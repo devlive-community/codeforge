@@ -1,4 +1,4 @@
-use super::{LanguagePlugin, python2::Python2Plugin, python3::Python3Plugin};
+use super::{python2::Python2Plugin, python3::Python3Plugin, LanguagePlugin};
 use std::collections::HashMap;
 
 pub struct PluginManager {
@@ -15,26 +15,30 @@ impl PluginManager {
         Self { plugins }
     }
 
-    pub fn get_plugin(&self, language: &str) -> Option<&Box<dyn LanguagePlugin>> {
-        self.plugins.get(language)
+    pub fn get_plugin(&self, language: &str) -> Option<&dyn LanguagePlugin> {
+        self.plugins.get(language).map(|plugin| plugin.as_ref())
     }
 
     pub fn get_supported_languages(&self) -> Vec<String> {
         self.plugins.keys().cloned().collect()
     }
 
+    #[allow(dead_code)]
     pub fn register_plugin(&mut self, language: String, plugin: Box<dyn LanguagePlugin>) {
         self.plugins.insert(language, plugin);
     }
 
+    #[allow(dead_code)]
     pub fn unregister_plugin(&mut self, language: &str) -> Option<Box<dyn LanguagePlugin>> {
         self.plugins.remove(language)
     }
 
+    #[allow(dead_code)]
     pub fn is_language_supported(&self, language: &str) -> bool {
         self.plugins.contains_key(language)
     }
 
+    #[allow(dead_code)]
     pub fn get_plugin_info(&self, language: &str) -> Option<PluginInfo> {
         self.get_plugin(language).map(|plugin| PluginInfo {
             name: plugin.get_language_name().to_string(),
@@ -47,6 +51,7 @@ impl PluginManager {
         })
     }
 
+    #[allow(dead_code)]
     pub fn get_all_plugin_info(&self) -> Vec<PluginInfo> {
         self.plugins
             .values()
