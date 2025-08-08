@@ -139,6 +139,7 @@ jobs:
           else
             pnpm install
           fi
+        shell: bash
 
       - name: Build application
         run: pnpm tauri build
