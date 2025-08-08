@@ -9,7 +9,7 @@ use plugins::{CodeExecutionRequest, ExecutionResult, LanguageInfo, PluginManager
 use std::fs;
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{Manager, State};
+use tauri::State;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -22,7 +22,6 @@ async fn execute_code(
     request: CodeExecutionRequest,
     history: State<'_, ExecutionHistory>,
     plugin_manager: State<'_, PluginManagerState>,
-    app_handle: tauri::AppHandle,
 ) -> Result<ExecutionResult, String> {
     let manager = plugin_manager.lock().await;
     let plugin = manager
@@ -152,10 +151,9 @@ async fn get_info(
 
         if let Ok(version_out) = version_output {
             if version_out.status.success() {
-                // 获取路径信息 - 只处理 Python
                 let path_result = Command::new(cmd)
                     .arg("-c")
-                    .arg(&plugin.get_path_command())
+                    .arg(plugin.get_path_command())
                     .output();
 
                 let version = String::from_utf8_lossy(&version_out.stdout)
@@ -166,10 +164,10 @@ async fn get_info(
                     if path_out.status.success() {
                         String::from_utf8_lossy(&path_out.stdout).trim().to_string()
                     } else {
-                        format!("Command found but path unavailable")
+                        "Command found but path unavailable".to_string()
                     }
                 } else {
-                    format!("Path detection failed")
+                    "Path detection failed".to_string()
                 };
 
                 return Ok(LanguageInfo {

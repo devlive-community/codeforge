@@ -1,0 +1,242 @@
+name: Pre Check
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev ]
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '18'
+  RUST_VERSION: '1.85.0'
+  PNPM_VERSION: '8'
+
+jobs:
+  # 前端检查和测试
+  frontend:
+    name: Frontend Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store
+
+      - name: Install dependencies
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
+
+      - name: Type check
+        run: pnpm vue-tsc --noEmit
+
+      - name: Build frontend
+        run: pnpm build
+
+  # 后端检查和测试
+  backend:
+    name: Backend Check
+    runs-on: ${{ matrix.platform }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ macos-latest, windows-latest ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Rust format check
+        run: cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+
+      - name: Rust clippy check
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+
+      - name: Build backend
+        run: cargo build --manifest-path src-tauri/Cargo.toml
+
+      - name: Run backend tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  # 完整应用构建测试
+  build:
+    name: Build Application
+    needs: [ frontend, backend ]
+    runs-on: ${{ matrix.platform }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ macos-latest, windows-latest ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
+        shell: bash
+
+      - name: Build application
+        run: pnpm tauri build
+
+      - name: Upload build artifacts (macOS)
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: src-tauri/target/release/bundle/
+          retention-days: 7
+
+      - name: Upload build artifacts (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: src-tauri/target/release/bundle/
+          retention-days: 7
+
+  # 代码质量检查
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史，用于 SonarCloud
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
+
+      - name: Generate coverage report
+        run: |
+          pnpm vitest run --coverage || true
+        continue-on-error: true
+
+      - name: Check bundle size
+        run: pnpm build && du -sh dist/
+
+      - name: Security audit (npm)
+        run: pnpm audit || true
+        continue-on-error: true
+
+      - name: Security audit (cargo)
+        run: |
+          cargo install cargo-audit
+          cargo audit --file src-tauri/Cargo.lock || true
+        continue-on-error: true
+
+  # 依赖检查
+  dependencies:
+    name: Dependencies Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Check outdated dependencies
+        run: |
+          pnpm outdated || true
+        continue-on-error: true
+
+      - name: Check for duplicated dependencies
+        run: |
+          pnpm why --recursive || true
+        continue-on-error: true
