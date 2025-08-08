@@ -1,4 +1,4 @@
-use super::{python2::Python2Plugin, python3::Python3Plugin, LanguagePlugin};
+use super::{LanguagePlugin, python2::Python2Plugin, python3::Python3Plugin};
 use std::collections::HashMap;
 
 pub struct PluginManager {
