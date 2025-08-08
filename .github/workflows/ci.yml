@@ -47,7 +47,12 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
 
       - name: Type check
         run: pnpm vue-tsc --noEmit
@@ -63,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
+        platform: [ ubuntu-latest, macos-latest, windows-latest ]
 
     steps:
       - name: Checkout repository
@@ -101,13 +106,13 @@ jobs:
   # 完整应用构建测试
   build:
     name: Build Application
-    needs: [frontend, backend]
+    needs: [ frontend, backend ]
     runs-on: ${{ matrix.platform }}
 
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
+        platform: [ ubuntu-latest, macos-latest, windows-latest ]
 
     steps:
       - name: Checkout repository
@@ -140,7 +145,12 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
 
       - name: Build application
         run: pnpm tauri build
@@ -196,7 +206,12 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
 
       - name: Generate coverage report
         run: |
