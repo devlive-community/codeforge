@@ -9,7 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   NODE_VERSION: '18'
-  RUST_VERSION: '1.70'
+  RUST_VERSION: '1.85.0'
   PNPM_VERSION: '8'
 
 jobs:
