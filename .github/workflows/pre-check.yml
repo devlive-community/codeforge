@@ -68,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ ubuntu-latest, macos-latest, windows-latest ]
+        platform: [ macos-latest, windows-latest ]
 
     steps:
       - name: Checkout repository
@@ -84,11 +84,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-
-      - name: Install system dependencies (Ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
 
       - name: Rust format check
         run: cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
