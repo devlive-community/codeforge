@@ -1,12 +1,22 @@
 <template>
   <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
     <div class="flex items-center space-x-3">
-      <div class="w-12 h-12 bg-gradient-to-br rounded-lg flex items-center justify-center">
-        <img src="/codeforge.svg" alt="CodeForge">
-      </div>
-      <div>
-        <h1 class="text-lg font-bold text-gray-800">CodeForge</h1>
-        <p class="text-xs text-gray-500">轻量级、高性能的桌面代码执行器，专为开发者、学生和编程爱好者设计。</p>
+      <div class="relative">
+        <!-- 自定义下拉选择器 -->
+        <div class="relative">
+          <select v-model="selectedLanguage"
+                  class="w-32 h-10 backdrop-blur-sm appearance-none bg-white/90 text-gray-800 text-sm font-medium border border-gray-200 rounded-lg px-2.5 pr-8 cursor-pointer focus:outline-none hover:bg-white/95 transition-all duration-200"
+                  :class="{ 'opacity-50 cursor-not-allowed': isRunning }"
+                  :disabled="isRunning"
+                  @change="handleLanguageChange">
+            <option v-for="language in supportedLanguages"
+                    class="text-gray-800 bg-white py-3 px-3 text-sm font-medium hover:bg-blue-50 hover:text-blue-800 focus:bg-blue-100 focus:text-blue-900 border-b border-gray-100 last:border-b-0"
+                    :key="language.value"
+                    :value="language.value">
+              {{ language.name }}
+            </option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -33,16 +43,37 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { Play, Square, Trash2 } from 'lucide-vue-next'
 
-defineProps<{
+interface Language
+{
+  name: string
+  value: string
+}
+
+const props = defineProps<{
   isRunning: boolean
   envInstalled: boolean
+  supportedLanguages: Language[]
+  currentLanguage: string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'run-code': []
   'clear-output': []
   'show-settings': []
+  'language-change': [language: string]
 }>()
+
+const selectedLanguage = ref(props.currentLanguage)
+
+// 监听外部语言变化
+watch(() => props.currentLanguage, (newLanguage) => {
+  selectedLanguage.value = newLanguage
+})
+
+const handleLanguageChange = () => {
+  emit('language-change', selectedLanguage.value)
+}
 </script>

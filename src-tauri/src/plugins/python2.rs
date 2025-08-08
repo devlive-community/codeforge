@@ -40,7 +40,7 @@ impl LanguagePlugin for Python2Plugin {
     fn post_execute_hook(&self, result: &mut ExecutionResult) -> Result<(), String> {
         // Python 特定的后处理
         if result.success && result.stdout.is_empty() && result.stderr.is_empty() {
-            result.stdout = "Code executed successfully (no output)".to_string();
+            result.stdout = "代码执行成功 (无输出)".to_string();
         }
 
         // 清理 Python 特定的错误信息

@@ -19,8 +19,16 @@ impl PluginManager {
         self.plugins.get(language).map(|plugin| plugin.as_ref())
     }
 
-    pub fn get_supported_languages(&self) -> Vec<String> {
-        self.plugins.keys().cloned().collect()
+    pub fn get_supported_languages(&self) -> Vec<serde_json::Value> {
+        self.plugins
+            .iter()
+            .map(|(key, plugin)| {
+                serde_json::json!({
+                    "name": plugin.get_language_name(),
+                    "value": key
+                })
+            })
+            .collect()
     }
 
     #[allow(dead_code)]

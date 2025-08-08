@@ -1,9 +1,10 @@
 <template>
-  <div class="bg-blue-600 text-white px-4 py-2 text-sm flex items-center justify-between">
+  <div class="text-white px-3.5 py-1 text-sm flex items-center justify-between"
+       :class="[envInfo.installed ? 'bg-green-500' : 'bg-red-500']">
     <div class="flex items-center space-x-6">
       <div class="flex items-center space-x-2">
         <component :is="envInfo.installed ? CheckCircle : XCircle"
-                   :class="envInfo.installed ? 'text-green-300' : 'text-red-300'"
+                   :class="envInfo.installed ? 'text-green-300' : 'text-white'"
                    class="w-4 h-4"/>
         <span>{{ envInfo.installed ? `${ envInfo.language }: ${ envInfo.version }` : `${ envInfo.language } 环境未安装` }}</span>
       </div>

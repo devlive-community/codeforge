@@ -2,8 +2,11 @@
   <div class="h-screen flex flex-col bg-gray-50">
     <AppHeader :is-running="isRunning"
                :env-installed="envInfo.installed"
+               :supported-languages="supportedLanguages"
+               :current-language="currentLanguage"
                @run-code="runCode"
                @clear-output="clearOutput"
+               @language-change="handleLanguageChange"
                @show-settings="showSettings = true">
     </AppHeader>
 
@@ -11,15 +14,12 @@
       <!-- 代码编辑器 -->
       <div class="flex-1 flex flex-col">
         <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-          <h2 class="text-sm font-medium text-gray-700">Python 代码编辑器</h2>
+          <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
           <div class="text-xs text-gray-500">
             <strong>{{ code.length }}</strong> 字符, <strong>{{ code.split('\n').length }}</strong> 行
           </div>
         </div>
-        <CodeEditor v-model="code"
-                    language="python"
-                    class="flex-1">
-        </CodeEditor>
+        <CodeEditor v-model="code" class="flex-1" :language="currentLanguage"/>
       </div>
 
       <!-- 输出 -->
@@ -35,10 +35,7 @@
     </div>
 
     <!-- 状态栏 -->
-    <StatusBar :env-info="envInfo"
-               :execution-time="lastExecutionTime"
-               :code-length="code.length">
-    </StatusBar>
+    <StatusBar :env-info="envInfo" :execution-time="lastExecutionTime" :code-length="code.length"/>
 
     <!-- 通知信息 -->
     <Toast v-if="toast.show"
@@ -87,7 +84,15 @@ interface EnvInfo
   language: string
 }
 
-const code = ref(`# Welcome to CodeForge!
+interface Language
+{
+  name: string
+  value: string
+}
+
+// 代码模板
+const codeTemplates: Record<string, string> = {
+  python: `# Welcome to CodeForge!
 # Write your Python code here and click Run to execute
 
 print("Hello, CodeForge!")
@@ -102,14 +107,52 @@ print(f"The result of {x} + {y} = {result}")
 numbers = [1, 2, 3, 4, 5]
 squared = [n**2 for n in numbers]
 print(f"Original: {numbers}")
-print(f"Squared: {squared}")`)
+print(f"Squared: {squared}")`,
 
+  python2: `# Welcome to CodeForge - Python 2!
+# Write your Python 2 code here and click Run to execute
+
+print "Hello, CodeForge from Python 2!"
+
+# Example: Simple calculation
+x = 10
+y = 20
+result = x + y
+print "The result of %d + %d = %d" % (x, y, result)
+
+# Example: List operations
+numbers = [1, 2, 3, 4, 5]
+squared = [n**2 for n in numbers]
+print "Original:", numbers
+print "Squared:", squared`,
+
+  python3: `# Welcome to CodeForge - Python 3!
+# Write your Python 3 code here and click Run to execute
+
+print("Hello, CodeForge from Python 3!")
+
+# Example: Simple calculation
+x = 10
+y = 20
+result = x + y
+print(f"The result of {x} + {y} = {result}")
+
+# Example: List operations
+numbers = [1, 2, 3, 4, 5]
+squared = [n**2 for n in numbers]
+print(f"Original: {numbers}")
+print(f"Squared: {squared}")`
+}
+
+const code = ref('')
+const currentLanguage = ref('python')
 const output = ref('')
 const isRunning = ref(false)
 const isSuccess = ref(false)
 const lastExecutionTime = ref(0)
 const activeTab = ref('output')
 const showSettings = ref(false)
+const supportedLanguages = ref<Language[]>([])
 
 const envInfo = ref<EnvInfo>({
   installed: false,
@@ -126,15 +169,17 @@ const toast = ref({
 
 const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
   toast.value = { show: true, message, type }
-  setTimeout(() => {
-    toast.value.show = false
-  }, 3000)
+}
+
+const getLanguageDisplayName = (languageValue: string) => {
+  const language = supportedLanguages.value.find(lang => lang.value === languageValue)
+  return language ? language.name : languageValue
 }
 
 const refreshEnvInfo = async () => {
   try {
     const info: LanguageInfo = await invoke('get_info', {
-      language: 'python2'
+      language: currentLanguage.value
     })
 
     envInfo.value = {
@@ -150,9 +195,46 @@ const refreshEnvInfo = async () => {
       installed: false,
       version: 'Error',
       path: 'Error',
-      language: 'python2'
+      language: currentLanguage.value
     }
   }
+}
+
+const getSupportedLanguages = async () => {
+  try {
+    const languages = await invoke<Language[]>('get_supported_languages')
+    supportedLanguages.value = languages.map((language) => ({
+      name: language.name,
+      value: language.value
+    }))
+
+    // 设置默认语言
+    if (supportedLanguages.value.length > 0 && !currentLanguage.value) {
+      currentLanguage.value = supportedLanguages.value[0].value
+    }
+  }
+  catch (error) {
+    console.error('Error getting supported languages:', error)
+    supportedLanguages.value = []
+  }
+}
+
+const handleLanguageChange = async (newLanguage: string) => {
+  currentLanguage.value = newLanguage
+
+  // 更新代码模板
+  code.value = codeTemplates[newLanguage] || `# ${ getLanguageDisplayName(newLanguage) } Code
+# Write your code here...
+
+print("Hello from ${ getLanguageDisplayName(newLanguage) }!")`
+
+  // 清空输出
+  output.value = ''
+
+  // 刷新环境信息
+  await refreshEnvInfo()
+
+  showToast(`已切换到 ${ getLanguageDisplayName(newLanguage) }`, 'info')
 }
 
 const runCode = async () => {
@@ -168,7 +250,7 @@ const runCode = async () => {
     const result: ExecutionResult = await invoke('execute_code', {
       request: {
         code: code.value,
-        language: 'python2'
+        language: currentLanguage.value
       }
     })
 
@@ -201,7 +283,20 @@ const clearOutput = () => {
   showToast('输出已清空', 'info')
 }
 
+window.addEventListener("contextmenu", (e) => e.preventDefault(), false);
+
 onMounted(async () => {
+  await getSupportedLanguages()
+
+  // 设置初始代码模板
+  if (supportedLanguages.value.length > 0) {
+    currentLanguage.value = supportedLanguages.value[0].value
+    code.value = codeTemplates[currentLanguage.value] || codeTemplates.python
+  }
+  else {
+    code.value = codeTemplates.python
+  }
+
   await refreshEnvInfo()
 })
 </script>
