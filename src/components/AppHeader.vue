@@ -13,16 +13,19 @@
     <div class="flex items-center space-x-3">
       <button @click="$emit('run-code')"
               :disabled="isRunning || !envInstalled"
-              :class="['flex items-center space-x-2 px-3 py-1.5 rounded-md font-medium transition-all duration-200 cursor-pointer',
+              :class="['flex items-center space-x-2 px-3 py-1.5 rounded-md font-medium transition-all duration-200',
                 isRunning || !envInstalled
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'btn-success shadow-sm hover:shadow-md'
+                  : 'btn-success shadow-sm hover:shadow-md cursor-pointer'
               ]">
         <component :is="isRunning ? Square : Play" class="w-3 h-3"/>
         <span>{{ isRunning ? '运行中...' : '运行代码' }}</span>
       </button>
 
-      <button @click="$emit('clear-output')" class="btn-danger px-3 py-2.5 rounded-md font-medium transition-all duration-200 cursor-pointer">
+      <button class="btn-danger px-3 py-2.5 rounded-md font-medium transition-all duration-200"
+              :disabled="isRunning || !envInstalled"
+              :class="[isRunning || !envInstalled ? 'cursor-not-allowed' : 'cursor-pointer']"
+              @click="$emit('clear-output')">
         <Trash2 class="w-4 h-4"/>
       </button>
     </div>

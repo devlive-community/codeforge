@@ -110,7 +110,6 @@ const isSuccess = ref(false)
 const lastExecutionTime = ref(0)
 const activeTab = ref('output')
 const showSettings = ref(false)
-const executionHistory = ref<ExecutionResult[]>([])
 
 const envInfo = ref<EnvInfo>({
   installed: false,
@@ -135,7 +134,7 @@ const showToast = (message: string, type: 'success' | 'error' | 'info' = 'succes
 const refreshEnvInfo = async () => {
   try {
     const info: LanguageInfo = await invoke('get_info', {
-      language: 'python'
+      language: 'python2'
     })
 
     envInfo.value = {
@@ -151,7 +150,7 @@ const refreshEnvInfo = async () => {
       installed: false,
       version: 'Error',
       path: 'Error',
-      language: 'python'
+      language: 'python2'
     }
   }
 }
@@ -169,7 +168,7 @@ const runCode = async () => {
     const result: ExecutionResult = await invoke('execute_code', {
       request: {
         code: code.value,
-        language: 'python'
+        language: 'python2'
       }
     })
 
@@ -199,7 +198,7 @@ const runCode = async () => {
 
 const clearOutput = () => {
   output.value = ''
-  showToast('Output cleared', 'info')
+  showToast('输出已清空', 'info')
 }
 
 onMounted(async () => {

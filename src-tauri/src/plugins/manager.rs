@@ -1,4 +1,4 @@
-use super::{python::PythonPlugin, LanguagePlugin};
+use super::{python2::Python2Plugin, python3::Python3Plugin, LanguagePlugin};
 use std::collections::HashMap;
 
 pub struct PluginManager {
@@ -9,7 +9,8 @@ impl PluginManager {
     pub fn new() -> Self {
         let mut plugins: HashMap<String, Box<dyn LanguagePlugin>> = HashMap::new();
 
-        plugins.insert("python".to_string(), Box::new(PythonPlugin));
+        plugins.insert("python2".to_string(), Box::new(Python2Plugin));
+        plugins.insert("python3".to_string(), Box::new(Python3Plugin));
 
         Self { plugins }
     }

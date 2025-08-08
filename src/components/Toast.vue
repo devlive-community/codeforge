@@ -75,7 +75,9 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const progressWidth = ref(100)
+// @ts-ignore
 let progressTimer: NodeJS.Timeout | null = null
+// @ts-ignore
 let autoCloseTimer: NodeJS.Timeout | null = null
 
 // 图标组件映射

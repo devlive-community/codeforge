@@ -1,10 +1,10 @@
 use super::{ExecutionResult, LanguagePlugin};
 
-pub struct PythonPlugin;
+pub struct Python2Plugin;
 
-impl LanguagePlugin for PythonPlugin {
+impl LanguagePlugin for Python2Plugin {
     fn get_language_name(&self) -> &'static str {
-        "Python"
+        "Python 2"
     }
 
     fn get_file_extension(&self) -> &'static str {
@@ -12,7 +12,7 @@ impl LanguagePlugin for PythonPlugin {
     }
 
     fn get_commands(&self) -> Vec<&'static str> {
-        vec!["python", "python2", "python3"]
+        vec!["python", "python2"]
     }
 
     fn get_version_args(&self) -> Vec<&'static str> {
