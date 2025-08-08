@@ -283,6 +283,8 @@ const clearOutput = () => {
   showToast('输出已清空', 'info')
 }
 
+window.addEventListener("contextmenu", (e) => e.preventDefault(), false);
+
 onMounted(async () => {
   await getSupportedLanguages()
 
