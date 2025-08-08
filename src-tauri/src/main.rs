@@ -192,7 +192,7 @@ async fn get_info(
 #[tauri::command]
 async fn get_supported_languages(
     plugin_manager: State<'_, PluginManagerState>,
-) -> Result<Vec<String>, String> {
+) -> Result<Vec<serde_json::Value>, String> {
     let manager = plugin_manager.lock().await;
     Ok(manager.get_supported_languages())
 }
