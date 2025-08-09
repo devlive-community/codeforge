@@ -21,7 +21,7 @@
         <pre :class="['whitespace-pre-wrap text-sm leading-relaxed', isSuccess ? 'text-green-300' : 'text-red-300']">{{ output }}</pre>
       </div>
 
-      <div v-else class="p-4 text-gray-500 flex flex-col items-center justify-center h-full space-y-2">
+      <div v-else class="p-4 text-gray-500 flex flex-col items-center justify-center h-full space-y-2 select-none">
         <Terminal class="w-8 h-8"/>
         <p class="text-sm">没有输出</p>
         <p class="text-xs">可以尝试运行一些代码</p>
