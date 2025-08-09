@@ -1,3 +1,5 @@
+use tauri_plugin_clipboard_manager::ClipboardExt;
+
 use tauri::{
     AppHandle, Manager,
     menu::{MenuItemBuilder, Submenu, SubmenuBuilder},
@@ -66,7 +68,10 @@ pub fn handle_edit_menu_event(app: &AppHandle, event_id: &str) {
             webview.eval("document.execCommand('copy')").ok();
         }
         "paste" => {
-            webview.eval("document.execCommand('paste')").ok();
+            if let Ok(text) = app.clipboard().read_text() {
+                let js = format!("document.execCommand('insertText', false, '{}')", text);
+                webview.eval(&js).ok();
+            }
         }
         "select_all" => {
             webview.eval("document.execCommand('selectAll')").ok();
