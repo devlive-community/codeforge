@@ -109,13 +109,11 @@ pub async fn get_log_files(app: AppHandle) -> Result<Vec<String>, String> {
     let mut log_files = Vec::new();
 
     if let Ok(entries) = std::fs::read_dir(&log_dir) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                if let Some(filename) = entry.file_name().to_str() {
-                    if filename.ends_with(".log") && filename.starts_with("codeforge-") {
-                        log_files.push(filename.to_string());
-                        info!("获取日志 -> 发现日志文件: {}", filename);
-                    }
+        for entry in entries.flatten() {
+            if let Some(filename) = entry.file_name().to_str() {
+                if filename.ends_with(".log") && filename.starts_with("codeforge-") {
+                    log_files.push(filename.to_string());
+                    info!("获取日志 -> 发现日志文件: {}", filename);
                 }
             }
         }
@@ -147,29 +145,27 @@ pub async fn clear_logs(app: AppHandle, keep_days: u32) -> Result<u32, String> {
     let mut scanned_count = 0;
 
     if let Ok(entries) = std::fs::read_dir(&log_dir) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                if let Some(filename) = entry.file_name().to_str() {
-                    if filename.ends_with(".log") && filename.starts_with("codeforge-") {
-                        scanned_count += 1;
-                        // 从文件名提取日期 codeforge-2024-08-09.log
-                        if let Some(date_str) = filename
-                            .strip_prefix("codeforge-")
-                            .and_then(|s| s.strip_suffix(".log"))
+        for entry in entries.flatten() {
+            if let Some(filename) = entry.file_name().to_str() {
+                if filename.ends_with(".log") && filename.starts_with("codeforge-") {
+                    scanned_count += 1;
+                    // 从文件名提取日期 codeforge-2024-08-09.log
+                    if let Some(date_str) = filename
+                        .strip_prefix("codeforge-")
+                        .and_then(|s| s.strip_suffix(".log"))
+                    {
+                        if let Ok(file_date) =
+                            chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
                         {
-                            if let Ok(file_date) =
-                                chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
-                            {
-                                if file_date < cutoff_date.date_naive() {
-                                    if let Err(e) = std::fs::remove_file(entry.path()) {
-                                        warn!("清理日志 -> 删除日志文件失败 {}: {}", filename, e);
-                                    } else {
-                                        info!("清理日志 -> 已删除日志文件: {}", filename);
-                                        deleted_count += 1;
-                                    }
+                            if file_date < cutoff_date.date_naive() {
+                                if let Err(e) = std::fs::remove_file(entry.path()) {
+                                    warn!("清理日志 -> 删除日志文件失败 {}: {}", filename, e);
                                 } else {
-                                    info!("清理日志 -> 日志文件文件未到期，将被保留: {}", filename);
+                                    info!("清理日志 -> 已删除日志文件: {}", filename);
+                                    deleted_count += 1;
                                 }
+                            } else {
+                                info!("清理日志 -> 日志文件文件未到期，将被保留: {}", filename);
                             }
                         }
                     }
