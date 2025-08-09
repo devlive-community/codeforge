@@ -43,12 +43,6 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-## 使用
-
-1. 在左侧编辑器输入代码
-2. 点击 "执行代码" 按钮执行
-3. 在右侧面板查看输出结果
-
 ## 技术栈
 
 - **前端：** Vue 3 + TypeScript + Tailwind CSS

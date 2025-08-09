@@ -64,8 +64,8 @@ async fn execute_code(
     for cmd in plugin.get_commands() {
         let args = plugin.get_execute_args(file_path.to_str().unwrap());
         debug!(
-            "执行插件代码 -> 执行命令: {} 携带参数: {:?} 语言: {}",
-            cmd, args, request.language
+            "执行 {:?} 代码 -> 执行命令: {:?} 携带参数: {:?}",
+            request.language, cmd, args
         );
 
         let output = Command::new(cmd)

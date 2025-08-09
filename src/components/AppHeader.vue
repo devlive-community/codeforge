@@ -5,6 +5,7 @@
         <!-- 自定义下拉选择器 -->
         <div class="relative">
           <Select v-model="selectedLanguage"
+                  class="w-48"
                   :options="supportedLanguages as any"
                   :disabled="isRunning"
                   placeholder="选择语言"
@@ -17,23 +18,18 @@
     </div>
 
     <div class="flex items-center space-x-3">
-      <button @click="$emit('run-code')"
+      <Button @click="$emit('run-code')"
               :disabled="isRunning || !envInstalled"
-              :class="['flex items-center space-x-2 px-3 py-1.5 rounded-md font-medium transition-all duration-200',
-                isRunning || !envInstalled
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'btn-success shadow-sm hover:shadow-md cursor-pointer'
-              ]">
-        <component :is="isRunning ? Square : Play" class="w-3 h-3"/>
+              :icon="isRunning ? Square : Play">
         <span>{{ isRunning ? '运行中...' : '运行代码' }}</span>
-      </button>
+      </Button>
 
-      <button class="btn-danger px-3 py-2.5 rounded-md font-medium transition-all duration-200"
+      <Button @click="$emit('clear-output')"
               :disabled="isRunning || !envInstalled"
-              :class="[isRunning || !envInstalled ? 'cursor-not-allowed' : 'cursor-pointer']"
-              @click="$emit('clear-output')">
-        <Trash2 class="w-4 h-4"/>
-      </button>
+              type="danger"
+              :icon-only="true"
+              :icon="Trash2">
+      </Button>
     </div>
   </div>
 </template>
@@ -42,6 +38,7 @@
 import { ref, watch } from 'vue'
 import { Play, Square, Trash2 } from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
+import Button from '../ui/Button.vue'
 
 interface Language
 {
