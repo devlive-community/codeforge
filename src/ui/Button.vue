@@ -156,12 +156,12 @@ const typeClasses = computed(() => {
     }
   }
 
-  return styles[type]?.[variant] || styles.primary.solid
+  return styles[type as keyof typeof styles]?.[variant] || styles.primary.solid
 })
 
 // 图标样式
 const iconClasses = computed(() => {
-  const hasText = props.text || !!props.$slots?.default
+  const hasText = props.text || !!(props as any).$slots?.default
   const sizeMap = {
     xs: 'w-3 h-3',
     sm: 'w-4 h-4',
