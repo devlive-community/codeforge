@@ -6,7 +6,7 @@ impl LanguagePlugin for Python3Plugin {
     fn get_order(&self) -> i32 {
         2
     }
-    
+
     fn get_language_name(&self) -> &'static str {
         "Python 3"
     }
@@ -32,13 +32,7 @@ impl LanguagePlugin for Python3Plugin {
     }
 
     fn pre_execute_hook(&self, code: &str) -> Result<String, String> {
-        // 添加一些 Python 特定的预处理
-        let processed_code = format!(
-            "# CodeForge Python 3 Execution\n# Generated at: {}\n\n{}",
-            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
-            code
-        );
-        Ok(processed_code)
+        Ok(code.to_string())
     }
 
     fn post_execute_hook(&self, result: &mut ExecutionResult) -> Result<(), String> {
