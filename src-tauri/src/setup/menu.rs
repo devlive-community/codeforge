@@ -1,29 +1,16 @@
+use super::menus;
+
 use tauri::{
-    AppHandle, Emitter,
-    menu::{Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
+    AppHandle,
+    menu::{Menu, MenuBuilder},
 };
 
 pub fn create_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
-    let about_item = MenuItemBuilder::new("关于 CodeForge")
-        .id("about")
-        .build(app)?;
-
     // 应用菜单
-    let app_submenu = SubmenuBuilder::new(app, "CodeForge")
-        .item(&about_item)
-        .build()?;
+    let app_submenu = menus::app::create_app_submenu(app)?;
 
     // 编辑菜单
-    let edit_submenu = SubmenuBuilder::new(app, "编辑")
-        .item(&PredefinedMenuItem::undo(app, Option::from("撤销"))?)
-        .item(&PredefinedMenuItem::redo(app, Option::from("重做"))?)
-        .separator()
-        .item(&PredefinedMenuItem::cut(app, Option::from("剪切"))?)
-        .item(&PredefinedMenuItem::copy(app, Option::from("复制"))?)
-        .item(&PredefinedMenuItem::paste(app, Option::from("粘贴"))?)
-        .separator()
-        .item(&PredefinedMenuItem::select_all(app, Option::from("全选"))?)
-        .build()?;
+    let edit_submenu = menus::edit::create_edit_submenu(app)?;
 
     let menu = MenuBuilder::new(app)
         .items(&[&app_submenu, &edit_submenu])
@@ -33,10 +20,8 @@ pub fn create_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 }
 
 pub fn setup_menu_handler(app: &AppHandle) {
-    app.on_menu_event(move |app, event| match event.id().as_ref() {
-        "about" => {
-            let _event = app.emit("show-about", ());
-        }
-        _ => {}
+    app.on_menu_event(move |app, event| {
+        menus::app::handle_app_menu_event(app, event.id().as_ref());
+        menus::edit::handle_edit_menu_event(app, event.id().as_ref());
     });
 }
