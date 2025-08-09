@@ -4,7 +4,10 @@
 )]
 
 mod plugins;
+mod setup;
 
+use crate::setup::app::get_app_info;
+use chrono::Utc;
 use plugins::{CodeExecutionRequest, ExecutionResult, LanguageInfo, PluginManager};
 use std::fs;
 use std::process::{Command, Stdio};
@@ -213,15 +216,26 @@ async fn clear_execution_history(history: State<'_, ExecutionHistory>) -> Result
 }
 
 fn main() {
+    let build_time = Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+    println!("cargo:rustc-env=BUILD_TIME={}", build_time);
+
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
         .manage(ExecutionHistory::default())
         .manage(PluginManagerState::new(PluginManager::new()))
+        .setup(|app| {
+            let menu = setup::menu::create_menu(app.handle())?;
+            app.set_menu(menu)?;
+            setup::menu::setup_menu_handler(app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             execute_code,
             get_info,
             get_supported_languages,
             get_execution_history,
-            clear_execution_history
+            clear_execution_history,
+            get_app_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -48,17 +48,22 @@
            :show-progress="true"
            @close="toast.show = false">
     </Toast>
+
+    <!-- 关于组件 -->
+    <About v-if="showAbout" @close="closeAbout"/>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { listen, UnlistenFn } from '@tauri-apps/api/event'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import OutputPanel from './components/OutputPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import Toast from './components/Toast.vue'
+import About from './components/About.vue'
 
 interface ExecutionResult
 {
@@ -155,6 +160,12 @@ const lastExecutionTime = ref(0)
 const activeTab = ref('output')
 const showSettings = ref(false)
 const supportedLanguages = ref<Language[]>([])
+const showAbout = ref(false)
+let unlistenFn: UnlistenFn | null = null
+
+const closeAbout = () => {
+  showAbout.value = false
+}
 
 const envInfo = ref<EnvInfo>({
   installed: false,
@@ -285,10 +296,11 @@ const clearOutput = () => {
   showToast('输出已清空', 'info')
 }
 
-window.addEventListener("contextmenu", (e) => e.preventDefault(), false);
+window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 
 onMounted(async () => {
   await getSupportedLanguages()
+  await refreshEnvInfo()
 
   // 设置初始代码模板
   if (supportedLanguages.value.length > 0) {
@@ -299,6 +311,15 @@ onMounted(async () => {
     code.value = codeTemplates.python
   }
 
-  await refreshEnvInfo()
+  // 监听来自 Rust 的 show-about 事件
+  unlistenFn = await listen('show-about', () => {
+    showAbout.value = true
+  })
+})
+
+onUnmounted(() => {
+  if (unlistenFn) {
+    unlistenFn()
+  }
 })
 </script>
