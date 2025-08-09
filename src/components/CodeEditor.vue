@@ -1,19 +1,20 @@
 <template>
-  <div class="flex bg-white h-full relative">
+  <div class="flex bg-white h-full relative overflow-hidden">
     <!-- 行号 -->
     <div ref="lineNumbersRef"
-         class="bg-gray-50 text-gray-400 text-sm font-mono py-4 px-3 select-none border-r border-gray-200 overflow-hidden flex-shrink-0 z-10">
+         class="bg-gray-50 text-gray-400 text-sm font-mono px-3 pb-4 select-none border-r border-gray-200 overflow-hidden flex-shrink-0 z-10"
+         style="padding-top: 0;">
       <div v-for="(num, index) in lineNumbers" :key="index" class="h-6 leading-6 text-right">
         {{ num }}
       </div>
     </div>
 
     <!-- 语法高亮容器 -->
-    <div class="flex-1 relative">
+    <div class="flex-1 relative overflow-hidden">
       <!-- 高亮显示层 -->
       <pre ref="highlightRef"
-           class="absolute inset-0 p-4 font-mono text-sm leading-6 bg-transparent pointer-events-none overflow-hidden whitespace-pre-wrap z-0"
-           style="margin: 0; border: 0; word-break: break-word; white-space: pre-wrap;"
+           class="absolute inset-0 px-4 pb-4 font-mono text-sm leading-6 bg-transparent pointer-events-none overflow-auto whitespace-pre-wrap z-0"
+           style="margin: 0; border: 0; padding-top: 0; word-break: break-word; white-space: pre-wrap;"
            v-html="highlightedCode"></pre>
 
       <!-- 代码输入框 -->
@@ -22,8 +23,8 @@
                 @input="handleInput"
                 @keydown="handleKeyDown"
                 @scroll="handleScroll"
-                class="absolute inset-0 p-4 font-mono text-sm leading-6 resize-none outline-none bg-transparent z-10"
-                style="color: transparent; caret-color: #374151; margin: 0; border: 0; word-break: break-word; white-space: pre-wrap;"
+                class="absolute inset-0 px-4 pb-4 font-mono text-sm leading-6 resize-none outline-none bg-transparent z-10 overflow-auto"
+                style="color: transparent; caret-color: #374151; margin: 0; border: 0; padding-top: 0; word-break: break-word; white-space: pre-wrap;"
                 placeholder="在此输入代码..."
                 spellcheck="false">
       </textarea>

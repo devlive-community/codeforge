@@ -12,14 +12,16 @@
 
     <div class="flex-1 flex overflow-hidden">
       <!-- 代码编辑器 -->
-      <div class="flex-1 flex flex-col">
-        <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
           <div class="text-xs text-gray-500">
             <strong>{{ code.length }}</strong> 字符, <strong>{{ code.split('\n').length }}</strong> 行
           </div>
         </div>
-        <CodeEditor v-model="code" class="flex-1" :language="currentLanguage"/>
+        <div class="flex-1 overflow-hidden">
+          <CodeEditor v-model="code" class="h-full" :language="currentLanguage"/>
+        </div>
       </div>
 
       <!-- 输出 -->
