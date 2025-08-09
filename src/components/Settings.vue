@@ -105,13 +105,11 @@
               自动清理日志
             </label>
             <div class="flex items-center gap-3">
-              <select v-model="keepDays"
-                      class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                <option value="7">保留 7 天</option>
-                <option value="14">保留 14 天</option>
-                <option value="30">保留 30 天</option>
-                <option value="90">保留 90 天</option>
-              </select>
+              <Select v-model="keepDays"
+                      class="w-36"
+                      :options="keepDaysOptions"
+                      placeholder="选择保留天数">
+              </Select>
               <button class="cursor-pointer px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-md transition-colors"
                       @click="clearLogs">
                 立即清理
@@ -125,7 +123,7 @@
       <div class="flex justify-end gap-3 pt-4 border-t border-gray-200/50 dark:border-gray-600/50">
         <button
             @click="closeSettings"
-            class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors">
+            class="cursor-pointer px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors">
           关闭
         </button>
       </div>
@@ -137,14 +135,21 @@
 import { nextTick, onMounted, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
-import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
+import { openPath } from '@tauri-apps/plugin-opener'
 import { FileText, Folder, Settings2, X } from 'lucide-vue-next'
+import Select from '../ui/Select.vue'
 
 const isVisible = ref(false)
 const currentLogDir = ref('')
 const newLogDir = ref('')
 const logFiles = ref<string[]>([])
 const keepDays = ref(30)
+const keepDaysOptions = [
+  { label: '保留 7 天', value: 7 },
+  { label: '保留 14 天', value: 14 },
+  { label: '保留 30 天', value: 30 },
+  { label: '保留 90 天', value: 90 }
+]
 
 const emit = defineEmits<{
   close: []
