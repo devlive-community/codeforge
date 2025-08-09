@@ -17,6 +17,7 @@ chrono = { version = "0.4.41", features = ["serde"] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-shell = "2.0"
+tauri-plugin-dialog = "2.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = "1.47.1"
@@ -25,3 +26,4 @@ tempfile = "3.0"
 chrono = { version = "0.4", features = ["serde"] }
 log = "0.4"
 fern = "0.7.1"
+dirs = "6.0.0"

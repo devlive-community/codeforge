@@ -8,7 +8,16 @@
   "permissions": [
     "core:default",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    "shell:default",
     "shell:allow-open",
-    "shell:default"
+    "dialog:default"
   ]
 }
