@@ -27,6 +27,9 @@ pub struct LanguageInfo {
 
 // 语言插件接口
 pub trait LanguagePlugin: Send + Sync {
+    fn get_order(&self) -> i32 {
+        0
+    }
     fn get_language_name(&self) -> &'static str;
     fn get_file_extension(&self) -> &'static str;
     fn get_commands(&self) -> Vec<&'static str>;

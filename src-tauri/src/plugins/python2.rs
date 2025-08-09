@@ -3,6 +3,10 @@ use super::{ExecutionResult, LanguagePlugin};
 pub struct Python2Plugin;
 
 impl LanguagePlugin for Python2Plugin {
+    fn get_order(&self) -> i32 {
+        1
+    }
+
     fn get_language_name(&self) -> &'static str {
         "Python 2"
     }
@@ -30,7 +34,7 @@ impl LanguagePlugin for Python2Plugin {
     fn pre_execute_hook(&self, code: &str) -> Result<String, String> {
         // 添加一些 Python 特定的预处理
         let processed_code = format!(
-            "# CodeForge Python Execution\n# Generated at: {}\n\n{}",
+            "# CodeForge Python 2 Execution\n# Generated at: {}\n\n{}",
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
             code
         );

@@ -6,7 +6,7 @@
         <component :is="envInfo.installed ? CheckCircle : XCircle"
                    :class="envInfo.installed ? 'text-green-300' : 'text-white'"
                    class="w-4 h-4"/>
-        <span>{{ envInfo.installed ? `${ envInfo.language }: ${ envInfo.version }` : `${ envInfo.language } 环境未安装` }}</span>
+        <span>{{ envInfo.installed ? `${ envInfo.language }: ${ envInfo.version }` : `${ envInfo.language }: 环境未安装` }}</span>
       </div>
 
       <div v-if="executionTime > 0" class="flex items-center space-x-2">
