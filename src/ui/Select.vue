@@ -9,7 +9,7 @@
             @keydown.arrow-down.prevent="openDropdown"
             @keydown.arrow-up.prevent="openDropdown"
             :class="[
-              'relative w-full cursor-pointer rounded-lg border bg-white py-1 pl-3 pr-10 text-left transition-all duration-200 ring-1 ring-blue-200',
+              'relative w-full cursor-pointer rounded-lg border bg-white px-4 py-2 pr-10 text-left transition-all duration-200 ring-1 ring-blue-200',
               disabled ? 'cursor-not-allowed bg-gray-50 text-gray-400' : 'hover:border-gray-400',
               ...buttonClasses
             ]"

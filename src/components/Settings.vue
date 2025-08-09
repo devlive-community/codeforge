@@ -2,7 +2,7 @@
   <div class="fixed inset-0 backdrop-blur-sm bg-white/20 dark:bg-gray-900/20 flex items-center justify-center z-50 transition-all duration-300 ease-out"
        :class="{ 'opacity-0': !isVisible, 'opacity-100': isVisible }">
     <div
-        class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-2xl w-4xl p-6 transform transition-all duration-300 ease-out border border-white/20 dark:border-gray-700/30 max-h-[80vh] overflow-y-auto"
+        class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-2xl w-6xl h-screen p-6 transform transition-all duration-300 ease-out border border-white/20 dark:border-gray-700/30 max-h-[80vh] overflow-y-auto"
         :class="{
           'scale-95 opacity-0 translate-y-4': !isVisible,
           'scale-100 opacity-100 translate-y-0': isVisible
@@ -47,32 +47,29 @@
                      placeholder="选择或输入日志目录路径"
                      class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                      readonly/>
-              <button
-                  class="px-4 py-2 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  @click="selectLogDirectory">
-                <Folder class="w-4 h-4"/>
-              </button>
+
+              <Button type="primary"
+                      :icon-only="true"
+                      :icon="Folder"
+                      @click="selectLogDirectory">
+              </Button>
             </div>
           </div>
 
           <!-- 操作按钮 -->
-          <div class="flex gap-3 pt-2">
-            <button
-                @click="applyLogDirChange"
-                :disabled="!newLogDir || newLogDir === currentLogDir"
-                class="cursor-pointer px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors">
+          <div class="flex gap-3 pt-0.5">
+            <Button @click="applyLogDirChange"
+                    :disabled="!newLogDir || newLogDir === currentLogDir"
+                    type="secondary">
               应用更改
-            </button>
-            <button
-                @click="openLogDirectory"
-                class="cursor-pointer px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors">
+            </Button>
+            <Button @click="openLogDirectory" type="secondary">
               打开日志目录
-            </button>
-            <button
-                @click="resetLogDirectory"
-                class="cursor-pointer px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors">
+            </Button>
+            <Button @click="resetLogDirectory"
+                    class="cursor-pointer px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors">
               重置为默认
-            </button>
+            </Button>
           </div>
 
           <!-- 日志文件列表 -->
@@ -110,22 +107,12 @@
                       :options="keepDaysOptions"
                       placeholder="选择保留天数">
               </Select>
-              <button class="cursor-pointer px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-md transition-colors"
-                      @click="clearLogs">
+              <Button type="danger" @click="clearLogs">
                 立即清理
-              </button>
+              </Button>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- 底部按钮 -->
-      <div class="flex justify-end gap-3 pt-4 border-t border-gray-200/50 dark:border-gray-600/50">
-        <button
-            @click="closeSettings"
-            class="cursor-pointer px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors">
-          关闭
-        </button>
       </div>
     </div>
   </div>
@@ -139,6 +126,7 @@ import { openPath } from '@tauri-apps/plugin-opener'
 import { FileText, Folder, Settings2, X } from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import { useToast } from '../plugins/toast'
+import Button from '../ui/Button.vue'
 
 const toast = useToast()
 const isVisible = ref(false)

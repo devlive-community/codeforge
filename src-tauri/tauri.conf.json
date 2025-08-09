@@ -13,6 +13,8 @@
     "windows": [
       {
         "title": "CodeForge",
+        "minWidth": 1000,
+        "minHeight": 600,
         "width": 1800,
         "height": 1200,
         "additionalBrowserArgs": "--disable-context-menu"

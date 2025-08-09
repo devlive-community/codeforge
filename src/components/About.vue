@@ -11,7 +11,7 @@
       <!-- 关闭按钮 -->
       <div class="flex justify-end mb-4">
         <button
-            class="text-gray-400 hover:cursor-pointer hover:text-gray-600 dark:hover:text-gray-200 transition-all duration-200 hover:scale-110 rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+            class="text-gray-400 hover:cursor-pointer dark:hover:text-gray-200 transition-all duration-200 hover:scale-110 rounded-full p-1 hover:bg-gray-300 dark:hover:bg-gray-700"
             @click="closeAbout">
           <X class="w-5 h-5"></X>
         </button>
@@ -61,7 +61,7 @@
       <!-- 技术栈 -->
       <div class="mb-6 transition-all duration-600 delay-500">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">技术栈</h3>
-        <hr class="border-gray-200/50 dark:border-gray-600/50 my-3" />
+        <hr class="border-gray-200/50 dark:border-gray-600/50 my-3"/>
         <div class="flex flex-wrap gap-2">
           <span v-for="(tech, index) in techStack"
                 class="px-3 py-1 text-xs rounded-full font-medium transform transition-all duration-200 hover:scale-110 hover:-translate-y-1 cursor-pointer"
