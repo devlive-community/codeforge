@@ -9,22 +9,27 @@
             @keydown.arrow-down.prevent="openDropdown"
             @keydown.arrow-up.prevent="openDropdown"
             :class="[
-              'relative w-full cursor-pointer rounded-lg border bg-white py-1 pl-3 pr-10 text-left shadow-sm transition-all duration-200',
+              'relative w-full cursor-pointer rounded-lg border bg-white py-1 pl-3 pr-10 text-left transition-all duration-200 ring-1 ring-blue-200',
               disabled ? 'cursor-not-allowed bg-gray-50 text-gray-400' : 'hover:border-gray-400',
               ...buttonClasses
             ]"
             :disabled="disabled"
             :aria-expanded="isOpen"
             :aria-haspopup="true"
+            :style="{
+              border: 'none !important',
+              outline: 'none !important',
+              boxShadow: '0 0 0 1px rgb(147 197 253)'
+            }"
             role="combobox">
       <span class="block truncate">
         {{ selectedLabel || placeholder }}
       </span>
       <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-        <ArrowUpIcon class="h-5 w-5 text-gray-400 transition-transform duration-200"
-                     :class="{ 'rotate-180': isOpen }"
-                     aria-hidden="true">
-        </ArrowUpIcon>
+        <ChevronUpIcon class="h-5 w-5 text-gray-400 transition-transform duration-200"
+                       :class="{ 'rotate-180': isOpen }"
+                       aria-hidden="true">
+        </ChevronUpIcon>
       </span>
     </button>
 
@@ -40,7 +45,7 @@
                 @before-leave="$emit('before-close')"
                 @after-leave="$emit('after-close')">
       <div v-show="isOpen"
-           class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+           class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white text-base shadow-lg ring-1 ring-blue-200 focus:outline-none"
            :class="dropdownClasses"
            role="listbox"
            :aria-labelledby="buttonId">
@@ -94,7 +99,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { ArrowUpIcon, CheckIcon } from 'lucide-vue-next'
+import { CheckIcon, ChevronUpIcon } from 'lucide-vue-next'
 
 // Props 定义
 interface Option

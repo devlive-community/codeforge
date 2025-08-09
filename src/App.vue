@@ -39,21 +39,14 @@
     <!-- 状态栏 -->
     <StatusBar :env-info="envInfo" :execution-time="lastExecutionTime" :code-length="code.length"/>
 
-    <!-- 通知信息 -->
-    <Toast v-if="toast.show"
-           :show="toast.show"
-           :message="toast.message"
-           :type="toast.type"
-           :duration="3000"
-           :show-progress="true"
-           @close="toast.show = false">
-    </Toast>
-
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
 
     <!-- 设置组件 -->
     <Settings v-if="showSettings" @close="closeSettings"/>
+
+    <!-- Toast 组件 -->
+    <Toast/>
   </div>
 </template>
 
@@ -65,9 +58,10 @@ import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import OutputPanel from './components/OutputPanel.vue'
 import StatusBar from './components/StatusBar.vue'
-import Toast from './components/Toast.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
+import Toast from './components/Toast.vue'
+import { useToast } from './plugins/toast'
 
 interface ExecutionResult
 {
@@ -155,6 +149,7 @@ print(f"Original: {numbers}")
 print(f"Squared: {squared}")`
 }
 
+const toast = useToast()
 const code = ref('')
 const currentLanguage = ref('python2')
 const output = ref('')
@@ -182,16 +177,6 @@ const envInfo = ref<EnvInfo>({
   path: '检查中...',
   language: 'python'
 })
-
-const toast = ref({
-  show: false,
-  message: '',
-  type: 'success' as 'success' | 'error' | 'info'
-})
-
-const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-  toast.value = { show: true, message, type }
-}
 
 const getLanguageDisplayName = (languageValue: string) => {
   const language = supportedLanguages.value.find(lang => lang.value === languageValue)
@@ -256,12 +241,12 @@ print("Hello from ${ getLanguageDisplayName(newLanguage) }!")`
   // 刷新环境信息
   await refreshEnvInfo()
 
-  showToast(`已切换到 ${ getLanguageDisplayName(newLanguage) }`, 'info')
+  toast.info(`已切换到 ${ getLanguageDisplayName(newLanguage) }`)
 }
 
 const runCode = async () => {
   if (!envInfo.value.installed) {
-    showToast(`${ envInfo.value.language } 环境未安装`, 'error')
+    toast.error(`${ envInfo.value.language } 环境未安装`)
     return
   }
 
@@ -284,16 +269,16 @@ const runCode = async () => {
       if (result.stderr) {
         output.value += '\n' + result.stderr
       }
-      showToast(`代码执行成功，用时 ${ result.execution_time } 毫秒`)
+      toast.success(`代码执行成功，用时 ${ result.execution_time } 毫秒`)
     }
     else {
       output.value = result.stderr || '代码执行失败 (无输出)'
-      showToast('代码执行失败，查看输出的错误信息', 'error')
+      toast.error('代码执行失败，查看输出的错误信息')
     }
   }
   catch (error) {
     output.value = `代码执行失败: ${ error }`
-    showToast('代码执行失败，请检查日志', 'error')
+    toast.error('代码执行失败，请检查日志')
   }
   finally {
     isRunning.value = false
@@ -302,7 +287,7 @@ const runCode = async () => {
 
 const clearOutput = () => {
   output.value = ''
-  showToast('输出已清空', 'info')
+  toast.info('输出已清空')
 }
 
 window.addEventListener('contextmenu', (e) => e.preventDefault(), false)

@@ -138,7 +138,9 @@ import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 import { FileText, Folder, Settings2, X } from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
+import { useToast } from '../plugins/toast'
 
+const toast = useToast()
 const isVisible = ref(false)
 const currentLogDir = ref('')
 const newLogDir = ref('')
@@ -205,12 +207,11 @@ const applyLogDirChange = async () => {
     await invoke('set_log_directory', { path: newLogDir.value })
     currentLogDir.value = newLogDir.value
     await loadLogFiles()
-    // 这里可以显示成功提示
-    console.log('日志目录已更新')
+    toast.success('日志目录已更新')
   }
   catch (error) {
     console.error('Failed to set log directory:', error)
-    // 这里可以显示错误提示
+    toast.error('日志目录更新失败, 错误信息: ' + error)
   }
 }
 
@@ -228,10 +229,11 @@ const resetLogDirectory = async () => {
     await invoke('reset_log_directory')
     await loadLogDirectory()
     await loadLogFiles()
-    console.log('日志目录已重置为默认')
+    toast.success('日志目录已重置为默认')
   }
   catch (error) {
     console.error('Failed to reset log directory:', error)
+    toast.error('日志目录重置失败, 错误信息: ' + error)
   }
 }
 
@@ -249,10 +251,11 @@ const clearLogs = async () => {
   try {
     await invoke('clear_logs', { keepDays: parseInt(keepDays.value.toString()) })
     await loadLogFiles()
-    console.log(`已清理 ${ keepDays.value } 天前的日志`)
+    toast.success(`已清理 ${ keepDays.value } 天前的日志`)
   }
   catch (error) {
     console.error('Failed to clear old logs:', error)
+    toast.error('清理日志失败, 错误信息: ' + error)
   }
 }
 
