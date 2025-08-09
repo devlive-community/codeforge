@@ -4,18 +4,14 @@
       <div class="relative">
         <!-- 自定义下拉选择器 -->
         <div class="relative">
-          <select v-model="selectedLanguage"
-                  class="w-32 h-10 backdrop-blur-sm appearance-none bg-white/90 text-gray-800 text-sm font-medium border border-gray-200 rounded-lg px-2.5 pr-8 cursor-pointer focus:outline-none hover:bg-white/95 transition-all duration-200"
-                  :class="{ 'opacity-50 cursor-not-allowed': isRunning }"
+          <Select v-model="selectedLanguage"
+                  :options="supportedLanguages as any"
                   :disabled="isRunning"
+                  placeholder="选择语言"
+                  value-key="value"
+                  label-key="name"
                   @change="handleLanguageChange">
-            <option v-for="language in supportedLanguages"
-                    class="text-gray-800 bg-white py-3 px-3 text-sm font-medium hover:bg-blue-50 hover:text-blue-800 focus:bg-blue-100 focus:text-blue-900 border-b border-gray-100 last:border-b-0"
-                    :key="language.value"
-                    :value="language.value">
-              {{ language.name }}
-            </option>
-          </select>
+          </Select>
         </div>
       </div>
     </div>
@@ -45,6 +41,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { Play, Square, Trash2 } from 'lucide-vue-next'
+import Select from '../ui/Select.vue'
 
 interface Language
 {

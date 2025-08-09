@@ -51,6 +51,9 @@
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
+
+    <!-- 设置组件 -->
+    <Settings v-if="showSettings" @close="closeSettings"/>
   </div>
 </template>
 
@@ -64,6 +67,7 @@ import OutputPanel from './components/OutputPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import Toast from './components/Toast.vue'
 import About from './components/About.vue'
+import Settings from './components/Settings.vue'
 
 interface ExecutionResult
 {
@@ -158,13 +162,18 @@ const isRunning = ref(false)
 const isSuccess = ref(false)
 const lastExecutionTime = ref(0)
 const activeTab = ref('output')
-const showSettings = ref(false)
 const supportedLanguages = ref<Language[]>([])
 const showAbout = ref(false)
-let unlistenFn: UnlistenFn | null = null
+let unlistenAboutFn: UnlistenFn | null = null
+const showSettings = ref(false)
+let unlistenSettingsFn: UnlistenFn | null = null
 
 const closeAbout = () => {
   showAbout.value = false
+}
+
+const closeSettings = () => {
+  showSettings.value = false
 }
 
 const envInfo = ref<EnvInfo>({
@@ -312,14 +321,23 @@ onMounted(async () => {
   }
 
   // 监听来自 Rust 的 show-about 事件
-  unlistenFn = await listen('show-about', () => {
+  unlistenAboutFn = await listen('show-about', () => {
     showAbout.value = true
+  })
+
+  // 监听来自 Rust 的 show-settings 事件
+  unlistenSettingsFn = await listen('show-settings', () => {
+    showSettings.value = true
   })
 })
 
 onUnmounted(() => {
-  if (unlistenFn) {
-    unlistenFn()
+  if (unlistenAboutFn) {
+    unlistenAboutFn()
+  }
+
+  if (unlistenSettingsFn) {
+    unlistenSettingsFn()
   }
 })
 </script>
