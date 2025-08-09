@@ -3,11 +3,12 @@
     windows_subsystem = "windows"
 )]
 
+mod logger;
 mod plugins;
 mod setup;
 
 use crate::setup::app::get_app_info;
-use chrono::Utc;
+use log::{debug, info};
 use plugins::{CodeExecutionRequest, ExecutionResult, LanguageInfo, PluginManager};
 use std::fs;
 use std::process::{Command, Stdio};
@@ -55,8 +56,10 @@ async fn execute_code(
     // 尝试不同的命令
     for cmd in plugin.get_commands() {
         let args = plugin.get_execute_args(file_path.to_str().unwrap());
-
-        println!("Trying command: {} with args: {:?}", cmd, args);
+        debug!(
+            "执行插件代码 -> 执行命令: {} 携带参数: {:?} 语言: {}",
+            cmd, args, request.language
+        );
 
         let output = Command::new(cmd)
             .args(&args)
@@ -148,8 +151,7 @@ async fn get_info(
 
     // 尝试不同的命令
     for cmd in plugin.get_commands() {
-        println!("Trying command: {} for language: {}", cmd, language);
-
+        debug!("获取插件信息 -> 执行命令: {} 语言: {}", cmd, language);
         let version_output = Command::new(cmd).args(plugin.get_version_args()).output();
 
         if let Ok(version_out) = version_output {
@@ -216,14 +218,18 @@ async fn clear_execution_history(history: State<'_, ExecutionHistory>) -> Result
 }
 
 fn main() {
-    let build_time = Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
-    println!("cargo:rustc-env=BUILD_TIME={}", build_time);
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(ExecutionHistory::default())
         .manage(PluginManagerState::new(PluginManager::new()))
         .setup(|app| {
+            // 初始化日志系统
+            if let Err(e) = logger::setup_logger(app.handle()) {
+                eprintln!("Failed to setup logger: {}", e);
+            }
+            info!("CodeForge 应用启动");
+            info!("应用版本: {}", env!("CARGO_PKG_VERSION"));
+
             let menu = setup::menu::create_menu(app.handle())?;
             app.set_menu(menu)?;
             setup::menu::setup_menu_handler(app.handle());
