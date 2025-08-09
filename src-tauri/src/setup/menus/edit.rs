@@ -1,4 +1,4 @@
-use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri::menu::PredefinedMenuItem;
 
 use tauri::{
     AppHandle, Manager,
@@ -26,11 +26,6 @@ pub fn create_edit_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>
         .accelerator("CmdOrCtrl+C")
         .build(app)?;
 
-    let paste_item = MenuItemBuilder::new("粘贴")
-        .id("paste")
-        .accelerator("CmdOrCtrl+V")
-        .build(app)?;
-
     let select_all_item = MenuItemBuilder::new("全选")
         .id("select_all")
         .accelerator("CmdOrCtrl+A")
@@ -42,7 +37,7 @@ pub fn create_edit_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>
         .separator()
         .item(&cut_item)
         .item(&copy_item)
-        .item(&paste_item)
+        .item(&PredefinedMenuItem::paste(app, Option::from("粘贴"))?)
         .separator()
         .item(&select_all_item)
         .build()?;
@@ -66,12 +61,6 @@ pub fn handle_edit_menu_event(app: &AppHandle, event_id: &str) {
         }
         "copy" => {
             webview.eval("document.execCommand('copy')").ok();
-        }
-        "paste" => {
-            if let Ok(text) = app.clipboard().read_text() {
-                let js = format!("document.execCommand('insertText', false, '{}')", text);
-                webview.eval(&js).ok();
-            }
         }
         "select_all" => {
             webview.eval("document.execCommand('selectAll')").ok();
