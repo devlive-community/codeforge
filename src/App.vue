@@ -152,7 +152,7 @@ print(f"Squared: {squared}")`
 }
 
 const code = ref('')
-const currentLanguage = ref('python')
+const currentLanguage = ref('python2')
 const output = ref('')
 const isRunning = ref(false)
 const isSuccess = ref(false)

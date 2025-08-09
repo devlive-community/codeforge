@@ -1,6 +1,6 @@
 use tauri::{
-    menu::{Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder}, AppHandle,
-    Emitter,
+    AppHandle, Emitter,
+    menu::{Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder},
 };
 
 pub fn create_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
