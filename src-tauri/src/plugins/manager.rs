@@ -1,4 +1,4 @@
-use super::{LanguagePlugin, python2::Python2Plugin, python3::Python3Plugin};
+use super::{LanguagePlugin, PluginConfig, python2::Python2Plugin, python3::Python3Plugin};
 use std::collections::HashMap;
 
 pub struct PluginManager {
@@ -53,12 +53,8 @@ impl PluginManager {
     pub fn get_plugin_info(&self, language: &str) -> Option<PluginInfo> {
         self.get_plugin(language).map(|plugin| PluginInfo {
             name: plugin.get_language_name().to_string(),
-            file_extension: plugin.get_file_extension().to_string(),
-            available_commands: plugin
-                .get_commands()
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
+            file_extension: plugin.get_file_extension(),
+            available_commands: vec![plugin.get_command().to_string()],
         })
     }
 
@@ -68,13 +64,16 @@ impl PluginManager {
             .values()
             .map(|plugin| PluginInfo {
                 name: plugin.get_language_name().to_string(),
-                file_extension: plugin.get_file_extension().to_string(),
-                available_commands: plugin
-                    .get_commands()
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                file_extension: plugin.get_file_extension(),
+                available_commands: vec![plugin.get_command().to_string()],
             })
+            .collect()
+    }
+
+    pub fn get_all_plugin_default_config(&self) -> Vec<PluginConfig> {
+        self.plugins
+            .values()
+            .map(|plugin| plugin.get_default_config())
             .collect()
     }
 }

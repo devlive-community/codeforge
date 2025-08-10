@@ -1,4 +1,5 @@
-use super::{ExecutionResult, LanguagePlugin};
+use super::{LanguagePlugin, PluginConfig};
+use std::vec;
 
 pub struct Python2Plugin;
 
@@ -11,12 +12,8 @@ impl LanguagePlugin for Python2Plugin {
         "Python 2"
     }
 
-    fn get_file_extension(&self) -> &'static str {
-        "py"
-    }
-
-    fn get_commands(&self) -> Vec<&'static str> {
-        vec!["python", "python2"]
+    fn get_language_key(&self) -> &'static str {
+        "python2"
     }
 
     fn get_version_args(&self) -> Vec<&'static str> {
@@ -31,23 +28,20 @@ impl LanguagePlugin for Python2Plugin {
         "import sys; print(sys.executable)".to_string()
     }
 
-    fn pre_execute_hook(&self, code: &str) -> Result<String, String> {
-        Ok(code.to_string())
+    fn get_default_config(&self) -> PluginConfig {
+        PluginConfig {
+            enabled: true,
+            language: String::from("python2"),
+            before_compile: None,
+            extension: String::from("py"),
+            execute_home: None,
+            run_command: Option::from(String::from("python2 $filename")),
+            after_compile: None,
+            template: None,
+        }
     }
 
-    fn post_execute_hook(&self, result: &mut ExecutionResult) -> Result<(), String> {
-        // Python 特定的后处理
-        if result.success && result.stdout.is_empty() && result.stderr.is_empty() {
-            result.stdout = "代码执行成功 (无输出)".to_string();
-        }
-
-        // 清理 Python 特定的错误信息
-        if !result.stderr.is_empty() {
-            result.stderr = result
-                .stderr
-                .replace("Traceback (most recent call last):", "Error:");
-        }
-
-        Ok(())
+    fn get_default_command(&self) -> String {
+        self.get_config().unwrap().run_command.unwrap()
     }
 }

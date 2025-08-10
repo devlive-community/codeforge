@@ -1,3 +1,4 @@
+use log::info;
 use tauri::{
     AppHandle, Emitter,
     menu::{MenuItemBuilder, Submenu, SubmenuBuilder},
@@ -38,6 +39,7 @@ pub fn handle_app_menu_event(app: &AppHandle, event_id: &str) {
             let _event = app.emit("show-settings", ());
         }
         "quit" => {
+            info!("CodeForge 应用关闭");
             app.exit(0);
         }
         _ => {}

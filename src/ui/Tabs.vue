@@ -189,7 +189,7 @@ const headerClasses = computed(() => {
     baseClasses.push('border-t', 'border-gray-200', 'dark:border-gray-700')
   }
   else if (props.position === 'left') {
-    baseClasses.push('flex-col', 'border-r', 'border-gray-200', 'dark:border-gray-700', 'mr-4', 'border-b-0')
+    baseClasses.push('flex-col', 'border-gray-200', 'dark:border-gray-700', 'mr-4', 'border-b-0')
   }
   else if (props.position === 'right') {
     baseClasses.push('flex-col', 'border-l', 'border-gray-200', 'dark:border-gray-700', 'ml-4', 'order-2', 'border-b-0')
