@@ -1,7 +1,7 @@
 use log::info;
 use tauri::{
-    menu::{MenuItemBuilder, Submenu, SubmenuBuilder}, AppHandle,
-    Emitter,
+    AppHandle, Emitter,
+    menu::{MenuItemBuilder, Submenu, SubmenuBuilder},
 };
 
 pub fn create_app_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>> {

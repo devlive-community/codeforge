@@ -21,7 +21,6 @@ import Modal from '../ui/Modal.vue'
 import Tabs from '../ui/Tabs.vue'
 import General from './setting/General.vue'
 import Language from './setting/Language.vue'
-import { useToast } from '../plugins/toast.ts'
 
 const isVisible = ref(false)
 const activeTab = ref('general')
@@ -40,8 +39,6 @@ const closeSettings = () => {
     emit('close')
   }, 300)
 }
-
-const toast = useToast()
 
 onMounted(async () => {
   // 延迟显示动画

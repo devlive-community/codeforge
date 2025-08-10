@@ -62,7 +62,7 @@ async fn execute_code(
         .map_err(|e| format!("Failed to write temporary file: {}", e))?;
 
     let start_time = std::time::Instant::now();
-    let mut last_error: String = String::new();
+    let mut _last_error: String = String::new();
 
     let cmd = plugin.get_command();
     let args = plugin.get_execute_args(file_path.to_str().unwrap());
@@ -119,7 +119,7 @@ async fn execute_code(
             return Ok(result);
         }
         Err(e) => {
-            last_error = format!("Failed to execute {} - {}", cmd, e);
+            _last_error = format!("Failed to execute {} - {}", cmd, e);
         }
     }
 
@@ -141,7 +141,7 @@ async fn execute_code(
             "{} interpreter not found. Please install {} and ensure it's in your PATH.\n\nLast error: {}\n\nTried commands: {:?}",
             request.language,
             request.language,
-            last_error,
+            _last_error,
             plugin.get_command().to_string()
         ),
         execution_time,
@@ -162,7 +162,7 @@ async fn get_info(
         .get_plugin(&language)
         .ok_or_else(|| format!("Unsupported language: {}", language))?;
 
-    plugin.pre_execute_hook(&String::new()).map_err(|e| {
+    plugin.pre_execute_hook("").map_err(|e| {
         error!(
             "获取环境 -> 调用插件 [ {} ] pre_execute_hook 出现错误 {:?}",
             language, e

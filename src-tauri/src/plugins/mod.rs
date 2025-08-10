@@ -63,7 +63,7 @@ pub trait LanguagePlugin: Send + Sync {
     fn get_execute_home(&self) -> Option<PathBuf> {
         self.get_config()
             .and_then(|config| config.execute_home.clone())
-            .map(|path| PathBuf::from(path))
+            .map(PathBuf::from)
     }
 
     // 获取插件支持的命令
