@@ -64,7 +64,7 @@ async fn execute_code(
     let start_time = std::time::Instant::now();
     let mut _last_error: String = String::new();
 
-    let cmd = plugin.get_command();
+    let cmd = plugin.get_command(None);
     let args = plugin.get_execute_args(file_path.to_str().unwrap());
     info!(
         "执行代码 -> 调用插件 [ {} ] 执行命令 {} 携带参数 {}",
@@ -74,7 +74,7 @@ async fn execute_code(
     );
 
     let output = Command::new(&cmd)
-        .args(&args)
+        .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output();
@@ -142,7 +142,9 @@ async fn execute_code(
             request.language,
             request.language,
             _last_error,
-            plugin.get_command().to_string()
+            plugin
+                .get_command(Some(file_path.to_str().unwrap()))
+                .to_string()
         ),
         execution_time,
         timestamp,
@@ -172,7 +174,7 @@ async fn get_info(
         format!("Pre-execution hook failed: {}", e)
     })?;
 
-    let cmd = plugin.get_command();
+    let cmd = plugin.get_command(None);
     debug!("获取环境 -> 插件 [ {} ] 命令 {}", language, cmd);
 
     let version_output = Command::new(&cmd).args(plugin.get_version_args()).output();
@@ -211,7 +213,7 @@ async fn get_info(
     Ok(LanguageInfo {
         installed: false,
         version: "Not found".to_string(),
-        path: format!("Not found - tried: {:?}", plugin.get_command()),
+        path: format!("Not found - tried: {:?}", plugin.get_command(None)),
         language: plugin.get_language_name().to_string(),
     })
 }

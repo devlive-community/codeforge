@@ -1,6 +1,6 @@
 <template>
   <div class="-mt-2">
-    <Tabs v-model="activeTab" type="card" size="md" position="left" :tabs="tabsData" @change="handleTabChange">
+    <Tabs v-model="activeTab" type="card" size="md" position="left" :tab-button-class="['w-36']" :tabs="tabsData" @change="handleTabChange">
       <template #[activeTab]="{ tab }">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
           <Settings2 class="w-5 h-5 mr-2"/>

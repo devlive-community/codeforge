@@ -1,4 +1,4 @@
-use super::{ExecutionResult, LanguagePlugin, PluginConfig};
+use super::{LanguagePlugin, PluginConfig};
 
 pub struct Python3Plugin;
 
@@ -17,10 +17,6 @@ impl LanguagePlugin for Python3Plugin {
 
     fn get_version_args(&self) -> Vec<&'static str> {
         vec!["--version"]
-    }
-
-    fn get_execute_args(&self, file_path: &str) -> Vec<String> {
-        vec![file_path.to_string()]
     }
 
     fn get_path_command(&self) -> String {
@@ -42,21 +38,5 @@ impl LanguagePlugin for Python3Plugin {
 
     fn get_default_command(&self) -> String {
         self.get_config().unwrap().run_command.unwrap()
-    }
-
-    fn post_execute_hook(&self, result: &mut ExecutionResult) -> Result<(), String> {
-        // Python 特定的后处理
-        if result.success && result.stdout.is_empty() && result.stderr.is_empty() {
-            result.stdout = "代码执行成功 (无输出)".to_string();
-        }
-
-        // 清理 Python 特定的错误信息
-        if !result.stderr.is_empty() {
-            result.stderr = result
-                .stderr
-                .replace("Traceback (most recent call last):", "Error:");
-        }
-
-        Ok(())
     }
 }

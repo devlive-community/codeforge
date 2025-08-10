@@ -8,33 +8,35 @@ use tauri::{AppHandle, Manager};
 static LOG_DIRECTORY: Mutex<Option<PathBuf>> = Mutex::new(None);
 
 pub fn setup_logger(app: &AppHandle) -> Result<(), fern::InitError> {
-    // 获取日志目录（可能是自定义的，也可能是默认的）
+    // 获取日志目录
     let log_dir = get_effective_log_directory(app);
 
     // 创建日志目录
     if let Err(e) = fs::create_dir_all(&log_dir) {
         eprintln!("Failed to create log directory: {}", e);
-        // 如果自定义目录创建失败，回退到默认目录
         let default_dir = get_default_log_directory(app);
         fs::create_dir_all(&default_dir).expect("Failed to create default log directory");
 
-        // 更新为默认目录
         {
             let mut guard = LOG_DIRECTORY.lock().unwrap();
-            *guard = None; // 清除自定义设置
+            *guard = None;
         }
 
         warn!("日志目录创建失败，使用默认目录: {:?}", default_dir);
-    } else {
-        info!("日志目录: {:?}", log_dir);
     }
 
     // 生成当天的日志文件名
     let today = Local::now().format("%Y-%m-%d").to_string();
-    let log_file = log_dir.join(format!("codeforge-{}.log", today));
 
-    // 配置日志
-    fern::Dispatch::new()
+    // 不同级别的日志文件
+    let all_log_file = log_dir.join(format!("codeforge-{}.log", today));
+    let error_log_file = log_dir.join(format!("codeforge-error-{}.log", today));
+    let warn_log_file = log_dir.join(format!("codeforge-warn-{}.log", today));
+    let info_log_file = log_dir.join(format!("codeforge-info-{}.log", today));
+    let debug_log_file = log_dir.join(format!("codeforge-debug-{}.log", today));
+
+    // 基础配置
+    let base_config = fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
                 "[{}] [{}] [{}:{}] {}",
@@ -45,17 +47,40 @@ pub fn setup_logger(app: &AppHandle) -> Result<(), fern::InitError> {
                 message
             ))
         })
-        .level(LevelFilter::Debug) // 设置日志级别
-        .level_for("hyper", LevelFilter::Warn) // 减少第三方库的日志
+        .level(LevelFilter::Debug)
+        .level_for("hyper", LevelFilter::Warn)
         .level_for("reqwest", LevelFilter::Warn)
-        .level_for("tauri", LevelFilter::Info) // Tauri 框架日志
-        .chain(std::io::stdout()) // 同时输出到控制台
-        .chain(fern::log_file(&log_file)?) // 输出到文件
+        .level_for("tauri", LevelFilter::Info);
+
+    // 配置不同级别的日志输出
+    base_config
+        .chain(std::io::stdout()) // 控制台输出
+        .chain(fern::log_file(&all_log_file)?) // 所有级别写入总文件
+        .chain(
+            fern::Dispatch::new()
+                .filter(|metadata| metadata.level() == log::Level::Error)
+                .chain(fern::log_file(&error_log_file)?),
+        )
+        .chain(
+            fern::Dispatch::new()
+                .filter(|metadata| metadata.level() == log::Level::Warn)
+                .chain(fern::log_file(&warn_log_file)?),
+        )
+        .chain(
+            fern::Dispatch::new()
+                .filter(|metadata| metadata.level() == log::Level::Info)
+                .chain(fern::log_file(&info_log_file)?),
+        )
+        .chain(
+            fern::Dispatch::new()
+                .filter(|metadata| metadata.level() == log::Level::Debug)
+                .chain(fern::log_file(&debug_log_file)?),
+        )
         .apply()?;
 
     info!("CodeForge 应用启动");
     info!("应用版本: {}", env!("CARGO_PKG_VERSION"));
-    info!("日志文件: {:?}", log_file);
+    info!("日志文件目录 {}", log_dir.display());
 
     Ok(())
 }

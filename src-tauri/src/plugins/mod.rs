@@ -63,18 +63,23 @@ pub trait LanguagePlugin: Send + Sync {
     fn get_execute_home(&self) -> Option<PathBuf> {
         self.get_config()
             .and_then(|config| config.execute_home.clone())
+            .filter(|path| !path.trim().is_empty()) // 过滤掉空字符串和只有空白字符的字符串
             .map(PathBuf::from)
     }
 
     // 获取插件支持的命令
-    fn get_command(&self) -> String {
+    fn get_command(&self, file_path: Option<&str>) -> String {
         if let Some(config) = self.get_config() {
             if let Some(run_cmd) = &config.run_command {
-                return run_cmd
-                    .split_whitespace()
-                    .next()
-                    .unwrap_or(&config.language)
-                    .to_string();
+                if let Some(path) = file_path {
+                    return run_cmd.replace("$filename", path);
+                } else {
+                    return run_cmd
+                        .split_whitespace()
+                        .next()
+                        .unwrap_or(&config.language)
+                        .to_string();
+                }
             }
         }
         self.get_default_command()
@@ -120,7 +125,23 @@ pub trait LanguagePlugin: Send + Sync {
     }
 
     fn get_version_args(&self) -> Vec<&'static str>;
-    fn get_execute_args(&self, file_path: &str) -> Vec<String>;
+
+    fn get_execute_args(&self, file_path: &str) -> Vec<String> {
+        if let Some(config) = self.get_config() {
+            if let Some(run_cmd) = &config.run_command {
+                // 替换 $filename 后分割，跳过第一个元素（命令本身）
+                let full_cmd = run_cmd.replace("$filename", file_path);
+                return full_cmd
+                    .split_whitespace()
+                    .skip(1) // 跳过命令部分，只返回参数
+                    .map(|s| s.to_string())
+                    .collect();
+            }
+        }
+        // 默认情况下，文件路径就是唯一的参数
+        vec![file_path.to_string()]
+    }
+
     fn get_path_command(&self) -> String;
 
     // 构建默认配置
@@ -193,7 +214,11 @@ pub trait LanguagePlugin: Send + Sync {
     }
 
     // 后执行钩子
-    fn post_execute_hook(&self, _result: &mut ExecutionResult) -> Result<(), String> {
+    fn post_execute_hook(&self, result: &mut ExecutionResult) -> Result<(), String> {
+        if result.success && result.stdout.is_empty() && result.stderr.is_empty() {
+            result.stdout = "代码执行成功 (无输出)".to_string();
+        }
+
         Ok(())
     }
 }

@@ -244,6 +244,14 @@ const getTabButtonClasses = (tab: Tab, _index: number) => {
     'transition-all', 'duration-200', 'cursor-pointer', 'whitespace-nowrap'
   ]
 
+  // 位置相关
+  if (props.position === 'left' || props.position === 'right') {
+    baseClasses.push('my-0.5')
+  }
+  else {
+    baseClasses.push('mx-0.5')
+  }
+
   // 尺寸
   if (props.size === 'sm') {
     baseClasses.push('px-3', 'py-1.5', 'text-xs')
@@ -270,7 +278,7 @@ const getTabButtonClasses = (tab: Tab, _index: number) => {
         baseClasses.push('text-blue-600', 'dark:text-blue-400', 'border-blue-600', 'dark:border-blue-400')
       }
       else {
-        baseClasses.push('text-gray-600', 'hover:text-gray-900', 'dark:text-gray-400', 'dark:hover:text-gray-100', 'hover:border-gray-300', 'dark:hover:border-gray-600')
+        baseClasses.push('text-gray-600', 'hover:text-blue-500', 'dark:text-gray-400', 'dark:hover:text-blue-300', 'hover:border-blue-300', 'dark:hover:border-blue-500')
       }
       break
 
@@ -281,7 +289,7 @@ const getTabButtonClasses = (tab: Tab, _index: number) => {
         baseClasses.push('bg-white', 'dark:bg-gray-700', 'shadow-sm', 'text-blue-600', 'dark:text-blue-400')
       }
       else {
-        baseClasses.push('text-gray-600', 'hover:text-gray-900', 'dark:text-gray-400', 'dark:hover:text-gray-100')
+        baseClasses.push('text-gray-600', 'hover:text-blue-500', 'dark:text-gray-400', 'dark:hover:text-blue-300', 'hover:bg-gray-100', 'dark:hover:bg-gray-600')
       }
       break
 
@@ -291,7 +299,14 @@ const getTabButtonClasses = (tab: Tab, _index: number) => {
         baseClasses.push('bg-blue-600', 'text-white', 'border-blue-600', 'z-10')
       }
       else {
-        baseClasses.push('bg-white', 'dark:bg-gray-800', 'text-gray-600', 'hover:text-gray-900', 'dark:text-gray-400', 'dark:hover:text-gray-100')
+        baseClasses.push('bg-white',
+            'dark:bg-gray-800',
+            'text-gray-600',
+            'hover:text-blue-500',
+            'dark:text-gray-400',
+            'dark:hover:text-blue-300',
+            'hover:bg-blue-50',
+            'dark:hover:bg-blue-900/20')
       }
       break
 
@@ -300,7 +315,7 @@ const getTabButtonClasses = (tab: Tab, _index: number) => {
         baseClasses.push('text-blue-600', 'dark:text-blue-400')
       }
       else {
-        baseClasses.push('text-gray-600', 'hover:text-gray-900', 'dark:text-gray-400', 'dark:hover:text-gray-100')
+        baseClasses.push('text-gray-600', 'hover:text-blue-500', 'dark:text-gray-400', 'dark:hover:text-blue-300')
       }
   }
 
