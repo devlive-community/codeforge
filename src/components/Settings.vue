@@ -1,121 +1,102 @@
 <template>
-  <div class="fixed inset-0 backdrop-blur-sm bg-white/20 dark:bg-gray-900/20 flex items-center justify-center z-50 transition-all duration-300 ease-out"
-       :class="{ 'opacity-0': !isVisible, 'opacity-100': isVisible }">
-    <div
-        class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-2xl w-6xl h-screen p-6 transform transition-all duration-300 ease-out border border-white/20 dark:border-gray-700/30 max-h-[80vh] overflow-y-auto"
-        :class="{
-          'scale-95 opacity-0 translate-y-4': !isVisible,
-          'scale-100 opacity-100 translate-y-0': isVisible
-        }">
+  <Modal v-model:show="isVisible" title="设置" size="4xl" :close-on-backdrop="false" :close-on-esc="false" @close="closeSettings">
+    <!-- 日志设置 -->
+    <div class="mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <FileText class="w-5 h-5 mr-2"/>
+        日志设置
+      </h3>
 
-      <!-- 头部 -->
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">设置</h2>
-        <button
-            @click="closeSettings"
-            class="text-gray-400 hover:cursor-pointer hover:text-gray-600 dark:hover:text-gray-200 transition-all duration-200 hover:scale-110 rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700">
-          <X class="w-5 h-5"/>
-        </button>
-      </div>
-
-      <!-- 日志设置 -->
-      <div class="mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-          <FileText class="w-5 h-5 mr-2"/>
-          日志设置
-        </h3>
-
-        <div class="space-y-4">
-          <!-- 当前日志目录 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              当前日志目录
-            </label>
-            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-              {{ currentLogDir || '加载中...' }}
-            </div>
-          </div>
-
-          <!-- 修改日志目录 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              选择新的日志目录
-            </label>
-            <div class="flex gap-2">
-              <input v-model="newLogDir"
-                     type="text"
-                     placeholder="选择或输入日志目录路径"
-                     class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                     readonly/>
-
-              <Button type="primary"
-                      :icon-only="true"
-                      :icon="Folder"
-                      @click="selectLogDirectory">
-              </Button>
-            </div>
-          </div>
-
-          <!-- 操作按钮 -->
-          <div class="flex gap-3 pt-0.5">
-            <Button @click="applyLogDirChange"
-                    :disabled="!newLogDir || newLogDir === currentLogDir"
-                    type="secondary">
-              应用更改
-            </Button>
-            <Button @click="openLogDirectory" type="secondary">
-              打开日志目录
-            </Button>
-            <Button @click="resetLogDirectory"
-                    class="cursor-pointer px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors">
-              重置为默认
-            </Button>
-          </div>
-
-          <!-- 日志文件列表 -->
-          <div v-if="logFiles.length > 0">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              最近的日志文件
-            </label>
-            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-32 overflow-y-auto">
-              <div v-for="file in logFiles.slice(0, 5)" :key="file"
-                   class="text-sm text-gray-600 dark:text-gray-400 font-mono py-1 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
-                   @click="openLogFile(file)">
-                {{ file }}
-              </div>
-            </div>
+      <div class="space-y-4">
+        <!-- 当前日志目录 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            当前日志目录
+          </label>
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+            {{ currentLogDir || '加载中...' }}
           </div>
         </div>
-      </div>
 
-      <!-- 日志管理 -->
-      <div class="mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-          <Settings2 class="w-5 h-5 mr-2"/>
-          日志管理
-        </h3>
+        <!-- 修改日志目录 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            选择新的日志目录
+          </label>
+          <div class="flex gap-2">
+            <input v-model="newLogDir"
+                   type="text"
+                   placeholder="选择或输入日志目录路径"
+                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                   readonly/>
 
-        <div class="space-y-4">
-          <!-- 清理旧日志 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              自动清理日志
-            </label>
-            <div class="flex items-center gap-3">
-              <Select v-model="keepDays"
-                      class="w-36"
-                      :options="keepDaysOptions"
-                      placeholder="选择保留天数">
-              </Select>
-              <Button type="danger" @click="clearLogs">
-                立即清理
-              </Button>
+            <Button type="primary"
+                    :icon-only="true"
+                    :icon="Folder"
+                    @click="selectLogDirectory">
+            </Button>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex gap-3 pt-0.5">
+          <Button @click="applyLogDirChange"
+                  :disabled="!newLogDir || newLogDir === currentLogDir"
+                  type="secondary">
+            应用更改
+          </Button>
+          <Button @click="openLogDirectory" type="secondary">
+            打开日志目录
+          </Button>
+          <Button @click="resetLogDirectory"
+                  class="cursor-pointer px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors">
+            重置为默认
+          </Button>
+        </div>
+
+        <!-- 日志文件列表 -->
+        <div v-if="logFiles.length > 0">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            最近的日志文件
+          </label>
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-32 overflow-y-auto">
+            <div v-for="file in logFiles.slice(0, 5)" :key="file"
+                 class="text-sm text-gray-600 dark:text-gray-400 font-mono py-1 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
+                 @click="openLogFile(file)">
+              {{ file }}
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- 日志管理 -->
+    <div class="mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <Settings2 class="w-5 h-5 mr-2"/>
+        日志管理
+      </h3>
+
+      <div class="space-y-4">
+        <!-- 清理旧日志 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            自动清理日志
+          </label>
+          <div class="flex items-center gap-3">
+            <Select v-model="keepDays"
+                    class="w-36"
+                    :options="keepDaysOptions"
+                    placeholder="选择保留天数">
+            </Select>
+            <Button type="danger" @click="clearLogs">
+              立即清理
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Modal>
 </template>
 
 <script setup lang="ts">
@@ -123,10 +104,11 @@ import { nextTick, onMounted, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
-import { FileText, Folder, Settings2, X } from 'lucide-vue-next'
+import { FileText, Folder, Settings2 } from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import { useToast } from '../plugins/toast'
 import Button from '../ui/Button.vue'
+import Modal from '../ui/Modal.vue'
 
 const toast = useToast()
 const isVisible = ref(false)

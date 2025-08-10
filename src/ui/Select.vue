@@ -2,6 +2,7 @@
   <div class="relative" ref="selectContainer">
     <!-- Select 按钮 -->
     <button type="button"
+            ref="selectButton"
             @click="toggleDropdown"
             @keydown.enter.prevent="toggleDropdown"
             @keydown.space.prevent="toggleDropdown"
@@ -33,67 +34,71 @@
       </span>
     </button>
 
-    <!-- Dropdown 列表 -->
-    <Transition enter-active-class="transition duration-200 ease-out"
-                enter-from-class="transform scale-95 opacity-0"
-                enter-to-class="transform scale-100 opacity-100"
-                leave-active-class="transition duration-150 ease-in"
-                leave-from-class="transform scale-100 opacity-100"
-                leave-to-class="transform scale-95 opacity-0"
-                @before-enter="$emit('before-open')"
-                @after-enter="$emit('after-open')"
-                @before-leave="$emit('before-close')"
-                @after-leave="$emit('after-close')">
-      <div v-show="isOpen"
-           class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white text-base shadow-lg ring-1 ring-blue-200 focus:outline-none"
-           :class="dropdownClasses"
-           role="listbox"
-           :aria-labelledby="buttonId">
-        <!-- 搜索框 (可选) -->
-        <div v-if="searchable" class="sticky top-0 bg-white p-2 border-b border-gray-100">
-          <input v-model="searchQuery"
-                 type="text"
-                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                 :placeholder="searchPlaceholder"
-                 @click.stop
-                 ref="searchInput"/>
-        </div>
-
-        <!-- 选项列表 -->
-        <template v-if="filteredOptions.length > 0">
-          <div v-for="(option, index) in filteredOptions"
-               :key="getOptionValue(option)"
-               @click="selectOption(option)"
-               @keydown.enter.prevent="selectOption(option)"
-               @keydown.space.prevent="selectOption(option)"
-               :class="[
-                  'relative cursor-pointer select-none py-1 my-1 pl-3 pr-9 transition-colors duration-150',
-                  isSelected(option)
-                    ? 'bg-blue-400 text-white'
-                    : 'text-gray-900 hover:bg-blue-50',
-                  highlightedIndex === index ? 'bg-blue-100' : ''
-                ]"
-               :aria-selected="isSelected(option)"
-               role="option"
-               tabindex="-1">
-            <span :class="['block truncate', isSelected(option) ? 'font-medium' : 'font-normal']">
-              {{ getOptionLabel(option) }}
-            </span>
-
-            <!-- 选中图标 -->
-            <span v-if="isSelected(option)"
-                  class="absolute inset-y-0 right-0 flex items-center pr-2">
-              <CheckIcon class="h-5 w-5" aria-hidden="true"/>
-            </span>
+    <!-- Dropdown 列表 - 使用 Teleport 渲染到 body -->
+    <Teleport to="body">
+      <Transition enter-active-class="transition duration-200 ease-out"
+                  enter-from-class="transform scale-95 opacity-0"
+                  enter-to-class="transform scale-100 opacity-100"
+                  leave-active-class="transition duration-150 ease-in"
+                  leave-from-class="transform scale-100 opacity-100"
+                  leave-to-class="transform scale-95 opacity-0"
+                  @before-enter="handleBeforeEnter"
+                  @after-enter="$emit('after-open')"
+                  @before-leave="$emit('before-close')"
+                  @after-leave="$emit('after-close')">
+        <div v-show="isOpen"
+             ref="dropdown"
+             class="fixed z-[99999] max-h-60 overflow-auto rounded-md bg-white text-base shadow-lg ring-1 ring-blue-200 focus:outline-none"
+             :class="dropdownClasses"
+             :style="dropdownStyle"
+             role="listbox"
+             :aria-labelledby="buttonId">
+          <!-- 搜索框 (可选) -->
+          <div v-if="searchable" class="sticky top-0 bg-white p-2 border-b border-gray-100">
+            <input v-model="searchQuery"
+                   type="text"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                   :placeholder="searchPlaceholder"
+                   @click.stop
+                   ref="searchInput"/>
           </div>
-        </template>
 
-        <!-- 无选项提示 -->
-        <div v-else class="px-3 py-2 text-gray-500 text-sm">
-          {{ noOptionsText }}
+          <!-- 选项列表 -->
+          <template v-if="filteredOptions.length > 0">
+            <div v-for="(option, index) in filteredOptions"
+                 :key="getOptionValue(option)"
+                 @click="selectOption(option)"
+                 @keydown.enter.prevent="selectOption(option)"
+                 @keydown.space.prevent="selectOption(option)"
+                 :class="[
+                    'relative cursor-pointer select-none py-1 my-1 pl-3 pr-9 transition-colors duration-150',
+                    isSelected(option)
+                      ? 'bg-blue-400 text-white'
+                      : 'text-gray-900 hover:bg-blue-50',
+                    highlightedIndex === index ? 'bg-blue-100' : ''
+                  ]"
+                 :aria-selected="isSelected(option)"
+                 role="option"
+                 tabindex="-1">
+              <span :class="['block truncate', isSelected(option) ? 'font-medium' : 'font-normal']">
+                {{ getOptionLabel(option) }}
+              </span>
+
+              <!-- 选中图标 -->
+              <span v-if="isSelected(option)"
+                    class="absolute inset-y-0 right-0 flex items-center pr-2">
+                <CheckIcon class="h-5 w-5" aria-hidden="true"/>
+              </span>
+            </div>
+          </template>
+
+          <!-- 无选项提示 -->
+          <div v-else class="px-3 py-2 text-gray-500 text-sm">
+            {{ noOptionsText }}
+          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -154,8 +159,13 @@ const isOpen = ref(false)
 const searchQuery = ref('')
 const highlightedIndex = ref(-1)
 const selectContainer = ref<HTMLElement>()
+const selectButton = ref<HTMLElement>()
+const dropdown = ref<HTMLElement>()
 const searchInput = ref<HTMLInputElement>()
 const buttonId = `select-button-${ Math.random().toString(36).substr(2, 9) }`
+
+// 下拉框位置样式
+const dropdownStyle = ref<Record<string, string>>({})
 
 // 计算属性
 const normalizedOptions = computed(() => {
@@ -193,6 +203,40 @@ const selectedLabel = computed(() => {
   return selectedOption.value?.label || ''
 })
 
+// 更新下拉框位置
+const updateDropdownPosition = async () => {
+  if (!selectButton.value || !isOpen.value) {
+    return
+  }
+
+  await nextTick()
+
+  const buttonRect = selectButton.value.getBoundingClientRect()
+  const viewportHeight = window.innerHeight
+
+  // 计算下方可用空间
+  const spaceBelow = viewportHeight - buttonRect.bottom
+  const dropdownHeight = 240 // max-h-60 对应约240px
+
+  let top = buttonRect.bottom + 2 // 默认显示在下方
+  let left = buttonRect.left
+  let width = buttonRect.width
+
+  // 如果下方空间不足，显示在上方
+  if (spaceBelow < dropdownHeight && buttonRect.top > dropdownHeight) {
+    // 显示在上方时，让下拉框紧贴按钮顶部
+    top = buttonRect.top - 2
+  }
+
+  dropdownStyle.value = {
+    top: `${ top }px`,
+    left: `${ left }px`,
+    width: `${ width }px`,
+    minWidth: `${ width }px`,
+    transform: spaceBelow < dropdownHeight && buttonRect.top > dropdownHeight ? 'translateY(-100%)' : 'none'
+  }
+}
+
 // 方法
 const getOptionValue = (option: Option) => option.value
 const getOptionLabel = (option: Option) => option.label
@@ -201,7 +245,7 @@ const isSelected = (option: Option) => {
   return option.value === props.modelValue
 }
 
-const toggleDropdown = () => {
+const toggleDropdown = async () => {
   if (props.disabled) {
     return
   }
@@ -214,7 +258,7 @@ const toggleDropdown = () => {
   }
 }
 
-const openDropdown = () => {
+const openDropdown = async () => {
   if (props.disabled) {
     return
   }
@@ -222,17 +266,30 @@ const openDropdown = () => {
   isOpen.value = true
   highlightedIndex.value = -1
 
+  // 更新位置
+  await updateDropdownPosition()
+
+  // 监听滚动和窗口大小变化
+  window.addEventListener('scroll', updateDropdownPosition, true)
+  window.addEventListener('resize', updateDropdownPosition)
+
   if (props.searchable) {
     nextTick(() => {
       searchInput.value?.focus()
     })
   }
+
+  emit('before-open')
 }
 
 const closeDropdown = () => {
   isOpen.value = false
   searchQuery.value = ''
   highlightedIndex.value = -1
+
+  // 移除监听器
+  window.removeEventListener('scroll', updateDropdownPosition, true)
+  window.removeEventListener('resize', updateDropdownPosition)
 }
 
 const selectOption = (option: Option) => {
@@ -243,6 +300,12 @@ const selectOption = (option: Option) => {
   emit('update:modelValue', option.value)
   emit('change', option.value, option)
   closeDropdown()
+}
+
+// 处理进入动画前的事件
+const handleBeforeEnter = () => {
+  updateDropdownPosition()
+  emit('before-open')
 }
 
 // 键盘导航
@@ -278,7 +341,12 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 // 点击外部关闭
 const handleClickOutside = (event: Event) => {
-  if (selectContainer.value && !selectContainer.value.contains(event.target as Node)) {
+  if (
+      selectContainer.value &&
+      !selectContainer.value.contains(event.target as Node) &&
+      dropdown.value &&
+      !dropdown.value.contains(event.target as Node)
+  ) {
     closeDropdown()
   }
 }
@@ -298,5 +366,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
   document.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('scroll', updateDropdownPosition, true)
+  window.removeEventListener('resize', updateDropdownPosition)
 })
 </script>

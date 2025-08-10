@@ -1,26 +1,6 @@
 <template>
-  <div class="fixed inset-0 backdrop-blur-sm bg-white/20 dark:bg-gray-900/20 flex items-center justify-center z-50 transition-all duration-300 ease-out"
-       :class="{ 'opacity-0': !isVisible, 'opacity-100': isVisible }"
-       @click.self="$event.preventDefault()">
-    <div
-        class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-2xl w-4xl p-6 transform transition-all duration-300 ease-out border border-white/20 dark:border-gray-700/30"
-        :class="{
-          'scale-95 opacity-0 translate-y-4': !isVisible,
-          'scale-100 opacity-100 translate-y-0': isVisible
-        }">
-
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">关于 CodeForge</h2>
-        <!-- 关闭按钮 -->
-        <div class="flex justify-end mb-4">
-          <button
-              class="text-gray-400 hover:cursor-pointer dark:hover:text-gray-200 transition-all duration-200 hover:scale-110 rounded-full p-1 hover:bg-gray-300 dark:hover:bg-gray-700"
-              @click="closeAbout">
-            <X class="w-5 h-5"></X>
-          </button>
-        </div>
-      </div>
-
+  <Modal v-model:show="isVisible" title="关于 CodeForge" size="3xl" :close-on-backdrop="false" :close-on-esc="false" @close="closeAbout">
+    <div class="space-y-6">
       <!-- 应用图标和标题 -->
       <div class="text-center mb-6">
         <div
@@ -76,22 +56,24 @@
           </span>
         </div>
       </div>
+    </div>
 
+    <template #footer>
       <!-- 底部信息 -->
-      <div class="border-t border-gray-200/50 dark:border-gray-600/50 pt-4 transition-all duration-600 delay-600">
+      <div class="border-gray-200/50 dark:border-gray-600/50 pt-4 transition-all duration-600 delay-600">
         <p class="text-xs text-center text-gray-500 dark:text-gray-400">
           © 2025 Devlive Community. 专为开发者打造的代码执行工具
         </p>
       </div>
-    </div>
-  </div>
+    </template>
+  </Modal>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-shell'
-import { X } from 'lucide-vue-next'
+import Modal from '../ui/Modal.vue'
 
 interface AppInfo
 {
