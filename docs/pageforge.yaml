@@ -1,0 +1,21 @@
+site:
+  title: CodeForge
+  description: CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发者、学生和编程爱好者设计。
+  hiddenTitle: true
+  keywords: CodeForge, Markdown, Python 2, Python 3, Rust
+  logo: /assets/logo.svg
+  favicon: assets/logo.svg
+  baseUrl: https://codeforge.devlive.org
+
+repo:
+  owner: devlive-community
+  name: codeforge
+  url: https://github.com/devlive-community/codeforge
+  branch: dev
+
+footer:
+  copyright: © 2025 CodeForge All Rights Reserved.
+  social:
+    github:
+      title: GitHub
+      href: https://github.com/devlive-community/codeforge

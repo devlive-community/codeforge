@@ -8,13 +8,17 @@
           'scale-95 opacity-0 translate-y-4': !isVisible,
           'scale-100 opacity-100 translate-y-0': isVisible
         }">
-      <!-- 关闭按钮 -->
-      <div class="flex justify-end mb-4">
-        <button
-            class="text-gray-400 hover:cursor-pointer dark:hover:text-gray-200 transition-all duration-200 hover:scale-110 rounded-full p-1 hover:bg-gray-300 dark:hover:bg-gray-700"
-            @click="closeAbout">
-          <X class="w-5 h-5"></X>
-        </button>
+
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">关于 CodeForge</h2>
+        <!-- 关闭按钮 -->
+        <div class="flex justify-end mb-4">
+          <button
+              class="text-gray-400 hover:cursor-pointer dark:hover:text-gray-200 transition-all duration-200 hover:scale-110 rounded-full p-1 hover:bg-gray-300 dark:hover:bg-gray-700"
+              @click="closeAbout">
+            <X class="w-5 h-5"></X>
+          </button>
+        </div>
       </div>
 
       <!-- 应用图标和标题 -->

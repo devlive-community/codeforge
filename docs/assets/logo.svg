@@ -1,0 +1,84 @@
+<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <defs>
+    <radialGradient id="bgGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </radialGradient>
+    
+    <linearGradient id="hammerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff6b35;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="codeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00d4aa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00a8ff;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Main background circle -->
+  <circle cx="150" cy="150" r="140" fill="url(#bgGradient)" stroke="#fff" stroke-width="3"/>
+  
+  <!-- Code brackets as anvil base -->
+  <text x="70" y="190" font-family="'Courier New', monospace" font-size="18" font-weight="bold" 
+        fill="url(#codeGradient)" filter="url(#glow)">&lt;</text>
+  <text x="220" y="190" font-family="'Courier New', monospace" font-size="18" font-weight="bold" 
+        fill="url(#codeGradient)" filter="url(#glow)">&gt;</text>
+  
+  <!-- Anvil/forge base -->
+  <rect x="90" y="175" width="120" height="20" rx="5" fill="#34495e" stroke="none"/>
+  
+  <!-- Hammer handle -->
+  <rect x="148" y="95" width="4" height="60" rx="2" fill="#8b4513"/>
+  
+  <!-- Hammer head - more realistic shape -->
+  <rect x="135" y="90" width="30" height="10" rx="1" fill="url(#hammerGradient)" filter="url(#glow)"/>
+  <rect x="140" y="87" width="20" height="4" rx="1" fill="url(#hammerGradient)"/>
+  
+  <!-- Sparks/code particles -->
+  <circle cx="170" cy="110" r="3" fill="#ffeb3b" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="185" cy="125" r="2" fill="#ff9800" opacity="0.6">
+    <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="160" cy="130" r="2" fill="#f44336" opacity="0.7">
+    <animate attributeName="opacity" values="0.7;0.3;0.7" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Code symbols being forged -->
+  <text x="150" y="170" font-family="'Courier New', monospace" font-size="24" font-weight="bold" 
+        text-anchor="middle" fill="url(#codeGradient)" filter="url(#glow)">
+    { }
+  </text>
+  
+  <!-- Binary code elements around the circle -->
+  <text x="150" y="40" font-family="monospace" font-size="12" text-anchor="middle" fill="#ffffff" opacity="0.7">
+    010110
+  </text>
+  <text x="50" y="150" font-family="monospace" font-size="12" text-anchor="middle" fill="#ffffff" opacity="0.7" transform="rotate(-90 50 150)">
+    110101
+  </text>
+  <text x="250" y="150" font-family="monospace" font-size="12" text-anchor="middle" fill="#ffffff" opacity="0.7" transform="rotate(90 250 150)">
+    101011
+  </text>
+  <text x="150" y="275" font-family="monospace" font-size="12" text-anchor="middle" fill="#ffffff" opacity="0.7">
+    011010
+  </text>
+  
+  <!-- Brand name -->
+  <text x="150" y="235" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" 
+        text-anchor="middle" fill="#ffffff" letter-spacing="1px">
+    CodeForge
+  </text>
+</svg>

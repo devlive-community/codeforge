@@ -4,11 +4,24 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PluginConfig {
+    pub enabled: bool,           // 插件是否启用
+    pub execute_home: String,    // 插件的执行路径
+    pub extensions: Vec<String>, // 插件支持的文件扩展名
+    pub language: String,        // 插件所属语言
+    pub before_compile: String,  // 插件在编译前执行的命令
+    pub after_compile: String,   // 插件在编译完成后执行的命令
+    pub run_command: String,     // 插件执行的命令
+    pub template: String,        // 插件的模板
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub log_directory: Option<String>,
     pub auto_clear_logs: Option<bool>,
     pub keep_log_days: Option<u32>,
     pub theme: Option<String>,
+    pub plugins: Option<Vec<PluginConfig>>,
 }
 
 impl Default for AppConfig {
@@ -18,6 +31,7 @@ impl Default for AppConfig {
             auto_clear_logs: Some(true),
             keep_log_days: Some(30),
             theme: Some("system".to_string()),
+            plugins: Some(vec![]),
         }
     }
 }
