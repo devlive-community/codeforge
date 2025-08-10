@@ -1,11 +1,13 @@
 use crate::plugins::PluginConfig;
+// 全局配置管理器
+use crate::PluginManagerState;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-// 全局配置管理器
 use std::sync::Mutex;
-use tauri::command;
+use tauri::{AppHandle, Manager, command};
+
 static CONFIG_MANAGER: Mutex<Option<ConfigManager>> = Mutex::new(None);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,9 +37,9 @@ pub struct ConfigManager {
 }
 
 impl ConfigManager {
-    pub fn new() -> Result<Self, String> {
+    pub fn new(app_handle: Option<&AppHandle>) -> Result<Self, String> {
         let config_path = Self::get_config_path()?;
-        let config = Self::load_config(&config_path)?;
+        let config = Self::load_config(&config_path, app_handle)?;
 
         Ok(Self {
             config_path,
@@ -59,27 +61,65 @@ impl ConfigManager {
         Ok(config_file)
     }
 
-    fn load_config(config_path: &PathBuf) -> Result<AppConfig, String> {
+    fn load_config(
+        config_path: &PathBuf,
+        app_handle: Option<&AppHandle>,
+    ) -> Result<AppConfig, String> {
+        println!("读取配置 -> 正在读取配置文件 {:?}", config_path);
         if config_path.exists() {
             match fs::read_to_string(config_path) {
                 Ok(content) => match serde_json::from_str::<AppConfig>(&content) {
-                    Ok(config) => {
-                        info!("读取配置 -> 成功加载配置文件: {:?}", config_path);
+                    Ok(mut config) => {
+                        println!("读取配置 -> 成功加载配置文件: {:?}", config_path);
+
+                        // 检查 plugins 是否为 null，如果是则加载默认配置
+                        if config.plugins.is_none() {
+                            println!("读取配置 -> plugins 为 null，加载默认插件配置");
+                            config.plugins = Self::get_default_plugins_config(app_handle);
+                        }
+
                         Ok(config)
                     }
                     Err(e) => {
                         warn!("读取配置 -> 配置文件格式错误，使用默认配置: {}", e);
-                        Ok(AppConfig::default())
+                        Ok(Self::create_default_config(app_handle))
                     }
                 },
                 Err(e) => {
                     warn!("读取配置 -> 读取配置文件失败，使用默认配置: {}", e);
-                    Ok(AppConfig::default())
+                    Ok(Self::create_default_config(app_handle))
                 }
             }
         } else {
-            info!("读取配置 -> 配置文件不存在，使用默认配置");
-            Ok(AppConfig::default())
+            println!("读取配置 -> 配置文件不存在，使用默认配置");
+            Ok(Self::create_default_config(app_handle))
+        }
+    }
+
+    fn get_default_plugins_config(app_handle: Option<&AppHandle>) -> Option<Vec<PluginConfig>> {
+        if let Some(handle) = app_handle {
+            // 从 Tauri 状态中获取 PluginManager
+            if let Some(plugin_manager_state) = handle.try_state::<PluginManagerState>() {
+                // 同步访问插件管理器
+                if let Ok(manager) = plugin_manager_state.try_lock() {
+                    return Some(manager.get_all_plugin_default_config());
+                } else {
+                    println!("读取配置 -> 无法获取插件管理器锁，使用空配置");
+                }
+            } else {
+                println!("读取配置 -> 无法获取插件管理器状态，使用空配置");
+            }
+        }
+        Some(vec![])
+    }
+
+    fn create_default_config(app_handle: Option<&AppHandle>) -> AppConfig {
+        AppConfig {
+            log_directory: None,
+            auto_clear_logs: Some(true),
+            keep_log_days: Some(30),
+            theme: Some("system".to_string()),
+            plugins: Self::get_default_plugins_config(app_handle),
         }
     }
 
@@ -89,7 +129,7 @@ impl ConfigManager {
 
         fs::write(&self.config_path, content).map_err(|e| format!("写入配置文件失败: {}", e))?;
 
-        info!("保存配置 -> 配置文件已保存: {:?}", self.config_path);
+        info!("保存配置 -> 配置文件已保存 {}", self.config_path.display());
         Ok(())
     }
 
@@ -108,15 +148,15 @@ impl ConfigManager {
 }
 
 // 初始化配置
-pub fn init_config() -> Result<(), String> {
-    let config_manager = ConfigManager::new()?;
+pub fn init_config(app_handle: Option<&AppHandle>) -> Result<(), String> {
+    let config_manager = ConfigManager::new(app_handle)?;
 
     // 如果配置中有自定义日志目录，设置到日志系统
     if let Some(log_dir) = config_manager.get_log_directory() {
-        info!("初始化 -> 从配置文件加载日志目录: {}", log_dir);
+        println!("读取配置 -> 从配置文件加载日志目录: {}", log_dir);
         // 使用内部函数设置，避免循环保存
         if let Err(e) = crate::logger::set_log_directory_internal(log_dir.to_string()) {
-            warn!("初始化 -> 应用配置中的日志目录失败: {}", e);
+            warn!("读取配置 -> 应用配置中的日志目录失败: {}", e);
         }
     }
 

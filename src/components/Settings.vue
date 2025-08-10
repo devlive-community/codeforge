@@ -1,8 +1,14 @@
 <template>
   <Modal v-model:show="isVisible" title="设置" size="4xl" :close-on-backdrop="false" :close-on-esc="false" @close="closeSettings">
     <Tabs v-model="activeTab" type="card" size="md" :tabs="tabsData">
+      <!-- 通用配置 -->
       <template #general>
         <General/>
+      </template>
+
+      <!-- 语言配置 -->
+      <template #language>
+        <Language/>
       </template>
     </Tabs>
   </Modal>
@@ -10,15 +16,18 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
-import { ShieldIcon } from 'lucide-vue-next'
+import { BracesIcon, ShieldIcon } from 'lucide-vue-next'
 import Modal from '../ui/Modal.vue'
 import Tabs from '../ui/Tabs.vue'
 import General from './setting/General.vue'
+import Language from './setting/Language.vue'
+import { useToast } from '../plugins/toast.ts'
 
 const isVisible = ref(false)
 const activeTab = ref('general')
 const tabsData = [
-  { key: 'general', label: '通用', icon: ShieldIcon }
+  { key: 'general', label: '通用', icon: ShieldIcon },
+  { key: 'language', label: '语言', icon: BracesIcon }
 ]
 
 const emit = defineEmits<{
@@ -31,6 +40,8 @@ const closeSettings = () => {
     emit('close')
   }, 300)
 }
+
+const toast = useToast()
 
 onMounted(async () => {
   // 延迟显示动画

@@ -33,7 +33,7 @@ impl LanguagePlugin for Python2Plugin {
             enabled: true,
             language: String::from("python2"),
             before_compile: None,
-            extensions: vec![String::from("py")],
+            extension: String::from("py"),
             execute_home: None,
             run_command: Option::from(String::from("python2 $filename")),
             after_compile: None,

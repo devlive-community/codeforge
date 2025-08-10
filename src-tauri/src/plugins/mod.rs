@@ -33,7 +33,7 @@ pub struct LanguageInfo {
 pub struct PluginConfig {
     pub enabled: bool,                  // 插件是否启用
     pub execute_home: Option<String>,   // 插件的执行路径
-    pub extensions: Vec<String>,        // 插件支持的文件扩展名
+    pub extension: String,              // 插件支持的文件扩展名
     pub language: String,               // 插件所属语言
     pub before_compile: Option<String>, // 插件在编译前执行的命令
     pub after_compile: Option<String>,  // 插件在编译完成后执行的命令
@@ -55,8 +55,8 @@ pub trait LanguagePlugin: Send + Sync {
     fn get_language_key(&self) -> &'static str;
 
     // 获取插件支持的文件扩展名
-    fn get_file_extension(&self) -> Vec<String> {
-        self.get_config().unwrap().extensions.clone()
+    fn get_file_extension(&self) -> String {
+        self.get_config().unwrap().extension.clone()
     }
 
     // 获取执行目录

@@ -46,7 +46,7 @@ async fn execute_code(
         "codeforge_{}_{}.{}",
         request.language,
         execution_id,
-        plugin.get_file_extension().first().unwrap().to_string()
+        plugin.get_file_extension()
     ));
 
     let processed_code = plugin.pre_execute_hook(&request.code).map_err(|e| {
@@ -62,7 +62,7 @@ async fn execute_code(
         .map_err(|e| format!("Failed to write temporary file: {}", e))?;
 
     let start_time = std::time::Instant::now();
-    let mut last_error = String::new();
+    let mut last_error: String = String::new();
 
     let cmd = plugin.get_command();
     let args = plugin.get_execute_args(file_path.to_str().unwrap());
@@ -162,6 +162,16 @@ async fn get_info(
         .get_plugin(&language)
         .ok_or_else(|| format!("Unsupported language: {}", language))?;
 
+    plugin.pre_execute_hook(&String::new()).map_err(|e| {
+        error!(
+            "获取环境 -> 调用插件 [ {} ] pre_execute_hook 出现错误 {:?}",
+            language, e
+        );
+
+        error!("获取环境 -> 调用插件 [ {} ] 失败", language);
+        format!("Pre-execution hook failed: {}", e)
+    })?;
+
     let cmd = plugin.get_command();
     debug!("获取环境 -> 插件 [ {} ] 命令 {}", language, cmd);
 
@@ -239,7 +249,7 @@ fn main() {
         .manage(PluginManagerState::new(PluginManager::new()))
         .setup(|app| {
             // 第一步：初始化配置系统
-            if let Err(e) = init_config() {
+            if let Err(e) = init_config(Some(app.handle())) {
                 eprintln!("Failed to initialize config: {}", e);
             }
 
