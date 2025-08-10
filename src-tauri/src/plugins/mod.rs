@@ -214,7 +214,11 @@ pub trait LanguagePlugin: Send + Sync {
     }
 
     // 后执行钩子
-    fn post_execute_hook(&self, _result: &mut ExecutionResult) -> Result<(), String> {
+    fn post_execute_hook(&self, result: &mut ExecutionResult) -> Result<(), String> {
+        if result.success && result.stdout.is_empty() && result.stderr.is_empty() {
+            result.stdout = "代码执行成功 (无输出)".to_string();
+        }
+
         Ok(())
     }
 }
