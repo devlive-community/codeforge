@@ -1,0 +1,18 @@
+{
+  "log_directory": null,
+  "auto_clear_logs": true,
+  "keep_log_days": 30,
+  "theme": "system",
+  "plugins": [
+    {
+      "enabled": true,
+      "execute_home": null,
+      "extensions": [],
+      "language": "python2",
+      "before_compile": null,
+      "after_compile": null,
+      "run_command": null,
+      "template": null
+    }
+  ]
+}
