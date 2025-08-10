@@ -1,4 +1,4 @@
-use super::{ExecutionResult, LanguagePlugin};
+use super::{ExecutionResult, LanguagePlugin, PluginConfig};
 
 pub struct Python3Plugin;
 
@@ -11,12 +11,8 @@ impl LanguagePlugin for Python3Plugin {
         "Python 3"
     }
 
-    fn get_file_extension(&self) -> &'static str {
-        "py"
-    }
-
-    fn get_commands(&self) -> Vec<&'static str> {
-        vec!["python", "python3"]
+    fn get_language_key(&self) -> &'static str {
+        "python3"
     }
 
     fn get_version_args(&self) -> Vec<&'static str> {
@@ -31,8 +27,21 @@ impl LanguagePlugin for Python3Plugin {
         "import sys; print(sys.executable)".to_string()
     }
 
-    fn pre_execute_hook(&self, code: &str) -> Result<String, String> {
-        Ok(code.to_string())
+    fn get_default_config(&self) -> PluginConfig {
+        PluginConfig {
+            enabled: true,
+            language: String::from("python3"),
+            before_compile: None,
+            extensions: vec![String::from("py")],
+            execute_home: None,
+            run_command: Option::from(String::from("python3 $filename")),
+            after_compile: None,
+            template: None,
+        }
+    }
+
+    fn get_default_command(&self) -> String {
+        self.get_config().unwrap().run_command.unwrap()
     }
 
     fn post_execute_hook(&self, result: &mut ExecutionResult) -> Result<(), String> {

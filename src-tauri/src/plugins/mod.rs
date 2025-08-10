@@ -1,4 +1,7 @@
+use crate::config::get_app_config_internal;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 // 通用结构定义
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -25,23 +28,171 @@ pub struct LanguageInfo {
     pub language: String,
 }
 
+// 插件配置结构
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PluginConfig {
+    pub enabled: bool,                  // 插件是否启用
+    pub execute_home: Option<String>,   // 插件的执行路径
+    pub extensions: Vec<String>,        // 插件支持的文件扩展名
+    pub language: String,               // 插件所属语言
+    pub before_compile: Option<String>, // 插件在编译前执行的命令
+    pub after_compile: Option<String>,  // 插件在编译完成后执行的命令
+    pub run_command: Option<String>,    // 插件执行的命令，例如 "python2 $filename"
+    pub template: Option<String>,       // 插件的模板
+}
+
 // 语言插件接口
 pub trait LanguagePlugin: Send + Sync {
+    // 获取插件优先级
     fn get_order(&self) -> i32 {
         0
     }
+
+    // 获取插件名称
     fn get_language_name(&self) -> &'static str;
-    fn get_file_extension(&self) -> &'static str;
-    fn get_commands(&self) -> Vec<&'static str>;
+
+    // 获取插件唯一标记
+    fn get_language_key(&self) -> &'static str;
+
+    // 获取插件支持的文件扩展名
+    fn get_file_extension(&self) -> Vec<String> {
+        self.get_config().unwrap().extensions.clone()
+    }
+
+    // 获取执行目录
+    fn get_execute_home(&self) -> Option<PathBuf> {
+        self.get_config()
+            .and_then(|config| config.execute_home.clone())
+            .map(|path| PathBuf::from(path))
+    }
+
+    // 获取插件支持的命令
+    fn get_command(&self) -> String {
+        if let Some(config) = self.get_config() {
+            if let Some(run_cmd) = &config.run_command {
+                return run_cmd
+                    .split_whitespace()
+                    .next()
+                    .unwrap_or(&config.language)
+                    .to_string();
+            }
+        }
+        self.get_default_command()
+    }
+
+    // 获取插件配置
+    fn get_config(&self) -> Option<PluginConfig> {
+        // 获取全局应用配置
+        if let Ok(app_config) = get_app_config_internal() {
+            // 检查是否有插件配置
+            if let Some(ref plugins) = app_config.plugins {
+                // 根据当前插件的语言名称过滤配置
+                let language_name = self.get_language_key();
+
+                // 查找匹配的插件配置
+                let found_config = plugins
+                    .iter()
+                    .find(|config| config.language == language_name)
+                    .cloned();
+
+                debug!(
+                    "执行代码 -> 获取插件 [ {} ] 配置 {:?}",
+                    language_name, found_config
+                );
+                return found_config;
+            }
+        }
+
+        // 如果没有找到配置，返回默认配置
+        debug!(
+            "执行代码 -> 插件 [ {} ] 未找到配置，使用默认配置",
+            self.get_language_key()
+        );
+        Some(self.get_default_config())
+    }
+
+    // 检查插件是否启用
+    #[allow(dead_code)]
+    fn is_enabled(&self) -> bool {
+        self.get_config()
+            .map(|config| config.enabled)
+            .unwrap_or(false)
+    }
+
     fn get_version_args(&self) -> Vec<&'static str>;
     fn get_execute_args(&self, file_path: &str) -> Vec<String>;
     fn get_path_command(&self) -> String;
 
-    // 可选的钩子函数
-    fn pre_execute_hook(&self, _code: &str) -> Result<String, String> {
-        Ok(_code.to_string())
+    // 构建默认配置
+    fn get_default_config(&self) -> PluginConfig;
+
+    // 获取默认命令
+    fn get_default_command(&self) -> String;
+
+    // 预执行钩子
+    fn pre_execute_hook(&self, code: &str) -> Result<String, String> {
+        info!(
+            "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 开始",
+            self.get_language_key()
+        );
+
+        if let Some(config) = self.get_config() {
+            // 1. 执行 before_compile 命令
+            if let Some(before_cmd) = &config.before_compile {
+                info!(
+                    "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 执行 before_compile 命令: {}",
+                    self.get_language_key(),
+                    before_cmd
+                );
+                let output = std::process::Command::new(before_cmd)
+                    .output()
+                    .map_err(|e| {
+                        info!(
+                            "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 执行 before_compile 命令 {} 失败 {:?}",
+                            self.get_language_key(),
+                            before_cmd,
+                            e
+                        );
+
+                        format!("执行 before_compile 失败: {}", e)
+                    })?;
+
+                if !output.status.success() {
+                    return Err(format!(
+                        "before_compile 命令执行失败: {}",
+                        String::from_utf8_lossy(&output.stderr)
+                    ));
+                }
+            }
+
+            // 2. 切换到 execute_home 目录
+            if let Some(execute_home) = self.get_execute_home() {
+                info!(
+                    "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 切换到执行目录 {}",
+                    self.get_language_key(),
+                    execute_home.display()
+                );
+                std::env::set_current_dir(&execute_home).map_err(|e| {
+                    info!(
+                        "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 切换到执行目录 {} 失败 {:?}",
+                        self.get_language_key(),
+                        execute_home.display(),
+                        e
+                    );
+                    format!("切换目录失败: {}", e)
+                })?;
+            }
+        }
+
+        info!(
+            "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 结束",
+            self.get_language_key()
+        );
+
+        Ok(code.to_string())
     }
 
+    // 后执行钩子
     fn post_execute_hook(&self, _result: &mut ExecutionResult) -> Result<(), String> {
         Ok(())
     }
@@ -51,5 +202,4 @@ pub trait LanguagePlugin: Send + Sync {
 pub mod manager;
 pub mod python2;
 pub mod python3;
-
 pub use manager::PluginManager;

@@ -53,12 +53,8 @@ impl PluginManager {
     pub fn get_plugin_info(&self, language: &str) -> Option<PluginInfo> {
         self.get_plugin(language).map(|plugin| PluginInfo {
             name: plugin.get_language_name().to_string(),
-            file_extension: plugin.get_file_extension().to_string(),
-            available_commands: plugin
-                .get_commands()
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
+            file_extension: plugin.get_file_extension().first().unwrap().to_string(),
+            available_commands: vec![plugin.get_command().to_string()],
         })
     }
 
@@ -68,12 +64,8 @@ impl PluginManager {
             .values()
             .map(|plugin| PluginInfo {
                 name: plugin.get_language_name().to_string(),
-                file_extension: plugin.get_file_extension().to_string(),
-                available_commands: plugin
-                    .get_commands()
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                file_extension: plugin.get_file_extension().first().unwrap().to_string(),
+                available_commands: vec![plugin.get_command().to_string()]
             })
             .collect()
     }

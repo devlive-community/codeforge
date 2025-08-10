@@ -1,19 +1,12 @@
+use crate::plugins::PluginConfig;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PluginConfig {
-    pub enabled: bool,           // 插件是否启用
-    pub execute_home: String,    // 插件的执行路径
-    pub extensions: Vec<String>, // 插件支持的文件扩展名
-    pub language: String,        // 插件所属语言
-    pub before_compile: String,  // 插件在编译前执行的命令
-    pub after_compile: String,   // 插件在编译完成后执行的命令
-    pub run_command: String,     // 插件执行的命令
-    pub template: String,        // 插件的模板
-}
+// 全局配置管理器
+use std::sync::Mutex;
+use tauri::command;
+static CONFIG_MANAGER: Mutex<Option<ConfigManager>> = Mutex::new(None);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -114,10 +107,6 @@ impl ConfigManager {
     }
 }
 
-// 全局配置管理器
-use std::sync::Mutex;
-static CONFIG_MANAGER: Mutex<Option<ConfigManager>> = Mutex::new(None);
-
 // 初始化配置
 pub fn init_config() -> Result<(), String> {
     let config_manager = ConfigManager::new()?;
@@ -144,11 +133,17 @@ pub fn get_config_manager() -> Result<std::sync::MutexGuard<'static, Option<Conf
         .map_err(|e| format!("获取配置管理器失败: {}", e))
 }
 
-// Tauri 命令
-use tauri::command;
-
 #[command]
 pub async fn get_app_config() -> Result<AppConfig, String> {
+    let guard = get_config_manager()?;
+    if let Some(config_manager) = guard.as_ref() {
+        Ok(config_manager.get_config().clone())
+    } else {
+        Err("配置管理器未初始化".to_string())
+    }
+}
+
+pub fn get_app_config_internal() -> Result<AppConfig, String> {
     let guard = get_config_manager()?;
     if let Some(config_manager) = guard.as_ref() {
         Ok(config_manager.get_config().clone())

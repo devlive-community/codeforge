@@ -15,7 +15,7 @@ use crate::utils::logger::{
 };
 use config::{get_app_config, get_config_path, init_config, update_app_config};
 
-use log::{debug, info};
+use log::{debug, error, info};
 use plugins::{CodeExecutionRequest, ExecutionResult, LanguageInfo, PluginManager};
 use std::fs;
 use std::process::{Command, Stdio};
@@ -34,6 +34,7 @@ async fn execute_code(
     history: State<'_, ExecutionHistory>,
     plugin_manager: State<'_, PluginManagerState>,
 ) -> Result<ExecutionResult, String> {
+    info!("执行代码 -> 调用插件 [ {} ] 开始", request.language);
     let manager = plugin_manager.lock().await;
     let plugin = manager
         .get_plugin(&request.language)
@@ -45,13 +46,16 @@ async fn execute_code(
         "codeforge_{}_{}.{}",
         request.language,
         execution_id,
-        plugin.get_file_extension()
+        plugin.get_file_extension().first().unwrap().to_string()
     ));
 
-    // 预处理代码
-    let processed_code = plugin
-        .pre_execute_hook(&request.code)
-        .map_err(|e| format!("Pre-execution hook failed: {}", e))?;
+    let processed_code = plugin.pre_execute_hook(&request.code).map_err(|e| {
+        error!(
+            "执行代码 -> 调用插件 [ {} ] pre_execute_hook 出现错误 {:?}",
+            request.language, e
+        );
+        format!("Pre-execution hook failed: {}", e)
+    })?;
 
     // 写入代码到临时文件
     fs::write(&file_path, &processed_code)
@@ -60,62 +64,62 @@ async fn execute_code(
     let start_time = std::time::Instant::now();
     let mut last_error = String::new();
 
-    // 尝试不同的命令
-    for cmd in plugin.get_commands() {
-        let args = plugin.get_execute_args(file_path.to_str().unwrap());
-        debug!(
-            "执行 {:?} 代码 -> 执行命令: {:?} 携带参数: {:?}",
-            request.language, cmd, args
-        );
+    let cmd = plugin.get_command();
+    let args = plugin.get_execute_args(file_path.to_str().unwrap());
+    info!(
+        "执行代码 -> 调用插件 [ {} ] 执行命令 {} 携带参数 {}",
+        request.language,
+        cmd,
+        args.join(" ")
+    );
 
-        let output = Command::new(cmd)
-            .args(&args)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output();
+    let output = Command::new(&cmd)
+        .args(&args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output();
 
-        match output {
-            Ok(output) => {
-                let execution_time = start_time.elapsed().as_millis();
-                let timestamp = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs();
+    match output {
+        Ok(output) => {
+            let execution_time = start_time.elapsed().as_millis();
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
 
-                // 清理临时文件
-                let _ = fs::remove_file(&file_path);
+            // 清理临时文件
+            let _ = fs::remove_file(&file_path);
 
-                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-                let mut result = ExecutionResult {
-                    success: output.status.success(),
-                    stdout,
-                    stderr,
-                    execution_time,
-                    timestamp,
-                    language: request.language.clone(),
-                };
+            let mut result = ExecutionResult {
+                success: output.status.success(),
+                stdout,
+                stderr,
+                execution_time,
+                timestamp,
+                language: request.language.clone(),
+            };
 
-                // 后处理
-                let _ = plugin.post_execute_hook(&mut result);
+            // 后处理
+            let _ = plugin.post_execute_hook(&mut result);
 
-                // 添加到执行历史
-                drop(manager); // 释放插件管理器锁
-                let mut history_guard = history.lock().await;
-                history_guard.push(result.clone());
+            // 添加到执行历史
+            drop(manager); // 释放插件管理器锁
+            let mut history_guard = history.lock().await;
+            history_guard.push(result.clone());
 
-                // 保持历史记录不超过100条
-                if history_guard.len() > 100 {
-                    history_guard.remove(0);
-                }
-
-                return Ok(result);
+            // 保持历史记录不超过100条
+            if history_guard.len() > 100 {
+                history_guard.remove(0);
             }
-            Err(e) => {
-                last_error = format!("Failed to execute {} - {}", cmd, e);
-                continue;
-            }
+
+            info!("执行代码 -> 调用插件 [ {} ] 完成", request.language);
+            return Ok(result);
+        }
+        Err(e) => {
+            last_error = format!("Failed to execute {} - {}", cmd, e);
         }
     }
 
@@ -129,6 +133,7 @@ async fn execute_code(
     // 清理临时文件
     let _ = fs::remove_file(&file_path);
 
+    error!("执行代码 -> 调用插件 [ {} ] 失败", request.language);
     Ok(ExecutionResult {
         success: false,
         stdout: String::new(),
@@ -137,7 +142,7 @@ async fn execute_code(
             request.language,
             request.language,
             last_error,
-            plugin.get_commands()
+            plugin.get_command().to_string()
         ),
         execution_time,
         timestamp,
@@ -151,51 +156,52 @@ async fn get_info(
     language: String,
     plugin_manager: State<'_, PluginManagerState>,
 ) -> Result<LanguageInfo, String> {
+    info!("获取环境 -> 调用插件 [ {} ] 开始", language);
     let manager = plugin_manager.lock().await;
     let plugin = manager
         .get_plugin(&language)
         .ok_or_else(|| format!("Unsupported language: {}", language))?;
 
-    // 尝试不同的命令
-    for cmd in plugin.get_commands() {
-        debug!("获取插件信息 -> 执行命令: {} 语言: {}", cmd, language);
-        let version_output = Command::new(cmd).args(plugin.get_version_args()).output();
+    let cmd = plugin.get_command();
+    debug!("获取环境 -> 插件 [ {} ] 命令 {}", language, cmd);
 
-        if let Ok(version_out) = version_output {
-            if version_out.status.success() {
-                let path_result = Command::new(cmd)
-                    .arg("-c")
-                    .arg(plugin.get_path_command())
-                    .output();
+    let version_output = Command::new(&cmd).args(plugin.get_version_args()).output();
+    if let Ok(version_out) = version_output {
+        if version_out.status.success() {
+            let path_result = Command::new(&cmd)
+                .arg("-c")
+                .arg(plugin.get_path_command())
+                .output();
 
-                let version = String::from_utf8_lossy(&version_out.stdout)
-                    .trim()
-                    .to_string();
+            let version = String::from_utf8_lossy(&version_out.stdout)
+                .trim()
+                .to_string();
 
-                let path = if let Ok(path_out) = path_result {
-                    if path_out.status.success() {
-                        String::from_utf8_lossy(&path_out.stdout).trim().to_string()
-                    } else {
-                        "Command found but path unavailable".to_string()
-                    }
+            let path = if let Ok(path_out) = path_result {
+                if path_out.status.success() {
+                    String::from_utf8_lossy(&path_out.stdout).trim().to_string()
                 } else {
-                    "Path detection failed".to_string()
-                };
+                    "Command found but path unavailable".to_string()
+                }
+            } else {
+                "Path detection failed".to_string()
+            };
 
-                return Ok(LanguageInfo {
-                    installed: true,
-                    version,
-                    path,
-                    language: plugin.get_language_name().to_string(),
-                });
-            }
+            info!("获取环境 -> 调用插件 [ {} ] 完成", language);
+            return Ok(LanguageInfo {
+                installed: true,
+                version,
+                path,
+                language: plugin.get_language_name().to_string(),
+            });
         }
     }
 
+    error!("获取环境 -> 调用插件 [ {} ] 失败", language);
     Ok(LanguageInfo {
         installed: false,
         version: "Not found".to_string(),
-        path: format!("Not found - tried: {:?}", plugin.get_commands()),
+        path: format!("Not found - tried: {:?}", plugin.get_command()),
         language: plugin.get_language_name().to_string(),
     })
 }
