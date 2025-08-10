@@ -1,0 +1,253 @@
+<template>
+  <div>
+    <!-- 日志设置 -->
+    <div class="mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <FileText class="w-5 h-5 mr-2"/>
+        日志设置
+      </h3>
+
+      <div class="space-y-4">
+        <!-- 当前日志目录 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            当前日志目录
+          </label>
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+            {{ currentLogDir || '加载中...' }}
+          </div>
+        </div>
+
+        <!-- 修改日志目录 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            选择新的日志目录
+          </label>
+          <div class="flex gap-2">
+            <input v-model="newLogDir"
+                   type="text"
+                   placeholder="选择或输入日志目录路径"
+                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                   readonly/>
+
+            <Button type="primary"
+                    :icon-only="true"
+                    :icon="Folder"
+                    @click="selectLogDirectory">
+            </Button>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex gap-3 pt-0.5">
+          <Button @click="applyLogDirChange"
+                  :disabled="!newLogDir || newLogDir === currentLogDir"
+                  type="secondary">
+            应用更改
+          </Button>
+          <Button @click="openLogDirectory" type="secondary">
+            打开日志目录
+          </Button>
+          <Button @click="resetLogDirectory"
+                  class="cursor-pointer px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors">
+            重置为默认
+          </Button>
+        </div>
+
+        <!-- 日志文件列表 -->
+        <div v-if="logFiles.length > 0">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            最近的日志文件
+          </label>
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-32 overflow-y-auto">
+            <div v-for="file in logFiles.slice(0, 5)" :key="file"
+                 class="text-sm text-gray-600 dark:text-gray-400 font-mono py-1 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
+                 @click="openLogFile(file)">
+              {{ file }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日志管理 -->
+    <div class="mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <Settings2 class="w-5 h-5 mr-2"/>
+        日志管理
+      </h3>
+
+      <div class="space-y-4">
+        <!-- 清理旧日志 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            自动清理日志
+          </label>
+          <div class="flex items-center gap-3">
+            <Select v-model="keepDays"
+                    class="w-36"
+                    :options="keepDaysOptions"
+                    placeholder="选择保留天数">
+            </Select>
+            <Button type="danger" @click="clearLogs">
+              立即清理
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { openPath } from '@tauri-apps/plugin-opener'
+import { FileText, Folder, Settings2 } from 'lucide-vue-next'
+import Select from '../../ui/Select.vue'
+import Button from '../../ui/Button.vue'
+import { useToast } from '../../plugins/toast'
+
+const emit = defineEmits<{
+  'settings-changed': [type: string, value: any]
+  'error': [message: string]
+}>()
+
+const toast = useToast()
+
+const currentLogDir = ref('')
+const newLogDir = ref('')
+const logFiles = ref<string[]>([])
+const keepDays = ref(30)
+
+const keepDaysOptions = [
+  { label: '保留 7 天', value: 7 },
+  { label: '保留 14 天', value: 14 },
+  { label: '保留 30 天', value: 30 },
+  { label: '保留 90 天', value: 90 }
+]
+
+const loadLogDirectory = async () => {
+  try {
+    const logDir = await invoke<string>('get_log_directory')
+    currentLogDir.value = logDir
+    newLogDir.value = logDir
+  }
+  catch (error) {
+    console.error('Failed to get current log directory:', error)
+    toast.error('获取日志目录失败 - 错误信息: ' + error)
+    emit('error', '获取日志目录失败')
+  }
+}
+
+const loadLogFiles = async () => {
+  try {
+    logFiles.value = await invoke<string[]>('get_log_files')
+  }
+  catch (error) {
+    console.error('Failed to get log files:', error)
+    emit('error', '获取日志文件列表失败')
+  }
+}
+
+const selectLogDirectory = async () => {
+  try {
+    const selected = await openDialog({
+      directory: true,
+      multiple: false,
+      title: '选择日志目录'
+    })
+
+    if (selected) {
+      newLogDir.value = selected as string
+    }
+  }
+  catch (error) {
+    console.error('Failed to select directory:', error)
+    emit('error', '选择目录失败')
+  }
+}
+
+const applyLogDirChange = async () => {
+  try {
+    await invoke('set_log_directory', { path: newLogDir.value })
+    currentLogDir.value = newLogDir.value
+    await loadLogFiles()
+    toast.success('日志目录已更新')
+    emit('settings-changed', 'logDirectory', newLogDir.value)
+  }
+  catch (error) {
+    console.error('Failed to set log directory:', error)
+    const errorMessage = '日志目录更新失败, 错误信息: ' + error
+    toast.error(errorMessage)
+    emit('error', errorMessage)
+  }
+}
+
+const openLogDirectory = async () => {
+  try {
+    await openPath(currentLogDir.value)
+  }
+  catch (error) {
+    console.error('Failed to open log directory:', error)
+    emit('error', '打开日志目录失败')
+  }
+}
+
+const resetLogDirectory = async () => {
+  try {
+    await invoke('reset_log_directory')
+    await loadLogDirectory()
+    await loadLogFiles()
+    toast.success('日志目录已重置为默认')
+    emit('settings-changed', 'logDirectory', 'reset')
+  }
+  catch (error) {
+    console.error('Failed to reset log directory:', error)
+    const errorMessage = '日志目录重置失败, 错误信息: ' + error
+    toast.error(errorMessage)
+    emit('error', errorMessage)
+  }
+}
+
+const openLogFile = async (filename: string) => {
+  try {
+    const logPath = `${ currentLogDir.value }/${ filename }`
+    await openPath(logPath)
+  }
+  catch (error) {
+    console.error('Failed to open log file:', error)
+    toast.error('打开日志文件失败 - 错误信息: ' + error)
+    emit('error', '打开日志文件失败')
+  }
+}
+
+const clearLogs = async () => {
+  try {
+    await invoke('clear_logs', { keepDays: parseInt(keepDays.value.toString()) })
+    await loadLogFiles()
+    toast.success(`已清理 ${ keepDays.value } 天前的日志`)
+    emit('settings-changed', 'logCleanup', keepDays.value)
+  }
+  catch (error) {
+    console.error('Failed to clear old logs:', error)
+    const errorMessage = '清理日志失败, 错误信息: ' + error
+    toast.error(errorMessage)
+    emit('error', errorMessage)
+  }
+}
+
+// 暴露方法给父组件
+defineExpose({
+  loadLogDirectory,
+  loadLogFiles,
+  clearLogs
+})
+
+// 生命周期
+onMounted(async () => {
+  await loadLogDirectory()
+  await loadLogFiles()
+})
+</script>
