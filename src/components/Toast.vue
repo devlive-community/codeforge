@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div class="fixed bottom-4 right-4 z-50 space-y-2 w-96">
+    <div class="fixed z-[99999] bottom-4 right-4 space-y-2 w-96">
       <TransitionGroup name="toast"
                        enter-active-class="transition-all duration-300 ease-out"
                        enter-from-class="transform translate-x-full opacity-0"
