@@ -8,7 +8,7 @@
 
       <!-- 语言配置 -->
       <template #language>
-        <Language/>
+        <Language v-if="activeTab === 'language'"/>
       </template>
     </Tabs>
   </Modal>
