@@ -4,6 +4,10 @@
       <div class="flex items-center space-x-2">
         <Terminal class="w-4 h-4"/>
         <span class="text-sm font-medium">控制台</span>
+        <div v-if="isRunning" class="flex items-center space-x-1 text-yellow-400">
+          <Loader class="w-3 h-3 animate-spin"/>
+          <span class="text-xs">执行中</span>
+        </div>
       </div>
       <div class="flex items-center space-x-3">
         <span v-if="isCopied" class="text-xs text-gray-400">{{ isCopied ? '已复制' : '复制失败' }}</span>
@@ -23,14 +27,20 @@
       </div>
     </div>
 
-    <div class="flex-1 overflow-auto">
-      <div v-if="isRunning" class="p-4 flex items-center space-x-2 text-yellow-400">
+    <div class="flex-1 overflow-auto" ref="outputContainer">
+      <div v-if="isRunning && !output" class="p-4 flex items-center space-x-2 text-yellow-400">
         <Loader class="w-4 h-4 animate-spin"/>
         <span>执行代码中...</span>
       </div>
 
       <div v-else-if="output" class="p-4">
-        <pre :class="['whitespace-pre-wrap text-sm leading-relaxed', isSuccess ? 'text-green-300' : 'text-red-300']">{{ output }}</pre>
+        <pre :class="['whitespace-pre-wrap text-sm leading-relaxed font-mono', getOutputClass()]">{{ output }}</pre>
+
+        <!-- 正在运行时显示光标 -->
+        <div v-if="isRunning" class="flex items-center mt-2 text-yellow-400">
+          <Loader class="w-4 h-4 animate-spin">█</Loader>
+          <span class="ml-2 text-xs">程序正在运行...</span>
+        </div>
       </div>
 
       <div v-else class="p-4 text-gray-500 flex flex-col items-center justify-center h-full space-y-2 select-none">
@@ -43,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { Check, Clock, Copy, Loader, Terminal } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -54,9 +64,23 @@ const props = defineProps<{
 }>()
 
 const isCopied = ref(false)
+const outputContainer = ref<HTMLElement>()
 
 // 动态切换图标
 const copyIcon = computed(() => isCopied.value ? Check : Copy)
+
+// 根据执行状态和成功状态确定输出样式
+const getOutputClass = () => {
+  if (props.isRunning) {
+    return 'text-yellow-300' // 运行中显示黄色
+  }
+  else if (props.isSuccess) {
+    return 'text-green-300'  // 成功显示绿色
+  }
+  else {
+    return 'text-red-300'    // 失败显示红色
+  }
+}
 
 const copyOutput = async () => {
   if (!props.output) {
@@ -94,4 +118,25 @@ const copyOutput = async () => {
     }
   }
 }
+
+// 自动滚动到底部（实时输出时）
+watch(() => props.output, async (newOutput, oldOutput) => {
+  // 只有在输出增加时才滚动（避免清空时滚动）
+  if (newOutput.length > (oldOutput?.length || 0)) {
+    await nextTick()
+    if (outputContainer.value) {
+      outputContainer.value.scrollTop = outputContainer.value.scrollHeight
+    }
+  }
+}, { flush: 'post' })
+
+// 监听运行状态变化，运行开始时也滚动到底部
+watch(() => props.isRunning, async (isRunning) => {
+  if (isRunning) {
+    await nextTick()
+    if (outputContainer.value) {
+      outputContainer.value.scrollTop = outputContainer.value.scrollHeight
+    }
+  }
+})
 </script>
