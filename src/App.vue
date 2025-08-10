@@ -5,6 +5,7 @@
                :supported-languages="supportedLanguages"
                :current-language="currentLanguage"
                @run-code="runCode"
+               @stop-code="stopCode"
                @clear-output="clearOutput"
                @language-change="handleLanguageChange"
                @show-settings="showSettings = true">
@@ -178,6 +179,7 @@ let unlistenSettingsFn: UnlistenFn | null = null
 let unlistenOutputFn: UnlistenFn | null = null
 let unlistenExecutionStartFn: UnlistenFn | null = null
 let unlistenExecutionCompleteFn: UnlistenFn | null = null
+let unlistenExecutionStoppedFn: UnlistenFn | null = null
 let unlistenExecutionTimeoutFn: UnlistenFn | null = null
 let unlistenExecutionErrorFn: UnlistenFn | null = null
 
@@ -303,6 +305,29 @@ const runCode = async () => {
   }
 }
 
+const stopCode = async () => {
+  if (!isRunning.value) {
+    return
+  }
+
+  try {
+    const result = await invoke<boolean>('stop_execution', {
+      language: currentLanguage.value
+    })
+
+    if (result) {
+      toast.info('正在停止代码执行...')
+    }
+    else {
+      toast.warning('没有找到正在运行的任务')
+    }
+  }
+  catch (error) {
+    console.error('Error stopping execution:', error)
+    toast.error('停止执行失败')
+  }
+}
+
 const clearOutput = () => {
   output.value = ''
   realTimeOutput.value = ''
@@ -361,6 +386,16 @@ const handleExecutionComplete = (event: any) => {
   }
 }
 
+const handleExecutionStopped = (event: any) => {
+  const data = event.payload
+  if (data.language === currentLanguage.value) {
+    isRunning.value = false
+    output.value += '\n\n🛑 代码执行已被用户停止'
+    toast.warning('代码执行已停止')
+    console.log('代码执行已停止')
+  }
+}
+
 const handleExecutionTimeout = (event: any) => {
   const data = event.payload
   if (data.language === currentLanguage.value) {
@@ -410,6 +445,7 @@ onMounted(async () => {
   // 监听执行状态事件
   unlistenExecutionStartFn = await listen('code-execution-start', handleExecutionStart)
   unlistenExecutionCompleteFn = await listen('code-execution-complete', handleExecutionComplete)
+  unlistenExecutionStoppedFn = await listen('code-execution-stopped', handleExecutionStopped)
   unlistenExecutionTimeoutFn = await listen('code-execution-timeout', handleExecutionTimeout)
   unlistenExecutionErrorFn = await listen('code-execution-error', handleExecutionError)
 })
@@ -422,6 +458,7 @@ onUnmounted(() => {
     unlistenOutputFn,
     unlistenExecutionStartFn,
     unlistenExecutionCompleteFn,
+    unlistenExecutionStoppedFn,
     unlistenExecutionTimeoutFn,
     unlistenExecutionErrorFn
   ]

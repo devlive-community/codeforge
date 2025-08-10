@@ -14,8 +14,9 @@ use crate::utils::logger::{
     clear_logs, get_log_directory, get_log_files, reset_log_directory, set_log_directory,
 };
 use config::{get_app_config, get_config_path, init_config, update_app_config};
+use std::collections::HashMap;
 
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use plugins::{CodeExecutionRequest, ExecutionResult, LanguageInfo, PluginManager};
 use std::fs;
 use std::process::{Command, Stdio};
@@ -25,11 +26,61 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use std::io::{BufRead, BufReader};
-use std::sync::mpsc;
+use std::sync::OnceLock;
+use std::sync::{Arc, mpsc};
 use std::thread;
+
+// 执行任务结构
+#[derive(Debug)]
+struct ExecutionTask {
+    #[allow(dead_code)]
+    pub language: String,
+    #[allow(dead_code)]
+    pub process_id: u32,
+    pub stop_flag: Arc<tokio::sync::Mutex<bool>>,
+}
 
 type ExecutionHistory = Mutex<Vec<ExecutionResult>>;
 type PluginManagerState = Mutex<PluginManager>;
+
+// 全局任务管理器
+type TaskManager = Arc<tokio::sync::Mutex<HashMap<String, ExecutionTask>>>;
+static TASK_MANAGER: OnceLock<TaskManager> = OnceLock::new();
+
+// 初始化任务管理器
+fn init_task_manager() -> TaskManager {
+    TASK_MANAGER
+        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(HashMap::new())))
+        .clone()
+}
+
+// 停止执行命令
+#[tauri::command]
+async fn stop_execution(language: String) -> Result<bool, String> {
+    let task_manager = init_task_manager();
+    let mut guard = task_manager.lock().await;
+
+    if let Some(task) = guard.remove(&language) {
+        // 设置停止标志
+        {
+            let mut stop_flag = task.stop_flag.lock().await;
+            *stop_flag = true;
+        }
+        info!("停止执行 -> 成功设置停止标志给语言 [ {} ]", language);
+        Ok(true)
+    } else {
+        warn!("停止执行 -> 语言 [ {} ] 没有正在运行的任务", language);
+        Ok(false)
+    }
+}
+
+// 检查是否有正在运行的任务
+#[tauri::command]
+async fn is_execution_running(language: String) -> Result<bool, String> {
+    let task_manager = init_task_manager();
+    let guard = task_manager.lock().await;
+    Ok(guard.contains_key(&language))
+}
 
 // 通用的代码执行函数
 #[tauri::command]
@@ -40,6 +91,10 @@ async fn execute_code(
     app: AppHandle,
 ) -> Result<ExecutionResult, String> {
     info!("执行代码 -> 调用插件 [ {} ] 开始", request.language);
+
+    // 先停止之前可能正在运行的任务
+    let _ = stop_execution(request.language.clone()).await;
+
     let manager = plugin_manager.lock().await;
     let plugin = manager
         .get_plugin(&request.language)
@@ -100,10 +155,7 @@ async fn execute_code(
                 .unwrap()
                 .as_secs();
 
-            // 清理临时文件
             let _ = fs::remove_file(&file_path);
-
-            // 发送执行完成事件
             let _ = app.emit(
                 "code-execution-complete",
                 serde_json::json!({
@@ -127,20 +179,35 @@ async fn execute_code(
         }
     };
 
+    // 创建停止标志
+    let stop_flag = Arc::new(tokio::sync::Mutex::new(false));
+
+    // 将任务添加到管理器
+    let task_manager = init_task_manager();
+    {
+        let mut guard = task_manager.lock().await;
+        guard.insert(
+            request.language.clone(),
+            ExecutionTask {
+                language: request.language.clone(),
+                process_id: child.id(),
+                stop_flag: stop_flag.clone(),
+            },
+        );
+    }
+
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
 
-    let (stdout_tx, stdout_rx) = mpsc::channel();
-    let (stderr_tx, stderr_rx) = mpsc::channel();
+    let (stdout_tx, stdout_rx) = mpsc::channel::<String>();
+    let (stderr_tx, stderr_rx) = mpsc::channel::<String>();
 
     // 读取 stdout
     thread::spawn(move || {
         let reader = BufReader::new(stdout);
-        for line in reader.lines() {
-            if let Ok(line) = line {
-                if stdout_tx.send(line).is_err() {
-                    break;
-                }
+        for line in reader.lines().map_while(Result::ok) {
+            if stdout_tx.send(line).is_err() {
+                break;
             }
         }
     });
@@ -148,31 +215,60 @@ async fn execute_code(
     // 读取 stderr
     thread::spawn(move || {
         let reader = BufReader::new(stderr);
-        for line in reader.lines() {
-            if let Ok(line) = line {
-                if stderr_tx.send(line).is_err() {
-                    break;
-                }
+        for line in reader.lines().map_while(Result::ok) {
+            if stderr_tx.send(line).is_err() {
+                break;
             }
         }
     });
 
     let mut stdout_lines = Vec::new();
     let mut stderr_lines = Vec::new();
+    let timeout = std::time::Duration::from_secs(30);
 
-    // 设置超时时间
-    let timeout = std::time::Duration::from_secs(3000);
-
+    // 主执行循环
     loop {
+        // 检查停止标志
+        {
+            let stop_guard = stop_flag.lock().await;
+            if *stop_guard {
+                info!(
+                    "执行代码 -> 收到停止信号，终止语言 [ {} ] 的执行",
+                    request.language
+                );
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = fs::remove_file(&file_path);
+
+                // 从任务管理器中移除
+                {
+                    let mut guard = task_manager.lock().await;
+                    guard.remove(&request.language);
+                }
+
+                let _ = app.emit(
+                    "code-execution-stopped",
+                    serde_json::json!({
+                        "language": request.language
+                    }),
+                );
+
+                return Err("代码执行被用户停止".to_string());
+            }
+        }
+
         // 检查超时
         if start_time.elapsed() > timeout {
             let _ = child.kill();
-            let _ = child.wait(); // 等待进程清理
-
-            // 清理临时文件
+            let _ = child.wait();
             let _ = fs::remove_file(&file_path);
 
-            // 发送超时事件
+            // 从任务管理器中移除
+            {
+                let mut guard = task_manager.lock().await;
+                guard.remove(&request.language);
+            }
+
             let _ = app.emit(
                 "code-execution-timeout",
                 serde_json::json!({
@@ -180,13 +276,13 @@ async fn execute_code(
                 }),
             );
 
+            error!("执行代码 -> 超时，终止语言 [ {} ] 的执行", request.language);
             return Err("代码执行超时（30秒）".to_string());
         }
 
         // 读取并发送 stdout
         while let Ok(line) = stdout_rx.try_recv() {
             stdout_lines.push(line.clone());
-            // 发送实时输出事件
             let _ = app.emit(
                 "code-output",
                 serde_json::json!({
@@ -200,7 +296,6 @@ async fn execute_code(
         // 读取并发送 stderr
         while let Ok(line) = stderr_rx.try_recv() {
             stderr_lines.push(line.clone());
-            // 发送实时错误事件
             let _ = app.emit(
                 "code-output",
                 serde_json::json!({
@@ -244,8 +339,13 @@ async fn execute_code(
                     .unwrap()
                     .as_secs();
 
-                // 清理临时文件
                 let _ = fs::remove_file(&file_path);
+
+                // 从任务管理器中移除
+                {
+                    let mut guard = task_manager.lock().await;
+                    guard.remove(&request.language);
+                }
 
                 let mut result = ExecutionResult {
                     success: status.success(),
@@ -256,10 +356,8 @@ async fn execute_code(
                     language: request.language.clone(),
                 };
 
-                // 后处理
                 let _ = plugin.post_execute_hook(&mut result);
 
-                // 发送执行完成事件
                 let _ = app.emit(
                     "code-execution-complete",
                     serde_json::json!({
@@ -269,12 +367,10 @@ async fn execute_code(
                     }),
                 );
 
-                // 添加到执行历史
-                drop(manager); // 释放插件管理器锁
+                drop(manager);
                 let mut history_guard = history.lock().await;
                 history_guard.push(result.clone());
 
-                // 保持历史记录不超过100条
                 if history_guard.len() > 100 {
                     history_guard.remove(0);
                 }
@@ -283,17 +379,19 @@ async fn execute_code(
                 return Ok(result);
             }
             Ok(None) => {
-                // 进程仍在运行，短暂休眠
                 tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             }
             Err(e) => {
                 let _ = child.kill();
                 let _ = child.wait();
-
-                // 清理临时文件
                 let _ = fs::remove_file(&file_path);
 
-                // 发送执行错误事件
+                // 从任务管理器中移除
+                {
+                    let mut guard = task_manager.lock().await;
+                    guard.remove(&request.language);
+                }
+
                 let _ = app.emit(
                     "code-execution-error",
                     serde_json::json!({
@@ -429,6 +527,8 @@ fn main() {
             get_supported_languages,
             get_execution_history,
             clear_execution_history,
+            stop_execution,
+            is_execution_running,
             get_app_info,
             // 日志相关命令
             get_log_directory,

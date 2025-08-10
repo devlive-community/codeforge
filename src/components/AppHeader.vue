@@ -18,15 +18,25 @@
     </div>
 
     <div class="flex items-center space-x-3">
-      <Button @click="$emit('run-code')"
-              :disabled="isRunning || !envInstalled"
-              :icon="isRunning ? Square : Play">
-        <span>{{ isRunning ? '运行中...' : '运行代码' }}</span>
+      <!-- 运行/停止按钮 -->
+      <Button v-if="!isRunning"
+              @click="$emit('run-code')"
+              :disabled="!envInstalled"
+              :icon="Play">
+        <span>运行代码</span>
       </Button>
 
-      <Button @click="$emit('clear-output')"
-              :disabled="isRunning || !envInstalled"
+      <Button v-else
+              @click="$emit('stop-code')"
               type="danger"
+              :icon="Square">
+        <span>停止执行</span>
+      </Button>
+
+      <!-- 清空输出按钮 -->
+      <Button @click="$emit('clear-output')"
+              :disabled="isRunning"
+              type="secondary"
               :icon-only="true"
               :icon="Trash2">
       </Button>
@@ -55,6 +65,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'run-code': []
+  'stop-code': []
   'clear-output': []
   'show-settings': []
   'language-change': [language: string]
