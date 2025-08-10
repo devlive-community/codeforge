@@ -20,9 +20,13 @@ use plugins::{CodeExecutionRequest, ExecutionResult, LanguageInfo, PluginManager
 use std::fs;
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 use uuid::Uuid;
+
+use std::io::{BufRead, BufReader};
+use std::sync::mpsc;
+use std::thread;
 
 type ExecutionHistory = Mutex<Vec<ExecutionResult>>;
 type PluginManagerState = Mutex<PluginManager>;
@@ -33,6 +37,7 @@ async fn execute_code(
     request: CodeExecutionRequest,
     history: State<'_, ExecutionHistory>,
     plugin_manager: State<'_, PluginManagerState>,
+    app: AppHandle,
 ) -> Result<ExecutionResult, String> {
     info!("执行代码 -> 调用插件 [ {} ] 开始", request.language);
     let manager = plugin_manager.lock().await;
@@ -62,7 +67,6 @@ async fn execute_code(
         .map_err(|e| format!("Failed to write temporary file: {}", e))?;
 
     let start_time = std::time::Instant::now();
-    let mut _last_error: String = String::new();
 
     let cmd = plugin.get_command(None);
     let args = plugin.get_execute_args(file_path.to_str().unwrap());
@@ -73,14 +77,23 @@ async fn execute_code(
         args.join(" ")
     );
 
-    let output = Command::new(&cmd)
-        .args(args)
+    // 发送执行开始事件
+    let _ = app.emit(
+        "code-execution-start",
+        serde_json::json!({
+            "language": request.language
+        }),
+    );
+
+    // 启动子进程
+    let mut child = match Command::new(&cmd)
+        .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .output();
-
-    match output {
-        Ok(output) => {
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(e) => {
             let execution_time = start_time.elapsed().as_millis();
             let timestamp = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -90,66 +103,209 @@ async fn execute_code(
             // 清理临时文件
             let _ = fs::remove_file(&file_path);
 
-            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            // 发送执行完成事件
+            let _ = app.emit(
+                "code-execution-complete",
+                serde_json::json!({
+                    "language": request.language,
+                    "success": false
+                }),
+            );
 
-            let mut result = ExecutionResult {
-                success: output.status.success(),
-                stdout,
-                stderr,
+            error!("执行代码 -> 调用插件 [ {} ] 失败: {}", request.language, e);
+            return Ok(ExecutionResult {
+                success: false,
+                stdout: String::new(),
+                stderr: format!(
+                    "{} interpreter not found. Please install {} and ensure it's in your PATH.\n\nError: {}",
+                    request.language, request.language, e
+                ),
                 execution_time,
                 timestamp,
-                language: request.language.clone(),
-            };
-
-            // 后处理
-            let _ = plugin.post_execute_hook(&mut result);
-
-            // 添加到执行历史
-            drop(manager); // 释放插件管理器锁
-            let mut history_guard = history.lock().await;
-            history_guard.push(result.clone());
-
-            // 保持历史记录不超过100条
-            if history_guard.len() > 100 {
-                history_guard.remove(0);
-            }
-
-            info!("执行代码 -> 调用插件 [ {} ] 完成", request.language);
-            return Ok(result);
+                language: request.language,
+            });
         }
-        Err(e) => {
-            _last_error = format!("Failed to execute {} - {}", cmd, e);
+    };
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    let (stdout_tx, stdout_rx) = mpsc::channel();
+    let (stderr_tx, stderr_rx) = mpsc::channel();
+
+    // 读取 stdout
+    thread::spawn(move || {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                if stdout_tx.send(line).is_err() {
+                    break;
+                }
+            }
+        }
+    });
+
+    // 读取 stderr
+    thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                if stderr_tx.send(line).is_err() {
+                    break;
+                }
+            }
+        }
+    });
+
+    let mut stdout_lines = Vec::new();
+    let mut stderr_lines = Vec::new();
+
+    // 设置超时时间
+    let timeout = std::time::Duration::from_secs(3000);
+
+    loop {
+        // 检查超时
+        if start_time.elapsed() > timeout {
+            let _ = child.kill();
+            let _ = child.wait(); // 等待进程清理
+
+            // 清理临时文件
+            let _ = fs::remove_file(&file_path);
+
+            // 发送超时事件
+            let _ = app.emit(
+                "code-execution-timeout",
+                serde_json::json!({
+                    "language": request.language
+                }),
+            );
+
+            return Err("代码执行超时（30秒）".to_string());
+        }
+
+        // 读取并发送 stdout
+        while let Ok(line) = stdout_rx.try_recv() {
+            stdout_lines.push(line.clone());
+            // 发送实时输出事件
+            let _ = app.emit(
+                "code-output",
+                serde_json::json!({
+                    "type": "stdout",
+                    "content": line,
+                    "language": request.language
+                }),
+            );
+        }
+
+        // 读取并发送 stderr
+        while let Ok(line) = stderr_rx.try_recv() {
+            stderr_lines.push(line.clone());
+            // 发送实时错误事件
+            let _ = app.emit(
+                "code-output",
+                serde_json::json!({
+                    "type": "stderr",
+                    "content": line,
+                    "language": request.language
+                }),
+            );
+        }
+
+        // 检查进程是否结束
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                // 进程已结束，读取剩余输出
+                while let Ok(line) = stdout_rx.try_recv() {
+                    stdout_lines.push(line.clone());
+                    let _ = app.emit(
+                        "code-output",
+                        serde_json::json!({
+                            "type": "stdout",
+                            "content": line,
+                            "language": request.language
+                        }),
+                    );
+                }
+                while let Ok(line) = stderr_rx.try_recv() {
+                    stderr_lines.push(line.clone());
+                    let _ = app.emit(
+                        "code-output",
+                        serde_json::json!({
+                            "type": "stderr",
+                            "content": line,
+                            "language": request.language
+                        }),
+                    );
+                }
+
+                let execution_time = start_time.elapsed().as_millis();
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+
+                // 清理临时文件
+                let _ = fs::remove_file(&file_path);
+
+                let mut result = ExecutionResult {
+                    success: status.success(),
+                    stdout: stdout_lines.join("\n"),
+                    stderr: stderr_lines.join("\n"),
+                    execution_time,
+                    timestamp,
+                    language: request.language.clone(),
+                };
+
+                // 后处理
+                let _ = plugin.post_execute_hook(&mut result);
+
+                // 发送执行完成事件
+                let _ = app.emit(
+                    "code-execution-complete",
+                    serde_json::json!({
+                        "language": request.language,
+                        "success": result.success,
+                        "execution_time": result.execution_time
+                    }),
+                );
+
+                // 添加到执行历史
+                drop(manager); // 释放插件管理器锁
+                let mut history_guard = history.lock().await;
+                history_guard.push(result.clone());
+
+                // 保持历史记录不超过100条
+                if history_guard.len() > 100 {
+                    history_guard.remove(0);
+                }
+
+                info!("执行代码 -> 调用插件 [ {} ] 完成", request.language);
+                return Ok(result);
+            }
+            Ok(None) => {
+                // 进程仍在运行，短暂休眠
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            }
+            Err(e) => {
+                let _ = child.kill();
+                let _ = child.wait();
+
+                // 清理临时文件
+                let _ = fs::remove_file(&file_path);
+
+                // 发送执行错误事件
+                let _ = app.emit(
+                    "code-execution-error",
+                    serde_json::json!({
+                        "language": request.language,
+                        "error": e.to_string()
+                    }),
+                );
+
+                return Err(format!("检查进程状态失败: {}", e));
+            }
         }
     }
-
-    // 如果所有命令都失败了
-    let execution_time = start_time.elapsed().as_millis();
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-
-    // 清理临时文件
-    let _ = fs::remove_file(&file_path);
-
-    error!("执行代码 -> 调用插件 [ {} ] 失败", request.language);
-    Ok(ExecutionResult {
-        success: false,
-        stdout: String::new(),
-        stderr: format!(
-            "{} interpreter not found. Please install {} and ensure it's in your PATH.\n\nLast error: {}\n\nTried commands: {:?}",
-            request.language,
-            request.language,
-            _last_error,
-            plugin
-                .get_command(Some(file_path.to_str().unwrap()))
-                .to_string()
-        ),
-        execution_time,
-        timestamp,
-        language: request.language,
-    })
 }
 
 // 通用的环境信息获取函数
