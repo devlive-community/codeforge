@@ -19,10 +19,6 @@ impl LanguagePlugin for Python3Plugin {
         vec!["--version"]
     }
 
-    fn get_execute_args(&self, file_path: &str) -> Vec<String> {
-        vec![file_path.to_string()]
-    }
-
     fn get_path_command(&self) -> String {
         "import sys; print(sys.executable)".to_string()
     }
