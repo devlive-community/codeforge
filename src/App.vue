@@ -416,7 +416,7 @@ const handleExecutionError = (event: any) => {
 }
 
 // 禁用右键菜单
-// window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
+window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 
 onMounted(async () => {
   await getSupportedLanguages()
