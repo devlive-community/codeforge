@@ -1,6 +1,6 @@
 use crate::plugins::PluginConfig;
 // 全局配置管理器
-use crate::PluginManagerState;
+use crate::plugin::PluginManagerState;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::fs;
