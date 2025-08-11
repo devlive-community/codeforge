@@ -273,11 +273,11 @@ pub trait LanguagePlugin: Send + Sync {
     fn execute_cross_platform_command(&self, command: &str) -> Result<(), String> {
         let output = if cfg!(target_os = "windows") {
             std::process::Command::new("cmd")
-                .args(&["/C", command])
+                .args(["/C", command])
                 .output()
         } else {
             std::process::Command::new("sh")
-                .args(&["-c", command])
+                .args(["-c", command])
                 .output()
         };
 
