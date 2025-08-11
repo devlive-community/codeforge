@@ -1,0 +1,1252 @@
+
+
+<!DOCTYPE html>
+<html lang="zh" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25.0.0 - CodeForge</title>
+    <!-- 基础 SEO meta 标签 -->
+<meta name="description" content="CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发者、学生和编程爱好者设计。">
+<meta name="keywords" content="CodeForge, Markdown, Python 2, Python 3, Rust">
+<meta name="author" content="PageForge">
+
+    <link rel="icon" href="/assets/logo.svg" type="image/x-icon">
+
+    <!-- 基础样式文件 -->
+    <link rel="stylesheet" href="/assets/pageforge.min.css">
+
+    <script>
+        (function () {
+            document.addEventListener('click', function (e) {
+                var link = e.target.closest('a');
+                if (!link) {
+                    return;
+                }
+
+                const href = link.getAttribute('href');
+                if (!href || href.startsWith('http') || href.startsWith('#')) {
+                    return;
+                }
+
+                e.preventDefault();
+
+                // 获取当前路径信息
+                const pathParts = window.location.pathname.split('/').filter(Boolean);
+                let version = null;
+                let lang = null;
+
+                // 解析当前 URL 中的版本和语言信息
+                if (pathParts.length > 0) {
+                    if (/^\d+\.\d+(\.\d+)?$/.test(pathParts[0]) || pathParts[0] === 'current') {
+                        version = pathParts[0];
+                        lang = pathParts[1];
+                    }
+                    else {
+                        lang = pathParts[0];
+                    }
+                }
+
+                // 构建 404 页面路径
+                let notFoundPath = '';
+                if (version) {
+                    notFoundPath += '/' + version;
+                }
+                if (lang) {
+                    notFoundPath += '/' + lang;
+                }
+                notFoundPath += '/404.html';
+
+                fetch(href)
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.href = href;
+                        }
+                        else {
+                            window.location.href = notFoundPath;
+                        }
+                    })
+                    .catch(() => {
+                        window.location.href = notFoundPath;
+                    });
+            });
+        })();
+    </script>
+
+    <!-- 加载主题配置中的额外 CSS 文件 -->
+    
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Prism.js 语法高亮样式 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/prism-ghcolors.css" rel="stylesheet"/>
+
+    <!-- 统计代码 -->
+    
+
+    <!-- Mermaid 图表 -->
+    
+
+    <!-- KaTeX 数学公式 -->
+    
+</head>
+
+<body class="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+<div class="flex flex-col min-h-screen">
+    
+        
+
+<header>
+    <nav class="fixed top-0 w-full bg-white  border-b z-40">
+        <!-- Banner -->
+        
+
+        <div class="max-w-screen-xl px-4 mx-auto 2xl:px-0">
+            <div class="flex items-center h-16">
+                <!-- 左侧Logo和导航 -->
+                <div class="flex items-center flex-1 min-w-0">
+                    <!-- Logo和标题 -->
+                    
+<div class="flex items-center space-x-4 shrink-0 lg:mr-8">
+    
+        <a href="/" class="flex items-center">
+            <img src="/assets/logo.svg"
+                 alt="CodeForge"
+                 class="h-10 w-auto object-contain transition-transform hover:scale-105">
+        </a>
+    
+    <a href="/"
+       class="text-xl font-bold text-gray-900  transition-colors">
+        
+    </a>
+</div>
+
+                    <!-- 桌面端导航 -->
+                    <div class="hidden lg:flex items-center gap-2 overflow-x-auto py-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    <ul class="flex items-center gap-2 shrink-0">
+        
+            <li class="shrink-0">
+                <a href="/release/25.0.0.html"
+                   class="inline-flex items-center rounded-lg justify-center px-3.5 py-3
+                          text-sm font-medium leading-none whitespace-nowrap
+                          
+                          text-blue-600  bg-blue-50/80  font-medium">
+                    发布日志
+                </a>
+            </li>
+        
+    </ul>
+</div>
+                </div>
+
+                <!-- 右侧工具栏 -->
+                <div class="flex items-center gap-2 lg:gap-4">
+                    <!-- 搜索框 -->
+                    
+
+                    <!-- 版本选择器 -->
+                    <!-- 版本切换器 -->
+
+
+                    <!-- 桌面端主题切换按钮 -->
+                    
+
+                    <!-- 语言切换器 -->
+                    
+
+                    <!-- 仓库链接 -->
+                    <div class="hidden lg:block">
+                        
+    <div class="hidden lg:flex items-center space-x-4 text-sm" id="github-stats-desktop">
+        <a href="https://github.com/devlive-community/codeforge"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="inline-flex items-center gap-3 text-gray-600 hover:text-gray-500 transition-colors">
+            <div class="inline-flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="w-6 h-6">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                </svg>
+            </div>
+            <div class="inline-flex flex-col items-center gap-0.5">
+                <div class="inline-flex items-center gap-1">
+                    devlive-community/codeforge
+                </div>
+                <div class="space-x-2" id="repo-stats">
+                    <!-- 初始显示配置的值 -->
+                    <div class="inline-flex items-center gap-1 tag-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.75 1.75 0 0 1 1 7.775Zm1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"></path>
+                        </svg>
+                        
+                    </div>
+                    <div class="inline-flex items-center gap-1 stars-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/>
+                        </svg>
+                        
+                    </div>
+                    <div class="inline-flex items-center gap-1 forks-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/>
+                        </svg>
+                        
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- 移动端仓库信息 -->
+    <div class="lg:hidden px-3 py-2" id="github-stats-mobile">
+        <a href="https://github.com/devlive-community/codeforge"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="flex items-center gap-3 text-gray-600 hover:text-gray-500 transition-colors">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="w-6 h-6">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                </svg>
+            </div>
+            <div class="flex flex-col gap-1">
+                <div class="flex items-center">
+                    devlive-community/codeforge
+                </div>
+                <div class="flex flex-wrap gap-3" id="repo-stats-mobile">
+                    <div class="flex items-center gap-1 tag-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.75 1.75 0 0 1 1 7.775Zm1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"></path>
+                        </svg>
+                        
+                    </div>
+                    <div class="flex items-center gap-1 stars-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/>
+                        </svg>
+                        
+                    </div>
+                    <div class="flex items-center gap-1 forks-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/>
+                        </svg>
+                        
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <script>
+        // 初始化 GitHub Stats
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.PageForge && window.PageForge.GitHubStats) {
+                // 同时初始化桌面端和移动端
+                window.PageForge.GitHubStats.init('devlive-community', 'codeforge', {
+                    desktopStatsId: 'repo-stats',
+                    mobileStatsId: 'repo-stats-mobile'  // 添加移动端容器ID
+                });
+            }
+        });
+    </script>
+
+                    </div>
+
+                    <!-- 移动端控制区 -->
+                    <div class="flex items-center gap-2 lg:hidden">
+                        <!-- 深色模式切换按钮 - 只在启用时显示 -->
+                        
+
+                        <!-- 移动端菜单切换 -->
+                        <button type="button"
+                                data-menu-toggle
+                                class="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 ">
+                            <svg class="h-6 w-6 menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                            </svg>
+                            <svg class="h-6 w-6 close-icon hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 移动端菜单 -->
+        <div class="hidden lg:hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-2 border-t ">
+                
+                    <a href="/release/25.0.0.html"
+                       class="block px-3 py-2 rounded-md text-base font-medium
+                      text-blue-600  bg-blue-50/80 ">
+                        发布日志
+                    </a>
+                
+
+                <!-- 移动端版本切换 -->
+                
+
+                <!-- 移动端语言切换 -->
+                
+
+                <!-- 移动端的仓库链接 -->
+                <div class="px-3 py-2 border-t ">
+                    
+    <div class="hidden lg:flex items-center space-x-4 text-sm" id="github-stats-desktop">
+        <a href="https://github.com/devlive-community/codeforge"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="inline-flex items-center gap-3 text-gray-600 hover:text-gray-500 transition-colors">
+            <div class="inline-flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="w-6 h-6">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                </svg>
+            </div>
+            <div class="inline-flex flex-col items-center gap-0.5">
+                <div class="inline-flex items-center gap-1">
+                    devlive-community/codeforge
+                </div>
+                <div class="space-x-2" id="repo-stats">
+                    <!-- 初始显示配置的值 -->
+                    <div class="inline-flex items-center gap-1 tag-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.75 1.75 0 0 1 1 7.775Zm1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"></path>
+                        </svg>
+                        
+                    </div>
+                    <div class="inline-flex items-center gap-1 stars-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/>
+                        </svg>
+                        
+                    </div>
+                    <div class="inline-flex items-center gap-1 forks-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/>
+                        </svg>
+                        
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- 移动端仓库信息 -->
+    <div class="lg:hidden px-3 py-2" id="github-stats-mobile">
+        <a href="https://github.com/devlive-community/codeforge"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="flex items-center gap-3 text-gray-600 hover:text-gray-500 transition-colors">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="w-6 h-6">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                </svg>
+            </div>
+            <div class="flex flex-col gap-1">
+                <div class="flex items-center">
+                    devlive-community/codeforge
+                </div>
+                <div class="flex flex-wrap gap-3" id="repo-stats-mobile">
+                    <div class="flex items-center gap-1 tag-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.75 1.75 0 0 1 1 7.775Zm1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"></path>
+                        </svg>
+                        
+                    </div>
+                    <div class="flex items-center gap-1 stars-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/>
+                        </svg>
+                        
+                    </div>
+                    <div class="flex items-center gap-1 forks-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/>
+                        </svg>
+                        
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <script>
+        // 初始化 GitHub Stats
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.PageForge && window.PageForge.GitHubStats) {
+                // 同时初始化桌面端和移动端
+                window.PageForge.GitHubStats.init('devlive-community', 'codeforge', {
+                    desktopStatsId: 'repo-stats',
+                    mobileStatsId: 'repo-stats-mobile'  // 添加移动端容器ID
+                });
+            }
+        });
+    </script>
+
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+    
+
+    <!-- 移动端菜单按钮 -->
+    
+        <button class="md:hidden fixed left-4 bottom-4 z-20 bg-white dark:bg-gray-800 p-2 rounded-full shadow-lg"
+                onclick="document.getElementById('sidebar-menu').classList.remove('-translate-x-full');
+                         document.getElementById('sidebar-overlay').classList.remove('hidden');">
+            <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    
+
+    <div class="pt-[--header-height] w-full">
+        <div class="container mx-auto px-4 py-4 md:py-8 flex-grow flex flex-col md:flex-row">
+            <!-- 左侧列表 -->
+            
+                <aside class="fixed md:relative md:w-56 lg:w-64 flex-shrink-0 md:pr-4 lg:pr-8
+                         inset-y-0 left-0 transform -translate-x-full md:translate-x-0
+                         transition duration-200 ease-in-out
+                         md:block z-30 bg-white dark:bg-gray-900 md:bg-transparent
+                         w-3/4 sm:w-64 top-[--header-height] md:top-auto"
+                       id="sidebar-menu">
+                    <div class="h-16 md:hidden flex items-center justify-end px-4 border-b dark:border-gray-800">
+                        <button class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                                onclick="document.getElementById('sidebar-menu').classList.add('-translate-x-full');
+                                     document.getElementById('sidebar-overlay').classList.add('hidden');">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <nav class="md:sticky p-4 md:p-0">
+                        <div class="space-y-4">
+                            
+
+
+
+
+
+
+    <div class="text-[0.9375rem] text-gray-600 dark:text-gray-300 overflow-y-auto max-h-[calc(100vh-4rem)] pageforge-scrollbar
+                sm:max-h-screen md:h-auto lg:max-h-[calc(100vh-2rem)]">
+        <div class="mb-6 overflow-x-auto min-w-0">
+            <div class="min-w-fit">
+                
+    <ul class="space-y-1.5">
+        
+            <li class="relative">
+                
+                    <a href="/release/25.0.0.html"
+                       class="group block">
+                        
+                        <div class="relative flex items-center px-2 sm:px-3 md:px-4 py-1.5 sm:py-2
+                                text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/20 font-medium
+                               rounded-md transition-all duration-200 ease-in-out">
+
+                            
+
+                            <span class="flex flex-grow items-center space-x-4 text-sm sm:text-base whitespace-nowrap">
+                                <span>25.0.0</span>
+                                
+
+
+                            </span>
+
+                            
+                        </div>
+                        
+                    </a>
+                
+            </li>
+        
+    </ul>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSubmenu(button) {
+            const submenu = button.nextElementSibling;
+            const arrow = button.querySelector('svg');
+
+            // 切换子菜单的类
+            if (submenu.classList.contains('max-h-0')) {
+                submenu.classList.remove('max-h-0', 'opacity-0');
+                submenu.classList.add('max-h-96', 'opacity-100');
+                arrow.classList.add('rotate-90');
+            } else {
+                submenu.classList.add('max-h-0', 'opacity-0');
+                submenu.classList.remove('max-h-96', 'opacity-100');
+                arrow.classList.remove('rotate-90');
+            }
+        }
+    </script>
+
+                        </div>
+                    </nav>
+                </aside>
+            
+
+            <!-- 中间内容 -->
+            <main class="flex-grow w-full md:w-2">
+                <article class="prose dark:prose-invert lg:prose-lg mx-auto
+                          max-w-none md:max-w-2xl lg:max-w-full">
+                    <!-- 页面容器 -->
+<div class="relative lg:flex lg:gap-8">
+    <!-- 主要内容区域 -->
+    <div class="min-w-0 flex-1">
+        <!-- 页面标题部分 -->
+        <div class="mb-8">
+            
+    <div class="flex items-center justify-between">
+        <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl lg:text-3xl">
+            25.0.0
+        </h1>
+
+        <div class="flex items-center gap-4">
+            <!-- 字体大小控制按钮 -->
+            
+
+            <!-- 分享按钮 -->
+            
+
+            <!-- 编辑源码 -->
+            
+
+            <!-- 查看源码 -->
+            
+        </div>
+    </div>
+
+    <!-- 阅读时间 -->
+    <div class="mt-2 flex flex-wrap items-center gap-4">
+        
+    <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span>10 分钟阅读</span>
+        
+            <span class="mx-1">•</span>
+            <span>
+                
+                    589 字
+                
+                
+                    +
+                
+                
+                    849 词
+                
+            </span>
+        
+    </div>
+
+    </div>
+
+    
+
+    <!-- 标签展示区域 -->
+    
+
+        </div>
+
+        <!-- 主要内容部分 -->
+        <div class="prose prose-gray dark:prose-invert max-w-none text-base">
+            
+        <div class="space-y-4"></div>
+    
+        <span class="text-base text-gray-700 leading-7 my-2">我们激动地宣布 </span>
+    <strong>
+        <span class="text-base text-gray-700 leading-7 my-2">CodeForge v25.0.0</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2"> 正式发布！这是 CodeForge 项目的首个正式版本，标志着这款轻量级、高性能桌面代码执行器正式与大家见面。</span>
+    
+        <div class="space-y-4"></div>
+    
+        <span class="text-base text-gray-700 leading-7 my-2">CodeForge 专为开发者、学生和编程爱好者设计，致力于提供简洁高效的代码执行体验。</span>
+    
+        <div class="space-y-4"></div>
+    
+        <hr class="my-4 h-0.5 border-0 bg-gray-200 dark:bg-gray-700"/>
+    
+        <div class="space-y-4"></div>
+    
+        <div class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-2xl [&_span]:sm:!text-3xl">
+            <div id="xiang-mu-xin-xi" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">📦 项目信息</span>
+    </div>
+        </div>
+    
+        <ul class="my-4 pl-8 list-disc">
+            <li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">项目地址</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：</span>
+    <a href="https://github.com/devlive-community/codeforge">
+        <span class="text-base text-gray-700 leading-7 my-2">https://github.com/devlive-community/codeforge</span>
+    </a></li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">官方网站</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：</span>
+    <a href="https://codeforge.devlive.org/">
+        <span class="text-base text-gray-700 leading-7 my-2">https://codeforge.devlive.org/</span>
+    </a></li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">版本号</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：v25.0.0</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">发布日期</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：2025年8月11日</span>
+    </li>
+        </ul>
+    
+        <div class="space-y-4"></div>
+    
+        <hr class="my-4 h-0.5 border-0 bg-gray-200 dark:bg-gray-700"/>
+    
+        <div class="space-y-4"></div>
+    
+        <div class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-2xl [&_span]:sm:!text-3xl">
+            <div id="he-xin-gong-neng-te-xing" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">✨ 核心功能特性</span>
+    </div>
+        </div>
+    
+        <div class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-xl [&_span]:sm:!text-2xl">
+            <div id="he-xin-zhi-xing-yin-qing" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">🔧 核心执行引擎</span>
+    </div>
+        </div>
+    
+        <ul class="my-4 pl-8 list-disc">
+            <li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">多语言支持</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：内置 Python2/Python3 支持，插件化架构可扩展更多语言</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">实时代码执行</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：支持代码实时运行和输出显示</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">执行控制</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：支持代码执行中断和超时控制</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">结果复制</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：一键复制执行结果到剪贴板</span>
+    </li>
+        </ul>
+    
+        <div class="space-y-4"></div>
+    
+        <div class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-xl [&_span]:sm:!text-2xl">
+            <div id="yong-hu-jie-mian" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">🎨 用户界面</span>
+    </div>
+        </div>
+    
+        <ul class="my-4 pl-8 list-disc">
+            <li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">现代化编辑器</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：集成代码高亮功能，提升编码体验</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">组件化设计</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：模块化的 UI 组件，包括 Tabs、Modal、Button、Toast、Select 等</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">语言切换</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：直观的语言选择界面，支持语言 Logo 显示</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">关于页面</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：完整的应用信息展示</span>
+    </li>
+        </ul>
+    
+        <div class="space-y-4"></div>
+    
+        <div class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-xl [&_span]:sm:!text-2xl">
+            <div id="xi-tong-pei-zhi" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">⚙️ 系统配置</span>
+    </div>
+        </div>
+    
+        <ul class="my-4 pl-8 list-disc">
+            <li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">插件系统</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：支持插件定制配置和排序</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">日志管理</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：分级日志记录，支持独立文件存储</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">配置更新</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：支持语言配置动态更新</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">执行环境</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：自定义执行目录和编译前命令</span>
+    </li>
+        </ul>
+    
+        <div class="space-y-4"></div>
+    
+        <div class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-xl [&_span]:sm:!text-2xl">
+            <div id="kai-fa-ti-yan" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">🛠️ 开发体验</span>
+    </div>
+        </div>
+    
+        <ul class="my-4 pl-8 list-disc">
+            <li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">快捷键支持</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：完整的编辑器快捷键支持</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">右键菜单</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：优化的上下文菜单体验</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">错误处理</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：完善的错误提示和异常处理机制</span>
+    </li>
+        </ul>
+    
+        <div class="space-y-4"></div>
+    
+        <hr class="my-4 h-0.5 border-0 bg-gray-200 dark:bg-gray-700"/>
+    
+        <div class="space-y-4"></div>
+    
+        <div class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-2xl [&_span]:sm:!text-3xl">
+            <div id="ji-shu-jia-gou" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">🔄 技术架构</span>
+    </div>
+        </div>
+    
+        <ul class="my-4 pl-8 list-disc">
+            <li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">跨平台支持</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：基于 Rust + Tauri 构建，支持 Windows、macOS</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">模块化设计</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：核心功能拆分为独立模块，便于维护和扩展</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">插件架构</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：支持第三方语言插件开发</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">现代化工具链</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：使用最新的 Rust 1.85.0 和现代前端技术栈</span>
+    </li>
+        </ul>
+    
+        <div class="space-y-4"></div>
+    
+        <hr class="my-4 h-0.5 border-0 bg-gray-200 dark:bg-gray-700"/>
+    
+        <div class="space-y-4"></div>
+    
+        <div class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-2xl [&_span]:sm:!text-3xl">
+            <div id="shi-yong-chang-jing" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">🎯 适用场景</span>
+    </div>
+        </div>
+    
+        <ul class="my-4 pl-8 list-disc">
+            <li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">学习编程</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：学生练习代码、验证算法逻辑</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">快速验证</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：开发者测试代码片段、调试问题</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">教学演示</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：教师课堂代码演示和讲解</span>
+    </li><li class="mb-2 text-gray-700"><strong>
+        <span class="text-base text-gray-700 leading-7 my-2">原型开发</span>
+    </strong>
+        <span class="text-base text-gray-700 leading-7 my-2">：快速构建和测试代码原型</span>
+    </li>
+        </ul>
+    
+        <div class="space-y-4"></div>
+    
+        <hr class="my-4 h-0.5 border-0 bg-gray-200 dark:bg-gray-700"/>
+    
+        <div class="space-y-4"></div>
+    
+        <div class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-2xl [&_span]:sm:!text-3xl">
+            <div id="li-ji-ti-yan" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">📥 立即体验</span>
+    </div>
+        </div>
+    
+        <span class="text-base text-gray-700 leading-7 my-2">访问我们的 </span>
+    
+        <a class="text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200 cursor-pointer"
+           href="https://github.com/devlive-community/codeforge"
+           target="_self"
+           title="">
+            GitHub 仓库
+        </a>
+    
+        <span class="text-base text-gray-700 leading-7 my-2"> 下载最新版本，或访问 </span>
+    
+        <a class="text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200 cursor-pointer"
+           href="https://codeforge.devlive.org/"
+           target="_self"
+           title="">
+            官方网站
+        </a>
+    
+        <span class="text-base text-gray-700 leading-7 my-2"> 了解更多信息。</span>
+    
+        <div class="space-y-4"></div>
+    
+        <hr class="my-4 h-0.5 border-0 bg-gray-200 dark:bg-gray-700"/>
+    
+        <div class="space-y-4"></div>
+    
+        <div class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white my-3 [&_span]:!font-inherit [&_span]:!text-inherit [&_code]:!text-inherit [&_span]:!text-2xl [&_span]:sm:!text-3xl">
+            <div id="can-yu-gong-xian" class="inline-flex items-center">
+        <span class="text-base text-gray-700 leading-7 my-2">🤝 参与贡献</span>
+    </div>
+        </div>
+    
+        <span class="text-base text-gray-700 leading-7 my-2">CodeForge 是一个开源项目，我们欢迎社区的贡献！无论是代码提交、Bug 反馈还是功能建议，都将帮助 CodeForge 变得更加完善。</span>
+    
+        </div>
+
+        <div class="clear-both"></div>
+
+        <!-- Git 信息部分 -->
+        
+
+        <!-- 贡献者信息 -->
+        
+
+        <!-- 评论部分 -->
+        
+    </div>
+</div>
+                </article>
+            </main>
+
+            <!-- 右侧目录 -->
+            
+                <!-- 桌面端目录 -->
+<div class="hidden lg:block flex-none md:w-56 lg:w-64 pl-8 mr-8">
+    <div class="sticky" style="top: calc(var(--header-height) + 1rem)">
+        <div class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">目录</div>
+        <div class="overflow-y-auto overflow-x-auto pr-4 pageforge-scrollbar"
+             style="max-height: calc(100vh - var(--header-height) - 8rem);">
+            <nav class="space-y-1 inline-block min-w-full"
+                 id="table-of-contents">
+                
+                
+                    
+                        <div class="pl-4 inline-block min-w-full">
+                            <a href="#xiang-mu-xin-xi"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="xiang-mu-xin-xi">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">📦 项目信息</span>
+    
+                            </a>
+                        </div>
+                        
+                    
+                        <div class="pl-4 inline-block min-w-full">
+                            <a href="#he-xin-gong-neng-te-xing"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="he-xin-gong-neng-te-xing">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">✨ 核心功能特性</span>
+    
+                            </a>
+                        </div>
+                        
+                            
+                    
+                        <div class="pl-8 inline-block min-w-full">
+                            <a href="#he-xin-zhi-xing-yin-qing"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="he-xin-zhi-xing-yin-qing">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">🔧 核心执行引擎</span>
+    
+                            </a>
+                        </div>
+                        
+                    
+                        <div class="pl-8 inline-block min-w-full">
+                            <a href="#yong-hu-jie-mian"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="yong-hu-jie-mian">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">🎨 用户界面</span>
+    
+                            </a>
+                        </div>
+                        
+                    
+                        <div class="pl-8 inline-block min-w-full">
+                            <a href="#xi-tong-pei-zhi"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="xi-tong-pei-zhi">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">⚙️ 系统配置</span>
+    
+                            </a>
+                        </div>
+                        
+                    
+                        <div class="pl-8 inline-block min-w-full">
+                            <a href="#kai-fa-ti-yan"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="kai-fa-ti-yan">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">🛠️ 开发体验</span>
+    
+                            </a>
+                        </div>
+                        
+                    
+                
+                        
+                    
+                        <div class="pl-4 inline-block min-w-full">
+                            <a href="#ji-shu-jia-gou"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="ji-shu-jia-gou">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">🔄 技术架构</span>
+    
+                            </a>
+                        </div>
+                        
+                    
+                        <div class="pl-4 inline-block min-w-full">
+                            <a href="#shi-yong-chang-jing"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="shi-yong-chang-jing">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">🎯 适用场景</span>
+    
+                            </a>
+                        </div>
+                        
+                    
+                        <div class="pl-4 inline-block min-w-full">
+                            <a href="#li-ji-ti-yan"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="li-ji-ti-yan">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">📥 立即体验</span>
+    
+                            </a>
+                        </div>
+                        
+                    
+                        <div class="pl-4 inline-block min-w-full">
+                            <a href="#can-yu-gong-xian"
+                               class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                               data-slug="can-yu-gong-xian">
+                                
+        <span class="text-base text-gray-700 leading-7 my-2">🤝 参与贡献</span>
+    
+                            </a>
+                        </div>
+                        
+                    
+                
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- 移动端目录按钮 -->
+<button id="toc-mobile-trigger"
+        class="lg:hidden fixed right-4 bottom-4 z-20 bg-white dark:bg-gray-800 p-2 rounded-full shadow-lg"
+        onclick="document.getElementById('toc-mobile').classList.toggle('translate-y-full')">
+    <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+    </svg>
+</button>
+
+<!-- 移动端目录 -->
+<div id="toc-mobile"
+     class="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white dark:bg-gray-800
+                transform translate-y-full transition duration-200 ease-in-out
+                p-4 rounded-t-2xl shadow-lg">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">目录</h3>
+        <button onclick="document.getElementById('toc-mobile').classList.add('translate-y-full')"
+                class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+    <div class="overflow-y-auto overflow-x-auto"
+         style="max-height: calc(60vh - var(--header-height));">
+        <nav class="space-y-1 inline-block min-w-full">
+            
+            
+                
+                    <div class="pl-4 inline-block min-w-full">
+                        <a href="#xiang-mu-xin-xi"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="xiang-mu-xin-xi">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">📦 项目信息</span>
+    
+                        </a>
+                    </div>
+                    
+                
+                    <div class="pl-4 inline-block min-w-full">
+                        <a href="#he-xin-gong-neng-te-xing"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="he-xin-gong-neng-te-xing">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">✨ 核心功能特性</span>
+    
+                        </a>
+                    </div>
+                    
+                        
+                
+                    <div class="pl-8 inline-block min-w-full">
+                        <a href="#he-xin-zhi-xing-yin-qing"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="he-xin-zhi-xing-yin-qing">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">🔧 核心执行引擎</span>
+    
+                        </a>
+                    </div>
+                    
+                
+                    <div class="pl-8 inline-block min-w-full">
+                        <a href="#yong-hu-jie-mian"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="yong-hu-jie-mian">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">🎨 用户界面</span>
+    
+                        </a>
+                    </div>
+                    
+                
+                    <div class="pl-8 inline-block min-w-full">
+                        <a href="#xi-tong-pei-zhi"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="xi-tong-pei-zhi">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">⚙️ 系统配置</span>
+    
+                        </a>
+                    </div>
+                    
+                
+                    <div class="pl-8 inline-block min-w-full">
+                        <a href="#kai-fa-ti-yan"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="kai-fa-ti-yan">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">🛠️ 开发体验</span>
+    
+                        </a>
+                    </div>
+                    
+                
+            
+                    
+                
+                    <div class="pl-4 inline-block min-w-full">
+                        <a href="#ji-shu-jia-gou"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="ji-shu-jia-gou">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">🔄 技术架构</span>
+    
+                        </a>
+                    </div>
+                    
+                
+                    <div class="pl-4 inline-block min-w-full">
+                        <a href="#shi-yong-chang-jing"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="shi-yong-chang-jing">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">🎯 适用场景</span>
+    
+                        </a>
+                    </div>
+                    
+                
+                    <div class="pl-4 inline-block min-w-full">
+                        <a href="#li-ji-ti-yan"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="li-ji-ti-yan">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">📥 立即体验</span>
+    
+                        </a>
+                    </div>
+                    
+                
+                    <div class="pl-4 inline-block min-w-full">
+                        <a href="#can-yu-gong-xian"
+                           class="block px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 toc-link whitespace-nowrap"
+                           data-slug="can-yu-gong-xian">
+                            
+        <span class="text-base text-gray-700 leading-7 my-2">🤝 参与贡献</span>
+    
+                        </a>
+                    </div>
+                    
+                
+            
+        </nav>
+    </div>
+</div>
+
+<!-- 控制脚本 -->
+<script>
+    const tocMobile = document.getElementById('toc-mobile');
+    const tocMobileTrigger = document.getElementById('toc-mobile-trigger');
+
+    tocMobileTrigger.addEventListener('click', () => {
+        tocMobile.classList.remove('translate-y-full');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!tocMobile.contains(e.target) &&
+            !tocMobileTrigger.contains(e.target) &&
+            !tocMobile.classList.contains('translate-y-full')) {
+            tocMobile.classList.add('translate-y-full');
+        }
+    });
+</script>
+            
+        </div>
+    </div>
+
+    
+        
+
+<footer class="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+    <div class="mx-auto w-full max-w-screen-xl p-4 py-6 lg:py-8">
+        <div class="flex flex-col md:flex-row md:justify-between gap-8">
+            <!-- Logo 和描述部分 -->
+            <div class="md:w-1/3">
+                
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <a href="/" class="flex items-center">
+                            <img src="/assets/logo.svg"
+                                 alt="CodeForge"
+                                 class="h-12">
+                        </a>
+                        <a href="/"
+                           class="text-xl font-bold text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                            
+                        </a>
+                    </div>
+                
+
+                <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                    CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发者、学生和编程爱好者设计。
+                </div>
+            </div>
+
+            <!-- 链接部分 -->
+            
+        </div>
+
+        <hr class="my-6 border-gray-200 sm:mx-auto dark:border-gray-700 lg:my-8"/>
+
+        <!-- 底部版权和社交链接 -->
+        <div class="flex flex-col items-center sm:flex-row sm:items-center justify-between gap-4">
+            <span class="text-sm text-gray-500 dark:text-gray-400">
+                © 2025 CodeForge All Rights Reserved. 使用 ❤️ <a href="https://pageforge.devlive.org" class="hover:text-blue-600" target="_blank">PageForge</a> 构建
+
+                
+            </span>
+
+            
+                <div class="flex items-center gap-4">
+                    
+
+                    
+
+                    
+
+                    
+                        <a href="https://github.com/devlive-community/codeforge"
+                           class="text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                           target="_blank">
+                            <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                      d="M10 .333A9.911 9.911 0 0 0 6.866 19.65c.5.092.678-.215.678-.477 0-.237-.01-1.017-.014-1.845-2.757.6-3.338-1.169-3.338-1.169a2.627 2.627 0 0 0-1.1-1.451c-.9-.615.07-.6.07-.6a2.084 2.084 0 0 1 1.518 1.021 2.11 2.11 0 0 0 2.884.823c.044-.503.268-.973.63-1.325-2.2-.25-4.516-1.1-4.516-4.9A3.832 3.832 0 0 1 4.7 7.068a3.56 3.56 0 0 1 .095-2.623s.832-.266 2.726 1.016a9.409 9.409 0 0 1 4.962 0c1.89-1.282 2.717-1.016 2.717-1.016.366.83.402 1.768.1 2.623a3.827 3.827 0 0 1 1.02 2.659c0 3.807-2.319 4.644-4.525 4.889a2.366 2.366 0 0 1 .673 1.834c0 1.326-.012 2.394-.012 2.72 0 .263.18.572.681.475A9.911 9.911 0 0 0 10 .333Z"
+                                      clip-rule="evenodd"/>
+                            </svg>
+                            <span class="sr-only">GitHub</span>
+                        </a>
+                    
+                </div>
+            
+        </div>
+    </div>
+</footer>
+    
+</div>
+
+<!-- 返回顶部按钮 -->
+
+
+<!-- 遮罩层 -->
+
+    <div class="md:hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-20 hidden"
+         id="sidebar-overlay"
+         onclick="document.getElementById('sidebar-menu').classList.add('-translate-x-full');
+                  this.classList.add('hidden');">
+    </div>
+
+</body>
+
+<!-- 基础脚本文件 -->
+<script src="/assets/pageforge.min.js"></script>
+
+<script>
+    // 移动端侧边栏打开时显示遮罩
+    document.querySelector('[onclick*="sidebar-menu"]').addEventListener('click', function () {
+        document.getElementById('sidebar-overlay').classList.remove('hidden');
+    });
+</script>
+
+<!-- 加载主题配置中的额外 JS 文件 -->
+
+
+<!-- 是否启用 Lucide 图标库 -->
+
+</html>
