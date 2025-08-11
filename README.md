@@ -6,6 +6,8 @@
 CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发者、学生和编程爱好者设计。
 </div>
 
+![CodeForge 演示](./resources/codeforge.gif)
+
 ## 特性
 
 - 🚀 **即时执行** - 一键运行代码
