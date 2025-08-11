@@ -7,7 +7,7 @@
           {{ `语言 [ ${ tab.label } ] 配置` }}
         </h3>
 
-        <Tabs v-model="activeTab" type="card" size="md" :tabs="tabsData">
+        <Tabs v-model="activeTab" type="card" size="md" :tabs="tabsData" :nav-class="['w-full', 'justify-center']">
           <template #general>
             <div class="space-y-4">
               <div>

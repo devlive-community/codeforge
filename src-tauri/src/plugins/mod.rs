@@ -315,6 +315,8 @@ pub trait LanguagePlugin: Send + Sync {
 
 // 重新导出子模块
 pub mod manager;
+pub mod nodejs;
 pub mod python2;
 pub mod python3;
+
 pub use manager::PluginManager;
