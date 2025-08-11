@@ -251,9 +251,7 @@ const handleLanguageChange = async (newLanguage: string) => {
 
   // 更新代码模板
   code.value = codeTemplates[newLanguage] || `# ${ getLanguageDisplayName(newLanguage) } Code
-# Write your code here...
-
-print("Hello from ${ getLanguageDisplayName(newLanguage) }!")`
+# Write your code here...`
 
   // 清空输出
   clearOutput()
