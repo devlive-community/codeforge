@@ -8,7 +8,7 @@ impl LanguagePlugin for NodeJSPlugin {
     }
 
     fn get_language_name(&self) -> &'static str {
-        "NodeJS"
+        "Node.js"
     }
 
     fn get_language_key(&self) -> &'static str {
