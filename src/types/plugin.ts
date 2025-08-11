@@ -8,4 +8,5 @@ export default interface PluginConfig
     after_compile?: string  // 插件在编译完成后执行的命令
     run_command?: string    // 插件执行的命令，例如 "python2 $filename"
     template?: string       // 插件的模板
+    timeout?: number       // 插件的超时时间
 }

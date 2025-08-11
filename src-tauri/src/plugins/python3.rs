@@ -33,6 +33,7 @@ impl LanguagePlugin for Python3Plugin {
             run_command: Option::from(String::from("python3 $filename")),
             after_compile: None,
             template: None,
+            timeout: Some(30),
         }
     }
 
