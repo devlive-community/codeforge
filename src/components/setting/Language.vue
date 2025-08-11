@@ -81,6 +81,18 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              超时时间(秒)
+            </label>
+            <div class="flex gap-2">
+              <input v-model="pluginConfig.timeout"
+                     type="number"
+                     placeholder="超时时间(秒)，默认 30 秒"
+                     class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               文件模板
             </label>
             <div class="flex">
@@ -125,7 +137,8 @@ const pluginConfig = ref<PluginConfig>({
   before_compile: '',
   after_compile: '',
   run_command: '',
-  template: ''
+  template: '',
+  timeout: 30
 })
 
 const getSupportedLanguages = async () => {

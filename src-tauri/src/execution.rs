@@ -205,7 +205,7 @@ pub async fn execute_code(
 
     let mut stdout_lines = Vec::new();
     let mut stderr_lines = Vec::new();
-    let timeout = std::time::Duration::from_secs(30);
+    let timeout = std::time::Duration::from_secs(plugin.get_timeout());
 
     // 主执行循环
     loop {
@@ -257,8 +257,12 @@ pub async fn execute_code(
                 }),
             );
 
-            error!("执行代码 -> 超时，终止语言 [ {} ] 的执行", request.language);
-            return Err("代码执行超时（30秒）".to_string());
+            error!(
+                "执行代码 -> 超时 ({} 秒)，终止语言 [ {} ] 的执行",
+                plugin.get_timeout(),
+                request.language
+            );
+            return Err(format!("代码执行超时（{} 秒）", plugin.get_timeout()));
         }
 
         // 读取并发送 stdout

@@ -39,6 +39,7 @@ pub struct PluginConfig {
     pub after_compile: Option<String>,  // 插件在编译完成后执行的命令
     pub run_command: Option<String>,    // 插件执行的命令，例如 "python2 $filename"
     pub template: Option<String>,       // 插件的模板
+    pub timeout: Option<u64>,           // 插件的超时时间
 }
 
 // 语言插件接口
@@ -65,6 +66,13 @@ pub trait LanguagePlugin: Send + Sync {
             .and_then(|config| config.execute_home.clone())
             .filter(|path| !path.trim().is_empty()) // 过滤掉空字符串和只有空白字符的字符串
             .map(PathBuf::from)
+    }
+
+    // 获取超时时间
+    fn get_timeout(&self) -> u64 {
+        self.get_config()
+            .map(|config| config.timeout.unwrap_or(30))
+            .unwrap_or(30)
     }
 
     // 获取插件支持的命令

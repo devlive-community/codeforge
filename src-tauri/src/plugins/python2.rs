@@ -34,6 +34,7 @@ impl LanguagePlugin for Python2Plugin {
             run_command: Option::from(String::from("python2 $filename")),
             after_compile: None,
             template: None,
+            timeout: Some(30),
         }
     }
 
