@@ -7,7 +7,7 @@ use tauri::{
 pub fn create_developer_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>> {
     let reload_item = MenuItemBuilder::new("重新加载")
         .id("reload-window")
-        .accelerator("CmdOrCtrl+R")
+        .accelerator("CmdOrCtrl+Shift+R")
         .build(app)?;
 
     let devtools_item = MenuItemBuilder::new("打开调试器")
