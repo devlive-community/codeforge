@@ -166,32 +166,15 @@ pub trait LanguagePlugin: Send + Sync {
         );
 
         if let Some(config) = self.get_config() {
-            // 1. 执行 before_compile 命令
+            // 1. 处理 before_compile 命令（直接在 Rust 中处理）
             if let Some(before_cmd) = &config.before_compile {
                 info!(
-                    "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 执行 before_compile 命令: {}",
+                    "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 处理环境变量: {}",
                     self.get_language_key(),
                     before_cmd
                 );
-                let output = std::process::Command::new(before_cmd)
-                    .output()
-                    .map_err(|e| {
-                        info!(
-                            "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 执行 before_compile 命令 {} 失败 {:?}",
-                            self.get_language_key(),
-                            before_cmd,
-                            e
-                        );
 
-                        format!("执行 before_compile 失败: {}", e)
-                    })?;
-
-                if !output.status.success() {
-                    return Err(format!(
-                        "before_compile 命令执行失败: {}",
-                        String::from_utf8_lossy(&output.stderr)
-                    ));
-                }
+                self.handle_environment_setup(before_cmd)?;
             }
 
             // 2. 切换到 execute_home 目录
@@ -201,15 +184,8 @@ pub trait LanguagePlugin: Send + Sync {
                     self.get_language_key(),
                     execute_home.display()
                 );
-                std::env::set_current_dir(&execute_home).map_err(|e| {
-                    info!(
-                        "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 切换到执行目录 {} 失败 {:?}",
-                        self.get_language_key(),
-                        execute_home.display(),
-                        e
-                    );
-                    format!("切换目录失败: {}", e)
-                })?;
+                std::env::set_current_dir(&execute_home)
+                    .map_err(|e| format!("切换目录失败: {}", e))?;
             }
         }
 
@@ -219,6 +195,102 @@ pub trait LanguagePlugin: Send + Sync {
         );
 
         Ok(code.to_string())
+    }
+
+    fn handle_environment_setup(&self, command: &str) -> Result<(), String> {
+        // 处理 export 命令（Unix/Linux/macOS）
+        if command.starts_with("export ") {
+            return self.handle_export_command(command);
+        }
+
+        // 处理 set 命令（Windows）
+        if command.starts_with("set ") {
+            return self.handle_set_command(command);
+        }
+
+        // 处理其他通用环境设置
+        self.execute_cross_platform_command(command)
+    }
+
+    fn handle_export_command(&self, command: &str) -> Result<(), String> {
+        if let Some(env_part) = command.strip_prefix("export ") {
+            if let Some((key, value)) = env_part.split_once("=") {
+                let value = value.trim_matches('"').trim_matches('\'');
+                let expanded_value = self.expand_env_vars(value);
+                let key = key.trim();
+
+                // 先记录日志，再设置环境变量
+                info!("设置环境变量 {}={}", key, expanded_value);
+
+                // 使用 unsafe 块设置环境变量
+                unsafe {
+                    std::env::set_var(key, expanded_value);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_set_command(&self, command: &str) -> Result<(), String> {
+        if let Some(env_part) = command.strip_prefix("set ") {
+            if let Some((key, value)) = env_part.split_once("=") {
+                let value = value.trim_matches('"').trim_matches('\'');
+                let expanded_value = self.expand_env_vars(value);
+                let key = key.trim();
+
+                // 先记录日志，再设置环境变量
+                info!("设置环境变量 {}={}", key, expanded_value);
+
+                // 使用 unsafe 块设置环境变量
+                unsafe {
+                    std::env::set_var(key, expanded_value);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn expand_env_vars(&self, value: &str) -> String {
+        let mut result = value.to_string();
+
+        // 处理 Unix 风格的环境变量 $VAR
+        if result.contains("$PATH") {
+            if let Ok(current_path) = std::env::var("PATH") {
+                result = result.replace("$PATH", &current_path);
+            }
+        }
+
+        // 处理 Windows 风格的环境变量 %VAR%
+        if result.contains("%PATH%") {
+            if let Ok(current_path) = std::env::var("PATH") {
+                result = result.replace("%PATH%", &current_path);
+            }
+        }
+
+        result
+    }
+
+    fn execute_cross_platform_command(&self, command: &str) -> Result<(), String> {
+        let output = if cfg!(target_os = "windows") {
+            std::process::Command::new("cmd")
+                .args(["/C", command])
+                .output()
+        } else {
+            std::process::Command::new("sh")
+                .args(["-c", command])
+                .output()
+        };
+
+        let output = output.map_err(|e| format!("执行命令失败: {}", e))?;
+
+        if !output.status.success() {
+            return Err(format!(
+                "命令执行失败: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+
+        Ok(())
     }
 
     // 后执行钩子
