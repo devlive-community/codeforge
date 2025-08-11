@@ -344,8 +344,8 @@ pub async fn execute_code(
                 let _ = plugin.post_execute_hook(&mut result);
 
                 if result.success
-                    && result.stdout == String::from("END-NO-OUTPUT")
-                    && result.stderr == String::from("END-NO-OUTPUT")
+                    && result.stdout == *"END-NO-OUTPUT"
+                    && result.stderr == *"END-NO-OUTPUT"
                 {
                     let _ = app.emit(
                         "code-output",

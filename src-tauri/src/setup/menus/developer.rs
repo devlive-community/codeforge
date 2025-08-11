@@ -34,7 +34,7 @@ pub fn handle_developer_menu_event(app: &AppHandle, event_id: &str) {
         "open-devtools" => {
             info!("开发者 -> 打开调试器");
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.open_devtools();
+                window.open_devtools();
             }
         }
         _ => {}
