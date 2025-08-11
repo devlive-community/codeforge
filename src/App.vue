@@ -338,6 +338,7 @@ const clearOutput = () => {
 // 处理实时输出
 const handleRealtimeOutput = (event: any) => {
   const data: CodeOutputEvent = event.payload
+  console.log('实时输出:', data)
 
   // 只处理当前语言的输出
   if (data.language !== currentLanguage.value) {
@@ -415,7 +416,7 @@ const handleExecutionError = (event: any) => {
 }
 
 // 禁用右键菜单
-window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
+// window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 
 onMounted(async () => {
   await getSupportedLanguages()

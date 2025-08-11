@@ -295,10 +295,20 @@ pub trait LanguagePlugin: Send + Sync {
 
     // 后执行钩子
     fn post_execute_hook(&self, result: &mut ExecutionResult) -> Result<(), String> {
+        info!(
+            "执行代码 -> 插件 [ {} ] 处理 post_execute_hook 开始",
+            self.get_language_key()
+        );
+
         if result.success && result.stdout.is_empty() && result.stderr.is_empty() {
-            result.stdout = "代码执行成功 (无输出)".to_string();
+            result.stdout = String::from("END-NO-OUTPUT");
+            result.stderr = String::from("END-NO-OUTPUT");
         }
 
+        info!(
+            "执行代码 -> 插件 [ {} ] 处理 post_execute_hook 结束",
+            self.get_language_key()
+        );
         Ok(())
     }
 }
