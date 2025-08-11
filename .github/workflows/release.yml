@@ -3,7 +3,7 @@ name: Release
 on:
   # 新发布触发
   release:
-    types: [published]
+    types: [ published ]
 
   # 手动触发
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, windows-latest]
+        platform: [ macos-latest, windows-latest ]
         include:
           - platform: macos-latest
             os: macos
@@ -79,11 +79,34 @@ jobs:
       - name: Build application
         run: pnpm tauri build --target ${{ matrix.target }}
 
-      - name: Upload build artifacts
+      - name: List build output (debug)
+        run: |
+          echo "=== Build output structure ==="
+          find src-tauri/target -name "*.dmg" -o -name "*.app" -o -name "*.msi" -o -name "*.exe" | grep -E "\.(dmg|app|msi)$|CodeForge.*\.exe$" | head -20
+          echo "=== Target directories ==="
+          ls -la src-tauri/target/ || echo "Target directory not found"
+          echo "=== Bundle directories ==="
+          find src-tauri/target -name "bundle" -type d | head -10
+        shell: bash
+
+      - name: Upload build artifacts (macOS)
+        if: matrix.platform == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
-          path: src-tauri/target/release/bundle/
+          path: |
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app
+          retention-days: 30
+
+      - name: Upload build artifacts (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          path: |
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
           retention-days: 30
 
   # 创建或更新 GitHub Release
