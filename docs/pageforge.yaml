@@ -19,3 +19,7 @@ footer:
     github:
       title: GitHub
       href: https://github.com/devlive-community/codeforge
+
+nav:
+  - 发布日志:
+      - /release/25.0.0.md

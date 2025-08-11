@@ -1,0 +1,167 @@
+name: Release
+
+on:
+  # 新发布触发
+  release:
+    types: [ published ]
+
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '18'
+  RUST_VERSION: '1.85.0'
+  PNPM_VERSION: '8'
+
+jobs:
+  # 构建发布版本
+  build-release:
+    name: Build Release
+    runs-on: ${{ matrix.platform }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ macos-latest, windows-latest ]
+        include:
+          - platform: macos-latest
+            os: macos
+            target: universal-apple-darwin
+          - platform: windows-latest
+            os: windows
+            target: x86_64-pc-windows-msvc
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Add Rust targets (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
+        shell: bash
+
+      - name: Build application
+        run: pnpm tauri build --target ${{ matrix.target }}
+
+      - name: List build output (debug)
+        run: |
+          echo "=== Build output structure ==="
+          find src-tauri/target -name "*.dmg" -o -name "*.app" -o -name "*.msi" -o -name "*.exe" | grep -E "\.(dmg|app|msi)$|CodeForge.*\.exe$" | head -20
+          echo "=== Target directories ==="
+          ls -la src-tauri/target/ || echo "Target directory not found"
+          echo "=== Bundle directories ==="
+          find src-tauri/target -name "bundle" -type d | head -10
+        shell: bash
+
+      - name: Upload build artifacts (macOS)
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          path: |
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app
+          retention-days: 30
+
+      - name: Upload build artifacts (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          path: |
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          retention-days: 30
+
+  # 创建或更新 GitHub Release
+  create-release:
+    name: Create Release
+    needs: build-release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -name "*.dmg" -exec cp {} release-assets/ \;
+          find artifacts -name "*.msi" -exec cp {} release-assets/ \;
+          find artifacts -name "*.exe" -exec cp {} release-assets/ \;
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: Release ${{ github.event.inputs.tag }}
+          files: release-assets/*
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  # 更新现有 Release
+  update-release:
+    name: Update Release
+    needs: build-release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -name "*.dmg" -exec cp {} release-assets/ \;
+          find artifacts -name "*.msi" -exec cp {} release-assets/ \;
+          find artifacts -name "*.exe" -exec cp {} release-assets/ \;
+
+      - name: Upload to existing release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: release-assets/*
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
