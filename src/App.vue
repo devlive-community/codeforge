@@ -338,6 +338,7 @@ const clearOutput = () => {
 // 处理实时输出
 const handleRealtimeOutput = (event: any) => {
   const data: CodeOutputEvent = event.payload
+  console.log('实时输出:', data)
 
   // 只处理当前语言的输出
   if (data.language !== currentLanguage.value) {
@@ -448,6 +449,9 @@ onMounted(async () => {
   unlistenExecutionStoppedFn = await listen('code-execution-stopped', handleExecutionStopped)
   unlistenExecutionTimeoutFn = await listen('code-execution-timeout', handleExecutionTimeout)
   unlistenExecutionErrorFn = await listen('code-execution-error', handleExecutionError)
+
+  // 触发 app-ready 事件，通知主进程
+  window.dispatchEvent(new CustomEvent('app-ready'))
 })
 
 onUnmounted(() => {

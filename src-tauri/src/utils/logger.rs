@@ -95,7 +95,7 @@ pub async fn reset_log_directory(_app: AppHandle) -> Result<(), String> {
 }
 
 // 获取日志文件列表
-#[command]
+#[tauri::command]
 pub async fn get_log_files(app: AppHandle) -> Result<Vec<String>, String> {
     let log_dir = {
         let guard = LOG_DIRECTORY.lock().unwrap();
@@ -106,22 +106,49 @@ pub async fn get_log_files(app: AppHandle) -> Result<Vec<String>, String> {
     };
     info!("获取日志 -> 日志目录为: {}", log_dir.display());
 
+    // 获取今天的日期字符串
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    info!("获取日志 -> 查找今天({})的日志文件", today);
+
     let mut log_files = Vec::new();
 
     if let Ok(entries) = std::fs::read_dir(&log_dir) {
         for entry in entries.flatten() {
             if let Some(filename) = entry.file_name().to_str() {
-                if filename.ends_with(".log") && filename.starts_with("codeforge-") {
+                if filename.ends_with(".log")
+                    && filename.starts_with("codeforge-")
+                    && filename.contains(&today)
+                {
                     log_files.push(filename.to_string());
-                    info!("获取日志 -> 发现日志文件: {}", filename);
+                    info!("获取日志 -> 发现今天的日志文件: {}", filename);
                 }
             }
         }
     }
 
-    info!("获取日志 -> 找到 {} 个日志文件", log_files.len());
-    log_files.sort();
-    log_files.reverse(); // 最新的在前面
+    info!("获取日志 -> 找到 {} 个今天的日志文件", log_files.len());
+
+    // 按日志级别排序：error -> warn -> info -> debug -> 普通日志
+    log_files.sort_by(|a, b| {
+        let get_priority = |filename: &str| -> u8 {
+            if filename.contains("-info-") {
+                1
+            } else if filename.contains("-warn-") {
+                2
+            } else if filename.contains("-error-") {
+                3
+            } else if filename.contains("-debug-") {
+                4
+            } else {
+                0
+            }
+        };
+
+        let priority_a = get_priority(a);
+        let priority_b = get_priority(b);
+
+        priority_a.cmp(&priority_b).then_with(|| a.cmp(b))
+    });
 
     Ok(log_files)
 }
