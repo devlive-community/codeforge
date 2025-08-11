@@ -1,6 +1,11 @@
 <template>
   <Modal v-model:show="isVisible" title="设置" size="4xl" :close-on-backdrop="false" :close-on-esc="false" @close="closeSettings">
-    <Tabs v-model="activeTab" type="card" size="md" :tabs="tabsData">
+    <Tabs v-model="activeTab"
+          type="card"
+          size="md"
+          :nav-class="['w-full']"
+          :tab-button-class="['flex', 'flex-col']"
+          :tabs="tabsData">
       <!-- 通用配置 -->
       <template #general>
         <General/>

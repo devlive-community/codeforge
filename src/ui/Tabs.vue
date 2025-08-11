@@ -21,8 +21,14 @@
                 :aria-controls="`tabpanel-${tab.key || tab.name || index}`"
                 role="tab"
                 :tabindex="isActiveTab(tab) ? 0 : -1">
-          <!-- 图标 -->
-          <component v-if="tab.icon" :is="tab.icon" :class="iconClasses"/>
+          <!-- 如果是组件图标 -->
+          <component v-if="tab.icon && !tab.svgIcon" :is="tab.icon" :class="iconClasses"/>
+
+          <!-- 如果是SVG字符串 -->
+          <div v-else-if="tab.svgIcon" v-html="tab.svgIcon" :class="iconClasses"/>
+
+          <!-- 如果是SVG URL -->
+          <img v-else-if="tab.svgUrl" :src="tab.svgUrl" :class="iconClasses" alt="icon"/>
 
           <!-- 文本 -->
           <span v-if="tab.label || tab.name" class="tab-text">
@@ -91,6 +97,8 @@ export interface Tab
   content?: Component
   html?: string
   text?: string
+  svgIcon?: string
+  svgUrl?: string
 
   [key: string]: any
 }
