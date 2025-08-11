@@ -1,6 +1,6 @@
-use crate::plugins::PluginConfig;
 // 全局配置管理器
 use crate::plugin::PluginManagerState;
+use crate::plugins::PluginConfig;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -72,11 +72,8 @@ impl ConfigManager {
                     Ok(mut config) => {
                         println!("读取配置 -> 成功加载配置文件: {:?}", config_path);
 
-                        // 检查 plugins 是否为 null，如果是则加载默认配置
-                        if config.plugins.is_none() {
-                            println!("读取配置 -> plugins 为 null，加载默认插件配置");
-                            config.plugins = Self::get_default_plugins_config(app_handle);
-                        }
+                        // 合并插件配置（现有配置 + 默认配置中缺失的插件）
+                        config.plugins = Self::merge_plugins_config(config.plugins, app_handle);
 
                         Ok(config)
                     }
@@ -93,6 +90,59 @@ impl ConfigManager {
         } else {
             println!("读取配置 -> 配置文件不存在，使用默认配置");
             Ok(Self::create_default_config(app_handle))
+        }
+    }
+
+    // 合并插件配置（现有配置 + 默认配置中缺失的插件）
+    fn merge_plugins_config(
+        existing_plugins: Option<Vec<PluginConfig>>,
+        app_handle: Option<&AppHandle>,
+    ) -> Option<Vec<PluginConfig>> {
+        // 获取所有默认插件配置
+        let default_plugins = Self::get_default_plugins_config(app_handle).unwrap_or_default();
+
+        if let Some(existing) = existing_plugins {
+            let mut merged_plugins = Vec::new();
+
+            // 遍历所有默认插件
+            for default_plugin in &default_plugins {
+                // 检查现有配置中是否已存在该插件
+                if let Some(existing_plugin) = existing
+                    .iter()
+                    .find(|p| p.language == default_plugin.language)
+                {
+                    // 如果存在，使用现有配置
+                    merged_plugins.push(existing_plugin.clone());
+                    println!("读取配置 -> 使用现有插件配置: {}", existing_plugin.language);
+                } else {
+                    // 如果不存在，使用默认配置
+                    merged_plugins.push(default_plugin.clone());
+                    println!(
+                        "读取配置 -> 添加缺失的默认插件配置: {}",
+                        default_plugin.language
+                    );
+                }
+            }
+
+            // 添加现有配置中有但默认配置中没有的插件（用户自定义的插件）
+            for existing_plugin in existing {
+                if !default_plugins
+                    .iter()
+                    .any(|p| p.language == existing_plugin.language)
+                {
+                    merged_plugins.push(existing_plugin.clone());
+                    println!(
+                        "读取配置 -> 保留用户自定义插件配置: {}",
+                        existing_plugin.language
+                    );
+                }
+            }
+
+            Some(merged_plugins)
+        } else {
+            // 如果现有配置中没有 plugins，直接使用默认配置
+            println!("读取配置 -> plugins 为 null，使用默认插件配置");
+            Some(default_plugins)
         }
     }
 

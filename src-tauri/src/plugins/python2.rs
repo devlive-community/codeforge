@@ -16,6 +16,12 @@ impl LanguagePlugin for Python2Plugin {
         "python2"
     }
 
+    fn get_file_extension(&self) -> String {
+        self.get_config()
+            .map(|config| config.extension.clone())
+            .unwrap_or_else(|| "py".to_string())
+    }
+
     fn get_version_args(&self) -> Vec<&'static str> {
         vec!["--version"]
     }
@@ -39,6 +45,8 @@ impl LanguagePlugin for Python2Plugin {
     }
 
     fn get_default_command(&self) -> String {
-        self.get_config().unwrap().run_command.unwrap()
+        self.get_config()
+            .and_then(|config| config.run_command)
+            .unwrap_or_else(|| "python2".to_string())
     }
 }

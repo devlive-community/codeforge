@@ -56,9 +56,7 @@ pub trait LanguagePlugin: Send + Sync {
     fn get_language_key(&self) -> &'static str;
 
     // 获取插件支持的文件扩展名
-    fn get_file_extension(&self) -> String {
-        self.get_config().unwrap().extension.clone()
-    }
+    fn get_file_extension(&self) -> String;
 
     // 获取执行目录
     fn get_execute_home(&self) -> Option<PathBuf> {
