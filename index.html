@@ -5,10 +5,157 @@
     <link rel="icon" type="image/svg+xml" href="/codeforge.svg"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>CodeForge</title>
+    <style>
+        /* 预加载样式 */
+        #app-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f9fafb;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .loading-logo img {
+            width: 100%;
+            height: 100%;
+            animation: pulse 2s infinite;
+        }
+
+        .loading-spinner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 2px solid transparent;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-subtitle {
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .loading-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .loading-dot:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+        }
+    </style>
 </head>
 
 <body>
+<!-- 预加载动画 -->
+<div id="app-loading">
+    <div class="loading-logo">
+        <img src="/codeforge.svg" alt="CodeForge"/>
+        <div class="loading-spinner"></div>
+    </div>
+    <h1 class="loading-title">CodeForge</h1>
+    <p class="loading-subtitle">轻量级代码执行器</p>
+    <div class="loading-dots">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+    </div>
+</div>
+
+<!-- Vue 应用 -->
 <div id="app"></div>
+
 <script type="module" src="/src/main.ts"></script>
+<script>
+    console.log('🎬 页面脚本已加载，等待 app-ready 事件')
+
+    // 监听应用准备就绪事件
+    window.addEventListener('app-ready', function () {
+        console.log('📡 收到 app-ready 事件，开始隐藏加载动画')
+        const appLoading = document.getElementById('app-loading');
+        if (appLoading) {
+            console.log('🎭 开始淡出动画')
+            appLoading.style.opacity = '0';
+            appLoading.style.transition = 'opacity 0.3s ease-out';
+            setTimeout(() => {
+                console.log('✨ 预加载动画已移除')
+                appLoading.remove();
+            }, 300);
+        }
+        else {
+            console.log('⚠️ 找不到预加载元素')
+        }
+    });
+
+    // 超时保护，避免永远加载
+    setTimeout(() => {
+        console.log('⏰ 超时保护触发，强制隐藏加载动画')
+        const appLoading = document.getElementById('app-loading');
+        if (appLoading) {
+            appLoading.remove();
+        }
+    }, 10000); // 10秒超时
+</script>
 </body>
 </html>

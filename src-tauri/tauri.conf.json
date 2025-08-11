@@ -17,6 +17,7 @@
         "minHeight": 600,
         "width": 1800,
         "height": 1200,
+        "center": true,
         "additionalBrowserArgs": "--disable-context-menu"
       }
     ],

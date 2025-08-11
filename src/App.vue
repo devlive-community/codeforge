@@ -448,6 +448,9 @@ onMounted(async () => {
   unlistenExecutionStoppedFn = await listen('code-execution-stopped', handleExecutionStopped)
   unlistenExecutionTimeoutFn = await listen('code-execution-timeout', handleExecutionTimeout)
   unlistenExecutionErrorFn = await listen('code-execution-error', handleExecutionError)
+
+  // 触发 app-ready 事件，通知主进程
+  window.dispatchEvent(new CustomEvent('app-ready'))
 })
 
 onUnmounted(() => {
