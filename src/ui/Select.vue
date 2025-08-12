@@ -10,18 +10,18 @@
             @keydown.arrow-down.prevent="openDropdown"
             @keydown.arrow-up.prevent="openDropdown"
             :class="[
-              'relative w-full cursor-pointer rounded-lg border bg-white px-4 py-2 pr-10 text-left transition-all duration-200 ring-1 ring-blue-200',
-              disabled ? 'cursor-not-allowed bg-gray-50 text-gray-400' : 'hover:border-gray-400',
+              'relative w-full cursor-pointer rounded-lg border bg-white px-4 py-2 pr-10 text-left transition-all duration-200',
+              // 根据状态动态应用边框样式
+              isOpen && !disabled
+                ? 'border-blue-400 ring-blue-200' // 打开时显示蓝色
+                : disabled
+                  ? 'border-gray-300 ring-0 cursor-not-allowed bg-gray-50 text-gray-400' // 禁用状态
+                  : 'border-gray-300 ring-0 hover:border-blue-400 hover:ring-blue-200', // 默认和悬停状态
               ...buttonClasses
             ]"
             :disabled="disabled"
             :aria-expanded="isOpen"
             :aria-haspopup="true"
-            :style="{
-              border: 'none !important',
-              outline: 'none !important',
-              boxShadow: '0 0 0 1px rgb(147 197 253)'
-            }"
             role="combobox">
       <span class="block truncate">
         {{ selectedLabel || placeholder }}
