@@ -2,6 +2,7 @@ import type { HighlightMatch, LanguageHighlighter } from './types'
 import { Python2Highlighter } from './languages/python2'
 import { Python3Highlighter } from './languages/python3'
 import { NodeJSHighlighter } from './languages/nodejs.ts'
+import { GoHighlighter } from './languages/go.ts'
 
 export class HighlightManager
 {
@@ -20,6 +21,7 @@ export class HighlightManager
         this.register(new Python2Highlighter())
         this.register(new Python3Highlighter())
         this.register(new NodeJSHighlighter())
+        this.register(new GoHighlighter())
     }
 
     /**

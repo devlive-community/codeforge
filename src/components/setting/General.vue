@@ -122,6 +122,7 @@ const logFiles = ref<string[]>([])
 const keepDays = ref(30)
 
 const keepDaysOptions = [
+  { label: '保留 1 天', value: 1 },
   { label: '保留 7 天', value: 7 },
   { label: '保留 14 天', value: 14 },
   { label: '保留 30 天', value: 30 },

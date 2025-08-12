@@ -1,3 +1,4 @@
+use chrono::{Duration, Local};
 use log::{error, info, warn};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -156,8 +157,6 @@ pub async fn get_log_files(app: AppHandle) -> Result<Vec<String>, String> {
 // 清除日志
 #[command]
 pub async fn clear_logs(app: AppHandle, keep_days: u32) -> Result<u32, String> {
-    use chrono::{Duration, Local};
-
     let log_dir = {
         let guard = LOG_DIRECTORY.lock().unwrap();
         match &*guard {
@@ -176,13 +175,54 @@ pub async fn clear_logs(app: AppHandle, keep_days: u32) -> Result<u32, String> {
             if let Some(filename) = entry.file_name().to_str() {
                 if filename.ends_with(".log") && filename.starts_with("codeforge-") {
                     scanned_count += 1;
-                    // 从文件名提取日期 codeforge-2024-08-09.log
-                    if let Some(date_str) = filename
-                        .strip_prefix("codeforge-")
-                        .and_then(|s| s.strip_suffix(".log"))
-                    {
+
+                    // 提取日期的函数
+                    let extract_date = |filename: &str| -> Option<String> {
+                        // 支持的日志文件格式：
+                        // 1. codeforge-2025-08-12.log
+                        // 2. codeforge-info-2025-08-12.log
+                        // 3. codeforge-warn-2025-08-12.log
+                        // 4. codeforge-error-2025-08-12.log
+                        // 5. codeforge-debug-2025-08-12.log
+
+                        if let Some(without_prefix) = filename.strip_prefix("codeforge-") {
+                            if let Some(without_suffix) = without_prefix.strip_suffix(".log") {
+                                // 使用正则表达式匹配日期部分
+                                // 匹配模式：可选的级别前缀 + 日期
+                                let date_patterns = [
+                                    // 直接日期格式：codeforge-2025-08-12.log
+                                    r"^(\d{4}-\d{2}-\d{2})$",
+                                    // 带级别前缀：codeforge-info-2025-08-12.log
+                                    r"^(?:info|warn|error|debug)-(\d{4}-\d{2}-\d{2})$",
+                                ];
+
+                                for pattern in &date_patterns {
+                                    if let Ok(re) = regex::Regex::new(pattern) {
+                                        if let Some(captures) = re.captures(without_suffix) {
+                                            if let Some(date_match) = captures.get(1) {
+                                                return Some(date_match.as_str().to_string());
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 如果正则匹配失败，尝试简单的字符串处理
+                                // 检查是否以日期结尾（最后10个字符应该是日期格式）
+                                if without_suffix.len() >= 10 {
+                                    let potential_date =
+                                        &without_suffix[without_suffix.len() - 10..];
+                                    if potential_date.matches('-').count() == 2 {
+                                        return Some(potential_date.to_string());
+                                    }
+                                }
+                            }
+                        }
+                        None
+                    };
+
+                    if let Some(date_str) = extract_date(filename) {
                         if let Ok(file_date) =
-                            chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+                            chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
                         {
                             if file_date < cutoff_date.date_naive() {
                                 if let Err(e) = std::fs::remove_file(entry.path()) {
@@ -192,14 +232,19 @@ pub async fn clear_logs(app: AppHandle, keep_days: u32) -> Result<u32, String> {
                                     deleted_count += 1;
                                 }
                             } else {
-                                info!("清理日志 -> 日志文件文件未到期，将被保留: {}", filename);
+                                info!("清理日志 -> 日志文件未到期，将被保留: {}", filename);
                             }
+                        } else {
+                            warn!("清理日志 -> 无法解析日期格式 {}: {}", filename, date_str);
                         }
+                    } else {
+                        warn!("清理日志 -> 无法从文件名提取日期: {}", filename);
                     }
                 }
             }
         }
     }
+
     info!(
         "清理日志 -> 扫描 {} 个日志文件，删除 {} 个",
         scanned_count, deleted_count

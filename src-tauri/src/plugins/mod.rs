@@ -77,15 +77,31 @@ pub trait LanguagePlugin: Send + Sync {
     fn get_command(&self, file_path: Option<&str>) -> String {
         if let Some(config) = self.get_config() {
             if let Some(run_cmd) = &config.run_command {
-                if let Some(path) = file_path {
-                    return run_cmd.replace("$filename", path);
+                return if let Some(path) = file_path {
+                    if self.get_execute_home().is_some() {
+                        // 如果有执行主目录，在整个命令前面加 ./
+                        let cmd_with_file = run_cmd.replace("$filename", path);
+                        if cmd_with_file.starts_with("./") {
+                            cmd_with_file
+                        } else {
+                            format!("./{}", cmd_with_file)
+                        }
+                    } else {
+                        run_cmd.replace("$filename", path)
+                    }
                 } else {
-                    return run_cmd
+                    let base_cmd = run_cmd
                         .split_whitespace()
                         .next()
                         .unwrap_or(&config.language)
                         .to_string();
-                }
+
+                    if self.get_execute_home().is_some() && !base_cmd.starts_with("./") {
+                        format!("./{}", base_cmd)
+                    } else {
+                        base_cmd
+                    }
+                };
             }
         }
         self.get_default_command()
@@ -312,6 +328,7 @@ pub trait LanguagePlugin: Send + Sync {
 }
 
 // 重新导出子模块
+pub mod go;
 pub mod manager;
 pub mod nodejs;
 pub mod python2;

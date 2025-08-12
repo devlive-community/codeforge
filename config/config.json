@@ -7,12 +7,46 @@
     {
       "enabled": true,
       "execute_home": null,
-      "extensions": [],
+      "extension": "py",
+      "language": "python3",
+      "before_compile": null,
+      "after_compile": null,
+      "run_command": "python3 $filename",
+      "template": "# -*- coding: utf-8 -*-\n# Python 3 示例代码 - CodeForge 代码执行环境\n\nprint(\"🎉 欢迎使用 CodeForge!\")\nprint(\"Welcome to CodeForge!\")\nprint()\n\nprint(\"=========================================\")\nprint(\"          CodeForge Python 3           \")\nprint(\"=========================================\")\nprint()\n\n# 基本输出示例\nprint(\"✅ Python 3 运行成功! (Python 3 is working!)\")\nprint(\"🐍 这是 Python 3.x 版本 (This is Python 3.x)\")\nprint()\n\n# 简单计算\nnumber1 = 10\nnumber2 = 20\nresult = number1 + number2\n\nprint(\"🔢 简单计算 (Simple calculation):\")\nprint(f\"{number1} + {number2} = {result}\")\nprint()\n\n# 字符串操作\nname = \"CodeForge\"\nversion = \"Python 3\"\n\nprint(\"📝 字符串操作 (String operations):\")\nprint(\"平台名称 (Platform):\", name)\nprint(\"语言版本 (Language):\", version)\nprint(f\"完整信息 (Full info): {name} - {version}\")\nprint()\n\n# 循环示例\nprint(\"🔄 循环输出 (Loop output):\")\nfor i in range(1, 6):\n    print(f\"第 {i} 次输出 (Output #{i}): Hello from CodeForge!\")\n\nprint()\n\n# 列表操作\nfruits = [\"苹果\", \"香蕉\", \"橙子\", \"葡萄\"]\nprint(\"🍎 水果列表 (Fruit list):\")\nfor index, fruit in enumerate(fruits, 1):\n    print(f\"{index}. {fruit}\")\n\nprint()\n\n# 条件判断\nscore = 85\nprint(\"📊 成绩评估 (Score evaluation):\")\nif score >= 90:\n    print(\"优秀! (Excellent!)\")\nelif score >= 80:\n    print(\"良好! (Good!)\")\nelif score >= 60:\n    print(\"及格 (Pass)\")\nelse:\n    print(\"需要努力 (Need improvement)\")\n\nprint()\n\n# Python 3 特性展示\nprint(\"🆕 Python 3 特性 (Python 3 features):\")\ndata = {\"name\": \"CodeForge\", \"language\": \"Python 3\", \"status\": \"运行中\"}\nprint(\"字典操作 (Dictionary):\", data)\n\n# 列表推导式\nsquares = [x**2 for x in range(1, 6)]\nprint(\"列表推导式 (List comprehension):\", squares)\n\nprint()\nprint(\"🎯 CodeForge Python 3 代码执行完成!\")\nprint(\"🎯 CodeForge Python 3 execution completed!\")\nprint()\nprint(\"感谢使用 CodeForge 代码执行环境! 🚀\")\nprint(\"Thank you for using CodeForge! 🚀\")",
+      "timeout": 30
+    },
+    {
+      "enabled": true,
+      "execute_home": null,
+      "extension": "js",
+      "language": "nodejs",
+      "before_compile": null,
+      "after_compile": null,
+      "run_command": "node $filename",
+      "template": "// Node.js 示例代码 - CodeForge 代码执行环境\n\nconsole.log(\"🎉 欢迎使用 CodeForge!\");\nconsole.log(\"Welcome to CodeForge!\");\nconsole.log(\"\");\n\nconsole.log(\"=========================================\");\nconsole.log(\"          CodeForge Node.js            \");\nconsole.log(\"=========================================\");\nconsole.log(\"\");\n\n// 基本输出示例\nconsole.log(\"✅ Node.js 运行成功! (Node.js is working!)\");\nconsole.log(`🟢 Node.js 版本 (Version): ${process.version}`);\nconsole.log(\"\");\n\n// 简单计算\nconst number1 = 10;\nconst number2 = 20;\nconst result = number1 + number2;\n\nconsole.log(\"🔢 简单计算 (Simple calculation):\");\nconsole.log(`${number1} + ${number2} = ${result}`);\nconsole.log(\"\");\n\n// 字符串操作\nconst name = \"CodeForge\";\nconst platform = \"Node.js\";\n\nconsole.log(\"📝 字符串操作 (String operations):\");\nconsole.log(\"平台名称 (Platform):\", name);\nconsole.log(\"运行环境 (Runtime):\", platform);\nconsole.log(`完整信息 (Full info): ${name} - ${platform}`);\nconsole.log(\"\");\n\n// 循环示例\nconsole.log(\"🔄 循环输出 (Loop output):\");\nfor (let i = 1; i <= 5; i++) {\n    console.log(`第 ${i} 次输出 (Output #${i}): Hello from CodeForge!`);\n}\n\nconsole.log(\"\");\n\n// 数组操作\nconst fruits = [\"苹果\", \"香蕉\", \"橙子\", \"葡萄\"];\nconsole.log(\"🍎 水果列表 (Fruit list):\");\nfruits.forEach((fruit, index) => {\n    console.log(`${index + 1}. ${fruit}`);\n});\n\nconsole.log(\"\");\n\n// 条件判断\nconst score = 85;\nconsole.log(\"📊 成绩评估 (Score evaluation):\");\nif (score >= 90) {\n    console.log(\"优秀! (Excellent!)\");\n} else if (score >= 80) {\n    console.log(\"良好! (Good!)\");\n} else if (score >= 60) {\n    console.log(\"及格 (Pass)\");\n} else {\n    console.log(\"需要努力 (Need improvement)\");\n}\n\nconsole.log(\"\");\n\n// JavaScript/Node.js 特性展示\nconsole.log(\"🆕 JavaScript 特性 (JavaScript features):\");\nconst data = { name: \"CodeForge\", platform: \"Node.js\", status: \"运行中\" };\nconsole.log(\"对象操作 (Object):\", JSON.stringify(data, null, 2));\n\n// 箭头函数和数组方法\nconst squares = [1, 2, 3, 4, 5].map(x => x ** 2);\nconsole.log(\"数组映射 (Array mapping):\", squares);\n\n// 异步操作示例\nconsole.log(\"⏰ 异步操作 (Async operation):\");\nsetTimeout(() => {\n    console.log(\"⏱️  1秒后执行 (Executed after 1 second)\");\n}, 1000);\n\nconsole.log(\"\");\nconsole.log(\"🎯 CodeForge Node.js 代码执行完成!\");\nconsole.log(\"🎯 CodeForge Node.js execution completed!\");\nconsole.log(\"\");\nconsole.log(\"感谢使用 CodeForge 代码执行环境! 🚀\");\nconsole.log(\"Thank you for using CodeForge! 🚀\");",
+      "timeout": 30
+    },
+    {
+      "enabled": true,
+      "execute_home": null,
+      "extension": "py",
       "language": "python2",
       "before_compile": null,
       "after_compile": null,
-      "run_command": null,
-      "template": null
+      "run_command": "python2 $filename",
+      "template": "# -*- coding: utf-8 -*-\n# Python 2 示例代码 - CodeForge 代码执行环境\n\nprint \"🎉 欢迎使用 CodeForge!\"\nprint \"Welcome to CodeForge!\"\nprint \"\"\n\nprint \"=========================================\"\nprint \"          CodeForge Python 2           \"\nprint \"=========================================\"\nprint \"\"\n\n# 基本输出示例\nprint \"✅ Python 2 运行成功! (Python 2 is working!)\"\nprint \"🐍 这是 Python 2.x 版本 (This is Python 2.x)\"\nprint \"\"\n\n# 简单计算\nnumber1 = 10\nnumber2 = 20\nresult = number1 + number2\n\nprint \"🔢 简单计算 (Simple calculation):\"\nprint \"%d + %d = %d\" % (number1, number2, result)\nprint \"\"\n\n# 字符串操作\nname = \"CodeForge\"\nversion = \"Python 2\"\n\nprint \"📝 字符串操作 (String operations):\"\nprint \"平台名称 (Platform): \" + name\nprint \"语言版本 (Language): \" + version\nprint \"完整信息 (Full info): %s - %s\" % (name, version)\nprint \"\"\n\n# 循环示例\nprint \"🔄 循环输出 (Loop output):\"\nfor i in range(1, 6):\n    print \"第 %d 次输出 (Output #%d): Hello from CodeForge!\" % (i, i)\n\nprint \"\"\n\n# 列表操作\nfruits = [u\"苹果\", u\"香蕉\", u\"橙子\", u\"葡萄\"]\nprint \"🍎 水果列表 (Fruit list):\"\nfor index, fruit in enumerate(fruits, 1):\n    print \"%d. %s\" % (index, fruit.encode('utf-8'))\n\nprint \"\"\n\n# 条件判断\nscore = 85\nprint \"📊 成绩评估 (Score evaluation):\"\nif score >= 90:\n    print \"优秀! (Excellent!)\"\nelif score >= 80:\n    print \"良好! (Good!)\"\nelif score >= 60:\n    print \"及格 (Pass)\"\nelse:\n    print \"需要努力 (Need improvement)\"\n\nprint \"\"\nprint \"🎯 CodeForge Python 2 代码执行完成!\"\nprint \"🎯 CodeForge Python 2 execution completed!\"\nprint \"\"\nprint \"感谢使用 CodeForge 代码执行环境! 🚀\"\nprint \"Thank you for using CodeForge! 🚀\"",
+      "timeout": 30
+    },
+    {
+      "enabled": true,
+      "execute_home": null,
+      "extension": "go",
+      "language": "go",
+      "before_compile": "go mod init temp 2>/dev/null || true",
+      "after_compile": null,
+      "run_command": "go run $filename",
+      "template": "package main\n\nimport (\n\t\"fmt\"\n\t\"runtime\"\n\t\"time\"\n)\n\nfunc main() {\n\tfmt.Println(\"🎉 欢迎使用 CodeForge!\")\n\tfmt.Println(\"Welcome to CodeForge!\")\n\tfmt.Println()\n\n\tfmt.Println(\"=========================================\")\n\tfmt.Println(\"            CodeForge Go               \")\n\tfmt.Println(\"=========================================\")\n\tfmt.Println()\n\n\t// 基本输出示例\n\tfmt.Println(\"✅ Go 运行成功! (Go is working!)\")\n\tfmt.Printf(\"🔷 Go 版本 (Version): %s\\n\", runtime.Version())\n\tfmt.Println()\n\n\t// 简单计算\n\tnumber1 := 10\n\tnumber2 := 20\n\tresult := number1 + number2\n\n\tfmt.Println(\"🔢 简单计算 (Simple calculation):\")\n\tfmt.Printf(\"%d + %d = %d\\n\", number1, number2, result)\n\tfmt.Println()\n\n\t// 字符串操作\n\tname := \"CodeForge\"\n\tlanguage := \"Go\"\n\n\tfmt.Println(\"📝 字符串操作 (String operations):\")\n\tfmt.Println(\"平台名称 (Platform):\", name)\n\tfmt.Println(\"编程语言 (Language):\", language)\n\tfmt.Printf(\"完整信息 (Full info): %s - %s\\n\", name, language)\n\tfmt.Println()\n\n\t// 循环示例\n\tfmt.Println(\"🔄 循环输出 (Loop output):\")\n\tfor i := 1; i <= 5; i++ {\n\t\tfmt.Printf(\"第 %d 次输出 (Output #%d): Hello from CodeForge!\\n\", i, i)\n\t}\n\n\tfmt.Println()\n\n\t// 切片操作\n\tfruits := []string{\"苹果\", \"香蕉\", \"橙子\", \"葡萄\"}\n\tfmt.Println(\"🍎 水果列表 (Fruit list):\")\n\tfor index, fruit := range fruits {\n\t\tfmt.Printf(\"%d. %s\\n\", index+1, fruit)\n\t}\n\n\tfmt.Println()\n\n\t// 条件判断\n\tscore := 85\n\tfmt.Println(\"📊 成绩评估 (Score evaluation):\")\n\tswitch {\n\tcase score >= 90:\n\t\tfmt.Println(\"优秀! (Excellent!)\")\n\tcase score >= 80:\n\t\tfmt.Println(\"良好! (Good!)\")\n\tcase score >= 60:\n\t\tfmt.Println(\"及格 (Pass)\")\n\tdefault:\n\t\tfmt.Println(\"需要努力 (Need improvement)\")\n\t}\n\n\tfmt.Println()\n\n\t// Go 特性展示\n\tfmt.Println(\"🆕 Go 特性 (Go features):\")\n\t\n\t// 结构体\n\ttype Info struct {\n\t\tName     string\n\t\tLanguage string\n\t\tStatus   string\n\t}\n\t\n\tdata := Info{\n\t\tName:     \"CodeForge\",\n\t\tLanguage: \"Go\",\n\t\tStatus:   \"运行中\",\n\t}\n\tfmt.Printf(\"结构体 (Struct): %+v\\n\", data)\n\n\t// 映射 (Map)\n\tlanguages := map[string]string{\n\t\t\"Go\":       \"编译型\",\n\t\t\"Python\":   \"解释型\",\n\t\t\"JavaScript\": \"解释型\",\n\t}\n\tfmt.Println(\"映射 (Map):\", languages)\n\n\t// 协程示例 (简单展示)\n\tfmt.Println(\"⚡ 协程示例 (Goroutine example):\")\n\tdone := make(chan bool)\n\t\n\tgo func() {\n\t\ttime.Sleep(100 * time.Millisecond)\n\t\tfmt.Println(\"🔥 协程执行完成! (Goroutine completed!)\")\n\t\tdone <- true\n\t}()\n\t\n\t<-done // 等待协程完成\n\n\tfmt.Println()\n\tfmt.Println(\"🎯 CodeForge Go 代码执行完成!\")\n\tfmt.Println(\"🎯 CodeForge Go execution completed!\")\n\tfmt.Println()\n\tfmt.Println(\"感谢使用 CodeForge 代码执行环境! 🚀\")\n\tfmt.Println(\"Thank you for using CodeForge! 🚀\")\n}",
+      "timeout": 30
     }
   ]
 }
