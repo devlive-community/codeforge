@@ -78,7 +78,7 @@ pub trait LanguagePlugin: Send + Sync {
         if let Some(config) = self.get_config() {
             if let Some(run_cmd) = &config.run_command {
                 return if let Some(path) = file_path {
-                    let final_cmd = if self.get_execute_home().is_some() {
+                    if self.get_execute_home().is_some() {
                         // 如果有执行主目录，在整个命令前面加 ./
                         let cmd_with_file = run_cmd.replace("$filename", path);
                         if cmd_with_file.starts_with("./") {
@@ -88,8 +88,7 @@ pub trait LanguagePlugin: Send + Sync {
                         }
                     } else {
                         run_cmd.replace("$filename", path)
-                    };
-                    final_cmd
+                    }
                 } else {
                     let base_cmd = run_cmd
                         .split_whitespace()
