@@ -27,3 +27,4 @@ chrono = { version = "0.4", features = ["serde"] }
 log = "0.4"
 fern = "0.7.1"
 dirs = "6.0.0"
+regex = "1.11.1"
