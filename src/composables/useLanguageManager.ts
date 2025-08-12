@@ -53,7 +53,8 @@ export function useLanguageManager(
             const languages = await invoke<Language[]>('get_supported_languages')
             supportedLanguages.value = languages.map((language) => ({
                 name: language.name,
-                value: language.value
+                value: language.value,
+                svgUrl: `/icons/${ language.value.replace(/\d+$/, '') }.svg`
             }))
 
             // 设置默认语言
