@@ -1,5 +1,5 @@
 use super::{
-    LanguagePlugin, PluginConfig, nodejs::NodeJSPlugin, python2::Python2Plugin,
+    LanguagePlugin, PluginConfig, go::GoPlugin, nodejs::NodeJSPlugin, python2::Python2Plugin,
     python3::Python3Plugin,
 };
 use std::collections::HashMap;
@@ -15,6 +15,7 @@ impl PluginManager {
         plugins.insert("python2".to_string(), Box::new(Python2Plugin));
         plugins.insert("python3".to_string(), Box::new(Python3Plugin));
         plugins.insert("nodejs".to_string(), Box::new(NodeJSPlugin));
+        plugins.insert("go".to_string(), Box::new(GoPlugin));
 
         Self { plugins }
     }

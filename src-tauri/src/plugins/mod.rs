@@ -316,5 +316,6 @@ pub mod manager;
 pub mod nodejs;
 pub mod python2;
 pub mod python3;
+pub mod go;
 
 pub use manager::PluginManager;
