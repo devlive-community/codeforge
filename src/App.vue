@@ -4,8 +4,8 @@
                :env-installed="envInfo.installed"
                :supported-languages="supportedLanguages"
                :current-language="currentLanguage"
-               @run-code="runCode"
-               @stop-code="stopCode"
+               @run-code="() => runCode(currentLanguage, envInfo.installed, envInfo.language)"
+               @stop-code="() => stopCode(currentLanguage)"
                @clear-output="clearOutput"
                @language-change="handleLanguageChange"
                @show-settings="showSettings = true">
@@ -52,9 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { listen, UnlistenFn } from '@tauri-apps/api/event'
+import { onMounted, onUnmounted } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import OutputPanel from './components/OutputPanel.vue'
@@ -64,378 +62,65 @@ import Settings from './components/Settings.vue'
 import Toast from './components/Toast.vue'
 import { useToast } from './plugins/toast'
 
-interface ExecutionResult
-{
-  success: boolean
-  stdout: string
-  stderr: string
-  execution_time: number
-  timestamp: number
-  language: string
-}
-
-interface LanguageInfo
-{
-  installed: boolean
-  version: string
-  path: string
-  language: string
-}
-
-interface EnvInfo
-{
-  installed: boolean
-  version: string
-  path: string
-  language: string
-}
-
-interface Language
-{
-  name: string
-  value: string
-}
-
-interface CodeOutputEvent
-{
-  type: 'stdout' | 'stderr'
-  content: string
-  language: string
-}
+// Composables
+import { useCodeExecution } from './composables/useCodeExecution'
+import { useLanguageManager } from './composables/useLanguageManager'
+import { useEventManager } from './composables/useEventManager'
+import { useAppState } from './composables/useAppState'
 
 const toast = useToast()
-const code = ref('')
-const currentLanguage = ref('python2')
-const output = ref('')
-const isRunning = ref(false)
-const isSuccess = ref(false)
-const lastExecutionTime = ref(0)
-const activeTab = ref('output')
-const supportedLanguages = ref<Language[]>([])
-const showAbout = ref(false)
-const showSettings = ref(false)
-const globalConfig = ref(null as any)
 
-// 实时输出相关
-const realTimeOutput = ref('')
-const realTimeStderr = ref('')
+const {
+  code,
+  output,
+  isRunning,
+  isSuccess,
+  lastExecutionTime,
+  runCode,
+  stopCode,
+  clearOutput
+} = useCodeExecution(toast)
 
-// 事件监听器
-let unlistenAboutFn: UnlistenFn | null = null
-let unlistenSettingsFn: UnlistenFn | null = null
-let unlistenOutputFn: UnlistenFn | null = null
-let unlistenExecutionStartFn: UnlistenFn | null = null
-let unlistenExecutionCompleteFn: UnlistenFn | null = null
-let unlistenExecutionStoppedFn: UnlistenFn | null = null
-let unlistenExecutionTimeoutFn: UnlistenFn | null = null
-let unlistenExecutionErrorFn: UnlistenFn | null = null
+const {
+  currentLanguage,
+  supportedLanguages,
+  envInfo,
+  getLanguageDisplayName,
+  handleLanguageChange,
+  initialize
+} = useLanguageManager(code, clearOutput, toast)
 
-const closeAbout = () => {
-  showAbout.value = false
-}
+const {
+  showAbout,
+  showSettings,
+  activeTab,
+  closeAbout,
+  closeSettings
+} = useAppState()
 
-const closeSettings = () => {
-  showSettings.value = false
-}
-
-const envInfo = ref<EnvInfo>({
-  installed: false,
-  version: '检查中...',
-  path: '检查中...',
-  language: 'python'
+const { initializeEventListeners, cleanupEventListeners } = useEventManager({
+  showAbout,
+  showSettings,
+  output,
+  isRunning,
+  isSuccess,
+  lastExecutionTime,
+  currentLanguage,
+  toast
 })
-
-const getLanguageDisplayName = (languageValue: string) => {
-  const language = supportedLanguages.value.find(lang => lang.value === languageValue)
-  return language ? language.name : languageValue
-}
-
-const refreshEnvInfo = async () => {
-  try {
-    const info: LanguageInfo = await invoke('get_info', {
-      language: currentLanguage.value
-    })
-
-    envInfo.value = {
-      installed: info.installed,
-      version: info.version,
-      path: info.path,
-      language: info.language
-    }
-  }
-  catch (error) {
-    console.error('Error checking Env installation:', error)
-    envInfo.value = {
-      installed: false,
-      version: 'Error',
-      path: 'Error',
-      language: currentLanguage.value
-    }
-  }
-}
-
-const getSupportedLanguages = async () => {
-  try {
-    const languages = await invoke<Language[]>('get_supported_languages')
-    supportedLanguages.value = languages.map((language) => ({
-      name: language.name,
-      value: language.value
-    }))
-
-    // 设置默认语言
-    if (supportedLanguages.value.length > 0 && !currentLanguage.value) {
-      currentLanguage.value = supportedLanguages.value[0].value
-    }
-  }
-  catch (error) {
-    console.error('Error getting supported languages:', error)
-    supportedLanguages.value = []
-  }
-}
-
-const handleLanguageChange = async (newLanguage: string) => {
-  currentLanguage.value = newLanguage
-
-  // 更新代码模板
-  code.value = filterPluginTemplate(newLanguage)
-
-  // 清空输出
-  clearOutput()
-
-  // 刷新环境信息
-  await refreshEnvInfo()
-
-  toast.info(`已切换到 ${ getLanguageDisplayName(newLanguage) }`)
-}
-
-const runCode = async () => {
-  if (!envInfo.value.installed) {
-    toast.error(`${ envInfo.value.language } 环境未安装`)
-    return
-  }
-
-  isRunning.value = true
-
-  // 清空所有输出
-  output.value = ''
-  realTimeOutput.value = ''
-  realTimeStderr.value = ''
-  isSuccess.value = false
-  lastExecutionTime.value = 0
-
-  try {
-    const result: ExecutionResult = await invoke('execute_code', {
-      request: {
-        code: code.value,
-        language: currentLanguage.value
-      }
-    })
-
-    // 注意：这里不需要手动设置 output，因为实时输出已经通过事件处理了
-    lastExecutionTime.value = result.execution_time
-    isSuccess.value = result.success
-
-    if (result.success) {
-      toast.success(`代码执行成功，用时 ${ result.execution_time } 毫秒`)
-    }
-    else {
-      toast.error('代码执行失败，查看输出的错误信息')
-    }
-  }
-  catch (error) {
-    output.value = `代码执行失败: ${ error }`
-    toast.error('代码执行失败，请检查日志')
-    isRunning.value = false
-  }
-}
-
-const stopCode = async () => {
-  if (!isRunning.value) {
-    return
-  }
-
-  try {
-    const result = await invoke<boolean>('stop_execution', {
-      language: currentLanguage.value
-    })
-
-    if (result) {
-      toast.info('正在停止代码执行...')
-    }
-    else {
-      toast.warning('没有找到正在运行的任务')
-    }
-  }
-  catch (error) {
-    console.error('Error stopping execution:', error)
-    toast.error('停止执行失败')
-  }
-}
-
-const clearOutput = () => {
-  output.value = ''
-  realTimeOutput.value = ''
-  realTimeStderr.value = ''
-  toast.info('输出已清空')
-}
-
-// 处理实时输出
-const handleRealtimeOutput = (event: any) => {
-  const data: CodeOutputEvent = event.payload
-  console.log('实时输出:', data)
-
-  // 只处理当前语言的输出
-  if (data.language !== currentLanguage.value) {
-    return
-  }
-
-  if (data.type === 'stdout') {
-    realTimeOutput.value += data.content + '\n'
-  }
-  else if (data.type === 'stderr') {
-    realTimeStderr.value += data.content + '\n'
-  }
-
-  // 合并输出显示
-  let combinedOutput = ''
-  if (realTimeOutput.value) {
-    combinedOutput += realTimeOutput.value
-  }
-  if (realTimeStderr.value) {
-    if (combinedOutput) {
-      combinedOutput += '\n'
-    }
-    combinedOutput += realTimeStderr.value
-  }
-
-  output.value = combinedOutput
-}
-
-// 处理执行状态事件
-const handleExecutionStart = (event: any) => {
-  const data = event.payload
-  if (data.language === currentLanguage.value) {
-    console.log('代码开始执行')
-  }
-}
-
-const handleExecutionComplete = (event: any) => {
-  const data = event.payload
-  if (data.language === currentLanguage.value) {
-    isRunning.value = false
-    isSuccess.value = data.success
-    if (data.execution_time) {
-      lastExecutionTime.value = data.execution_time
-    }
-    console.log('代码执行完成')
-  }
-}
-
-const handleExecutionStopped = (event: any) => {
-  const data = event.payload
-  if (data.language === currentLanguage.value) {
-    isRunning.value = false
-    output.value += '\n\n🛑 代码执行已被用户停止'
-    toast.warning('代码执行已停止')
-    console.log('代码执行已停止')
-  }
-}
-
-const handleExecutionTimeout = (event: any) => {
-  const data = event.payload
-  if (data.language === currentLanguage.value) {
-    isRunning.value = false
-    output.value += '\n\n⚠️ 代码执行超时（30秒）'
-    toast.error('代码执行超时')
-  }
-}
-
-const handleExecutionError = (event: any) => {
-  const data = event.payload
-  if (data.language === currentLanguage.value) {
-    isRunning.value = false
-    output.value += `\n\n❌ 执行错误: ${ data.error }`
-    toast.error('代码执行出错')
-  }
-}
-
-const getConfigure = async () => {
-  try {
-    globalConfig.value = await invoke<any>('get_app_config')
-  }
-  catch (error) {
-    toast.error('获取配置失败 - 错误信息: ' + error)
-  }
-}
-
-const filterPluginTemplate = (plugin: any) => {
-  if (globalConfig.value && globalConfig.value.plugins) {
-    return globalConfig.value.plugins.find((p: any) => p.language === plugin).template
-  }
-
-  return null
-}
 
 // 禁用右键菜单
 window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 
 onMounted(async () => {
-  await getSupportedLanguages()
-  await refreshEnvInfo()
-  await getConfigure()
-
-  // 设置初始代码模板
-  if (supportedLanguages.value.length > 0) {
-    currentLanguage.value = supportedLanguages.value[0].value
-    console.log('当前语言:', currentLanguage.value)
-    const template = filterPluginTemplate(currentLanguage.value)
-    console.log('使用的模板:', template)
-    code.value = template
-  }
-  else {
-    code.value = 'No supported languages found'
-  }
-
-  // 监听来自 Rust 的各种事件
-  unlistenAboutFn = await listen('show-about', () => {
-    showAbout.value = true
-  })
-
-  unlistenSettingsFn = await listen('show-settings', () => {
-    showSettings.value = true
-  })
-
-  // 监听实时输出事件
-  unlistenOutputFn = await listen('code-output', handleRealtimeOutput)
-
-  // 监听执行状态事件
-  unlistenExecutionStartFn = await listen('code-execution-start', handleExecutionStart)
-  unlistenExecutionCompleteFn = await listen('code-execution-complete', handleExecutionComplete)
-  unlistenExecutionStoppedFn = await listen('code-execution-stopped', handleExecutionStopped)
-  unlistenExecutionTimeoutFn = await listen('code-execution-timeout', handleExecutionTimeout)
-  unlistenExecutionErrorFn = await listen('code-execution-error', handleExecutionError)
+  await initialize()
+  await initializeEventListeners()
 
   // 触发 app-ready 事件，通知主进程
   window.dispatchEvent(new CustomEvent('app-ready'))
 })
 
 onUnmounted(() => {
-  // 清理所有事件监听器
-  const listeners = [
-    unlistenAboutFn,
-    unlistenSettingsFn,
-    unlistenOutputFn,
-    unlistenExecutionStartFn,
-    unlistenExecutionCompleteFn,
-    unlistenExecutionStoppedFn,
-    unlistenExecutionTimeoutFn,
-    unlistenExecutionErrorFn
-  ]
-
-  listeners.forEach(listener => {
-    if (listener) {
-      listener()
-    }
-  })
+  cleanupEventListeners()
 })
 </script>
