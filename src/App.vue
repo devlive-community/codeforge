@@ -103,60 +103,6 @@ interface CodeOutputEvent
   language: string
 }
 
-// 代码模板
-const codeTemplates: Record<string, string> = {
-  python: `# Welcome to CodeForge!
-# Write your Python code here and click Run to execute
-
-print("Hello, CodeForge!")
-
-# Example: Simple calculation
-x = 10
-y = 20
-result = x + y
-print(f"The result of {x} + {y} = {result}")
-
-# Example: List operations
-numbers = [1, 2, 3, 4, 5]
-squared = [n**2 for n in numbers]
-print(f"Original: {numbers}")
-print(f"Squared: {squared}")`,
-
-  python2: `# Welcome to CodeForge - Python 2!
-# Write your Python 2 code here and click Run to execute
-
-print "Hello, CodeForge from Python 2!"
-
-# Example: Simple calculation
-x = 10
-y = 20
-result = x + y
-print "The result of %d + %d = %d" % (x, y, result)
-
-# Example: List operations
-numbers = [1, 2, 3, 4, 5]
-squared = [n**2 for n in numbers]
-print "Original:", numbers
-print "Squared:", squared`,
-
-  python3: `# Welcome to CodeForge - Python 3!
-# Write your Python 3 code here and click Run to execute
-
-print("Hello, CodeForge from Python 3!")
-
-# Example: Simple calculation
-x = 10
-y = 20
-result = x + y
-print(f"The result of {x} + {y} = {result}")
-
-# Example: List operations
-numbers = [1, 2, 3, 4, 5]
-squared = [n**2 for n in numbers]
-print(f"Original: {numbers}")
-print(f"Squared: {squared}")`
-}
-
 const toast = useToast()
 const code = ref('')
 const currentLanguage = ref('python2')
@@ -168,6 +114,7 @@ const activeTab = ref('output')
 const supportedLanguages = ref<Language[]>([])
 const showAbout = ref(false)
 const showSettings = ref(false)
+const globalConfig = ref(null as any)
 
 // 实时输出相关
 const realTimeOutput = ref('')
@@ -250,8 +197,7 @@ const handleLanguageChange = async (newLanguage: string) => {
   currentLanguage.value = newLanguage
 
   // 更新代码模板
-  code.value = codeTemplates[newLanguage] || `# ${ getLanguageDisplayName(newLanguage) } Code
-# Write your code here...`
+  code.value = filterPluginTemplate(newLanguage)
 
   // 清空输出
   clearOutput()
@@ -413,20 +359,41 @@ const handleExecutionError = (event: any) => {
   }
 }
 
+const getConfigure = async () => {
+  try {
+    globalConfig.value = await invoke<any>('get_app_config')
+  }
+  catch (error) {
+    toast.error('获取配置失败 - 错误信息: ' + error)
+  }
+}
+
+const filterPluginTemplate = (plugin: any) => {
+  if (globalConfig.value && globalConfig.value.plugins) {
+    return globalConfig.value.plugins.find((p: any) => p.language === plugin).template
+  }
+
+  return null
+}
+
 // 禁用右键菜单
 window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 
 onMounted(async () => {
   await getSupportedLanguages()
   await refreshEnvInfo()
+  await getConfigure()
 
   // 设置初始代码模板
   if (supportedLanguages.value.length > 0) {
     currentLanguage.value = supportedLanguages.value[0].value
-    code.value = codeTemplates[currentLanguage.value] || codeTemplates.python
+    console.log('当前语言:', currentLanguage.value)
+    const template = filterPluginTemplate(currentLanguage.value)
+    console.log('使用的模板:', template)
+    code.value = template
   }
   else {
-    code.value = codeTemplates.python
+    code.value = 'No supported languages found'
   }
 
   // 监听来自 Rust 的各种事件
