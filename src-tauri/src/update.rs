@@ -261,45 +261,8 @@ async fn do_update(
 async fn do_install(
     update_path: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    #[cfg(target_os = "windows")]
-    {
-        let current_exe = std::env::current_exe()?;
-        let backup_path = current_exe.with_extension("exe.backup");
-
-        // 备份当前文件
-        std::fs::copy(&current_exe, &backup_path)?;
-
-        // 创建更新脚本
-        let script_path = std::env::temp_dir().join("update.bat");
-        let script_content = format!(
-            r#"@echo off
-timeout /t 2 /nobreak >nul
-copy /Y "{}" "{}"
-start "" "{}"
-del "%~f0"
-"#,
-            update_path.display(),
-            current_exe.display(),
-            current_exe.display()
-        );
-
-        std::fs::write(&script_path, script_content)?;
-
-        // 启动脚本
-        std::process::Command::new("cmd")
-            .args(&["/C", "start", "", "/min", script_path.to_str().unwrap()])
-            .spawn()?;
-
-        // 等待一秒后退出
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        std::process::exit(0);
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        let current_exe = std::env::current_exe()?;
-        std::fs::copy(update_path, &current_exe)?;
-    }
+    let current_exe = std::env::current_exe()?;
+    std::fs::copy(update_path, &current_exe)?;
 
     Ok(())
 }
