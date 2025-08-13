@@ -46,7 +46,7 @@ pub fn handle_app_menu_event(app: &AppHandle, event_id: &str) {
             let _event = app.emit("show-about", ());
         }
         "update" => {
-            let _event = app.emit("check-update", ());
+            let _event = app.emit("show-update", ());
         }
         "settings" => {
             let _event = app.emit("show-settings", ());

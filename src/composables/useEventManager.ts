@@ -7,6 +7,7 @@ interface EventManagerOptions
 {
     showAbout: Ref<boolean>
     showSettings: Ref<boolean>
+    showUpdate: Ref<boolean>
     output: Ref<string>
     isRunning: Ref<boolean>
     isSuccess: Ref<boolean>
@@ -20,6 +21,7 @@ export function useEventManager(options: EventManagerOptions)
     const {
         showAbout,
         showSettings,
+        showUpdate,
         output,
         isRunning,
         isSuccess,
@@ -31,6 +33,7 @@ export function useEventManager(options: EventManagerOptions)
     // 事件监听器引用
     let unlistenAboutFn: UnlistenFn | null = null
     let unlistenSettingsFn: UnlistenFn | null = null
+    let unlistenUpdateFn: UnlistenFn | null = null
     let unlistenOutputFn: UnlistenFn | null = null
     let unlistenExecutionStartFn: UnlistenFn | null = null
     let unlistenExecutionCompleteFn: UnlistenFn | null = null
@@ -132,6 +135,10 @@ export function useEventManager(options: EventManagerOptions)
             showSettings.value = true
         })
 
+        unlistenUpdateFn = await listen('show-update', () => {
+            showUpdate.value = true
+        })
+
         // 监听实时输出事件
         unlistenOutputFn = await listen('code-output', handleRealtimeOutput)
 
@@ -148,6 +155,7 @@ export function useEventManager(options: EventManagerOptions)
         const listeners = [
             unlistenAboutFn,
             unlistenSettingsFn,
+            unlistenUpdateFn,
             unlistenOutputFn,
             unlistenExecutionStartFn,
             unlistenExecutionCompleteFn,

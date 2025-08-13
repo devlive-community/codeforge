@@ -46,6 +46,9 @@
     <!-- 设置组件 -->
     <Settings v-if="showSettings" @close="closeSettings"/>
 
+    <!-- 更新组件 -->
+    <Update v-if="showUpdate" @close="closeUpdate"/>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
@@ -67,6 +70,7 @@ import { useCodeExecution } from './composables/useCodeExecution'
 import { useLanguageManager } from './composables/useLanguageManager'
 import { useEventManager } from './composables/useEventManager'
 import { useAppState } from './composables/useAppState'
+import Update from './components/Update.vue'
 
 const toast = useToast()
 
@@ -93,14 +97,17 @@ const {
 const {
   showAbout,
   showSettings,
+  showUpdate,
   activeTab,
   closeAbout,
-  closeSettings
+  closeSettings,
+  closeUpdate
 } = useAppState()
 
 const { initializeEventListeners, cleanupEventListeners } = useEventManager({
   showAbout,
   showSettings,
+  showUpdate,
   output,
   isRunning,
   isSuccess,
