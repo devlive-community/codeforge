@@ -3,6 +3,7 @@ use crate::plugin::PluginManagerState;
 use crate::plugins::PluginConfig;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
+use serde_json::Value::Bool;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -11,12 +12,20 @@ use tauri::{AppHandle, Manager, command};
 static CONFIG_MANAGER: Mutex<Option<ConfigManager>> = Mutex::new(None);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EditorConfig {
+    pub indent_with_tab: Option<bool>, // 是否使用 tab 缩进
+    pub tab_size: Option<u32>,         // tab 缩进, 空格数，默认为 2
+    pub theme: Option<String>,         // 编辑器主题
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub log_directory: Option<String>,
     pub auto_clear_logs: Option<bool>,
     pub keep_log_days: Option<u32>,
     pub theme: Option<String>,
     pub plugins: Option<Vec<PluginConfig>>,
+    pub editor: Option<EditorConfig>,
 }
 
 impl Default for AppConfig {
@@ -27,6 +36,11 @@ impl Default for AppConfig {
             keep_log_days: Some(30),
             theme: Some("system".to_string()),
             plugins: Some(vec![]),
+            editor: Some(EditorConfig {
+                indent_with_tab: Some(true),
+                tab_size: Some(2),
+                theme: Some("githubLight".to_string()),
+            }),
         }
     }
 }
@@ -74,6 +88,16 @@ impl ConfigManager {
 
                         // 合并插件配置（现有配置 + 默认配置中缺失的插件）
                         config.plugins = Self::merge_plugins_config(config.plugins, app_handle);
+
+                        // 检查并设置 editor 默认配置
+                        if config.editor.is_none() {
+                            config.editor = Some(EditorConfig {
+                                indent_with_tab: Some(true),
+                                tab_size: Some(2),
+                                theme: Some("githubLight".to_string()),
+                            });
+                            println!("读取配置 -> 添加默认 editor 配置");
+                        }
 
                         Ok(config)
                     }
@@ -170,6 +194,11 @@ impl ConfigManager {
             keep_log_days: Some(30),
             theme: Some("system".to_string()),
             plugins: Self::get_default_plugins_config(app_handle),
+            editor: Some(EditorConfig {
+                indent_with_tab: Some(true),
+                tab_size: Some(2),
+                theme: Some("githubLight".to_string()),
+            }),
         }
     }
 
