@@ -9,6 +9,8 @@ pub fn create_app_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>>
         .id("about")
         .build(app)?;
 
+    let update_item = MenuItemBuilder::new("检查更新").id("update").build(app)?;
+
     let settings_item = MenuItemBuilder::new("设置")
         .id("settings")
         .accelerator("CmdOrCtrl+,")
@@ -27,6 +29,8 @@ pub fn create_app_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>>
     let app_submenu = SubmenuBuilder::new(app, "CodeForge")
         .item(&about_item)
         .separator()
+        .item(&update_item)
+        .separator()
         .item(&settings_item)
         .separator()
         .item(&restart_item)
@@ -40,6 +44,9 @@ pub fn handle_app_menu_event(app: &AppHandle, event_id: &str) {
     match event_id {
         "about" => {
             let _event = app.emit("show-about", ());
+        }
+        "update" => {
+            let _event = app.emit("show-update", ());
         }
         "settings" => {
             let _event = app.emit("show-settings", ());

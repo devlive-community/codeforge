@@ -23,9 +23,15 @@
             :aria-expanded="isOpen"
             :aria-haspopup="true"
             role="combobox">
-      <span class="block truncate">
-        {{ selectedLabel || placeholder }}
-      </span>
+      <div class="flex space-x-3 items-center truncate">
+        <!-- 如果是SVG字符串 -->
+        <div v-if="selectedOption && getSvgIcon(selectedOption)" v-html="getSvgIcon(selectedOption)" class="w-6 h-6"/>
+
+        <!-- 如果是SVG URL -->
+        <img v-else-if="selectedOption && getSvgUrl(selectedOption)" :src="getSvgUrl(selectedOption)" class="w-6 h-6" alt="icon"/>
+
+        <span>{{ selectedLabel || placeholder }}</span>
+      </div>
       <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
         <ChevronUpIcon class="h-5 w-5 text-gray-400 transition-transform duration-200"
                        :class="{ 'rotate-180': isOpen }"
@@ -71,7 +77,7 @@
                  @keydown.enter.prevent="selectOption(option)"
                  @keydown.space.prevent="selectOption(option)"
                  :class="[
-                    'relative cursor-pointer select-none py-1 my-1 pl-3 pr-9 transition-colors duration-150',
+                    'relative flex space-x-3 items-center cursor-pointer select-none py-1 my-1 pl-3 pr-9 transition-colors duration-150',
                     isSelected(option)
                       ? 'bg-blue-400 text-white'
                       : 'text-gray-900 hover:bg-blue-50',
@@ -80,6 +86,12 @@
                  :aria-selected="isSelected(option)"
                  role="option"
                  tabindex="-1">
+              <!-- 如果是SVG字符串 -->
+              <div v-if="getSvgIcon(option)" v-html="getSvgIcon(option)" class="w-6 h-6"/>
+
+              <!-- 如果是SVG URL -->
+              <img v-else-if="getSvgUrl(option)" :src="getSvgUrl(option)" class="w-6 h-6" alt="icon"/>
+
               <span :class="['block truncate', isSelected(option) ? 'font-medium' : 'font-normal']">
                 {{ getOptionLabel(option) }}
               </span>
@@ -112,6 +124,8 @@ interface Option
   label: string
   value: any
   disabled?: boolean
+  svgIcon?: string
+  svgUrl?: string
 
   [key: string]: any
 }
@@ -177,6 +191,8 @@ const normalizedOptions = computed(() => {
       ...option,
       label: option[props.labelKey] || option.label,
       value: option[props.valueKey] || option.value,
+      svgIcon: option.svgIcon || '',
+      svgUrl: option.svgUrl || '',
       disabled: option.disabled || false
     }
   })
@@ -240,6 +256,8 @@ const updateDropdownPosition = async () => {
 // 方法
 const getOptionValue = (option: Option) => option.value
 const getOptionLabel = (option: Option) => option.label
+const getSvgUrl = (option: Option) => option.svgUrl
+const getSvgIcon = (option: Option) => option.svgIcon
 
 const isSelected = (option: Option) => {
   return option.value === props.modelValue

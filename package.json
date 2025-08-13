@@ -17,7 +17,8 @@
     "@vueuse/core": "^13.6.0",
     "lodash-es": "^4.17.21",
     "lucide-vue-next": "^0.539.0",
-    "vue": "^3.5.13"
+    "vue": "^3.5.13",
+    "vue3-markdown-it": "^1.0.10"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
