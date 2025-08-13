@@ -159,10 +159,10 @@ fn version_is_newer(new_version: &str, current_version: &str) -> bool {
         let new_part = new_parts.get(i).unwrap_or(&0);
         let current_part = current_parts.get(i).unwrap_or(&0);
 
-        if new_part > current_part {
-            return true;
-        } else if new_part < current_part {
-            return false;
+        match new_part.cmp(current_part) {
+            std::cmp::Ordering::Greater => return true,
+            std::cmp::Ordering::Less => return false,
+            std::cmp::Ordering::Equal => continue,
         }
     }
 
