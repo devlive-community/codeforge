@@ -10,14 +10,23 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.2",
+    "@codemirror/lang-go": "^6.0.1",
+    "@codemirror/lang-javascript": "^6.2.4",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.1",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.3.2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-shell": "^2.3.0",
+    "@uiw/codemirror-themes-all": "^4.24.2",
     "@vueuse/core": "^13.6.0",
+    "codemirror": "^6.0.2",
     "lodash-es": "^4.17.21",
     "lucide-vue-next": "^0.539.0",
     "vue": "^3.5.13",
+    "vue-codemirror": "^6.1.1",
     "vue3-markdown-it": "^1.0.10"
   },
   "devDependencies": {

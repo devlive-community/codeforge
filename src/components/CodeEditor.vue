@@ -1,40 +1,20 @@
 <template>
-  <div class="flex bg-white h-full relative overflow-hidden">
-    <!-- 行号 -->
-    <div ref="lineNumbersRef"
-         class="bg-gray-50 text-gray-400 text-sm font-mono px-3 pb-4 select-none border-r border-gray-200 overflow-hidden flex-shrink-0 z-10"
-         style="padding-top: 0;">
-      <div v-for="(num, index) in lineNumbers" :key="index" class="h-6 leading-6 text-right">
-        {{ num }}
-      </div>
-    </div>
-
-    <!-- 语法高亮容器 -->
-    <div class="flex-1 relative overflow-hidden">
-      <!-- 高亮显示层 -->
-      <pre ref="highlightRef"
-           class="absolute inset-0 px-4 pb-4 font-mono text-sm leading-6 bg-transparent pointer-events-none overflow-auto whitespace-pre-wrap z-0"
-           style="margin: 0; border: 0; padding-top: 0; word-break: break-word; white-space: pre-wrap;"
-           v-html="highlightedCode"></pre>
-
-      <!-- 代码输入框 -->
-      <textarea ref="textareaRef"
-                :value="modelValue"
-                @input="handleInput"
-                @keydown="handleKeyDown"
-                @scroll="handleScroll"
-                class="absolute inset-0 px-4 pb-4 font-mono text-sm leading-6 resize-none outline-none bg-transparent z-10 overflow-auto"
-                style="color: transparent; caret-color: #374151; margin: 0; border: 0; padding-top: 0; word-break: break-word; white-space: pre-wrap;"
-                placeholder="在此输入代码..."
-                spellcheck="false">
-      </textarea>
-    </div>
+  <div class="flex bg-white h-full relative">
+    <Codemirror v-if="isReady"
+                style="width: 100%; height: 100%"
+                :model-value="modelValue"
+                :extensions="extensions"
+                @change="handleInput"/>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
-import { highlightCode } from '../utils/highlighter'
+import { nextTick, onMounted, ref, watch } from 'vue'
+import { Codemirror } from 'vue-codemirror'
+import { python } from '@codemirror/lang-python'
+import { javascript } from '@codemirror/lang-javascript'
+import { go } from '@codemirror/lang-go'
+import { githubLight } from '@uiw/codemirror-themes-all'
 
 const props = defineProps<{
   modelValue: string
@@ -45,46 +25,57 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-const textareaRef = ref<HTMLTextAreaElement>()
-const lineNumbersRef = ref<HTMLElement>()
-const highlightRef = ref<HTMLPreElement>()
-
-const lineNumbers = computed(() => {
-  const lines = props.modelValue.split('\n')
-  return lines.map((_, index) => String(index + 1))
-})
-
-const highlightedCode = computed(() => {
-  return highlightCode(props.modelValue, props.language || 'python3')
-})
-
-const handleInput = (e: Event) => {
-  const target = e.target as HTMLTextAreaElement
-  emit('update:modelValue', target.value)
+const handleInput = (value: string) => {
+  emit('update:modelValue', value)
 }
 
-const handleKeyDown = async (e: KeyboardEvent) => {
-  if (e.key === 'Tab') {
-    e.preventDefault()
-    const target = e.target as HTMLTextAreaElement
-    const start = target.selectionStart
-    const end = target.selectionEnd
-    const newValue = props.modelValue.substring(0, start) + '    ' + props.modelValue.substring(end)
-    emit('update:modelValue', newValue)
+const isReady = ref(false)
+const extensions = ref<[]>([])
 
+// 获取语言扩展
+const getLanguageExtension = (language: string): any | null => {
+  switch (language) {
+    case 'python2':
+    case 'python3':
+      return python()
+    case 'nodejs':
+      return javascript()
+    case 'go':
+      return go()
+    default:
+      return null
+  }
+}
+
+// 更新扩展的函数
+const updateExtensions = async () => {
+  const result = [githubLight]
+
+  if (props.language) {
+    const langExtension = getLanguageExtension(props.language)
+    if (langExtension) {
+      result.push(langExtension)
+    }
+  }
+
+  extensions.value = result as any
+
+  // 如果组件还没准备好，等待下一个 tick 后设置为准备好
+  if (!isReady.value) {
     await nextTick()
-    target.selectionStart = target.selectionEnd = start + 4
+    isReady.value = true
   }
 }
 
-const handleScroll = (e: Event) => {
-  const target = e.target as HTMLTextAreaElement
-  if (lineNumbersRef.value) {
-    lineNumbersRef.value.scrollTop = target.scrollTop
-  }
-  if (highlightRef.value) {
-    highlightRef.value.scrollTop = target.scrollTop
-    highlightRef.value.scrollLeft = target.scrollLeft
-  }
-}
+// 监听语言变化
+watch(() => props.language, async () => {
+  isReady.value = false
+  await nextTick()
+  await updateExtensions()
+}, { immediate: false })
+
+// 组件挂载时初始化
+onMounted(async () => {
+  await updateExtensions()
+})
 </script>
