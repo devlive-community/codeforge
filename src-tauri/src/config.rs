@@ -3,7 +3,6 @@ use crate::plugin::PluginManagerState;
 use crate::plugins::PluginConfig;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
-use serde_json::Value::Bool;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
