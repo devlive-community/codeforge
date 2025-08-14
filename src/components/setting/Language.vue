@@ -180,10 +180,6 @@ const {
     {
       modelValue: templateContent.value,
       language: currentLanguage.value
-    },
-    // emit 函数用于更新 modelValue
-    (event: 'update:modelValue', value: string) => {
-      templateContent.value = value
     }
 )
 
