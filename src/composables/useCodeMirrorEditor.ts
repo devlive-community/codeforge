@@ -3,6 +3,7 @@ import { python } from '@codemirror/lang-python'
 import { javascript } from '@codemirror/lang-javascript'
 import { go } from '@codemirror/lang-go'
 import { java } from '@codemirror/lang-java'
+import { shell } from '@codemirror/legacy-modes/mode/shell'
 import {
     abcdef,
     abyss,
@@ -53,6 +54,7 @@ import {
 } from '@uiw/codemirror-themes-all'
 import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '../plugins/toast'
+import { StreamLanguage } from '@codemirror/language'
 
 interface EditorConfig
 {
@@ -153,6 +155,8 @@ export function useCodeMirrorEditor(props: Props)
                 return go()
             case 'java':
                 return java()
+            case 'shell':
+                return StreamLanguage.define(shell)
             default:
                 return null
         }

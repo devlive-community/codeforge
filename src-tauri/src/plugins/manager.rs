@@ -3,6 +3,7 @@ use super::{
     python3::Python3Plugin,
 };
 use crate::plugins::java::JavaPlugin;
+use crate::plugins::shell::ShellPlugin;
 use std::collections::HashMap;
 
 pub struct PluginManager {
@@ -18,6 +19,7 @@ impl PluginManager {
         plugins.insert("nodejs".to_string(), Box::new(NodeJSPlugin));
         plugins.insert("go".to_string(), Box::new(GoPlugin));
         plugins.insert("java".to_string(), Box::new(JavaPlugin));
+        plugins.insert("shell".to_string(), Box::new(ShellPlugin));
 
         Self { plugins }
     }

@@ -98,7 +98,7 @@
           <template #template>
             <div class="w-[98%]">
               <Codemirror v-if="isEditorReady && pluginConfig.template !== undefined"
-                          style="width: 100%; height: 380px"
+                          style="width: 102%; height: 380px"
                           v-model="pluginConfig.template"
                           :extensions="currentExtensions"
                           class="flex-1 border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden"/>
