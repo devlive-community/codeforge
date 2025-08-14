@@ -8,9 +8,9 @@
           :tabs="tabsPluginData"
           @change="handleTabChange">
       <template #[activePlugin]="{ tab }">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-          <LanguagesIcon class="w-5 h-5 mr-2"/>
-          {{ `语言 [ ${ tab.label } ] 配置` }}
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+          <img :src="`/icons/${activePlugin.replace(/\d+$/, '')}.svg`" class="w-6 h-6" :alt="tab.label"/>
+          <span>{{ `语言 [ ${ tab.label } ] 配置` }}</span>
         </h3>
 
         <Tabs v-model="activeTab"
@@ -96,15 +96,14 @@
           </template>
 
           <template #template>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                文件模板
-              </label>
-              <div class="flex">
-                <textarea v-model="pluginConfig.template"
-                          placeholder="文件模板"
-                          rows="20"
-                          class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+            <div class="w-[98%]">
+              <Codemirror v-if="isEditorReady && pluginConfig.template !== undefined"
+                          style="width: 100%; height: 380px"
+                          v-model="pluginConfig.template"
+                          :extensions="currentExtensions"
+                          class="flex-1 border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden"/>
+              <div v-else class="flex-1 flex items-center justify-center h-64 border border-gray-300 dark:border-gray-600 rounded-md">
+                <div class="text-gray-500">加载编辑器中...</div>
               </div>
             </div>
           </template>
@@ -129,12 +128,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { ContainerIcon, FileIcon, Folder, LanguagesIcon, PickaxeIcon, Settings2 } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { ContainerIcon, FileIcon, Folder, PickaxeIcon, Settings2 } from 'lucide-vue-next'
+import { Codemirror } from 'vue-codemirror'
 import Button from '../../ui/Button.vue'
 import Tabs from '../../ui/Tabs.vue'
 import { usePluginConfig } from '../../composables/usePluginConfig'
 import type PluginConfig from '../../types/plugin'
+import { useCodeMirrorEditor } from '../../composables/useCodeMirrorEditor.ts'
 
 const emit = defineEmits<{
   'settings-changed': [config: PluginConfig]
@@ -150,6 +151,78 @@ const {
   selectExecuteHome,
   initializePlugin
 } = usePluginConfig(emit)
+
+// 编辑器状态
+const isEditorReady = ref(false)
+const currentExtensions = ref<any[]>([])
+
+// 创建 computed 来响应式地获取当前语言
+const currentLanguage = computed(() => {
+  return activePlugin.value || ''
+})
+
+// 创建 computed 来响应式地获取模板内容
+const templateContent = computed({
+  get: () => pluginConfig.value?.template || '',
+  set: (value: string) => {
+    if (pluginConfig.value) {
+      pluginConfig.value.template = value
+    }
+  }
+})
+
+// 使用 useCodeMirrorEditor composable
+const {
+  initializeEditor,
+  getLanguageExtension,
+  getThemeExtension
+} = useCodeMirrorEditor(
+    {
+      modelValue: templateContent.value,
+      language: currentLanguage.value
+    },
+    // emit 函数用于更新 modelValue
+    (event: 'update:modelValue', value: string) => {
+      templateContent.value = value
+    }
+)
+
+// 更新扩展的函数
+const updateExtensions = async () => {
+  const newExtensions = []
+
+  // 添加主题扩展
+  const themeExtension = getThemeExtension()
+  newExtensions.push(themeExtension)
+
+  // 添加语言扩展
+  if (currentLanguage.value) {
+    const langExtension = getLanguageExtension(currentLanguage.value)
+    if (langExtension) {
+      newExtensions.push(langExtension)
+    }
+  }
+
+  currentExtensions.value = newExtensions
+
+  if (!isEditorReady.value) {
+    await nextTick()
+    isEditorReady.value = true
+  }
+}
+
+// 监听语言变化
+watch(currentLanguage, async (newLanguage) => {
+  console.log('Language changed to:', newLanguage)
+  if (newLanguage) {
+    await updateExtensions()
+  }
+}, { immediate: false })
+
+// 监听插件配置变化
+watch(() => pluginConfig.value?.template, (newTemplate) => {
+  console.log('Template changed:', newTemplate)
+}, { immediate: false })
 
 // 标签页数据
 const tabsData = [
@@ -176,6 +249,21 @@ const tabsData = [
 ]
 
 onMounted(async () => {
+  console.log('Component mounted')
+
+  // 先初始化插件配置
   await initializePlugin()
+  console.log('Plugin initialized:', {
+    activePlugin: activePlugin.value,
+    template: pluginConfig.value?.template
+  })
+
+  // 再初始化编辑器
+  await initializeEditor()
+  console.log('Editor initialized')
+
+  // 更新扩展
+  await updateExtensions()
+  console.log('Extensions updated:', currentExtensions.value)
 })
 </script>

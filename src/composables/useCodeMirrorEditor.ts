@@ -67,12 +67,7 @@ interface Props
     language?: string
 }
 
-interface Emit
-{
-    (event: 'update:modelValue', value: string): void
-}
-
-export function useCodeMirrorEditor(props: Props, _emit: Emit)
+export function useCodeMirrorEditor(props: Props)
 {
     const toast = useToast()
 
