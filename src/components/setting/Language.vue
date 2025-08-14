@@ -1,13 +1,23 @@
 <template>
   <div class="-mt-2">
-    <Tabs v-model="activePlugin" type="card" size="md" position="left" :tab-button-class="['w-36']" :tabs="tabsPluginData" @change="handleTabChange">
+    <Tabs v-model="activePlugin"
+          type="card"
+          size="md"
+          position="left"
+          :tab-button-class="['w-36']"
+          :tabs="tabsPluginData"
+          @change="handleTabChange">
       <template #[activePlugin]="{ tab }">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
           <LanguagesIcon class="w-5 h-5 mr-2"/>
           {{ `语言 [ ${ tab.label } ] 配置` }}
         </h3>
 
-        <Tabs v-model="activeTab" type="card" size="md" :tabs="tabsData" :nav-class="['w-full', 'justify-center']">
+        <Tabs v-model="activeTab"
+              type="card"
+              size="md"
+              :tabs="tabsData"
+              :nav-class="['w-full', 'justify-center']">
           <template #general>
             <div class="space-y-4">
               <div>
@@ -119,14 +129,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { debounce } from 'lodash-es'
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { onMounted } from 'vue'
 import { ContainerIcon, FileIcon, Folder, LanguagesIcon, PickaxeIcon, Settings2 } from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
-import { useToast } from '../../plugins/toast'
 import Tabs from '../../ui/Tabs.vue'
+import { usePluginConfig } from '../../composables/usePluginConfig'
 import type PluginConfig from '../../types/plugin'
 
 const emit = defineEmits<{
@@ -134,12 +141,17 @@ const emit = defineEmits<{
   'error': [message: string]
 }>()
 
-const toast = useToast()
+const {
+  activePlugin,
+  activeTab,
+  tabsPluginData,
+  pluginConfig,
+  handleTabChange,
+  selectExecuteHome,
+  initializePlugin
+} = usePluginConfig(emit)
 
-const activePlugin = ref('')
-const tabsPluginData = ref([] as any[])
-
-const activeTab = ref('general')
+// 标签页数据
 const tabsData = [
   {
     key: 'general',
@@ -147,9 +159,9 @@ const tabsData = [
     icon: Settings2
   },
   {
-    'key': 'environment',
-    'label': '环境配置',
-    'icon': ContainerIcon
+    key: 'environment',
+    label: '环境配置',
+    icon: ContainerIcon
   },
   {
     key: 'template',
@@ -163,113 +175,7 @@ const tabsData = [
   }
 ]
 
-const globalConfig = ref(null as any)
-const pluginConfig = ref<PluginConfig>({
-  enabled: false,
-  execute_home: '',
-  extension: '',
-  language: '',
-  before_compile: '',
-  after_compile: '',
-  run_command: '',
-  template: '',
-  timeout: 30
-})
-
-const getSupportedLanguages = async () => {
-  try {
-    const languages = await invoke<any[]>('get_supported_languages')
-    tabsPluginData.value = languages.map((language) => ({
-      key: language.value,
-      label: language.name,
-      svgUrl: `/icons/${ language.value.replace(/\d+$/, '') }.svg`
-    }))
-
-    if (tabsPluginData.value.length > 0 && !activePlugin.value) {
-      activePlugin.value = tabsPluginData.value[0].key
-    }
-  }
-  catch (error) {
-    toast.error('获取支持的语言失败 - 错误信息: ' + error)
-    tabsPluginData.value = []
-  }
-}
-
-const getConfigure = async () => {
-  try {
-    globalConfig.value = await invoke<any>('get_app_config')
-
-    handleTabChange()
-  }
-  catch (error) {
-    toast.error('获取配置失败 - 错误信息: ' + error)
-  }
-}
-
-const handleTabChange = () => {
-  if (globalConfig.value && globalConfig.value.plugins) {
-    pluginConfig.value = globalConfig.value.plugins.find((plugin: any) => plugin.language === activePlugin.value)
-  }
-}
-
-const selectExecuteHome = async () => {
-  try {
-    const selected = await openDialog({
-      directory: true,
-      multiple: false,
-      title: '选择语言环境目录'
-    })
-
-    if (selected) {
-      pluginConfig.value.execute_home = selected as string
-    }
-  }
-  catch (error) {
-    console.error('Failed to select directory:', error)
-    emit('error', '选择目录失败')
-  }
-}
-
-const updateGlobalConfig = async (updatedPlugin: PluginConfig) => {
-  if (!globalConfig.value || !globalConfig.value.plugins) {
-    return
-  }
-
-  const pluginIndex = globalConfig.value.plugins.findIndex(
-      (plugin: any) => plugin.language === updatedPlugin.language
-  )
-
-  if (pluginIndex !== -1) {
-    globalConfig.value.plugins[pluginIndex] = { ...updatedPlugin }
-  }
-
-  try {
-    await invoke('update_app_config', { config: globalConfig.value })
-    toast.success(`${ tabsPluginData.value.find((tab: any) => tab.key === updatedPlugin.language).label } 配置已保存`)
-    emit('settings-changed', updatedPlugin)
-  }
-  catch (error) {
-    toast.error('保存配置失败 - 错误信息: ' + error)
-    emit('error', '保存配置失败')
-  }
-}
-
-watch(pluginConfig, (newConfig, oldConfig) => {
-  if (oldConfig && newConfig.language) {
-    // 防抖处理，避免频繁保存
-    debounceUpdate(newConfig)
-  }
-}, {
-  deep: true,
-  flush: 'post'
-})
-
-const debounceUpdate = debounce((config: PluginConfig) => {
-  updateGlobalConfig(config)
-}, 1000)
-
 onMounted(async () => {
-  await getSupportedLanguages()
-  await getConfigure()
+  await initializePlugin()
 })
 </script>
