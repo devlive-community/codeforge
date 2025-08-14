@@ -29,7 +29,7 @@ const {
   extensions,
   editorConfig,
   initializeEditor
-} = useCodeMirrorEditor(props, emit)
+} = useCodeMirrorEditor(props)
 
 const handleInput = (value: string) => {
   emit('update:modelValue', value)

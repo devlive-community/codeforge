@@ -32,6 +32,11 @@ pub async fn get_info(
     debug!("获取环境 -> 插件 [ {} ] 命令 {}", language, cmd);
 
     let version_output = Command::new(&cmd).args(plugin.get_version_args()).output();
+    debug!(
+        "获取环境 -> 插件 [ {} ] 版本, 结果 {:?}",
+        plugin.get_language_key(),
+        version_output
+    );
     if let Ok(version_out) = version_output {
         if version_out.status.success() {
             let path_result = Command::new(&cmd)
@@ -39,9 +44,19 @@ pub async fn get_info(
                 .arg(plugin.get_path_command())
                 .output();
 
-            let version = String::from_utf8_lossy(&version_out.stdout)
+            let mut version = String::from_utf8_lossy(&version_out.stdout)
                 .trim()
                 .to_string();
+
+            if version.is_empty() {
+                info!(
+                    "获取环境 -> 调用插件 [ {} ] 版本为空，通过 stderr 获取",
+                    language
+                );
+                version = String::from_utf8_lossy(&version_out.stderr)
+                    .trim()
+                    .to_string();
+            }
 
             let path = if let Ok(path_out) = path_result {
                 if path_out.status.success() {

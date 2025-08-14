@@ -1,5 +1,4 @@
 import type { Ref } from 'vue'
-import { ref } from 'vue'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
 import { CodeOutputEvent } from '../types/app.ts'
 
@@ -14,6 +13,11 @@ interface EventManagerOptions
     lastExecutionTime: Ref<number>
     currentLanguage: Ref<string>
     toast: any
+    handleRealtimeOutput: (currentLanguage: string, data: any) => void
+    handleExecutionComplete: (currentLanguage: string, data: any) => void
+    handleExecutionStopped: (currentLanguage: string, data: any) => void
+    handleExecutionTimeout: (currentLanguage: string, data: any) => void
+    handleExecutionError: (currentLanguage: string, data: any) => void
 }
 
 export function useEventManager(options: EventManagerOptions)
@@ -22,12 +26,12 @@ export function useEventManager(options: EventManagerOptions)
         showAbout,
         showSettings,
         showUpdate,
-        output,
-        isRunning,
-        isSuccess,
-        lastExecutionTime,
         currentLanguage,
-        toast
+        handleRealtimeOutput,
+        handleExecutionComplete,
+        handleExecutionStopped,
+        handleExecutionTimeout,
+        handleExecutionError
     } = options
 
     // 事件监听器引用
@@ -41,40 +45,11 @@ export function useEventManager(options: EventManagerOptions)
     let unlistenExecutionTimeoutFn: UnlistenFn | null = null
     let unlistenExecutionErrorFn: UnlistenFn | null = null
 
-    // 实时输出相关
-    const realTimeOutput = ref('')
-    const realTimeStderr = ref('')
-
     // 处理实时输出
-    const handleRealtimeOutput = (event: any) => {
+    const handleRealtimeOutputWrapper = (event: any) => {
         const data: CodeOutputEvent = event.payload
         console.log('实时输出:', data)
-
-        // 只处理当前语言的输出
-        if (data.language !== currentLanguage.value) {
-            return
-        }
-
-        if (data.type === 'stdout') {
-            realTimeOutput.value += data.content + '\n'
-        }
-        else if (data.type === 'stderr') {
-            realTimeStderr.value += data.content + '\n'
-        }
-
-        // 合并输出显示
-        let combinedOutput = ''
-        if (realTimeOutput.value) {
-            combinedOutput += realTimeOutput.value
-        }
-        if (realTimeStderr.value) {
-            if (combinedOutput) {
-                combinedOutput += '\n'
-            }
-            combinedOutput += realTimeStderr.value
-        }
-
-        output.value = combinedOutput
+        handleRealtimeOutput(currentLanguage.value, data)
     }
 
     // 处理执行状态事件
@@ -85,44 +60,26 @@ export function useEventManager(options: EventManagerOptions)
         }
     }
 
-    const handleExecutionComplete = (event: any) => {
+    const handleExecutionCompleteWrapper = (event: any) => {
         const data = event.payload
-        if (data.language === currentLanguage.value) {
-            isRunning.value = false
-            isSuccess.value = data.success
-            if (data.execution_time) {
-                lastExecutionTime.value = data.execution_time
-            }
-            console.log('代码执行完成')
-        }
+        console.log('代码执行完成')
+        handleExecutionComplete(currentLanguage.value, data)
     }
 
-    const handleExecutionStopped = (event: any) => {
+    const handleExecutionStoppedWrapper = (event: any) => {
         const data = event.payload
-        if (data.language === currentLanguage.value) {
-            isRunning.value = false
-            output.value += '\n\n🛑 代码执行已被用户停止'
-            toast.warning('代码执行已停止')
-            console.log('代码执行已停止')
-        }
+        console.log('代码执行已停止')
+        handleExecutionStopped(currentLanguage.value, data)
     }
 
-    const handleExecutionTimeout = (event: any) => {
+    const handleExecutionTimeoutWrapper = (event: any) => {
         const data = event.payload
-        if (data.language === currentLanguage.value) {
-            isRunning.value = false
-            output.value += '\n\n⚠️ 代码执行超时（30秒）'
-            toast.error('代码执行超时')
-        }
+        handleExecutionTimeout(currentLanguage.value, data)
     }
 
-    const handleExecutionError = (event: any) => {
+    const handleExecutionErrorWrapper = (event: any) => {
         const data = event.payload
-        if (data.language === currentLanguage.value) {
-            isRunning.value = false
-            output.value += `\n\n❌ 执行错误: ${ data.error }`
-            toast.error('代码执行出错')
-        }
+        handleExecutionError(currentLanguage.value, data)
     }
 
     const initializeEventListeners = async () => {
@@ -140,14 +97,14 @@ export function useEventManager(options: EventManagerOptions)
         })
 
         // 监听实时输出事件
-        unlistenOutputFn = await listen('code-output', handleRealtimeOutput)
+        unlistenOutputFn = await listen('code-output', handleRealtimeOutputWrapper)
 
         // 监听执行状态事件
         unlistenExecutionStartFn = await listen('code-execution-start', handleExecutionStart)
-        unlistenExecutionCompleteFn = await listen('code-execution-complete', handleExecutionComplete)
-        unlistenExecutionStoppedFn = await listen('code-execution-stopped', handleExecutionStopped)
-        unlistenExecutionTimeoutFn = await listen('code-execution-timeout', handleExecutionTimeout)
-        unlistenExecutionErrorFn = await listen('code-execution-error', handleExecutionError)
+        unlistenExecutionCompleteFn = await listen('code-execution-complete', handleExecutionCompleteWrapper)
+        unlistenExecutionStoppedFn = await listen('code-execution-stopped', handleExecutionStoppedWrapper)
+        unlistenExecutionTimeoutFn = await listen('code-execution-timeout', handleExecutionTimeoutWrapper)
+        unlistenExecutionErrorFn = await listen('code-execution-error', handleExecutionErrorWrapper)
     }
 
     const cleanupEventListeners = () => {

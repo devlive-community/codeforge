@@ -2,6 +2,7 @@ use super::{
     LanguagePlugin, PluginConfig, go::GoPlugin, nodejs::NodeJSPlugin, python2::Python2Plugin,
     python3::Python3Plugin,
 };
+use crate::plugins::java::JavaPlugin;
 use std::collections::HashMap;
 
 pub struct PluginManager {
@@ -16,6 +17,7 @@ impl PluginManager {
         plugins.insert("python3".to_string(), Box::new(Python3Plugin));
         plugins.insert("nodejs".to_string(), Box::new(NodeJSPlugin));
         plugins.insert("go".to_string(), Box::new(GoPlugin));
+        plugins.insert("java".to_string(), Box::new(JavaPlugin));
 
         Self { plugins }
     }

@@ -1,13 +1,23 @@
 <template>
   <div class="-mt-2">
-    <Tabs v-model="activePlugin" type="card" size="md" position="left" :tab-button-class="['w-36']" :tabs="tabsPluginData" @change="handleTabChange">
+    <Tabs v-model="activePlugin"
+          type="card"
+          size="md"
+          position="left"
+          :tab-button-class="['w-36']"
+          :tabs="tabsPluginData"
+          @change="handleTabChange">
       <template #[activePlugin]="{ tab }">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-          <LanguagesIcon class="w-5 h-5 mr-2"/>
-          {{ `语言 [ ${ tab.label } ] 配置` }}
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+          <img :src="`/icons/${activePlugin.replace(/\d+$/, '')}.svg`" class="w-6 h-6" :alt="tab.label"/>
+          <span>{{ `语言 [ ${ tab.label } ] 配置` }}</span>
         </h3>
 
-        <Tabs v-model="activeTab" type="card" size="md" :tabs="tabsData" :nav-class="['w-full', 'justify-center']">
+        <Tabs v-model="activeTab"
+              type="card"
+              size="md"
+              :tabs="tabsData"
+              :nav-class="['w-full', 'justify-center']">
           <template #general>
             <div class="space-y-4">
               <div>
@@ -86,15 +96,14 @@
           </template>
 
           <template #template>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                文件模板
-              </label>
-              <div class="flex">
-                <textarea v-model="pluginConfig.template"
-                          placeholder="文件模板"
-                          rows="20"
-                          class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+            <div class="w-[98%]">
+              <Codemirror v-if="isEditorReady && pluginConfig.template !== undefined"
+                          style="width: 100%; height: 380px"
+                          v-model="pluginConfig.template"
+                          :extensions="currentExtensions"
+                          class="flex-1 border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden"/>
+              <div v-else class="flex-1 flex items-center justify-center h-64 border border-gray-300 dark:border-gray-600 rounded-md">
+                <div class="text-gray-500">加载编辑器中...</div>
               </div>
             </div>
           </template>
@@ -119,27 +128,99 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { debounce } from 'lodash-es'
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
-import { ContainerIcon, FileIcon, Folder, LanguagesIcon, PickaxeIcon, Settings2 } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { ContainerIcon, FileIcon, Folder, PickaxeIcon, Settings2 } from 'lucide-vue-next'
+import { Codemirror } from 'vue-codemirror'
 import Button from '../../ui/Button.vue'
-import { useToast } from '../../plugins/toast'
 import Tabs from '../../ui/Tabs.vue'
+import { usePluginConfig } from '../../composables/usePluginConfig'
 import type PluginConfig from '../../types/plugin'
+import { useCodeMirrorEditor } from '../../composables/useCodeMirrorEditor.ts'
 
 const emit = defineEmits<{
   'settings-changed': [config: PluginConfig]
   'error': [message: string]
 }>()
 
-const toast = useToast()
+const {
+  activePlugin,
+  activeTab,
+  tabsPluginData,
+  pluginConfig,
+  handleTabChange,
+  selectExecuteHome,
+  initializePlugin
+} = usePluginConfig(emit)
 
-const activePlugin = ref('')
-const tabsPluginData = ref([] as any[])
+// 编辑器状态
+const isEditorReady = ref(false)
+const currentExtensions = ref<any[]>([])
 
-const activeTab = ref('general')
+// 创建 computed 来响应式地获取当前语言
+const currentLanguage = computed(() => {
+  return activePlugin.value || ''
+})
+
+// 创建 computed 来响应式地获取模板内容
+const templateContent = computed({
+  get: () => pluginConfig.value?.template || '',
+  set: (value: string) => {
+    if (pluginConfig.value) {
+      pluginConfig.value.template = value
+    }
+  }
+})
+
+// 使用 useCodeMirrorEditor composable
+const {
+  initializeEditor,
+  getLanguageExtension,
+  getThemeExtension
+} = useCodeMirrorEditor(
+    {
+      modelValue: templateContent.value,
+      language: currentLanguage.value
+    }
+)
+
+// 更新扩展的函数
+const updateExtensions = async () => {
+  const newExtensions = []
+
+  // 添加主题扩展
+  const themeExtension = getThemeExtension()
+  newExtensions.push(themeExtension)
+
+  // 添加语言扩展
+  if (currentLanguage.value) {
+    const langExtension = getLanguageExtension(currentLanguage.value)
+    if (langExtension) {
+      newExtensions.push(langExtension)
+    }
+  }
+
+  currentExtensions.value = newExtensions
+
+  if (!isEditorReady.value) {
+    await nextTick()
+    isEditorReady.value = true
+  }
+}
+
+// 监听语言变化
+watch(currentLanguage, async (newLanguage) => {
+  console.log('Language changed to:', newLanguage)
+  if (newLanguage) {
+    await updateExtensions()
+  }
+}, { immediate: false })
+
+// 监听插件配置变化
+watch(() => pluginConfig.value?.template, (newTemplate) => {
+  console.log('Template changed:', newTemplate)
+}, { immediate: false })
+
+// 标签页数据
 const tabsData = [
   {
     key: 'general',
@@ -147,9 +228,9 @@ const tabsData = [
     icon: Settings2
   },
   {
-    'key': 'environment',
-    'label': '环境配置',
-    'icon': ContainerIcon
+    key: 'environment',
+    label: '环境配置',
+    icon: ContainerIcon
   },
   {
     key: 'template',
@@ -163,113 +244,22 @@ const tabsData = [
   }
 ]
 
-const globalConfig = ref(null as any)
-const pluginConfig = ref<PluginConfig>({
-  enabled: false,
-  execute_home: '',
-  extension: '',
-  language: '',
-  before_compile: '',
-  after_compile: '',
-  run_command: '',
-  template: '',
-  timeout: 30
-})
-
-const getSupportedLanguages = async () => {
-  try {
-    const languages = await invoke<any[]>('get_supported_languages')
-    tabsPluginData.value = languages.map((language) => ({
-      key: language.value,
-      label: language.name,
-      svgUrl: `/icons/${ language.value.replace(/\d+$/, '') }.svg`
-    }))
-
-    if (tabsPluginData.value.length > 0 && !activePlugin.value) {
-      activePlugin.value = tabsPluginData.value[0].key
-    }
-  }
-  catch (error) {
-    toast.error('获取支持的语言失败 - 错误信息: ' + error)
-    tabsPluginData.value = []
-  }
-}
-
-const getConfigure = async () => {
-  try {
-    globalConfig.value = await invoke<any>('get_app_config')
-
-    handleTabChange()
-  }
-  catch (error) {
-    toast.error('获取配置失败 - 错误信息: ' + error)
-  }
-}
-
-const handleTabChange = () => {
-  if (globalConfig.value && globalConfig.value.plugins) {
-    pluginConfig.value = globalConfig.value.plugins.find((plugin: any) => plugin.language === activePlugin.value)
-  }
-}
-
-const selectExecuteHome = async () => {
-  try {
-    const selected = await openDialog({
-      directory: true,
-      multiple: false,
-      title: '选择语言环境目录'
-    })
-
-    if (selected) {
-      pluginConfig.value.execute_home = selected as string
-    }
-  }
-  catch (error) {
-    console.error('Failed to select directory:', error)
-    emit('error', '选择目录失败')
-  }
-}
-
-const updateGlobalConfig = async (updatedPlugin: PluginConfig) => {
-  if (!globalConfig.value || !globalConfig.value.plugins) {
-    return
-  }
-
-  const pluginIndex = globalConfig.value.plugins.findIndex(
-      (plugin: any) => plugin.language === updatedPlugin.language
-  )
-
-  if (pluginIndex !== -1) {
-    globalConfig.value.plugins[pluginIndex] = { ...updatedPlugin }
-  }
-
-  try {
-    await invoke('update_app_config', { config: globalConfig.value })
-    toast.success(`${ tabsPluginData.value.find((tab: any) => tab.key === updatedPlugin.language).label } 配置已保存`)
-    emit('settings-changed', updatedPlugin)
-  }
-  catch (error) {
-    toast.error('保存配置失败 - 错误信息: ' + error)
-    emit('error', '保存配置失败')
-  }
-}
-
-watch(pluginConfig, (newConfig, oldConfig) => {
-  if (oldConfig && newConfig.language) {
-    // 防抖处理，避免频繁保存
-    debounceUpdate(newConfig)
-  }
-}, {
-  deep: true,
-  flush: 'post'
-})
-
-const debounceUpdate = debounce((config: PluginConfig) => {
-  updateGlobalConfig(config)
-}, 1000)
-
 onMounted(async () => {
-  await getSupportedLanguages()
-  await getConfigure()
+  console.log('Component mounted')
+
+  // 先初始化插件配置
+  await initializePlugin()
+  console.log('Plugin initialized:', {
+    activePlugin: activePlugin.value,
+    template: pluginConfig.value?.template
+  })
+
+  // 再初始化编辑器
+  await initializeEditor()
+  console.log('Editor initialized')
+
+  // 更新扩展
+  await updateExtensions()
+  console.log('Extensions updated:', currentExtensions.value)
 })
 </script>

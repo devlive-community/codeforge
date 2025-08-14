@@ -82,7 +82,12 @@ const {
   lastExecutionTime,
   runCode,
   stopCode,
-  clearOutput
+  clearOutput,
+  handleRealtimeOutput,
+  handleExecutionComplete,
+  handleExecutionStopped,
+  handleExecutionTimeout,
+  handleExecutionError
 } = useCodeExecution(toast)
 
 const {
@@ -113,7 +118,12 @@ const { initializeEventListeners, cleanupEventListeners } = useEventManager({
   isSuccess,
   lastExecutionTime,
   currentLanguage,
-  toast
+  toast,
+  handleRealtimeOutput,
+  handleExecutionComplete,
+  handleExecutionStopped,
+  handleExecutionTimeout,
+  handleExecutionError
 })
 
 // 禁用右键菜单

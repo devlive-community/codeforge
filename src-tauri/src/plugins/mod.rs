@@ -1,6 +1,7 @@
 use crate::config::get_app_config_internal;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
+use std::format;
 use std::path::PathBuf;
 
 // 通用结构定义
@@ -329,6 +330,7 @@ pub trait LanguagePlugin: Send + Sync {
 
 // 重新导出子模块
 pub mod go;
+pub mod java;
 pub mod manager;
 pub mod nodejs;
 pub mod python2;
