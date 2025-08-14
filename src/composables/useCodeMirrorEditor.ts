@@ -2,6 +2,7 @@ import { nextTick, ref, watch } from 'vue'
 import { python } from '@codemirror/lang-python'
 import { javascript } from '@codemirror/lang-javascript'
 import { go } from '@codemirror/lang-go'
+import { java } from '@codemirror/lang-java'
 import {
     abcdef,
     abyss,
@@ -155,6 +156,8 @@ export function useCodeMirrorEditor(props: Props, _emit: Emit)
                 return javascript()
             case 'go':
                 return go()
+            case 'java':
+                return java()
             default:
                 return null
         }

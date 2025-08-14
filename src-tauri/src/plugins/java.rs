@@ -5,7 +5,7 @@ pub struct JavaPlugin;
 
 impl LanguagePlugin for JavaPlugin {
     fn get_order(&self) -> i32 {
-        2
+        5
     }
 
     fn get_language_name(&self) -> &'static str {
