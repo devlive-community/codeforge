@@ -3,6 +3,7 @@ import { python } from '@codemirror/lang-python'
 import { javascript } from '@codemirror/lang-javascript'
 import { go } from '@codemirror/lang-go'
 import { java } from '@codemirror/lang-java'
+import { rust } from '@codemirror/lang-rust'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
 import {
     abcdef,
@@ -155,6 +156,8 @@ export function useCodeMirrorEditor(props: Props)
                 return go()
             case 'java':
                 return java()
+            case 'rust':
+                return rust()
             case 'shell':
                 return StreamLanguage.define(shell)
             default:
