@@ -3,6 +3,7 @@ use super::{
     python3::Python3Plugin,
 };
 use crate::plugins::java::JavaPlugin;
+use crate::plugins::rust::RustPlugin;
 use crate::plugins::shell::ShellPlugin;
 use std::collections::HashMap;
 
@@ -20,6 +21,7 @@ impl PluginManager {
         plugins.insert("go".to_string(), Box::new(GoPlugin));
         plugins.insert("java".to_string(), Box::new(JavaPlugin));
         plugins.insert("shell".to_string(), Box::new(ShellPlugin));
+        plugins.insert("rust".to_string(), Box::new(RustPlugin));
 
         Self { plugins }
     }
