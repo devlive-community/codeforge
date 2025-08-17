@@ -13,7 +13,7 @@ hero:
     url: /download.html
     text: 立即下载
   secondaryCta:
-    url: /<%= pageData.language %>/usage/href.html
+    url: https://github.com/devlive-community/codeforge
     text: 了解更多
 
 features:
@@ -47,13 +47,13 @@ stats:
   description: 我们取得的成就
   items:
     - label: GitHub Stars
-      value: 0+
-    - label: Gitee Stars
-      value: 0+
-    - label: 正常运行时间
-      value: 99.99%
+      value: 5+
+    - label: 跨平台性(Windows、macOS)
+      value: 3+
+    - label: 支持的语言
+      value: 5+
     - label: 客户满意度
-      value: 0%
+      value: 100%
 
 cta:
   title: 准备好开始了吗？
