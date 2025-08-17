@@ -21,7 +21,7 @@
           </div>
         </div>
         <div class="flex-1 overflow-hidden">
-          <CodeEditor v-model="code" class="h-full" :language="currentLanguage"/>
+          <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
         </div>
       </div>
 
@@ -44,7 +44,7 @@
     <About v-if="showAbout" @close="closeAbout"/>
 
     <!-- 设置组件 -->
-    <Settings v-if="showSettings" @close="closeSettings"/>
+    <Settings v-if="showSettings" @close="closeSettings" @settings-changed="handleSettingsChanged"/>
 
     <!-- 更新组件 -->
     <Update v-if="showUpdate" @close="closeUpdate"/>
@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import OutputPanel from './components/OutputPanel.vue'
@@ -70,6 +70,7 @@ import { useCodeExecution } from './composables/useCodeExecution'
 import { useLanguageManager } from './composables/useLanguageManager'
 import { useEventManager } from './composables/useEventManager'
 import { useAppState } from './composables/useAppState'
+import { useEditorConfig } from './composables/useEditorConfig'
 import Update from './components/Update.vue'
 
 const toast = useToast()
@@ -109,6 +110,34 @@ const {
   closeUpdate
 } = useAppState()
 
+// 编辑器配置管理
+const {
+  editorConfig,
+  loadConfig: loadEditorConfig
+} = useEditorConfig()
+
+// 强制刷新 CodeEditor 组件的 key
+const editorConfigKey = ref(0)
+
+// 处理设置变更
+const handleSettingsChanged = (config: any) => {
+  console.log('主组件接收到设置变更:', config)
+  // 延迟一点点再刷新，减少闪烁
+  setTimeout(() => {
+    editorConfigKey.value++
+  }, 50)
+}
+
+// 监听编辑器配置变化
+watch(editorConfig, (newConfig) => {
+  if (newConfig) {
+    console.log('编辑器配置更新，刷新编辑器组件')
+    setTimeout(() => {
+      editorConfigKey.value++
+    }, 50)
+  }
+}, { deep: true })
+
 const { initializeEventListeners, cleanupEventListeners } = useEventManager({
   showAbout,
   showSettings,
@@ -131,6 +160,7 @@ window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 
 onMounted(async () => {
   await initialize()
+  await loadEditorConfig()
   await initializeEventListeners()
 
   // 触发 app-ready 事件，通知主进程

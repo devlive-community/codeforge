@@ -13,7 +13,7 @@
 
       <!-- 编辑器配置 -->
       <template #editor>
-        <Editor v-if="activeTab === 'editor'"/>
+        <Editor v-if="activeTab === 'editor'" @settings-changed="handleEditorSettingsChanged" @error="handleEditorError"/>
       </template>
 
       <!-- 语言配置 -->
@@ -43,7 +43,20 @@ const tabsData = [
 
 const emit = defineEmits<{
   close: []
+  'settings-changed': [config: any]
 }>()
+
+// 处理编辑器设置变更
+const handleEditorSettingsChanged = (config: any) => {
+  console.log('设置模态框接收到编辑器配置变更:', config)
+  // 向上传递事件到主组件
+  emit('settings-changed', config)
+}
+
+// 处理编辑器错误
+const handleEditorError = (message: string) => {
+  console.error('编辑器设置错误:', message)
+}
 
 const closeSettings = () => {
   isVisible.value = false
