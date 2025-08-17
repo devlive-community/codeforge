@@ -13,7 +13,7 @@
 
       <!-- 编辑器配置 -->
       <template #editor>
-        <Editor v-if="activeTab === 'editor'"/>
+        <Editor v-if="activeTab === 'editor'" @settings-changed="handleEditorSettingsChanged" @error="handleEditorError"/>
       </template>
 
       <!-- 语言配置 -->
@@ -25,38 +25,30 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
-import { BracesIcon, CodeIcon, ShieldIcon } from 'lucide-vue-next'
+import { onMounted } from 'vue'
 import Modal from '../ui/Modal.vue'
 import Tabs from '../ui/Tabs.vue'
 import General from './setting/General.vue'
 import Language from './setting/Language.vue'
 import Editor from './setting/Editor.vue'
-
-const isVisible = ref(false)
-const activeTab = ref('general')
-const tabsData = [
-  { key: 'general', label: '通用', icon: ShieldIcon },
-  { key: 'editor', label: '编辑器', icon: CodeIcon },
-  { key: 'language', label: '语言', icon: BracesIcon }
-]
+import { useSettings } from '../composables/useSettings.ts'
 
 const emit = defineEmits<{
   close: []
+  'settings-changed': [config: any]
 }>()
 
-const closeSettings = () => {
-  isVisible.value = false
-  setTimeout(() => {
-    emit('close')
-  }, 300)
-}
+const {
+  isVisible,
+  activeTab,
+  tabsData,
+  handleEditorSettingsChanged,
+  handleEditorError,
+  closeSettings,
+  initialize
+} = useSettings(emit)
 
 onMounted(async () => {
-  // 延迟显示动画
-  await nextTick()
-  setTimeout(() => {
-    isVisible.value = true
-  }, 50)
+  await initialize()
 })
 </script>

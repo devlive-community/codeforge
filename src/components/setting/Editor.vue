@@ -7,8 +7,7 @@
       <div class="flex gap-2">
         <input v-model="editorConfig.indent_with_tab"
                type="checkbox"
-               placeholder="超时时间(秒)，默认 30 秒"
-               class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+               class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
       </div>
     </div>
 
@@ -17,12 +16,12 @@
         缩进空格数
       </label>
       <div class="flex gap-2">
-        <input v-model="editorConfig.tab_size"
+        <input v-model.number="editorConfig.tab_size"
                type="number"
-               :disabled="!editorConfig.indent_with_tab"
-               placeholder="缩进空格数，默认 2 秒"
-               class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-               :class="[!editorConfig.indent_with_tab ? 'opacity-50 cursor-not-allowed' : '']"/>
+               min="1"
+               max="8"
+               placeholder="缩进空格数，默认 2"
+               class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
       </div>
     </div>
 
@@ -31,10 +30,7 @@
         编辑器主题
       </label>
       <div class="flex gap-2">
-        <Select v-model="editorConfig.theme"
-                class="w-1/4"
-                placeholder="选择编辑器主题"
-                :options="themeOptions"/>
+        <Select v-model="editorConfig.theme" class="w-1/4" placeholder="选择编辑器主题" :options="themeOptions"/>
       </div>
     </div>
   </div>
