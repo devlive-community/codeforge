@@ -101,6 +101,22 @@
     <nav class="fixed top-0 w-full bg-white  border-b z-40">
         <!-- Banner -->
         
+    <div class="w-full bg-blue-50 " data-banner>
+        <div class="max-w-screen-xl px-6 py-3 mx-auto flex items-center justify-between">
+            
+                <div class="text-blue-700 ">
+                    💗 <a href="https://github.com/devlive-community/codeforge" target="_blank">CodeForge <em>2025.0.1</em> 已经发布, 如果喜欢我们的软件，请点击这里支持我们</a> ❤️
+                </div>
+            
+            <button class="text-blue-500 hover:text-blue-700 "
+                    data-banner-close>
+                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
 
         <div class="max-w-screen-xl px-4 mx-auto 2xl:px-0">
             <div class="flex items-center h-16">
@@ -127,7 +143,7 @@
     <ul class="flex items-center gap-2 shrink-0">
         
             <li class="shrink-0">
-                <a href="/release/25.0.0.html"
+                <a href="/release/25.0.1.html"
                    class="inline-flex items-center rounded-lg justify-center px-3.5 py-3
                           text-sm font-medium leading-none whitespace-nowrap
                           
@@ -276,7 +292,7 @@
         <div class="hidden lg:hidden" id="mobile-menu">
             <div class="px-2 pt-2 pb-3 space-y-2 border-t ">
                 
-                    <a href="/release/25.0.0.html"
+                    <a href="/release/25.0.1.html"
                        class="block px-3 py-2 rounded-md text-base font-medium
                       text-gray-700  hover:text-gray-900  hover:bg-gray-50 ">
                         发布日志
@@ -422,7 +438,7 @@
                        class="rounded-xl bg-indigo-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all duration-300">
                         立即下载
                     </a>
-                    <a href="//usage/href.html"
+                    <a href="https://github.com/devlive-community/codeforge"
                        class="text-sm font-semibold leading-6 text-white hover:text-indigo-300 transition-all duration-300">
                         了解更多 <span aria-hidden="true">→</span>
                     </a>
@@ -521,28 +537,28 @@
                         <div class="flex flex-col gap-y-3 border-l border-white/10 pl-6">
                             <dt class="text-sm leading-6 text-gray-300">GitHub Stars</dt>
                             <dd class="order-first text-3xl font-semibold tracking-tight text-white">
-                                0+
+                                5+
                             </dd>
                         </div>
                     
                         <div class="flex flex-col gap-y-3 border-l border-white/10 pl-6">
-                            <dt class="text-sm leading-6 text-gray-300">Gitee Stars</dt>
+                            <dt class="text-sm leading-6 text-gray-300">跨平台性(Windows、macOS)</dt>
                             <dd class="order-first text-3xl font-semibold tracking-tight text-white">
-                                0+
+                                3+
                             </dd>
                         </div>
                     
                         <div class="flex flex-col gap-y-3 border-l border-white/10 pl-6">
-                            <dt class="text-sm leading-6 text-gray-300">正常运行时间</dt>
+                            <dt class="text-sm leading-6 text-gray-300">支持的语言</dt>
                             <dd class="order-first text-3xl font-semibold tracking-tight text-white">
-                                99.99%
+                                5+
                             </dd>
                         </div>
                     
                         <div class="flex flex-col gap-y-3 border-l border-white/10 pl-6">
                             <dt class="text-sm leading-6 text-gray-300">客户满意度</dt>
                             <dd class="order-first text-3xl font-semibold tracking-tight text-white">
-                                0%
+                                100%
                             </dd>
                         </div>
                     
@@ -619,6 +635,8 @@
                 © 2025 CodeForge All Rights Reserved. 使用 ❤️ <a href="https://pageforge.devlive.org" class="hover:text-blue-600" target="_blank">PageForge</a> 构建
 
                 
+                    <a href="/sitemap.xml" target="_blank" class="ml-3 dark:hover:text-white hover:underline hover:text-blue-600">站点地图</a>
+                
             </span>
 
             
@@ -670,5 +688,27 @@
 
 
 <!-- 是否启用 Lucide 图标库 -->
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+        // 在页面加载完成后执行
+        window.addEventListener('load', () => {
+            // 初始化图标
+            lucide.createIcons();
+
+            // 延迟检查图标是否加载完成
+            setTimeout(() => {
+                document.querySelectorAll('[data-lucide]').forEach(icon => {
+                    if (icon.children.length > 0) {
+                        icon.style.display = 'block';
+                        const skeleton = icon.previousElementSibling;
+                        if (skeleton) {
+                            skeleton.style.display = 'none';
+                        }
+                    }
+                });
+            }, 100);
+        });
+    </script>
 
 </html>
