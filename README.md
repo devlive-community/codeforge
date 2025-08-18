@@ -6,7 +6,11 @@
 CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发者、学生和编程爱好者设计。
 </div>
 
-![CodeForge 演示](./resources/codeforge.gif)
+## 演示视频
+
+📹 [下载演示视频](https://devlive-cdn.oss-cn-beijing.aliyuncs.com/applications/codeforge/codeforge.mp4) (点击下载或观看)
+
+> 注：由于 GitHub 不支持直接播放视频，请下载或点击链接查看
 
 ## 特性
 

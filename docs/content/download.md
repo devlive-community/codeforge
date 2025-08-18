@@ -6,7 +6,7 @@ config:
     toc: false
 ---
 
-当前的 CodeForge 版本是 <img class="inline-flex" src="https://img.shields.io/github/v/release/devlive-community/codeforge.svg" />。有关详细信息，请参阅 [发行说明](/release/25.0.0.html)。
+当前的 CodeForge 版本是 <img class="inline-flex" src="https://img.shields.io/github/v/release/devlive-community/codeforge.svg" />。有关详细信息，请参阅 [发行说明](/release/25.0.1.html)。
 
 <br />
 
