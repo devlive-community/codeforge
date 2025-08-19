@@ -34,7 +34,7 @@ impl PluginManager {
 
     pub fn get_supported_languages(&self) -> Vec<serde_json::Value> {
         let mut plugins: Vec<_> = self.plugins.iter().collect();
-        plugins.sort_by_key(|(_, plugin)| plugin.get_order());
+        plugins.sort_by_key(|(_, plugin)| plugin.get_language_key());
 
         plugins
             .into_iter()
