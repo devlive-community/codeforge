@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "CodeForge"
-version = "25.0.1"
+version = "25.0.2"
 dependencies = [
  "chrono",
  "dirs",
