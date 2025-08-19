@@ -22,13 +22,14 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
 
 ## 支持的语言
 
-- **Python 2**
-- **Python 3**
-- **Node.js**
 - **Go**
 - **Java**
-- **Shell**
+- **Node.js**
+- **Python 2**
+- **Python 3**
 - **Rust**
+- **Shell**
+- **Swift**
 - **...更多语言敬请期待**
 
 ## 安装

@@ -46,6 +46,7 @@ pub struct PluginConfig {
 // 语言插件接口
 pub trait LanguagePlugin: Send + Sync {
     // 获取插件优先级
+    #[allow(dead_code)]
     fn get_order(&self) -> i32 {
         0
     }
@@ -337,5 +338,6 @@ pub mod python2;
 pub mod python3;
 pub mod rust;
 pub mod shell;
+pub mod swift;
 
 pub use manager::PluginManager;

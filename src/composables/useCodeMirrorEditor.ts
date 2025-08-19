@@ -5,6 +5,7 @@ import { go } from '@codemirror/lang-go'
 import { java } from '@codemirror/lang-java'
 import { rust } from '@codemirror/lang-rust'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
+import { swift } from '@codemirror/legacy-modes/mode/swift'
 import {
     abcdef,
     abyss,
@@ -160,6 +161,8 @@ export function useCodeMirrorEditor(props: Props)
                 return rust()
             case 'shell':
                 return StreamLanguage.define(shell)
+            case 'swift':
+                return StreamLanguage.define(swift)
             default:
                 return null
         }

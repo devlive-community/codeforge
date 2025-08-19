@@ -5,6 +5,7 @@ use super::{
 use crate::plugins::java::JavaPlugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::shell::ShellPlugin;
+use crate::plugins::swift::SwiftPlugin;
 use std::collections::HashMap;
 
 pub struct PluginManager {
@@ -22,6 +23,7 @@ impl PluginManager {
         plugins.insert("java".to_string(), Box::new(JavaPlugin));
         plugins.insert("shell".to_string(), Box::new(ShellPlugin));
         plugins.insert("rust".to_string(), Box::new(RustPlugin));
+        plugins.insert("swift".to_string(), Box::new(SwiftPlugin));
 
         Self { plugins }
     }
@@ -32,7 +34,7 @@ impl PluginManager {
 
     pub fn get_supported_languages(&self) -> Vec<serde_json::Value> {
         let mut plugins: Vec<_> = self.plugins.iter().collect();
-        plugins.sort_by_key(|(_, plugin)| plugin.get_order());
+        plugins.sort_by_key(|(_, plugin)| plugin.get_language_key());
 
         plugins
             .into_iter()
