@@ -16,8 +16,9 @@
       <div class="flex-1 flex flex-col overflow-hidden">
         <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
-          <div class="text-xs text-gray-500">
-            <strong>{{ code.length }}</strong> 字符, <strong>{{ code.split('\n').length }}</strong> 行
+          <div class="flex items-center space-x-2 text-xs text-gray-500">
+            <span><strong>{{ (code || '').length }}</strong> 字符</span>
+            <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
           </div>
         </div>
         <div class="flex-1 overflow-hidden">
@@ -38,7 +39,7 @@
     </div>
 
     <!-- 状态栏 -->
-    <StatusBar :env-info="envInfo" :execution-time="lastExecutionTime" :code-length="code.length"/>
+    <StatusBar :env-info="envInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
