@@ -8,7 +8,7 @@ export function useLanguageManager(
     toast: any
 )
 {
-    const currentLanguage = ref('python2')
+    const currentLanguage = ref('')
     const supportedLanguages = ref<Language[]>([])
     const globalConfig = ref(null as any)
 
@@ -16,7 +16,7 @@ export function useLanguageManager(
         installed: false,
         version: '检查中...',
         path: '检查中...',
-        language: 'python'
+        language: ''
     })
 
     const getLanguageDisplayName = (languageValue: string) => {
@@ -25,6 +25,11 @@ export function useLanguageManager(
     }
 
     const refreshEnvInfo = async () => {
+        // 确保有当前语言才进行检查
+        if (!currentLanguage.value) {
+            return
+        }
+
         try {
             const info: LanguageInfo = await invoke('get_info', {
                 language: currentLanguage.value
@@ -56,11 +61,6 @@ export function useLanguageManager(
                 value: language.value,
                 svgUrl: `/icons/${ language.value.replace(/\d+$/, '') }.svg`
             }))
-
-            // 设置默认语言
-            if (supportedLanguages.value.length > 0 && !currentLanguage.value) {
-                currentLanguage.value = supportedLanguages.value[0].value
-            }
         }
         catch (error) {
             console.error('Error getting supported languages:', error)
@@ -79,9 +79,9 @@ export function useLanguageManager(
 
     const filterPluginTemplate = (plugin: any) => {
         if (globalConfig.value && globalConfig.value.plugins) {
-            return globalConfig.value.plugins.find((p: any) => p.language === plugin).template
+            return globalConfig.value.plugins.find((p: any) => p.language === plugin)?.template || ''
         }
-        return null
+        return ''
     }
 
     const handleLanguageChange = async (newLanguage: string) => {
@@ -100,17 +100,23 @@ export function useLanguageManager(
     }
 
     const initialize = async () => {
+        // 获取支持的语言列表
         await getSupportedLanguages()
-        await refreshEnvInfo()
+
+        // 获取配置
         await getConfigure()
 
-        // 设置初始代码模板
+        // 设置默认语言和初始代码模板
         if (supportedLanguages.value.length > 0) {
             currentLanguage.value = supportedLanguages.value[0].value
             console.log('当前语言:', currentLanguage.value)
+
             const template = filterPluginTemplate(currentLanguage.value)
             console.log('使用的模板:', template)
             code.value = template
+
+            // 刷新环境信息（此时 currentLanguage 已经正确设置）
+            await refreshEnvInfo()
         }
         else {
             code.value = 'No supported languages found'
