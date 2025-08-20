@@ -337,6 +337,7 @@ pub mod nodejs;
 pub mod python2;
 pub mod python3;
 pub mod rust;
+pub mod scala;
 pub mod shell;
 pub mod swift;
 
