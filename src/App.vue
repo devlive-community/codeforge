@@ -39,7 +39,7 @@
     </div>
 
     <!-- 状态栏 -->
-    <StatusBar :env-info="envInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length"/>
+    <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
@@ -96,6 +96,7 @@ const {
   currentLanguage,
   supportedLanguages,
   envInfo,
+  isLoadingEnvInfo,
   getLanguageDisplayName,
   handleLanguageChange,
   initialize
