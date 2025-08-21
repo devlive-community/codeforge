@@ -175,25 +175,14 @@ pub trait LanguagePlugin: Send + Sync {
     fn get_default_command(&self) -> String;
 
     // 预执行钩子
-    fn pre_execute_hook(&self, code: &str) -> Result<String, String> {
+    fn pre_execute_hook(&self, code: &str, file_path: &str) -> Result<String, String> {
         info!(
             "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 开始",
             self.get_language_key()
         );
 
         if let Some(config) = self.get_config() {
-            // 1. 处理 before_compile 命令（直接在 Rust 中处理）
-            if let Some(before_cmd) = &config.before_compile {
-                info!(
-                    "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 处理环境变量: {}",
-                    self.get_language_key(),
-                    before_cmd
-                );
-
-                self.handle_environment_setup(before_cmd)?;
-            }
-
-            // 2. 切换到 execute_home 目录
+            // 1. 切换到 execute_home 目录
             if let Some(execute_home) = self.get_execute_home() {
                 info!(
                     "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 切换到执行目录 {}",
@@ -202,6 +191,27 @@ pub trait LanguagePlugin: Send + Sync {
                 );
                 std::env::set_current_dir(&execute_home)
                     .map_err(|e| format!("切换目录失败: {}", e))?;
+            }
+
+            // 2. 处理 before_compile 命令（直接在 Rust 中处理）
+            if let Some(before_cmd) = &config.before_compile {
+                info!(
+                    "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 处理环境变量: {}",
+                    self.get_language_key(),
+                    before_cmd
+                );
+
+                // 如果命令包含 $filename 但没有提供 filename，跳过编译步骤
+                if before_cmd.contains("$filename") && file_path.is_empty() {
+                    info!(
+                        "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 跳过编译步骤，因为没有提供文件名",
+                        self.get_language_key()
+                    );
+                    return Ok(code.to_string());
+                }
+
+                let processed_cmd = before_cmd.replace("$filename", file_path);
+                self.handle_environment_setup(&processed_cmd)?;
             }
         }
 
@@ -332,6 +342,7 @@ pub trait LanguagePlugin: Send + Sync {
 // 重新导出子模块
 pub mod go;
 pub mod java;
+pub mod kotlin;
 pub mod manager;
 pub mod nodejs;
 pub mod python2;

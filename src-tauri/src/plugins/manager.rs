@@ -3,6 +3,7 @@ use super::{
     python3::Python3Plugin,
 };
 use crate::plugins::java::JavaPlugin;
+use crate::plugins::kotlin::KotlinPlugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
 use crate::plugins::shell::ShellPlugin;
@@ -26,6 +27,7 @@ impl PluginManager {
         plugins.insert("rust".to_string(), Box::new(RustPlugin));
         plugins.insert("swift".to_string(), Box::new(SwiftPlugin));
         plugins.insert("scala".to_string(), Box::new(ScalaPlugin));
+        plugins.insert("kotlin".to_string(), Box::new(KotlinPlugin));
 
         Self { plugins }
     }
