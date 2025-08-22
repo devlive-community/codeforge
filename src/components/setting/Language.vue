@@ -118,10 +118,7 @@
                 超时时间(秒)
               </label>
               <div class="flex gap-2">
-                <input v-model="pluginConfig.timeout"
-                       type="number"
-                       placeholder="超时时间(秒)，默认 30 秒"
-                       class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+                <Number v-model="pluginConfig.timeout" class="w-1/5" placeholder="超时时间(秒)，默认 30 秒"/>
               </div>
             </div>
           </template>
@@ -137,6 +134,7 @@ import { ContainerIcon, FileIcon, Folder, PickaxeIcon, Settings2 } from 'lucide-
 import { Codemirror } from 'vue-codemirror'
 import Button from '../../ui/Button.vue'
 import Tabs from '../../ui/Tabs.vue'
+import Number from '../../ui/Number.vue'
 import { usePluginConfig } from '../../composables/usePluginConfig'
 import type PluginConfig from '../../types/plugin'
 import { useCodeMirrorEditor } from '../../composables/useCodeMirrorEditor.ts'
