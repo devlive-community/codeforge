@@ -3,6 +3,7 @@
     <div class="flex items-center space-x-3">
       <Select v-model="selectedLanguage"
               class="w-48"
+              searchable
               :options="supportedLanguages as any"
               :disabled="isRunning"
               placeholder="选择语言"
