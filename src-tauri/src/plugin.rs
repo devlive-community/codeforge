@@ -18,7 +18,7 @@ pub async fn get_info(
         .get_plugin(&language)
         .ok_or_else(|| format!("Unsupported language: {}", language))?;
 
-    plugin.pre_execute_hook("").map_err(|e| {
+    plugin.pre_execute_hook("", "").map_err(|e| {
         error!(
             "获取环境 -> 调用插件 [ {} ] pre_execute_hook 出现错误 {:?}",
             language, e

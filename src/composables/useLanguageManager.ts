@@ -12,6 +12,9 @@ export function useLanguageManager(
     const supportedLanguages = ref<Language[]>([])
     const globalConfig = ref(null as any)
 
+    // 🔥 添加加载状态
+    const isLoadingEnvInfo = ref(false)
+
     const envInfo = ref<EnvInfo>({
         installed: false,
         version: '检查中...',
@@ -28,6 +31,15 @@ export function useLanguageManager(
         // 确保有当前语言才进行检查
         if (!currentLanguage.value) {
             return
+        }
+
+        // 🔥 设置加载状态
+        isLoadingEnvInfo.value = true
+        envInfo.value = {
+            installed: false,
+            version: '检查中...',
+            path: '检查中...',
+            language: getLanguageDisplayName(currentLanguage.value)
         }
 
         try {
@@ -48,8 +60,11 @@ export function useLanguageManager(
                 installed: false,
                 version: 'Error',
                 path: 'Error',
-                language: currentLanguage.value
+                language: getLanguageDisplayName(currentLanguage.value)
             }
+        }
+        finally {
+            isLoadingEnvInfo.value = false
         }
     }
 
@@ -93,8 +108,7 @@ export function useLanguageManager(
         // 清空输出
         clearOutput()
 
-        // 刷新环境信息
-        await refreshEnvInfo()
+        refreshEnvInfo()
 
         toast.info(`已切换到 ${ getLanguageDisplayName(newLanguage) }`)
     }
@@ -115,8 +129,7 @@ export function useLanguageManager(
             console.log('使用的模板:', template)
             code.value = template
 
-            // 刷新环境信息（此时 currentLanguage 已经正确设置）
-            await refreshEnvInfo()
+            refreshEnvInfo()
         }
         else {
             code.value = 'No supported languages found'
@@ -127,6 +140,7 @@ export function useLanguageManager(
         currentLanguage,
         supportedLanguages,
         envInfo,
+        isLoadingEnvInfo,
         getLanguageDisplayName,
         handleLanguageChange,
         initialize

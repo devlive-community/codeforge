@@ -9,7 +9,6 @@ use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
-use uuid::Uuid;
 
 // 执行任务结构
 #[derive(Debug)]
@@ -81,26 +80,26 @@ pub async fn execute_code(
         .get_plugin(&request.language)
         .ok_or_else(|| format!("Unsupported language: {}", request.language))?;
 
-    let execution_id = Uuid::new_v4().to_string();
     let temp_dir = std::env::temp_dir();
     let file_path = temp_dir.join(format!(
-        "codeforge_{}_{}.{}",
+        "Codeforge_{}.{}",
         request.language,
-        execution_id,
         plugin.get_file_extension()
     ));
 
-    let processed_code = plugin.pre_execute_hook(&request.code).map_err(|e| {
-        error!(
-            "执行代码 -> 调用插件 [ {} ] pre_execute_hook 出现错误 {:?}",
-            request.language, e
-        );
-        format!("Pre-execution hook failed: {}", e)
-    })?;
-
     // 写入代码到临时文件
-    fs::write(&file_path, &processed_code)
+    fs::write(&file_path, &request.code)
         .map_err(|e| format!("Failed to write temporary file: {}", e))?;
+
+    let _processed_code = plugin
+        .pre_execute_hook(&request.code, file_path.to_str().unwrap())
+        .map_err(|e| {
+            error!(
+                "执行代码 -> 调用插件 [ {} ] pre_execute_hook 出现错误 {:?}",
+                request.language, e
+            );
+            format!("Pre-execution hook failed: {}", e)
+        })?;
 
     let start_time = std::time::Instant::now();
 
