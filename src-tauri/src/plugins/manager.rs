@@ -1,4 +1,5 @@
 use super::{LanguagePlugin, PluginConfig};
+use crate::plugins::c::CPlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::java::JavaPlugin;
@@ -31,6 +32,7 @@ impl PluginManager {
         plugins.insert("scala".to_string(), Box::new(ScalaPlugin));
         plugins.insert("kotlin".to_string(), Box::new(KotlinPlugin));
         plugins.insert("clojure".to_string(), Box::new(ClojurePlugin));
+        plugins.insert("c".to_string(), Box::new(CPlugin));
 
         Self { plugins }
     }
@@ -74,7 +76,7 @@ impl PluginManager {
         self.get_plugin(language).map(|plugin| PluginInfo {
             name: plugin.get_language_name().to_string(),
             file_extension: plugin.get_file_extension(),
-            available_commands: vec![plugin.get_command(None).to_string()],
+            available_commands: vec![plugin.get_command(None, true, None).to_string()],
         })
     }
 
@@ -85,7 +87,7 @@ impl PluginManager {
             .map(|plugin| PluginInfo {
                 name: plugin.get_language_name().to_string(),
                 file_extension: plugin.get_file_extension(),
-                available_commands: vec![plugin.get_command(None).to_string()],
+                available_commands: vec![plugin.get_command(None, true, None).to_string()],
             })
             .collect()
     }

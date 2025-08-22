@@ -4,6 +4,7 @@ import { javascript } from '@codemirror/lang-javascript'
 import { go } from '@codemirror/lang-go'
 import { java } from '@codemirror/lang-java'
 import { rust } from '@codemirror/lang-rust'
+import { cpp } from '@codemirror/lang-cpp'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { swift } from '@codemirror/legacy-modes/mode/swift'
 import { kotlin, scala } from '@codemirror/legacy-modes/mode/clike'
@@ -161,6 +162,8 @@ export function useCodeMirrorEditor(props: Props)
                 return java()
             case 'rust':
                 return rust()
+            case 'c':
+                return cpp()
             case 'shell':
                 return StreamLanguage.define(shell)
             case 'swift':

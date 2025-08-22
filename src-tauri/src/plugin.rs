@@ -28,7 +28,7 @@ pub async fn get_info(
         format!("Pre-execution hook failed: {}", e)
     })?;
 
-    let cmd = plugin.get_command(None);
+    let cmd = plugin.get_command(None, true, None);
     debug!("获取环境 -> 插件 [ {} ] 命令 {}", language, cmd);
 
     let version_output = Command::new(&cmd).args(plugin.get_version_args()).output();
@@ -82,7 +82,10 @@ pub async fn get_info(
     Ok(LanguageInfo {
         installed: false,
         version: "Not found".to_string(),
-        path: format!("Not found - tried: {:?}", plugin.get_command(None)),
+        path: format!(
+            "Not found - tried: {:?}",
+            plugin.get_command(None, true, None)
+        ),
         language: plugin.get_language_name().to_string(),
     })
 }

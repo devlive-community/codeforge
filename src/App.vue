@@ -15,7 +15,11 @@
       <!-- 代码编辑器 -->
       <div class="flex-1 flex flex-col overflow-hidden">
         <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-          <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+          <div class="flex items-center space-x-3">
+            <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
+            <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+          </div>
+
           <div class="flex items-center space-x-2 text-xs text-gray-500">
             <span><strong>{{ (code || '').length }}</strong> 字符</span>
             <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
