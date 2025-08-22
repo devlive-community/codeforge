@@ -1,6 +1,6 @@
 use log::info;
 use tauri::{
-    AppHandle, Emitter, Manager,
+    AppHandle, Emitter,
     menu::{MenuItemBuilder, Submenu, SubmenuBuilder},
 };
 
