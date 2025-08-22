@@ -81,11 +81,12 @@ pub async fn execute_code(
         .ok_or_else(|| format!("Unsupported language: {}", request.language))?;
 
     let temp_dir = std::env::temp_dir();
-    let file_path = temp_dir.join(format!(
+    let file_name = format!(
         "Codeforge_{}.{}",
         request.language,
         plugin.get_file_extension()
-    ));
+    );
+    let file_path = temp_dir.join(file_name.clone());
 
     // 写入代码到临时文件
     fs::write(&file_path, &request.code)
@@ -103,7 +104,7 @@ pub async fn execute_code(
 
     let start_time = std::time::Instant::now();
 
-    let cmd = plugin.get_command(None);
+    let cmd = plugin.get_command(None, false, Some(file_path.to_string_lossy().to_string()));
     let args = plugin.get_execute_args(file_path.to_str().unwrap());
     info!(
         "执行代码 -> 调用插件 [ {} ] 执行命令 {} 携带参数 {}",

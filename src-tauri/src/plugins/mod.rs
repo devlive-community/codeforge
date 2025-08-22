@@ -76,7 +76,12 @@ pub trait LanguagePlugin: Send + Sync {
     }
 
     // 获取插件支持的命令
-    fn get_command(&self, file_path: Option<&str>) -> String {
+    fn get_command(
+        &self,
+        file_path: Option<&str>,
+        _is_version: bool,
+        _file_name: Option<String>,
+    ) -> String {
         if let Some(config) = self.get_config() {
             if let Some(run_cmd) = &config.run_command {
                 return if let Some(path) = file_path {
@@ -340,6 +345,7 @@ pub trait LanguagePlugin: Send + Sync {
 }
 
 // 重新导出子模块
+pub mod c;
 pub mod clojure;
 pub mod go;
 pub mod java;

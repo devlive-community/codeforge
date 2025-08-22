@@ -15,7 +15,7 @@
           <Button @click="starRepository" type="warning" :icon="Star" class="transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
             给个 Star
           </Button>
-          <Button @click="openGitHubRepo" :icon="GithubIcon" class="transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
+          <Button @click="openGitHubRepo" type="secondary" :icon="GithubIcon" class="transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
             查看源码
           </Button>
           <Button @click="reportIssue" type="danger" :icon="Bug" class="transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
