@@ -47,7 +47,7 @@
 
 <script setup lang="ts">
 import type { Component } from 'vue'
-import { computed, useAttrs } from 'vue'
+import { computed } from 'vue'
 
 interface Props
 {
@@ -94,11 +94,6 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   change: [value: boolean, event: Event]
 }>()
-
-const attrs = useAttrs()
-
-// 生成唯一 ID
-const switchId = computed(() => props.id || `switch-${ Math.random().toString(36).substr(2, 9) }`)
 
 // 包装器样式
 const wrapperClasses = computed(() => [
