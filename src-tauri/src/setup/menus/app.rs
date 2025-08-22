@@ -16,6 +16,11 @@ pub fn create_app_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>>
         .accelerator("CmdOrCtrl+,")
         .build(app)?;
 
+    let hide_item = MenuItemBuilder::new("隐藏 CodeForge")
+        .id("hide")
+        .accelerator("CmdOrCtrl+H")
+        .build(app)?;
+
     let restart_item = MenuItemBuilder::new("重启 CodeForge")
         .id("restart")
         .accelerator("CmdOrCtrl+R")
@@ -32,6 +37,8 @@ pub fn create_app_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>>
         .item(&update_item)
         .separator()
         .item(&settings_item)
+        .separator()
+        .item(&hide_item)
         .separator()
         .item(&restart_item)
         .item(&quit_item)
@@ -50,6 +57,10 @@ pub fn handle_app_menu_event(app: &AppHandle, event_id: &str) {
         }
         "settings" => {
             let _event = app.emit("show-settings", ());
+        }
+        "hide" => {
+            info!("隐藏应用 CodeForge");
+            let _ = app.hide();
         }
         "restart" => {
             info!("CodeForge 应用重启");
