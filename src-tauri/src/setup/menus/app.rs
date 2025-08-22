@@ -1,6 +1,6 @@
 use log::info;
 use tauri::{
-    AppHandle, Emitter,
+    AppHandle, Emitter, Manager,
     menu::{MenuItemBuilder, Submenu, SubmenuBuilder},
 };
 
@@ -16,9 +16,16 @@ pub fn create_app_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>>
         .accelerator("CmdOrCtrl+,")
         .build(app)?;
 
+    #[cfg(target_os = "macos")]
     let hide_item = MenuItemBuilder::new("隐藏 CodeForge")
         .id("hide")
         .accelerator("CmdOrCtrl+H")
+        .build(app)?;
+
+    #[cfg(not(target_os = "macos"))]
+    let hide_item = MenuItemBuilder::new("最小化 CodeForge")
+        .id("hide")
+        .accelerator("CmdOrCtrl+M")
         .build(app)?;
 
     let restart_item = MenuItemBuilder::new("重启 CodeForge")
@@ -59,8 +66,26 @@ pub fn handle_app_menu_event(app: &AppHandle, event_id: &str) {
             let _event = app.emit("show-settings", ());
         }
         "hide" => {
-            info!("隐藏应用 CodeForge");
-            let _ = app.hide();
+            #[cfg(target_os = "macos")]
+            {
+                info!("隐藏应用 CodeForge");
+                let _ = app.hide();
+            }
+
+            #[cfg(not(target_os = "macos"))]
+            {
+                info!("最小化应用 CodeForge");
+                // 获取主窗口并最小化
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.minimize();
+                } else {
+                    // 如果找不到 main 窗口，尝试获取第一个可用窗口
+                    let windows = app.webview_windows();
+                    if let Some((_, window)) = windows.iter().next() {
+                        let _ = window.minimize();
+                    }
+                }
+            }
         }
         "restart" => {
             info!("CodeForge 应用重启");
