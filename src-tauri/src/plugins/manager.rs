@@ -1,9 +1,11 @@
-use super::{
-    LanguagePlugin, PluginConfig, go::GoPlugin, nodejs::NodeJSPlugin, python2::Python2Plugin,
-    python3::Python3Plugin,
-};
+use super::{LanguagePlugin, PluginConfig};
+use crate::plugins::clojure::ClojurePlugin;
+use crate::plugins::go::GoPlugin;
 use crate::plugins::java::JavaPlugin;
 use crate::plugins::kotlin::KotlinPlugin;
+use crate::plugins::nodejs::NodeJSPlugin;
+use crate::plugins::python2::Python2Plugin;
+use crate::plugins::python3::Python3Plugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
 use crate::plugins::shell::ShellPlugin;
@@ -28,6 +30,7 @@ impl PluginManager {
         plugins.insert("swift".to_string(), Box::new(SwiftPlugin));
         plugins.insert("scala".to_string(), Box::new(ScalaPlugin));
         plugins.insert("kotlin".to_string(), Box::new(KotlinPlugin));
+        plugins.insert("clojure".to_string(), Box::new(ClojurePlugin));
 
         Self { plugins }
     }

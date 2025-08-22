@@ -46,6 +46,10 @@
                     <div class="font-bold">$filename</div>
                     <div>执行的源文件或临时生成的文件</div>
                   </div>
+                  <div class="flex text-sm font-medium text-gray-700 dark:text-gray-300 ml-1 space-x-4">
+                    <div class="font-bold">$classname</div>
+                    <div>执行的类名,如果没有则为空</div>
+                  </div>
                 </div>
               </div>
 

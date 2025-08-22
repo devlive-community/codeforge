@@ -340,6 +340,7 @@ pub trait LanguagePlugin: Send + Sync {
 }
 
 // 重新导出子模块
+pub mod clojure;
 pub mod go;
 pub mod java;
 pub mod kotlin;
