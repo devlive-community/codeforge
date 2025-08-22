@@ -1,7 +1,7 @@
 <template>
   <div class="flex bg-white h-full relative">
     <Codemirror v-if="isReady"
-                style="width: 100%; height: 100%"
+                :style="{ width: '100%', height: '100%', fontSize: editorConfig?.font_size ? `${editorConfig.font_size}px` : undefined }"
                 :model-value="modelValue"
                 :extensions="extensions"
                 :indent-with-tab="editorConfig?.indent_with_tab"

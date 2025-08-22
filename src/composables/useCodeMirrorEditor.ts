@@ -66,6 +66,7 @@ interface EditorConfig
     theme?: string
     indent_with_tab?: boolean
     tab_size?: number
+    font_size?: number
 }
 
 interface Props
@@ -221,7 +222,8 @@ export function useCodeMirrorEditor(props: Props)
                 editorConfig.value = {
                     theme: 'githubLight',
                     indent_with_tab: true,
-                    tab_size: 2
+                    tab_size: 2,
+                    font_size: 14
                 }
                 await updateExtensions()
             }
@@ -234,7 +236,8 @@ export function useCodeMirrorEditor(props: Props)
             editorConfig.value = {
                 theme: 'githubLight',
                 indent_with_tab: true,
-                tab_size: 2
+                tab_size: 2,
+                font_size: 14
             }
             await updateExtensions()
         }

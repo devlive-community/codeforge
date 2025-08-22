@@ -54,59 +54,64 @@
                   @after-leave="$emit('after-close')">
         <div v-show="isOpen"
              ref="dropdown"
-             class="fixed z-[99999] max-h-60 overflow-auto rounded-md bg-white text-base shadow-lg ring-1 ring-blue-200 focus:outline-none"
+             class="fixed z-[99999] bg-white text-base shadow-lg ring-1 ring-blue-200 focus:outline-none rounded-md overflow-hidden"
              :class="dropdownClasses"
              :style="dropdownStyle"
              role="listbox"
              :aria-labelledby="buttonId">
+
           <!-- 搜索框 (可选) -->
-          <div v-if="searchable" class="sticky top-0 bg-white p-2 border-b border-gray-100">
+          <div v-if="searchable" class="p-2 border-b border-gray-100 bg-white">
             <input v-model="searchQuery"
                    type="text"
                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                    :placeholder="searchPlaceholder"
                    @click.stop
+                   @keydown.stop
                    ref="searchInput"/>
           </div>
 
-          <!-- 选项列表 -->
-          <template v-if="filteredOptions.length > 0">
-            <div v-for="(option, index) in filteredOptions"
-                 :key="getOptionValue(option)"
-                 @click="selectOption(option)"
-                 @keydown.enter.prevent="selectOption(option)"
-                 @keydown.space.prevent="selectOption(option)"
-                 :class="[
-                    'relative flex space-x-3 items-center cursor-pointer select-none py-1 my-1 pl-3 pr-9 transition-colors duration-150',
-                    isSelected(option)
-                      ? 'bg-blue-400 text-white'
-                      : 'text-gray-900 hover:bg-blue-50',
-                    highlightedIndex === index ? 'bg-blue-100' : ''
-                  ]"
-                 :aria-selected="isSelected(option)"
-                 role="option"
-                 tabindex="-1">
-              <!-- 如果是SVG字符串 -->
-              <div v-if="getSvgIcon(option)" v-html="getSvgIcon(option)" class="w-6 h-6"/>
+          <!-- 选项列表容器 -->
+          <div class="max-h-60 overflow-auto" @scroll.stop>
+            <!-- 选项列表 -->
+            <template v-if="filteredOptions.length > 0">
+              <div v-for="(option, index) in filteredOptions"
+                   :key="getOptionValue(option)"
+                   @click="selectOption(option)"
+                   @keydown.enter.prevent="selectOption(option)"
+                   @keydown.space.prevent="selectOption(option)"
+                   :class="[
+                      'relative flex space-x-3 items-center cursor-pointer select-none py-2 px-3 transition-colors duration-150',
+                      isSelected(option)
+                        ? 'bg-blue-400 text-white'
+                        : 'text-gray-900 hover:bg-blue-50',
+                      highlightedIndex === index ? 'bg-blue-100' : ''
+                    ]"
+                   :aria-selected="isSelected(option)"
+                   role="option"
+                   tabindex="-1">
+                <!-- 如果是SVG字符串 -->
+                <div v-if="getSvgIcon(option)" v-html="getSvgIcon(option)" class="w-6 h-6 flex-shrink-0"/>
 
-              <!-- 如果是SVG URL -->
-              <img v-else-if="getSvgUrl(option)" :src="getSvgUrl(option)" class="w-6 h-6" alt="icon"/>
+                <!-- 如果是SVG URL -->
+                <img v-else-if="getSvgUrl(option)" :src="getSvgUrl(option)" class="w-6 h-6 flex-shrink-0" alt="icon"/>
 
-              <span :class="['block truncate', isSelected(option) ? 'font-medium' : 'font-normal']">
-                {{ getOptionLabel(option) }}
-              </span>
+                <span :class="['block truncate flex-1', isSelected(option) ? 'font-medium' : 'font-normal']">
+                  {{ getOptionLabel(option) }}
+                </span>
 
-              <!-- 选中图标 -->
-              <span v-if="isSelected(option)"
-                    class="absolute inset-y-0 right-0 flex items-center pr-2">
-                <CheckIcon class="h-5 w-5" aria-hidden="true"/>
-              </span>
+                <!-- 选中图标 -->
+                <span v-if="isSelected(option)"
+                      class="flex-shrink-0 ml-2">
+                  <CheckIcon class="h-5 w-5" aria-hidden="true"/>
+                </span>
+              </div>
+            </template>
+
+            <!-- 无选项提示 -->
+            <div v-else class="px-3 py-2 text-gray-500 text-sm">
+              {{ noOptionsText }}
             </div>
-          </template>
-
-          <!-- 无选项提示 -->
-          <div v-else class="px-3 py-2 text-gray-500 text-sm">
-            {{ noOptionsText }}
           </div>
         </div>
       </Transition>
@@ -229,28 +234,57 @@ const updateDropdownPosition = async () => {
 
   const buttonRect = selectButton.value.getBoundingClientRect()
   const viewportHeight = window.innerHeight
+  const viewportWidth = window.innerWidth
 
   // 计算下方可用空间
-  const spaceBelow = viewportHeight - buttonRect.bottom
-  const dropdownHeight = 240 // max-h-60 对应约240px
+  const spaceBelow = viewportHeight - buttonRect.bottom - 10 // 留10px边距
+  const spaceAbove = buttonRect.top - 10 // 留10px边距
 
-  let top = buttonRect.bottom + 2 // 默认显示在下方
-  let left = buttonRect.left
+  // 搜索框高度（如果启用）
+  const searchBoxHeight = props.searchable ? 60 : 0
+
+  // 基础下拉框高度
+  const baseDropdownHeight = 240 // max-h-60 对应约240px
+  const totalDropdownHeight = baseDropdownHeight + searchBoxHeight
+
+  let top = buttonRect.bottom + 4 // 默认显示在下方，留4px间距
+  let left = Math.max(10, Math.min(buttonRect.left, viewportWidth - buttonRect.width - 10)) // 确保不超出视口
   let width = buttonRect.width
+  let maxHeight = Math.min(totalDropdownHeight, spaceBelow)
 
-  // 如果下方空间不足，显示在上方
-  if (spaceBelow < dropdownHeight && buttonRect.top > dropdownHeight) {
-    // 显示在上方时，让下拉框紧贴按钮顶部
-    top = buttonRect.top - 2
-  }
+  // 如果下方空间不足且上方空间更大，显示在上方
+  if (spaceBelow < 150 && spaceAbove > spaceBelow) {
+    top = buttonRect.top - 4 // 显示在上方，留4px间距
+    maxHeight = Math.min(totalDropdownHeight, spaceAbove)
 
-  dropdownStyle.value = {
-    top: `${ top }px`,
-    left: `${ left }px`,
-    width: `${ width }px`,
-    minWidth: `${ width }px`,
-    transform: spaceBelow < dropdownHeight && buttonRect.top > dropdownHeight ? 'translateY(-100%)' : 'none'
+    dropdownStyle.value = {
+      top: `${ top }px`,
+      left: `${ left }px`,
+      width: `${ width }px`,
+      minWidth: `${ width }px`,
+      maxHeight: `${ maxHeight }px`,
+      transform: 'translateY(-100%)'
+    }
   }
+  else {
+    dropdownStyle.value = {
+      top: `${ top }px`,
+      left: `${ left }px`,
+      width: `${ width }px`,
+      minWidth: `${ width }px`,
+      maxHeight: `${ maxHeight }px`,
+      transform: 'none'
+    }
+  }
+}
+
+// 防抖更新位置
+let updateTimer: number | null = null
+const debouncedUpdatePosition = () => {
+  if (updateTimer) {
+    clearTimeout(updateTimer)
+  }
+  updateTimer = window.setTimeout(updateDropdownPosition, 10)
 }
 
 // 方法
@@ -287,9 +321,9 @@ const openDropdown = async () => {
   // 更新位置
   await updateDropdownPosition()
 
-  // 监听滚动和窗口大小变化
-  window.addEventListener('scroll', updateDropdownPosition, true)
-  window.addEventListener('resize', updateDropdownPosition)
+  // 监听滚动和窗口大小变化，使用防抖
+  window.addEventListener('scroll', debouncedUpdatePosition, true)
+  window.addEventListener('resize', debouncedUpdatePosition)
 
   if (props.searchable) {
     nextTick(() => {
@@ -305,9 +339,15 @@ const closeDropdown = () => {
   searchQuery.value = ''
   highlightedIndex.value = -1
 
+  // 清理定时器
+  if (updateTimer) {
+    clearTimeout(updateTimer)
+    updateTimer = null
+  }
+
   // 移除监听器
-  window.removeEventListener('scroll', updateDropdownPosition, true)
-  window.removeEventListener('resize', updateDropdownPosition)
+  window.removeEventListener('scroll', debouncedUpdatePosition, true)
+  window.removeEventListener('resize', debouncedUpdatePosition)
 }
 
 const selectOption = (option: Option) => {
@@ -382,9 +422,14 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // 清理定时器
+  if (updateTimer) {
+    clearTimeout(updateTimer)
+  }
+
   document.removeEventListener('click', handleClickOutside)
   document.removeEventListener('keydown', handleKeydown)
-  window.removeEventListener('scroll', updateDropdownPosition, true)
-  window.removeEventListener('resize', updateDropdownPosition)
+  window.removeEventListener('scroll', debouncedUpdatePosition, true)
+  window.removeEventListener('resize', debouncedUpdatePosition)
 })
 </script>
