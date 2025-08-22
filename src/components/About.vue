@@ -9,6 +9,19 @@
         </div>
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2 transition-all duration-600 delay-100">CodeForge</h2>
         <p class="text-gray-600 dark:text-gray-400 mb-4 transition-all duration-600 delay-200">CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发者、学生和编程爱好者设计。</p>
+
+        <!-- GitHub Actions -->
+        <div class="flex justify-center gap-3 mt-4">
+          <Button @click="starRepository" type="warning" :icon="Star" class="transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
+            给个 Star
+          </Button>
+          <Button @click="openGitHubRepo" :icon="GithubIcon" class="transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
+            查看源码
+          </Button>
+          <Button @click="reportIssue" type="danger" :icon="Bug" class="transition-all duration-200 transform hover:scale-105 hover:shadow-lg">
+            报告问题
+          </Button>
+        </div>
       </div>
 
       <!-- 版本信息 -->
@@ -70,92 +83,32 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-shell'
+import { onMounted } from 'vue'
 import Modal from '../ui/Modal.vue'
-
-interface AppInfo
-{
-  version: string
-  build_time: string
-  platform: string
-  arch: string
-}
-
-const platform = ref('Unknown')
-const version = ref('1.0.0')
-const buildTime = ref('2025-08-09')
-const isVisible = ref(false)
-
-const features = [
-  '多语言代码执行支持',
-  '智能语法高亮系统',
-  '实时执行统计分析',
-  '现代化用户界面'
-]
-
-const techStack = [
-  { name: 'Vue 3', class: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200', url: 'https://vuejs.org' },
-  { name: 'TypeScript', class: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200', url: 'https://www.typescriptlang.org' },
-  { name: 'Tauri', class: 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200', url: 'https://tauri.app' },
-  { name: 'Rust', class: 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200', url: 'https://www.rust-lang.org' },
-  { name: 'Tailwind CSS', class: 'bg-cyan-100 dark:bg-cyan-900/50 text-cyan-800 dark:text-cyan-200', url: 'https://tailwindcss.com' }
-]
+import { useAboutModal } from '../composables/useAboutModal'
+import Button from '../ui/Button.vue'
+import { Bug, GithubIcon, Star } from 'lucide-vue-next'
 
 const emit = defineEmits<{
   close: []
 }>()
 
-const closeAbout = () => {
-  isVisible.value = false
-  setTimeout(() => {
-    emit('close')
-  }, 300)
-}
-
-const openTechUrl = async (url: string) => {
-  try {
-    console.log('Opening URL:', url)
-    await open(url)
-  }
-  catch (error) {
-    console.error('Failed to open URL:', error)
-  }
-}
-
-const loadAppInfo = async () => {
-  try {
-    const appInfo: AppInfo = await invoke('get_app_info')
-    version.value = appInfo.version
-    buildTime.value = appInfo.build_time
-    platform.value = `${ appInfo.platform } (${ appInfo.arch })`
-  }
-  catch (error) {
-    console.error('Failed to get app info:', error)
-    // 使用默认值
-    platform.value = navigator.platform
-  }
-}
-
-// 监听组件显示状态，当组件重新显示时重置动画
-watch(() => true, () => {
-  if (!isVisible.value) {
-    nextTick(() => {
-      setTimeout(() => {
-        isVisible.value = true
-      }, 50)
-    })
-  }
-})
+const {
+  isVisible,
+  platform,
+  version,
+  buildTime,
+  features,
+  techStack,
+  openTechUrl,
+  openGitHubRepo,
+  starRepository,
+  reportIssue,
+  closeAbout,
+  showModal
+} = useAboutModal(emit)
 
 onMounted(async () => {
-  await loadAppInfo()
-
-  // 延迟显示动画
-  await nextTick()
-  setTimeout(() => {
-    isVisible.value = true
-  }, 50)
+  await showModal()
 })
 </script>

@@ -36,3 +36,11 @@ export interface CodeOutputEvent
     content: string
     language: string
 }
+
+export interface AppInfo
+{
+    version: string
+    build_time: string
+    platform: string
+    arch: string
+}
