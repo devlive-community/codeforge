@@ -6,8 +6,8 @@ import { java } from '@codemirror/lang-java'
 import { rust } from '@codemirror/lang-rust'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { swift } from '@codemirror/legacy-modes/mode/swift'
-import { scala } from '@codemirror/legacy-modes/mode/clike'
-import { kotlin } from '@codemirror/legacy-modes/mode/clike'
+import { kotlin, scala } from '@codemirror/legacy-modes/mode/clike'
+import { clojure } from '@codemirror/legacy-modes/mode/clojure'
 import {
     abcdef,
     abyss,
@@ -169,6 +169,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(scala)
             case 'kotlin':
                 return StreamLanguage.define(kotlin)
+            case 'clojure':
+                return StreamLanguage.define(clojure)
             default:
                 return null
         }
