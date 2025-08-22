@@ -20,6 +20,15 @@
 
     <div>
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        字体大小
+      </label>
+      <div class="flex gap-2">
+        <Number v-model="editorConfig.font_size" :min="1" :max="30" placeholder="字体大小"/>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         编辑器主题
       </label>
       <div class="flex gap-2">

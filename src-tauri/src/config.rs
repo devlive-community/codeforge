@@ -15,6 +15,7 @@ pub struct EditorConfig {
     pub indent_with_tab: Option<bool>, // 是否使用 tab 缩进
     pub tab_size: Option<u32>,         // tab 缩进, 空格数，默认为 2
     pub theme: Option<String>,         // 编辑器主题
+    pub font_size: Option<u32>,        // 编辑器字体大小
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +40,7 @@ impl Default for AppConfig {
                 indent_with_tab: Some(true),
                 tab_size: Some(2),
                 theme: Some("githubLight".to_string()),
+                font_size: Some(14),
             }),
         }
     }
@@ -94,6 +96,7 @@ impl ConfigManager {
                                 indent_with_tab: Some(true),
                                 tab_size: Some(2),
                                 theme: Some("githubLight".to_string()),
+                                font_size: Some(14),
                             });
                             println!("读取配置 -> 添加默认 editor 配置");
                         }
@@ -197,6 +200,7 @@ impl ConfigManager {
                 indent_with_tab: Some(true),
                 tab_size: Some(2),
                 theme: Some("githubLight".to_string()),
+                font_size: Some(14),
             }),
         }
     }

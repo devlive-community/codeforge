@@ -1,4 +1,6 @@
 use log::info;
+#[allow(unused_imports)]
+use tauri::Manager;
 use tauri::{
     AppHandle, Emitter,
     menu::{MenuItemBuilder, Submenu, SubmenuBuilder},

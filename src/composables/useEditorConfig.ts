@@ -8,6 +8,7 @@ interface EditorConfig
     tab_size?: number
     theme?: string
     indent_with_tab?: boolean
+    font_size?: number
 }
 
 interface ThemeOption
@@ -149,7 +150,8 @@ export function useEditorConfig(emit?: any)
         editorConfig.value = {
             indent_with_tab: true,
             tab_size: 2,
-            theme: 'githubLight'
+            theme: 'githubLight',
+            font_size: 14
         }
     }
 
