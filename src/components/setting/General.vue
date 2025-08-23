@@ -8,21 +8,13 @@
       </h3>
 
       <div class="space-y-4">
-        <!-- 当前日志目录 -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            当前日志目录
-          </label>
+        <Label label="当前日志目录">
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
             {{ currentLogDir || '加载中...' }}
           </div>
-        </div>
+        </Label>
 
-        <!-- 修改日志目录 -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            选择新的日志目录
-          </label>
+        <Label label="选择新的日志目录">
           <div class="flex gap-2">
             <input v-model="newLogDir"
                    type="text"
@@ -36,7 +28,7 @@
                     @click="selectLogDirectory">
             </Button>
           </div>
-        </div>
+        </Label>
 
         <!-- 操作按钮 -->
         <div class="flex gap-3 pt-0.5">
@@ -54,11 +46,7 @@
           </Button>
         </div>
 
-        <!-- 日志文件列表 -->
-        <div v-if="logFiles.length > 0">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            最近的日志文件
-          </label>
+        <Label v-if="logFiles.length > 0" label="最近的日志文件">
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-32 overflow-y-auto">
             <div v-for="file in logFiles.slice(0, 5)" :key="file"
                  class="text-sm text-gray-600 dark:text-gray-400 font-mono py-1 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
@@ -66,7 +54,7 @@
               {{ file }}
             </div>
           </div>
-        </div>
+        </Label>
       </div>
     </div>
 
@@ -78,11 +66,7 @@
       </h3>
 
       <div class="space-y-4">
-        <!-- 清理旧日志 -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            自动清理日志
-          </label>
+        <Label label="清理日志">
           <div class="flex items-center gap-3">
             <Select v-model="keepDays"
                     class="w-36"
@@ -93,151 +77,44 @@
               立即清理
             </Button>
           </div>
-        </div>
+        </Label>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
-import { openPath } from '@tauri-apps/plugin-opener'
+import { onMounted } from 'vue'
 import { FileText, Folder, Settings2 } from 'lucide-vue-next'
 import Select from '../../ui/Select.vue'
 import Button from '../../ui/Button.vue'
-import { useToast } from '../../plugins/toast'
+import Label from '../../ui/Label.vue'
+import { useLogDirectory } from '../../composables/useLogDirectory'
+import { useLogCleanup } from '../../composables/useLogCleanup'
 
 const emit = defineEmits<{
   'settings-changed': [type: string, value: any]
   'error': [message: string]
 }>()
 
-const toast = useToast()
+const {
+  currentLogDir,
+  newLogDir,
+  logFiles,
+  loadLogDirectory,
+  loadLogFiles,
+  selectLogDirectory,
+  applyLogDirChange,
+  openLogDirectory,
+  resetLogDirectory,
+  openLogFile
+} = useLogDirectory(emit)
 
-const currentLogDir = ref('')
-const newLogDir = ref('')
-const logFiles = ref<string[]>([])
-const keepDays = ref(30)
-
-const keepDaysOptions = [
-  { label: '保留 1 天', value: 1 },
-  { label: '保留 7 天', value: 7 },
-  { label: '保留 14 天', value: 14 },
-  { label: '保留 30 天', value: 30 },
-  { label: '保留 90 天', value: 90 }
-]
-
-const loadLogDirectory = async () => {
-  try {
-    const logDir = await invoke<string>('get_log_directory')
-    currentLogDir.value = logDir
-    newLogDir.value = logDir
-  }
-  catch (error) {
-    console.error('Failed to get current log directory:', error)
-    toast.error('获取日志目录失败 - 错误信息: ' + error)
-    emit('error', '获取日志目录失败')
-  }
-}
-
-const loadLogFiles = async () => {
-  try {
-    logFiles.value = await invoke<string[]>('get_log_files')
-  }
-  catch (error) {
-    console.error('Failed to get log files:', error)
-    emit('error', '获取日志文件列表失败')
-  }
-}
-
-const selectLogDirectory = async () => {
-  try {
-    const selected = await openDialog({
-      directory: true,
-      multiple: false,
-      title: '选择日志目录'
-    })
-
-    if (selected) {
-      newLogDir.value = selected as string
-    }
-  }
-  catch (error) {
-    console.error('Failed to select directory:', error)
-    emit('error', '选择目录失败')
-  }
-}
-
-const applyLogDirChange = async () => {
-  try {
-    await invoke('set_log_directory', { path: newLogDir.value })
-    currentLogDir.value = newLogDir.value
-    await loadLogFiles()
-    toast.success('日志目录已更新')
-    emit('settings-changed', 'logDirectory', newLogDir.value)
-  }
-  catch (error) {
-    console.error('Failed to set log directory:', error)
-    const errorMessage = '日志目录更新失败, 错误信息: ' + error
-    toast.error(errorMessage)
-    emit('error', errorMessage)
-  }
-}
-
-const openLogDirectory = async () => {
-  try {
-    await openPath(currentLogDir.value)
-  }
-  catch (error) {
-    console.error('Failed to open log directory:', error)
-    emit('error', '打开日志目录失败')
-  }
-}
-
-const resetLogDirectory = async () => {
-  try {
-    await invoke('reset_log_directory')
-    await loadLogDirectory()
-    await loadLogFiles()
-    toast.success('日志目录已重置为默认')
-    emit('settings-changed', 'logDirectory', 'reset')
-  }
-  catch (error) {
-    console.error('Failed to reset log directory:', error)
-    const errorMessage = '日志目录重置失败, 错误信息: ' + error
-    toast.error(errorMessage)
-    emit('error', errorMessage)
-  }
-}
-
-const openLogFile = async (filename: string) => {
-  try {
-    const logPath = `${ currentLogDir.value }/${ filename }`
-    await openPath(logPath)
-  }
-  catch (error) {
-    console.error('Failed to open log file:', error)
-    toast.error('打开日志文件失败 - 错误信息: ' + error)
-    emit('error', '打开日志文件失败')
-  }
-}
-
-const clearLogs = async () => {
-  try {
-    await invoke('clear_logs', { keepDays: parseInt(keepDays.value.toString()) })
-    await loadLogFiles()
-    toast.success(`已清理 ${ keepDays.value } 天前的日志`)
-    emit('settings-changed', 'logCleanup', keepDays.value)
-  }
-  catch (error) {
-    console.error('Failed to clear old logs:', error)
-    const errorMessage = '清理日志失败, 错误信息: ' + error
-    toast.error(errorMessage)
-    emit('error', errorMessage)
-  }
-}
+const {
+  keepDays,
+  keepDaysOptions,
+  clearLogs
+} = useLogCleanup(emit, loadLogFiles)
 
 // 暴露方法给父组件
 defineExpose({
