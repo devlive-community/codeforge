@@ -2,14 +2,7 @@ import { ref, watch } from 'vue'
 import { debounce } from 'lodash-es'
 import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '../plugins/toast'
-
-interface EditorConfig
-{
-    tab_size?: number
-    theme?: string
-    indent_with_tab?: boolean
-    font_size?: number
-}
+import { EditorConfig } from '../types/app.ts'
 
 interface ThemeOption
 {

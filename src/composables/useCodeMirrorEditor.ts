@@ -60,14 +60,8 @@ import {
 import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '../plugins/toast'
 import { StreamLanguage } from '@codemirror/language'
-
-interface EditorConfig
-{
-    theme?: string
-    indent_with_tab?: boolean
-    tab_size?: number
-    font_size?: number
-}
+import { EditorConfig } from '../types/app.ts'
+import { EditorView } from '@codemirror/view'
 
 interface Props
 {
@@ -83,6 +77,13 @@ export function useCodeMirrorEditor(props: Props)
     const isReady = ref(false)
     const extensions = ref<any[]>([])
     const editorConfig = ref<EditorConfig>({})
+    const defaultConfig = {
+        theme: 'githubLight',
+        indent_with_tab: true,
+        tab_size: 2,
+        font_size: 14,
+        show_line_numbers: false
+    }
 
     // 主题映射
     const themeMap: Record<string, any> = {
@@ -180,8 +181,18 @@ export function useCodeMirrorEditor(props: Props)
         }
     }
 
+    // 隐藏行号的主题扩展
+    const hideLineNumbersTheme = EditorView.theme({
+        '.cm-lineNumbers': {
+            display: 'none !important'
+        },
+        '.cm-gutters': {
+            display: 'none !important'
+        }
+    })
+
     // 更新扩展的函数
-    const updateExtensions = async () => {
+    const updateExtensions = async (showLineNumbers?: boolean) => {
         const result = []
 
         // 添加主题扩展
@@ -194,6 +205,14 @@ export function useCodeMirrorEditor(props: Props)
             if (langExtension) {
                 result.push(langExtension)
             }
+        }
+
+        // 处理行号显示逻辑
+        const shouldShowLineNumbers = showLineNumbers ?? editorConfig.value?.show_line_numbers ?? false
+
+        // 如果配置为不显示行号，则添加隐藏行号的扩展
+        if (!shouldShowLineNumbers) {
+            result.push(hideLineNumbersTheme)
         }
 
         extensions.value = result
@@ -219,26 +238,14 @@ export function useCodeMirrorEditor(props: Props)
             }
             else {
                 // 如果没有配置，使用默认配置
-                editorConfig.value = {
-                    theme: 'githubLight',
-                    indent_with_tab: true,
-                    tab_size: 2,
-                    font_size: 14
-                }
+                editorConfig.value = defaultConfig
                 await updateExtensions()
             }
         }
         catch (error) {
             console.error('获取配置失败:', error)
             toast.error('获取配置失败 - 错误信息: ' + error)
-
-            // 失败时使用默认配置
-            editorConfig.value = {
-                theme: 'githubLight',
-                indent_with_tab: true,
-                tab_size: 2,
-                font_size: 14
-            }
+            editorConfig.value = defaultConfig
             await updateExtensions()
         }
     }
@@ -293,6 +300,12 @@ export function useCodeMirrorEditor(props: Props)
     // 监听缩进配置变化
     watch(() => [editorConfig.value?.indent_with_tab, editorConfig.value?.tab_size], async () => {
         // 缩进配置变化时重新渲染
+        await reRenderEditor()
+    }, { immediate: false })
+
+    // 监听行号显示配置变化
+    watch(() => editorConfig.value?.show_line_numbers, async () => {
+        console.log('行号显示配置变化:', editorConfig.value?.show_line_numbers)
         await reRenderEditor()
     }, { immediate: false })
 
