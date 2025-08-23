@@ -21,17 +21,11 @@
           <template #general>
             <div class="space-y-4">
               <Label label="编译前执行的命令">
-                <input v-model="pluginConfig.before_compile"
-                       type="text"
-                       placeholder="编译前执行的命令"
-                       class="w-full flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+                <Input v-model="pluginConfig.before_compile" class="w-full" placeholder="编译前执行的命令"/>
               </Label>
 
               <Label label="执行的命令">
-                <input v-model="pluginConfig.run_command"
-                       type="text"
-                       placeholder="执行的命令"
-                       class="w-full flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+                <Input v-model="pluginConfig.run_command" class="w-full" placeholder="执行的命令"/>
                 <div class="flex flex-col mx-2 mt-2 space-y-1.5">
                   <div class="flex text-sm font-medium text-gray-700 dark:text-gray-300 ml-1 space-x-4">
                     <div class="font-bold">$filename</div>
@@ -45,17 +39,11 @@
               </Label>
 
               <Label label="编译完成后执行的命令">
-                <input v-model="pluginConfig.after_compile"
-                       type="text"
-                       placeholder="编译完成后执行的命令"
-                       class="w-full flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+                <Input v-model="pluginConfig.after_compile" class="w-full" placeholder="编译完成后执行的命令"/>
               </Label>
 
               <Label label="文件后缀名">
-                <input v-model="pluginConfig.extension"
-                       type="text"
-                       placeholder="输入文件后缀名"
-                       class="w-full flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+                <Input v-model="pluginConfig.extension" class="w-full" placeholder="输入文件后缀名"/>
               </Label>
             </div>
           </template>
@@ -63,10 +51,7 @@
           <template #environment>
             <Label label="语言环境目录">
               <div class="flex gap-2">
-                <input v-model="pluginConfig.execute_home"
-                       type="text"
-                       placeholder="选择语言环境目录路径"
-                       class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"/>
+                <Input v-model="pluginConfig.execute_home" class="w-full" placeholder="选择语言环境目录路径"/>
 
                 <Button type="primary"
                         :icon-only="true"
@@ -109,6 +94,7 @@ import Button from '../../ui/Button.vue'
 import Tabs from '../../ui/Tabs.vue'
 import Number from '../../ui/Number.vue'
 import Label from '../../ui/Label.vue'
+import Input from '../../ui/Input.vue'
 import { useLanguageSettings } from '../../composables/useLanguageSettings'
 import type PluginConfig from '../../types/plugin'
 
