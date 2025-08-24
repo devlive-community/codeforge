@@ -61,7 +61,8 @@ import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '../plugins/toast'
 import { StreamLanguage } from '@codemirror/language'
 import { EditorConfig } from '../types/app.ts'
-import { EditorView, hoverTooltip } from '@codemirror/view'
+import { EditorView } from '@codemirror/view'
+import { useCodeMirrorFunctionHelp } from './useCodeMirrorFunctionHelp'
 
 interface Props
 {
@@ -72,6 +73,7 @@ interface Props
 export function useCodeMirrorEditor(props: Props)
 {
     const toast = useToast()
+    const { showFunctionHelpHover, functionHelpTheme } = useCodeMirrorFunctionHelp()
 
     // 状态管理
     const isReady = ref(false)
@@ -158,6 +160,7 @@ export function useCodeMirrorEditor(props: Props)
             case 'python3':
                 return python()
             case 'nodejs':
+            case 'javascript-nodejs':
                 return javascript()
             case 'go':
                 return go()
@@ -192,32 +195,6 @@ export function useCodeMirrorEditor(props: Props)
         }
     })
 
-    // 显示函数提示扩展
-    const showFunctionHelpHover = hoverTooltip((view, pos, side) => {
-        let { from, to, text } = view.state.doc.lineAt(pos)
-        let start = pos, end = pos
-        while (start > from && /\w/.test(text[start - from - 1])) {
-            start--
-        }
-        while (end < to && /\w/.test(text[end - from])) {
-            end++
-        }
-        if (start == pos && side < 0 || end == pos && side > 0) {
-            return null
-        }
-        return {
-            pos: start,
-            end,
-            above: true,
-            create(_view)
-            {
-                let dom = document.createElement('div')
-                dom.textContent = text.slice(start - from, end - from)
-                return { dom }
-            }
-        }
-    }, { hoverTime: 500 })
-
     // 更新扩展的函数
     const updateExtensions = async (showLineNumbers?: boolean, showFunctionHelp?: boolean) => {
         const result = []
@@ -225,6 +202,9 @@ export function useCodeMirrorEditor(props: Props)
         // 添加主题扩展
         const themeExtension = getThemeExtension(editorConfig.value?.theme)
         result.push(themeExtension)
+
+        // 添加函数帮助主题
+        result.push(functionHelpTheme)
 
         // 添加语言扩展
         if (props.language) {
@@ -255,7 +235,7 @@ export function useCodeMirrorEditor(props: Props)
         }
     }
 
-    // 加载编辑器配置
+    // 其余代码完全保持不变...
     const loadEditorConfig = async () => {
         try {
             const globalConfig = await invoke<any>('get_app_config')
