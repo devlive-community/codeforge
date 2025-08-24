@@ -4,7 +4,7 @@
           type="card"
           size="md"
           position="left"
-          :tab-button-class="['w-36']"
+          :tab-button-class="['w-48']"
           :tabs="tabsPluginData"
           @change="handleTabChange">
       <template #[activePlugin]="{ tab }">

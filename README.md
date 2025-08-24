@@ -26,6 +26,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
 - **Clojure**
 - **Go**
 - **Java**
+- **JavaScript (Node.js)**
 - **Kotlin**
 - **Node.js**
 - **Python 2**
