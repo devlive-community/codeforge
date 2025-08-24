@@ -44,3 +44,13 @@ export interface AppInfo
     platform: string
     arch: string
 }
+
+export interface EditorConfig
+{
+    theme?: string
+    indent_with_tab?: boolean
+    tab_size?: number
+    font_size?: number
+    show_line_numbers?: boolean
+    show_function_help?: boolean
+}

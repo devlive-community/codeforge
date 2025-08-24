@@ -4,6 +4,14 @@
       <Switch v-model="editorConfig.indent_with_tab"/>
     </Label>
 
+    <Label label="是否显示行号">
+      <Switch v-model="editorConfig.show_line_numbers"/>
+    </Label>
+
+    <Label label="是否显示函数帮助信息">
+      <Switch v-model="editorConfig.show_function_help"/>
+    </Label>
+
     <Label label="缩进空格数">
       <Number v-model="editorConfig.tab_size" :min="1" :max="8" placeholder="缩进空格数"/>
     </Label>

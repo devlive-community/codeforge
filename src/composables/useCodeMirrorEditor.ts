@@ -60,14 +60,8 @@ import {
 import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '../plugins/toast'
 import { StreamLanguage } from '@codemirror/language'
-
-interface EditorConfig
-{
-    theme?: string
-    indent_with_tab?: boolean
-    tab_size?: number
-    font_size?: number
-}
+import { EditorConfig } from '../types/app.ts'
+import { EditorView, hoverTooltip } from '@codemirror/view'
 
 interface Props
 {
@@ -83,6 +77,14 @@ export function useCodeMirrorEditor(props: Props)
     const isReady = ref(false)
     const extensions = ref<any[]>([])
     const editorConfig = ref<EditorConfig>({})
+    const defaultConfig = {
+        theme: 'githubLight',
+        indent_with_tab: true,
+        tab_size: 2,
+        font_size: 14,
+        show_line_numbers: false,
+        show_function_help: false
+    }
 
     // 主题映射
     const themeMap: Record<string, any> = {
@@ -180,8 +182,44 @@ export function useCodeMirrorEditor(props: Props)
         }
     }
 
+    // 隐藏行号的主题扩展
+    const hideLineNumbersTheme = EditorView.theme({
+        '.cm-lineNumbers': {
+            display: 'none !important'
+        },
+        '.cm-gutters': {
+            display: 'none !important'
+        }
+    })
+
+    // 显示函数提示扩展
+    const showFunctionHelpHover = hoverTooltip((view, pos, side) => {
+        let { from, to, text } = view.state.doc.lineAt(pos)
+        let start = pos, end = pos
+        while (start > from && /\w/.test(text[start - from - 1])) {
+            start--
+        }
+        while (end < to && /\w/.test(text[end - from])) {
+            end++
+        }
+        if (start == pos && side < 0 || end == pos && side > 0) {
+            return null
+        }
+        return {
+            pos: start,
+            end,
+            above: true,
+            create(_view)
+            {
+                let dom = document.createElement('div')
+                dom.textContent = text.slice(start - from, end - from)
+                return { dom }
+            }
+        }
+    }, { hoverTime: 500 })
+
     // 更新扩展的函数
-    const updateExtensions = async () => {
+    const updateExtensions = async (showLineNumbers?: boolean, showFunctionHelp?: boolean) => {
         const result = []
 
         // 添加主题扩展
@@ -194,6 +232,18 @@ export function useCodeMirrorEditor(props: Props)
             if (langExtension) {
                 result.push(langExtension)
             }
+        }
+
+        // 处理行号显示逻辑
+        const shouldShowLineNumbers = showLineNumbers ?? editorConfig.value?.show_line_numbers ?? false
+        // 如果配置为不显示行号，则添加隐藏行号的扩展
+        if (!shouldShowLineNumbers) {
+            result.push(hideLineNumbersTheme)
+        }
+
+        const shouldShowFunctionHelp = showFunctionHelp ?? editorConfig.value?.show_function_help ?? false
+        if (shouldShowFunctionHelp) {
+            result.push(showFunctionHelpHover)
         }
 
         extensions.value = result
@@ -219,26 +269,14 @@ export function useCodeMirrorEditor(props: Props)
             }
             else {
                 // 如果没有配置，使用默认配置
-                editorConfig.value = {
-                    theme: 'githubLight',
-                    indent_with_tab: true,
-                    tab_size: 2,
-                    font_size: 14
-                }
+                editorConfig.value = defaultConfig
                 await updateExtensions()
             }
         }
         catch (error) {
             console.error('获取配置失败:', error)
             toast.error('获取配置失败 - 错误信息: ' + error)
-
-            // 失败时使用默认配置
-            editorConfig.value = {
-                theme: 'githubLight',
-                indent_with_tab: true,
-                tab_size: 2,
-                font_size: 14
-            }
+            editorConfig.value = defaultConfig
             await updateExtensions()
         }
     }
@@ -295,6 +333,18 @@ export function useCodeMirrorEditor(props: Props)
         // 缩进配置变化时重新渲染
         await reRenderEditor()
     }, { immediate: false })
+
+    // 监听行号显示配置变化
+    watch(() => editorConfig.value?.show_line_numbers, async () => {
+        console.log('行号显示配置变化:', editorConfig.value?.show_line_numbers)
+        await reRenderEditor()
+    }, { immediate: false })
+
+    // 监听函数帮助配置变化
+    watch(() => editorConfig.value?.show_function_help, async () => {
+        console.log('函数帮助配置变化:', editorConfig.value?.show_function_help)
+        await reRenderEditor()
+    })
 
     return {
         // 状态

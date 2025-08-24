@@ -12,10 +12,12 @@ static CONFIG_MANAGER: Mutex<Option<ConfigManager>> = Mutex::new(None);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditorConfig {
-    pub indent_with_tab: Option<bool>, // 是否使用 tab 缩进
-    pub tab_size: Option<u32>,         // tab 缩进, 空格数，默认为 2
-    pub theme: Option<String>,         // 编辑器主题
-    pub font_size: Option<u32>,        // 编辑器字体大小
+    pub indent_with_tab: Option<bool>,    // 是否使用 tab 缩进
+    pub tab_size: Option<u32>,            // tab 缩进, 空格数，默认为 2
+    pub theme: Option<String>,            // 编辑器主题
+    pub font_size: Option<u32>,           // 编辑器字体大小
+    pub show_line_numbers: Option<bool>,  // 是否显示行号
+    pub show_function_help: Option<bool>, // 是否显示函数帮助
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +43,8 @@ impl Default for AppConfig {
                 tab_size: Some(2),
                 theme: Some("githubLight".to_string()),
                 font_size: Some(14),
+                show_line_numbers: Some(true),
+                show_function_help: Some(false),
             }),
         }
     }
@@ -97,6 +101,8 @@ impl ConfigManager {
                                 tab_size: Some(2),
                                 theme: Some("githubLight".to_string()),
                                 font_size: Some(14),
+                                show_line_numbers: Some(true),
+                                show_function_help: Some(false),
                             });
                             println!("读取配置 -> 添加默认 editor 配置");
                         }
@@ -201,6 +207,8 @@ impl ConfigManager {
                 tab_size: Some(2),
                 theme: Some("githubLight".to_string()),
                 font_size: Some(14),
+                show_line_numbers: Some(true),
+                show_function_help: Some(false),
             }),
         }
     }
