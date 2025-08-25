@@ -74,7 +74,6 @@ fn replace_executable(
         perms.set_mode(0o755);
         std::fs::set_permissions(current_exe, perms)?;
     }
-    
     info!("安装更新 -> 可执行文件权限设置完成");
 
     Ok(())
