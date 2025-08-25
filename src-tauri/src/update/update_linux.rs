@@ -67,10 +67,14 @@ fn replace_executable(
     std::fs::copy(update_path, current_exe)?;
 
     // 设置可执行权限
-    use std::os::unix::fs::PermissionsExt;
-    let mut perms = std::fs::metadata(current_exe)?.permissions();
-    perms.set_mode(0o755);
-    std::fs::set_permissions(current_exe, perms)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(current_exe)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(current_exe, perms)?;
+    }
+    
     info!("安装更新 -> 可执行文件权限设置完成");
 
     Ok(())

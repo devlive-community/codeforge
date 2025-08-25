@@ -252,10 +252,13 @@ rm "$0"
     std::fs::write(&script_path, script_content)?;
 
     // 设置脚本可执行权限
-    use std::os::unix::fs::PermissionsExt;
-    let mut perms = std::fs::metadata(&script_path)?.permissions();
-    perms.set_mode(0o755);
-    std::fs::set_permissions(&script_path, perms)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&script_path)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&script_path, perms)?;
+    }
 
     info!("安装更新 -> 启动更新脚本: {}", script_path.display());
 
