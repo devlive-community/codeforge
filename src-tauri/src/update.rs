@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 use tauri::{AppHandle, Emitter, command};
 
+mod update_linux;
+mod update_mac;
+mod update_windows;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateInfo {
     pub version: String,
@@ -118,14 +122,21 @@ async fn get_latest_release(
 // 查找平台对应的文件
 fn get_platform_asset(assets: &[GitHubAsset]) -> Option<&GitHubAsset> {
     let os = std::env::consts::OS;
-    info!("检查更新 -> 当前平台: {}", os);
+    let arch = std::env::consts::ARCH;
+    info!("检查更新 -> 当前平台: {} {}", os, arch);
 
     for asset in assets {
         let name = asset.name.to_lowercase();
 
         let matches = match os {
-            "windows" => name.contains("windows") || name.contains("win") || name.ends_with(".exe"),
-            "macos" => name.contains("macos") || name.contains("darwin") || name.ends_with(".dmg"),
+            "windows" => {
+                if arch == "x86_64" {
+                    name.contains("x64") && (name.ends_with(".exe") || name.ends_with(".msi"))
+                } else {
+                    name.contains("windows") || name.ends_with(".exe") || name.ends_with(".msi")
+                }
+            }
+            "macos" => name.contains("universal") && name.ends_with(".dmg"),
             "linux" => name.contains("linux") || name.ends_with(".appimage"),
             _ => false,
         };
@@ -136,7 +147,6 @@ fn get_platform_asset(assets: &[GitHubAsset]) -> Option<&GitHubAsset> {
         }
     }
 
-    // 如果没找到匹配的，返回第一个
     assets.first()
 }
 
@@ -179,7 +189,22 @@ async fn do_update(
     let temp_dir = std::env::temp_dir().join("codeforge_update");
     std::fs::create_dir_all(&temp_dir)?;
 
-    let file_name = format!("update_{}.exe", update_info.version);
+    // 根据平台确定文件扩展名
+    let os = std::env::consts::OS;
+    let file_extension = match os {
+        "windows" => {
+            if update_info.url.contains(".msi") {
+                "msi"
+            } else {
+                "exe"
+            }
+        }
+        "macos" => "dmg",
+        "linux" => "appimage",
+        _ => "bin",
+    };
+
+    let file_name = format!("update_{}.{}", update_info.version, file_extension);
     let download_path = temp_dir.join(&file_name);
 
     info!("检查更新 -> 下载更新文件: {}", update_info.url);
@@ -257,12 +282,16 @@ async fn do_update(
     Ok(())
 }
 
-// 安装更新
+// 安装更新函数
 async fn do_install(
     update_path: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let current_exe = std::env::current_exe()?;
-    std::fs::copy(update_path, &current_exe)?;
+    let os = std::env::consts::OS;
 
-    Ok(())
+    match os {
+        "windows" => update_windows::install(update_path).await,
+        "macos" => update_mac::install(update_path).await,
+        "linux" => update_linux::install(update_path).await,
+        _ => Err("不支持的操作系统".into()),
+    }
 }
