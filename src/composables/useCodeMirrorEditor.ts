@@ -1,15 +1,15 @@
-import { nextTick, ref, watch } from 'vue'
-import { python } from '@codemirror/lang-python'
-import { javascript } from '@codemirror/lang-javascript'
-import { go } from '@codemirror/lang-go'
-import { java } from '@codemirror/lang-java'
-import { rust } from '@codemirror/lang-rust'
-import { cpp } from '@codemirror/lang-cpp'
-import { shell } from '@codemirror/legacy-modes/mode/shell'
-import { swift } from '@codemirror/legacy-modes/mode/swift'
-import { kotlin, scala } from '@codemirror/legacy-modes/mode/clike'
-import { clojure } from '@codemirror/legacy-modes/mode/clojure'
-import { ruby } from '@codemirror/legacy-modes/mode/ruby'
+import {nextTick, ref, watch} from 'vue'
+import {python} from '@codemirror/lang-python'
+import {javascript} from '@codemirror/lang-javascript'
+import {go} from '@codemirror/lang-go'
+import {java} from '@codemirror/lang-java'
+import {rust} from '@codemirror/lang-rust'
+import {cpp} from '@codemirror/lang-cpp'
+import {shell} from '@codemirror/legacy-modes/mode/shell'
+import {swift} from '@codemirror/legacy-modes/mode/swift'
+import {kotlin, scala} from '@codemirror/legacy-modes/mode/clike'
+import {clojure} from '@codemirror/legacy-modes/mode/clojure'
+import {ruby} from '@codemirror/legacy-modes/mode/ruby'
 import {
     abcdef,
     abyss,
@@ -58,12 +58,12 @@ import {
     xcodeDark,
     xcodeLight
 } from '@uiw/codemirror-themes-all'
-import { invoke } from '@tauri-apps/api/core'
-import { useToast } from '../plugins/toast'
-import { StreamLanguage } from '@codemirror/language'
-import { EditorConfig } from '../types/app.ts'
-import { EditorView } from '@codemirror/view'
-import { useCodeMirrorFunctionHelp } from './useCodeMirrorFunctionHelp'
+import {invoke} from '@tauri-apps/api/core'
+import {useToast} from '../plugins/toast'
+import {StreamLanguage} from '@codemirror/language'
+import {EditorConfig} from '../types/app.ts'
+import {EditorView} from '@codemirror/view'
+import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 
 interface Props
 {
@@ -74,7 +74,7 @@ interface Props
 export function useCodeMirrorEditor(props: Props)
 {
     const toast = useToast()
-    const { showFunctionHelpHover, functionHelpTheme } = useCodeMirrorFunctionHelp()
+    const {showFunctionHelpHover, functionHelpTheme} = useCodeMirrorFunctionHelp()
 
     // 状态管理
     const isReady = ref(false)
@@ -150,7 +150,7 @@ export function useCodeMirrorEditor(props: Props)
             return theme
         }
 
-        console.warn(`主题 "${ themeName }" 未找到，使用默认主题`)
+        console.warn(`主题 "${themeName}" 未找到，使用默认主题`)
         return githubLight
     }
 
@@ -172,6 +172,7 @@ export function useCodeMirrorEditor(props: Props)
             case 'c':
                 return cpp()
             case 'shell':
+            case 'applescript':
                 return StreamLanguage.define(shell)
             case 'swift':
                 return StreamLanguage.define(swift)
@@ -278,7 +279,7 @@ export function useCodeMirrorEditor(props: Props)
             await reRenderEditor()
         }
         else {
-            console.warn(`主题 "${ themeName }" 不存在`)
+            console.warn(`主题 "${themeName}" 不存在`)
         }
     }
 
@@ -301,7 +302,7 @@ export function useCodeMirrorEditor(props: Props)
     watch(() => props.language, async () => {
         console.log('语言变化:', props.language)
         await reRenderEditor()
-    }, { immediate: false })
+    }, {immediate: false})
 
     // 监听编辑器配置变化
     watch(() => editorConfig.value?.theme, async (newTheme, oldTheme) => {
@@ -309,19 +310,19 @@ export function useCodeMirrorEditor(props: Props)
             console.log('主题变化:', oldTheme, '->', newTheme)
             await reRenderEditor()
         }
-    }, { immediate: false })
+    }, {immediate: false})
 
     // 监听缩进配置变化
     watch(() => [editorConfig.value?.indent_with_tab, editorConfig.value?.tab_size], async () => {
         // 缩进配置变化时重新渲染
         await reRenderEditor()
-    }, { immediate: false })
+    }, {immediate: false})
 
     // 监听行号显示配置变化
     watch(() => editorConfig.value?.show_line_numbers, async () => {
         console.log('行号显示配置变化:', editorConfig.value?.show_line_numbers)
         await reRenderEditor()
-    }, { immediate: false })
+    }, {immediate: false})
 
     // 监听函数帮助配置变化
     watch(() => editorConfig.value?.show_function_help, async () => {

@@ -22,6 +22,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
 
 ## 支持的语言
 
+- **AppleScript**
 - **C**
 - **Clojure**
 - **Go**
@@ -31,6 +32,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
 - **Node.js**
 - **Python 2**
 - **Python 3**
+- **Ruby**
 - **Rust**
 - **Shell**
 - **Swift**

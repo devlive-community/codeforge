@@ -77,7 +77,7 @@
 
           <template #advanced>
             <Label label="超时时间(秒)">
-              <Number v-model="pluginConfig.timeout" class="w-1/5" placeholder="超时时间(秒)，默认 30 秒"/>
+              <Number v-model="pluginConfig.timeout" class="w-1/4" placeholder="超时时间(秒)，默认 30 秒"/>
             </Label>
           </template>
         </Tabs>
