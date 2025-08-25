@@ -81,7 +81,7 @@
                    @keydown.enter.prevent="selectOption(option)"
                    @keydown.space.prevent="selectOption(option)"
                    :class="[
-                      'relative flex space-x-3 items-center cursor-pointer select-none py-2 px-3 transition-colors duration-150',
+                      'relative flex my-1 space-x-3 items-center cursor-pointer select-none py-2 px-3 transition-colors duration-150',
                       isSelected(option)
                         ? 'bg-blue-400 text-white'
                         : 'text-gray-900 hover:bg-blue-50',

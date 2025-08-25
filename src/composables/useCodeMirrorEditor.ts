@@ -9,6 +9,7 @@ import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { swift } from '@codemirror/legacy-modes/mode/swift'
 import { kotlin, scala } from '@codemirror/legacy-modes/mode/clike'
 import { clojure } from '@codemirror/legacy-modes/mode/clojure'
+import { ruby } from '@codemirror/legacy-modes/mode/ruby'
 import {
     abcdef,
     abyss,
@@ -180,6 +181,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(kotlin)
             case 'clojure':
                 return StreamLanguage.define(clojure)
+            case 'ruby':
+                return StreamLanguage.define(ruby)
             default:
                 return null
         }

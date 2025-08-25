@@ -355,6 +355,7 @@ pub mod manager;
 pub mod nodejs;
 pub mod python2;
 pub mod python3;
+pub mod ruby;
 pub mod rust;
 pub mod scala;
 pub mod shell;
