@@ -361,5 +361,6 @@ pub mod rust;
 pub mod scala;
 pub mod shell;
 pub mod swift;
+pub mod typescript_nodejs;
 
 pub use manager::PluginManager;
