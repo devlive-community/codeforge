@@ -14,6 +14,7 @@ use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
 use crate::plugins::shell::ShellPlugin;
 use crate::plugins::swift::SwiftPlugin;
+use crate::plugins::typescript::TypeScriptPlugin;
 use crate::plugins::typescript_nodejs::TypeScriptNodeJsPlugin;
 use std::collections::HashMap;
 
@@ -39,6 +40,7 @@ impl PluginManager {
         plugins.insert("c".to_string(), Box::new(CPlugin));
         plugins.insert("ruby".to_string(), Box::new(RubyPlugin));
         plugins.insert("applescript".to_string(), Box::new(AppleScriptPlugin));
+        plugins.insert("typescript".to_string(), Box::new(TypeScriptPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(JavaScriptNodeJsPlugin),

@@ -216,6 +216,11 @@ pub trait LanguagePlugin: Send + Sync {
                 }
 
                 let processed_cmd = before_cmd.replace("$filename", file_path);
+                info!(
+                    "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 处理命令 {}",
+                    self.get_language_key(),
+                    processed_cmd
+                );
                 self.handle_environment_setup(&processed_cmd)?;
             }
         }
@@ -361,6 +366,7 @@ pub mod rust;
 pub mod scala;
 pub mod shell;
 pub mod swift;
+pub mod typescript;
 pub mod typescript_nodejs;
 
 pub use manager::PluginManager;
