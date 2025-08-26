@@ -373,6 +373,8 @@ pub mod c;
 pub mod clojure;
 pub mod go;
 pub mod java;
+pub mod javascript_browser;
+pub mod javascript_jquery;
 pub mod javascript_nodejs;
 pub mod kotlin;
 pub mod manager;

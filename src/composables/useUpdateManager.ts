@@ -1,7 +1,7 @@
-import { ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
-import { CheckCircle, Download, RefreshCw, Wifi } from 'lucide-vue-next'
+import {ref} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
+import {listen} from '@tauri-apps/api/event'
+import {CheckCircle, Download, RefreshCw, Wifi} from 'lucide-vue-next'
 
 interface UpdateInfo
 {
@@ -164,16 +164,19 @@ export function useUpdateManager()
                 updateInfo.value = result
                 hasUpdate.value = true
                 currentStatus.value = 'UPDATE_AVAILABLE'
+                return result
             }
             else {
                 hasUpdate.value = false
                 currentStatus.value = 'NO_UPDATE'
+                return null
             }
         }
         catch (error) {
             console.error('Failed to check for updates:', error)
             errorMessage.value = String(error)
             currentStatus.value = 'ERROR'
+            return null
         }
         finally {
             isChecking.value = false
@@ -191,7 +194,7 @@ export function useUpdateManager()
         errorMessage.value = ''
 
         try {
-            await invoke('start_update', { updateInfo: updateInfo.value })
+            await invoke('start_update', {updateInfo: updateInfo.value})
         }
         catch (error) {
             console.error('Failed to start update:', error)
@@ -214,7 +217,7 @@ export function useUpdateManager()
     const setupUpdateListeners = async () => {
         // 监听下载进度
         await listen('update-progress', (event: any) => {
-            const { progress, speed, status } = event.payload
+            const {progress, speed, status} = event.payload
             downloadProgress.value = progress
             downloadSpeed.value = speed
 
@@ -259,11 +262,11 @@ export function useUpdateManager()
             unitIndex++
         }
 
-        return `${ size.toFixed(1) } ${ units[unitIndex] }`
+        return `${size.toFixed(1)} ${units[unitIndex]}`
     }
 
     const formatSpeed = (bytesPerSecond: number) => {
-        return `${ formatSize(bytesPerSecond) }/s`
+        return `${formatSize(bytesPerSecond)}/s`
     }
 
     return {

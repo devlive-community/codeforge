@@ -4,6 +4,8 @@ use crate::plugins::c::CPlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::java::JavaPlugin;
+use crate::plugins::javascript_browser::JavaScriptBrowserPlugin;
+use crate::plugins::javascript_jquery::JavaScriptJQueryPlugin;
 use crate::plugins::javascript_nodejs::JavaScriptNodeJsPlugin;
 use crate::plugins::kotlin::KotlinPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
@@ -53,6 +55,14 @@ impl PluginManager {
         plugins.insert(
             "typescript-browser".to_string(),
             Box::new(TypeScriptBrowserPlugin),
+        );
+        plugins.insert(
+            "javascript-browser".to_string(),
+            Box::new(JavaScriptBrowserPlugin),
+        );
+        plugins.insert(
+            "javascript-jquery".to_string(),
+            Box::new(JavaScriptJQueryPlugin),
         );
 
         Self { plugins }

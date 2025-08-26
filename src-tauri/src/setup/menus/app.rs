@@ -6,12 +6,31 @@ use tauri::{
     menu::{MenuItemBuilder, Submenu, SubmenuBuilder},
 };
 
+use crate::update::check_for_updates;
+
+fn check_update_sync() -> bool {
+    match tokio::runtime::Runtime::new() {
+        Ok(rt) => match rt.block_on(check_for_updates()) {
+            Ok(Some(_)) => true,
+            Ok(None) => false,
+            Err(_e) => false,
+        },
+        Err(_e) => false,
+    }
+}
+
 pub fn create_app_submenu(app: &AppHandle) -> tauri::Result<Submenu<tauri::Wry>> {
     let about_item = MenuItemBuilder::new("关于 CodeForge")
         .id("about")
         .build(app)?;
 
-    let update_item = MenuItemBuilder::new("检查更新").id("update").build(app)?;
+    let update_text = if check_update_sync() {
+        "检查更新 (有新版本)"
+    } else {
+        "检查更新"
+    };
+
+    let update_item = MenuItemBuilder::new(update_text).id("update").build(app)?;
 
     let settings_item = MenuItemBuilder::new("设置")
         .id("settings")
