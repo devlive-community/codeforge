@@ -1,25 +1,25 @@
 use super::{LanguagePlugin, PluginConfig};
 use std::vec;
 
-pub struct SwiftPlugin;
+pub struct RubyPlugin;
 
-impl LanguagePlugin for SwiftPlugin {
+impl LanguagePlugin for RubyPlugin {
     fn get_order(&self) -> i32 {
-        8
+        14
     }
 
     fn get_language_name(&self) -> &'static str {
-        "Swift"
+        "Ruby"
     }
 
     fn get_language_key(&self) -> &'static str {
-        "swift"
+        "ruby"
     }
 
     fn get_file_extension(&self) -> String {
         self.get_config()
             .map(|config| config.extension.clone())
-            .unwrap_or_else(|| "swift".to_string())
+            .unwrap_or_else(|| "rb".to_string())
     }
 
     fn get_version_args(&self) -> Vec<&'static str> {
@@ -27,19 +27,19 @@ impl LanguagePlugin for SwiftPlugin {
     }
 
     fn get_path_command(&self) -> String {
-        "which swift".to_string()
+        "which ruby".to_string()
     }
 
     fn get_default_config(&self) -> PluginConfig {
         PluginConfig {
             enabled: true,
-            language: String::from("swift"),
+            language: String::from("ruby"),
             before_compile: None,
-            extension: String::from("swift"),
+            extension: String::from("rb"),
             execute_home: None,
-            run_command: Some(String::from("swift $filename")),
+            run_command: Some(String::from("ruby $filename")),
             after_compile: None,
-            template: Some(String::from("// 在这里输入 Swift 代码")),
+            template: Some(String::from("# 在这里输入 Ruby 代码")),
             timeout: Some(30),
         }
     }
@@ -47,6 +47,6 @@ impl LanguagePlugin for SwiftPlugin {
     fn get_default_command(&self) -> String {
         self.get_config()
             .and_then(|config| config.run_command.clone())
-            .unwrap_or_else(|| "swift".to_string())
+            .unwrap_or_else(|| "ruby".to_string())
     }
 }

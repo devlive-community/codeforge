@@ -345,6 +345,7 @@ pub trait LanguagePlugin: Send + Sync {
 }
 
 // 重新导出子模块
+pub mod applescript;
 pub mod c;
 pub mod clojure;
 pub mod go;
@@ -355,6 +356,7 @@ pub mod manager;
 pub mod nodejs;
 pub mod python2;
 pub mod python3;
+pub mod ruby;
 pub mod rust;
 pub mod scala;
 pub mod shell;

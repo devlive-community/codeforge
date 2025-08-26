@@ -5,12 +5,13 @@
           size="md"
           position="left"
           :tab-button-class="['w-48']"
+          :nav-class="['max-h-[70vh] overflow-y-auto']"
           :tabs="tabsPluginData"
           @change="handleTabChange">
       <template #[activePlugin]="{ tab }">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
           <img :src="`/icons/${activePlugin.replace(/\d+$/, '')}.svg`" class="w-6 h-6" :alt="tab.label"/>
-          <span>{{ `语言 [ ${ tab.label } ] 配置` }}</span>
+          <span>{{ `语言 [ ${tab.label} ] 配置` }}</span>
         </h3>
 
         <Tabs v-model="activeTab"
@@ -77,7 +78,7 @@
 
           <template #advanced>
             <Label label="超时时间(秒)">
-              <Number v-model="pluginConfig.timeout" class="w-1/5" placeholder="超时时间(秒)，默认 30 秒"/>
+              <Number v-model="pluginConfig.timeout" class="w-1/4" placeholder="超时时间(秒)，默认 30 秒"/>
             </Label>
           </template>
         </Tabs>
@@ -87,15 +88,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { Folder } from 'lucide-vue-next'
-import { Codemirror } from 'vue-codemirror'
+import {onMounted} from 'vue'
+import {Folder} from 'lucide-vue-next'
+import {Codemirror} from 'vue-codemirror'
 import Button from '../../ui/Button.vue'
 import Tabs from '../../ui/Tabs.vue'
 import Number from '../../ui/Number.vue'
 import Label from '../../ui/Label.vue'
 import Input from '../../ui/Input.vue'
-import { useLanguageSettings } from '../../composables/useLanguageSettings'
+import {useLanguageSettings} from '../../composables/useLanguageSettings'
 import type PluginConfig from '../../types/plugin'
 
 const emit = defineEmits<{

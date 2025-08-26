@@ -1,4 +1,5 @@
 use super::{LanguagePlugin, PluginConfig};
+use crate::plugins::applescript::AppleScriptPlugin;
 use crate::plugins::c::CPlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::go::GoPlugin;
@@ -8,6 +9,7 @@ use crate::plugins::kotlin::KotlinPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
 use crate::plugins::python2::Python2Plugin;
 use crate::plugins::python3::Python3Plugin;
+use crate::plugins::ruby::RubyPlugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
 use crate::plugins::shell::ShellPlugin;
@@ -34,6 +36,8 @@ impl PluginManager {
         plugins.insert("kotlin".to_string(), Box::new(KotlinPlugin));
         plugins.insert("clojure".to_string(), Box::new(ClojurePlugin));
         plugins.insert("c".to_string(), Box::new(CPlugin));
+        plugins.insert("ruby".to_string(), Box::new(RubyPlugin));
+        plugins.insert("applescript".to_string(), Box::new(AppleScriptPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(LanguageNodeJsPlugin),
