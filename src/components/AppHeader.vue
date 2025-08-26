@@ -31,6 +31,10 @@
     </div>
 
     <div class="flex items-center space-x-3">
+      <Button type="warning" :icon="CheckCircle" v-if="hasUpdate">
+        有新版本
+      </Button>
+
       <!-- 清空输出按钮 -->
       <Button @click="handleClearOutput"
               :disabled="isRunning"
@@ -43,12 +47,13 @@
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue'
-import {FileCode, Play, Square, Trash2} from 'lucide-vue-next'
+import {computed, onMounted, ref} from 'vue'
+import {CheckCircle, FileCode, Play, Square, Trash2} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
 import {Language} from '../types/app.ts'
 import {invoke} from "@tauri-apps/api/core";
+import {useUpdateManager} from "../composables/useUpdateManager.ts";
 
 const props = defineProps<{
   isRunning: boolean
@@ -66,6 +71,8 @@ const emit = defineEmits<{
   'load-example': [content: string]
 }>()
 
+const {checkForUpdates} = useUpdateManager()
+
 // 使用计算属性来处理双向绑定
 const selectedLanguage = computed({
   get: () => props.currentLanguage,
@@ -75,6 +82,7 @@ const selectedLanguage = computed({
     }
   }
 })
+const hasUpdate = ref(false)
 
 // 事件处理函数 - 确保不传递任何参数
 const handleRunCode = () => {
@@ -87,6 +95,13 @@ const handleStopCode = () => {
 
 const handleClearOutput = () => {
   emit('clear-output')
+}
+
+const checkUpdater = async () => {
+  const result = await checkForUpdates()
+  if (result) {
+    hasUpdate.value = true
+  }
 }
 
 // 处理 Select 组件的 change 事件
@@ -105,4 +120,8 @@ const loadExample = async () => {
     console.error('Error loading example:', error)
   }
 }
+
+onMounted(async () => {
+  await checkUpdater()
+})
 </script>
