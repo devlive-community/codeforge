@@ -15,6 +15,7 @@ use crate::plugins::scala::ScalaPlugin;
 use crate::plugins::shell::ShellPlugin;
 use crate::plugins::swift::SwiftPlugin;
 use crate::plugins::typescript::TypeScriptPlugin;
+use crate::plugins::typescript_browser::TypeScriptBrowserPlugin;
 use crate::plugins::typescript_nodejs::TypeScriptNodeJsPlugin;
 use std::collections::HashMap;
 
@@ -48,6 +49,10 @@ impl PluginManager {
         plugins.insert(
             "typescript-nodejs".to_string(),
             Box::new(TypeScriptNodeJsPlugin),
+        );
+        plugins.insert(
+            "typescript-browser".to_string(),
+            Box::new(TypeScriptBrowserPlugin),
         );
 
         Self { plugins }

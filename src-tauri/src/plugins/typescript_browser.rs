@@ -1,19 +1,19 @@
 use super::{LanguagePlugin, PluginConfig};
 use std::vec;
 
-pub struct TypeScriptPlugin;
+pub struct TypeScriptBrowserPlugin;
 
-impl LanguagePlugin for TypeScriptPlugin {
+impl LanguagePlugin for TypeScriptBrowserPlugin {
     fn get_order(&self) -> i32 {
-        17
+        16
     }
 
     fn get_language_name(&self) -> &'static str {
-        "TypeScript"
+        "TypeScript (Browser)"
     }
 
     fn get_language_key(&self) -> &'static str {
-        "typescript"
+        "typescript-browser"
     }
 
     fn get_file_extension(&self) -> String {
@@ -58,15 +58,17 @@ impl LanguagePlugin for TypeScriptPlugin {
     fn get_default_config(&self) -> PluginConfig {
         PluginConfig {
             enabled: true,
-            language: String::from("typescript"),
+            language: String::from("typescript-browser"),
             before_compile: Some(String::from(
                 "tsc --lib es2017,dom --skipLibCheck $filename",
             )),
             extension: String::from("ts"),
             execute_home: None,
-            run_command: Some(String::from("node $classname")),
+            run_command: Some(String::from(
+                "echo <script src=\"file://$classname\"></script>",
+            )),
             after_compile: Some(String::from("rm -f *.js")),
-            template: Some(String::from("// 在这里输入 TypeScript 代码")),
+            template: Some(String::from("// 在这里输入 TypeScript (Browser) 代码")),
             timeout: Some(30),
         }
     }

@@ -1,4 +1,4 @@
-// JavaScript 示例代码 - CodeForge 代码执行环境
+// TypeScript Node.js 示例代码 - CodeForge 代码执行环境
 
 function greetUser(name) {
     return `Hello, ${name}! 👋`;
@@ -41,18 +41,18 @@ function main() {
     console.log("");
 
     console.log("=========================================");
-    console.log("         CodeForge JavaScript         ");
+    console.log("         CodeForge TypeScript Node.js         ");
     console.log("=========================================");
     console.log("");
 
     // 基本输出示例
-    console.log("✅ JavaScript 运行成功! (JavaScript is working!)");
-    console.log("⚡ 这是 JavaScript 程序 (This is JavaScript program)");
+    console.log("✅ TypeScript 运行成功! (TypeScript is working!)");
+    console.log("⚡ 这是 TypeScript 程序 (This is TypeScript program)");
     console.log("");
 
     // 变量操作
     const name = "CodeForge";
-    const version = "JavaScript";
+    const version = "TypeScript";
     const number1 = 10;
     const number2 = 20;
     const calculation = addNumbers(number1, number2);
@@ -204,8 +204,8 @@ function main() {
         console.log("计算历史:", calc.getHistory());
         console.log("");
 
-        console.log("🎯 CodeForge JavaScript 代码执行完成!");
-        console.log("🎯 CodeForge JavaScript execution completed!");
+        console.log("🎯 CodeForge TypeScript 代码执行完成!");
+        console.log("🎯 CodeForge TypeScript execution completed!");
         console.log("");
         console.log("感谢使用 CodeForge 代码执行环境! 🚀");
         console.log("Thank you for using CodeForge! 🚀");

@@ -185,6 +185,7 @@ export function useCodeMirrorEditor(props: Props)
             case 'ruby':
                 return StreamLanguage.define(ruby)
             case 'typescript':
+            case 'typescript-browser':
             case 'typescript-nodejs':
                 return javascript({typescript: true})
             default:

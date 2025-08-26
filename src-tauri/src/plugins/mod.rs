@@ -124,16 +124,17 @@ pub trait LanguagePlugin: Send + Sync {
                 let language_name = self.get_language_key();
 
                 // 查找匹配的插件配置
-                let found_config = plugins
+                if let Some(found_config) = plugins
                     .iter()
                     .find(|config| config.language == language_name)
-                    .cloned();
-
-                debug!(
-                    "执行代码 -> 获取插件 [ {} ] 配置 {:?}",
-                    language_name, found_config
-                );
-                return found_config;
+                    .cloned()
+                {
+                    debug!(
+                        "执行代码 -> 获取插件 [ {} ] 配置 {:?}",
+                        language_name, found_config
+                    );
+                    return Some(found_config);
+                }
             }
         }
 
@@ -384,6 +385,7 @@ pub mod scala;
 pub mod shell;
 pub mod swift;
 pub mod typescript;
+pub mod typescript_browser;
 pub mod typescript_nodejs;
 
 pub use manager::PluginManager;
