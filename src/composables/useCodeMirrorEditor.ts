@@ -64,6 +64,7 @@ import {StreamLanguage} from '@codemirror/language'
 import {EditorConfig} from '../types/app.ts'
 import {EditorView} from '@codemirror/view'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
+import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 
 interface Props
 {
@@ -234,6 +235,13 @@ export function useCodeMirrorEditor(props: Props)
             result.push(showFunctionHelpHover)
         }
 
+        const shouldShowSpaceOmission = editorConfig.value?.space_dot_omission ?? false
+        if (shouldShowSpaceOmission) {
+            const {spaceOmissionPlugin, spaceOmissionTheme} = useCodeMirrorSpaceOmission()
+            result.push(spaceOmissionPlugin)
+            result.push(spaceOmissionTheme)
+        }
+
         extensions.value = result
 
         // 如果组件还没准备好，等待下一个 tick 后设置为准备好
@@ -331,6 +339,11 @@ export function useCodeMirrorEditor(props: Props)
     // 监听函数帮助配置变化
     watch(() => editorConfig.value?.show_function_help, async () => {
         console.log('函数帮助配置变化:', editorConfig.value?.show_function_help)
+        await reRenderEditor()
+    })
+
+    watch(() => editorConfig.value?.space_dot_omission, async () => {
+        console.log('是否显示空格省略:', editorConfig.value?.space_dot_omission)
         await reRenderEditor()
     })
 

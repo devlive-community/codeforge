@@ -53,4 +53,5 @@ export interface EditorConfig
     font_size?: number
     show_line_numbers?: boolean
     show_function_help?: boolean
+    space_dot_omission?: boolean
 }

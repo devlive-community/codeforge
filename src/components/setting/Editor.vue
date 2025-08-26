@@ -12,6 +12,10 @@
       <Switch v-model="editorConfig.show_function_help"/>
     </Label>
 
+    <Label label="是否显示空格省略">
+      <Switch v-model="editorConfig.space_dot_omission"/>
+    </Label>
+
     <Label label="缩进空格数">
       <Number v-model="editorConfig.tab_size" :min="1" :max="8" placeholder="缩进空格数"/>
     </Label>
@@ -27,8 +31,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useEditorConfig } from '../../composables/useEditorConfig'
+import {onMounted} from 'vue'
+import {useEditorConfig} from '../../composables/useEditorConfig'
 import Select from '../../ui/Select.vue'
 import Switch from '../../ui/Switch.vue'
 import Number from '../../ui/Number.vue'

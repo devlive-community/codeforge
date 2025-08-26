@@ -18,6 +18,7 @@ pub struct EditorConfig {
     pub font_size: Option<u32>,           // 编辑器字体大小
     pub show_line_numbers: Option<bool>,  // 是否显示行号
     pub show_function_help: Option<bool>, // 是否显示函数帮助
+    pub space_dot_omission: Option<bool>, // 是否显示空格省略
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,6 +46,7 @@ impl Default for AppConfig {
                 font_size: Some(14),
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
+                space_dot_omission: Some(false),
             }),
         }
     }
@@ -103,6 +105,7 @@ impl ConfigManager {
                                 font_size: Some(14),
                                 show_line_numbers: Some(true),
                                 show_function_help: Some(false),
+                                space_dot_omission: Some(false),
                             });
                             println!("读取配置 -> 添加默认 editor 配置");
                         }
@@ -209,6 +212,7 @@ impl ConfigManager {
                 font_size: Some(14),
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
+                space_dot_omission: Some(false),
             }),
         }
     }
