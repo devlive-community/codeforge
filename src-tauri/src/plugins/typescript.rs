@@ -36,7 +36,7 @@ impl LanguagePlugin for TypeScriptPlugin {
                 let processed_cmd = if run_cmd.contains("$classname") {
                     let class_name = if file_path.ends_with(&self.get_file_extension().to_string())
                     {
-                        file_path.replace(&self.get_file_extension().to_string(), ".js")
+                        file_path.replace(&self.get_file_extension().to_string(), "js")
                     } else {
                         file_path.to_string()
                     };
@@ -59,7 +59,7 @@ impl LanguagePlugin for TypeScriptPlugin {
         PluginConfig {
             enabled: true,
             language: String::from("typescript"),
-            before_compile: Some(String::from("tsc $filename")),
+            before_compile: Some(String::from("tsc --lib es2017,dom --skipLibCheck $filename")),
             extension: String::from("ts"),
             execute_home: None,
             run_command: Some(String::from("node $classname")),
