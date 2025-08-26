@@ -23,7 +23,7 @@ impl LanguagePlugin for TypeScriptBrowserPlugin {
     }
 
     fn get_version_args(&self) -> Vec<&'static str> {
-        vec!["--version"]
+        vec!["--"]
     }
 
     fn get_path_command(&self) -> String {

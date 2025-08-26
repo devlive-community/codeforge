@@ -1,19 +1,19 @@
 use super::{LanguagePlugin, PluginConfig};
 use std::vec;
 
-pub struct JavaScriptBrowserPlugin;
+pub struct JavaScriptJQueryPlugin;
 
-impl LanguagePlugin for JavaScriptBrowserPlugin {
+impl LanguagePlugin for JavaScriptJQueryPlugin {
     fn get_order(&self) -> i32 {
         13
     }
 
     fn get_language_name(&self) -> &'static str {
-        "JavaScript (Browser)"
+        "JavaScript (jQuery)"
     }
 
     fn get_language_key(&self) -> &'static str {
-        "javascript-browser"
+        "javascript-jquery"
     }
 
     fn get_file_extension(&self) -> String {
@@ -38,10 +38,10 @@ impl LanguagePlugin for JavaScriptBrowserPlugin {
             extension: String::from("js"),
             execute_home: None,
             run_command: Some(String::from(
-                "echo <script src=\"file://$filename\"></script>",
+                "echo <script src=\"https://code.jquery.com/jquery-3.7.1.min.js\" crossorigin=\"anonymous\"></script>\n<script src=\"file://$filename\"></script>",
             )),
             after_compile: None,
-            template: Some(String::from("// 在这里输入 JavaScript (Browser) 代码")),
+            template: Some(String::from("// 在这里输入 JavaScript (jQuery) 代码")),
             timeout: Some(30),
         }
     }
