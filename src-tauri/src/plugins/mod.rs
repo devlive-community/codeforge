@@ -307,6 +307,8 @@ pub trait LanguagePlugin: Send + Sync {
     }
 
     fn execute_cross_platform_command(&self, command: &str) -> Result<(), String> {
+        info!("执行命令: {}", command);
+
         let output = if cfg!(target_os = "windows") {
             std::process::Command::new("cmd")
                 .args(["/C", command])
@@ -319,11 +321,26 @@ pub trait LanguagePlugin: Send + Sync {
 
         let output = output.map_err(|e| format!("执行命令失败: {}", e))?;
 
+        debug!("命令退出状态: {:?}", output.status);
+        debug!("命令标准输出: {}", String::from_utf8_lossy(&output.stdout));
+        debug!("命令标准错误: {}", String::from_utf8_lossy(&output.stderr));
+
         if !output.status.success() {
-            return Err(format!(
-                "命令执行失败: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            let error_msg = if !stderr.is_empty() {
+                stderr.to_string()
+            } else if !stdout.is_empty() {
+                stdout.to_string()
+            } else {
+                format!(
+                    "命令执行失败，退出代码: {}",
+                    output.status.code().unwrap_or(-1)
+                )
+            };
+
+            return Err(format!("命令执行失败: {}", error_msg));
         }
 
         Ok(())
