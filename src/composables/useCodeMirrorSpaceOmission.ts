@@ -1,7 +1,11 @@
 import {EditorView, ViewPlugin, ViewUpdate} from '@codemirror/view'
 
-export function useCodeMirrorSpaceOmission()
+export function useCodeMirrorSpaceOmission(fontFamily?: string)
 {
+    // 设置默认字体
+    const defaultFont = "monospace"
+    const actualFont = fontFamily || defaultFont
+
     const spaceOmissionPlugin = ViewPlugin.fromClass(class
     {
         private styleElement: HTMLStyleElement | null = null
@@ -70,7 +74,7 @@ export function useCodeMirrorSpaceOmission()
                             font-weight: 500;
                             pointer-events: none;
                             z-index: 2;
-                            font-family: monospace;
+                            font-family: ${actualFont};
                             font-size: inherit;
                             line-height: inherit;
                         }

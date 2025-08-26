@@ -16,6 +16,7 @@ pub struct EditorConfig {
     pub tab_size: Option<u32>,            // tab 缩进, 空格数，默认为 2
     pub theme: Option<String>,            // 编辑器主题
     pub font_size: Option<u32>,           // 编辑器字体大小
+    pub font_family: Option<String>,      // 编辑器字体
     pub show_line_numbers: Option<bool>,  // 是否显示行号
     pub show_function_help: Option<bool>, // 是否显示函数帮助
     pub space_dot_omission: Option<bool>, // 是否显示空格省略
@@ -44,6 +45,7 @@ impl Default for AppConfig {
                 tab_size: Some(2),
                 theme: Some("githubLight".to_string()),
                 font_size: Some(14),
+                font_family: Some("monospace".to_string()),
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
                 space_dot_omission: Some(false),
@@ -103,6 +105,7 @@ impl ConfigManager {
                                 tab_size: Some(2),
                                 theme: Some("githubLight".to_string()),
                                 font_size: Some(14),
+                                font_family: Some("monospace".to_string()),
                                 show_line_numbers: Some(true),
                                 show_function_help: Some(false),
                                 space_dot_omission: Some(false),
@@ -210,6 +213,7 @@ impl ConfigManager {
                 tab_size: Some(2),
                 theme: Some("githubLight".to_string()),
                 font_size: Some(14),
+                font_family: Some("monospace".to_string()),
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
                 space_dot_omission: Some(false),

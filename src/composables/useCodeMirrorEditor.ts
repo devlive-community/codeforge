@@ -62,9 +62,10 @@ import {invoke} from '@tauri-apps/api/core'
 import {useToast} from '../plugins/toast'
 import {StreamLanguage} from '@codemirror/language'
 import {EditorConfig} from '../types/app.ts'
-import {EditorView} from '@codemirror/view'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
+import {EditorView} from "@codemirror/view";
+import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 
 interface Props
 {
@@ -86,6 +87,7 @@ export function useCodeMirrorEditor(props: Props)
         indent_with_tab: true,
         tab_size: 2,
         font_size: 14,
+        font_family: 'monospace',
         show_line_numbers: false,
         show_function_help: false
     }
@@ -215,6 +217,12 @@ export function useCodeMirrorEditor(props: Props)
         // 添加函数帮助主题
         result.push(functionHelpTheme)
 
+        // 设置字体
+        const {fontFamilyTheme} = useCodeMirrorFontFamily(
+            editorConfig.value?.font_family
+        )
+        result.push(fontFamilyTheme)
+
         // 添加语言扩展
         if (props.language) {
             const langExtension = getLanguageExtension(props.language)
@@ -237,7 +245,7 @@ export function useCodeMirrorEditor(props: Props)
 
         const shouldShowSpaceOmission = editorConfig.value?.space_dot_omission ?? false
         if (shouldShowSpaceOmission) {
-            const {spaceOmissionPlugin, spaceOmissionTheme} = useCodeMirrorSpaceOmission()
+            const {spaceOmissionPlugin, spaceOmissionTheme} = useCodeMirrorSpaceOmission(editorConfig.value?.font_family)
             result.push(spaceOmissionPlugin)
             result.push(spaceOmissionTheme)
         }
