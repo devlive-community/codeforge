@@ -4,6 +4,7 @@
 )]
 
 mod config;
+mod example;
 mod execution;
 mod logger;
 mod plugin;
@@ -22,6 +23,7 @@ use crate::utils::logger::{
     clear_logs, get_log_directory, get_log_files, reset_log_directory, set_log_directory,
 };
 use config::{get_app_config, get_config_path, init_config, update_app_config};
+use example::load_example;
 use log::info;
 use plugins::PluginManager;
 use update::{check_for_updates, start_update};
@@ -76,6 +78,7 @@ fn main() {
             // 更新相关命令
             check_for_updates,
             start_update,
+            load_example,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

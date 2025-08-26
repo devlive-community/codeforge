@@ -8,7 +8,8 @@
                @stop-code="() => stopCode(currentLanguage)"
                @clear-output="clearOutput"
                @language-change="handleLanguageChange"
-               @show-settings="showSettings = true">
+               @show-settings="showSettings = true"
+               @load-example="loadExample">
     </AppHeader>
 
     <div class="flex-1 flex overflow-hidden">
@@ -60,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import {onMounted, onUnmounted, ref, watch} from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import OutputPanel from './components/OutputPanel.vue'
@@ -68,14 +69,14 @@ import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
 import Toast from './components/Toast.vue'
-import { useToast } from './plugins/toast'
+import {useToast} from './plugins/toast'
 
 // Composables
-import { useCodeExecution } from './composables/useCodeExecution'
-import { useLanguageManager } from './composables/useLanguageManager'
-import { useEventManager } from './composables/useEventManager'
-import { useAppState } from './composables/useAppState'
-import { useEditorConfig } from './composables/useEditorConfig'
+import {useCodeExecution} from './composables/useCodeExecution'
+import {useLanguageManager} from './composables/useLanguageManager'
+import {useEventManager} from './composables/useEventManager'
+import {useAppState} from './composables/useAppState'
+import {useEditorConfig} from './composables/useEditorConfig'
 import Update from './components/Update.vue'
 
 const toast = useToast()
@@ -134,6 +135,10 @@ const handleSettingsChanged = (config: any) => {
   }, 50)
 }
 
+const loadExample = (content: string) => {
+  code.value = content || ''
+}
+
 // 监听编辑器配置变化
 watch(editorConfig, (newConfig) => {
   if (newConfig) {
@@ -142,9 +147,9 @@ watch(editorConfig, (newConfig) => {
       editorConfigKey.value++
     }, 50)
   }
-}, { deep: true })
+}, {deep: true})
 
-const { initializeEventListeners, cleanupEventListeners } = useEventManager({
+const {initializeEventListeners, cleanupEventListeners} = useEventManager({
   showAbout,
   showSettings,
   showUpdate,

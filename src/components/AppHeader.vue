@@ -11,9 +11,7 @@
               label-key="name"
               @change="handleLanguageChange">
       </Select>
-    </div>
 
-    <div class="flex items-center space-x-3">
       <!-- 运行/停止按钮 -->
       <Button v-if="!isRunning"
               @click="handleRunCode"
@@ -29,6 +27,10 @@
         <span>停止执行</span>
       </Button>
 
+      <Button type="info" :icon="FileCode" @click="loadExample">加载示例</Button>
+    </div>
+
+    <div class="flex items-center space-x-3">
       <!-- 清空输出按钮 -->
       <Button @click="handleClearOutput"
               :disabled="isRunning"
@@ -41,11 +43,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Play, Square, Trash2 } from 'lucide-vue-next'
+import {computed} from 'vue'
+import {FileCode, Play, Square, Trash2} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
-import { Language } from '../types/app.ts'
+import {Language} from '../types/app.ts'
+import {invoke} from "@tauri-apps/api/core";
 
 const props = defineProps<{
   isRunning: boolean
@@ -60,6 +63,7 @@ const emit = defineEmits<{
   'clear-output': []
   'show-settings': []
   'language-change': [language: string]
+  'load-example': [content: string]
 }>()
 
 // 使用计算属性来处理双向绑定
@@ -89,6 +93,16 @@ const handleClearOutput = () => {
 const handleLanguageChange = (value: string) => {
   if (value !== props.currentLanguage) {
     emit('language-change', value)
+  }
+}
+
+const loadExample = async () => {
+  try {
+    const example = await invoke<any>('load_example', {language: selectedLanguage.value})
+    emit('load-example', example)
+  }
+  catch (error) {
+    console.error('Error loading example:', error)
   }
 }
 </script>
