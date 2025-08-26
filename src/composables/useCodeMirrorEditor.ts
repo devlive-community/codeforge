@@ -164,6 +164,7 @@ export function useCodeMirrorEditor(props: Props)
             case 'python3':
                 return python()
             case 'nodejs':
+            case 'javascript-browser':
             case 'javascript-nodejs':
                 return javascript()
             case 'go':
