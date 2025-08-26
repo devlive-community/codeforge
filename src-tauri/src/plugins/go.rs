@@ -33,7 +33,7 @@ impl LanguagePlugin for GoPlugin {
             execute_home: None,
             run_command: Some(String::from("go run $filename")),
             after_compile: None,
-            template: Some(String::from("// 在这里输入 Go 代码" )),
+            template: Some(String::from("// 在这里输入 Go 代码")),
             timeout: Some(30),
         }
     }
