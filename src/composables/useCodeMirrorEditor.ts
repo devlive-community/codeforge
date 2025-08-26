@@ -62,8 +62,10 @@ import {invoke} from '@tauri-apps/api/core'
 import {useToast} from '../plugins/toast'
 import {StreamLanguage} from '@codemirror/language'
 import {EditorConfig} from '../types/app.ts'
-import {EditorView} from '@codemirror/view'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
+import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
+import {EditorView} from "@codemirror/view";
+import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 
 interface Props
 {
@@ -85,6 +87,7 @@ export function useCodeMirrorEditor(props: Props)
         indent_with_tab: true,
         tab_size: 2,
         font_size: 14,
+        font_family: 'monospace',
         show_line_numbers: false,
         show_function_help: false
     }
@@ -214,6 +217,12 @@ export function useCodeMirrorEditor(props: Props)
         // 添加函数帮助主题
         result.push(functionHelpTheme)
 
+        // 设置字体
+        const {fontFamilyTheme} = useCodeMirrorFontFamily(
+            editorConfig.value?.font_family
+        )
+        result.push(fontFamilyTheme)
+
         // 添加语言扩展
         if (props.language) {
             const langExtension = getLanguageExtension(props.language)
@@ -232,6 +241,13 @@ export function useCodeMirrorEditor(props: Props)
         const shouldShowFunctionHelp = showFunctionHelp ?? editorConfig.value?.show_function_help ?? false
         if (shouldShowFunctionHelp) {
             result.push(showFunctionHelpHover)
+        }
+
+        const shouldShowSpaceOmission = editorConfig.value?.space_dot_omission ?? false
+        if (shouldShowSpaceOmission) {
+            const {spaceOmissionPlugin, spaceOmissionTheme} = useCodeMirrorSpaceOmission(editorConfig.value?.font_family)
+            result.push(spaceOmissionPlugin)
+            result.push(spaceOmissionTheme)
         }
 
         extensions.value = result
@@ -331,6 +347,11 @@ export function useCodeMirrorEditor(props: Props)
     // 监听函数帮助配置变化
     watch(() => editorConfig.value?.show_function_help, async () => {
         console.log('函数帮助配置变化:', editorConfig.value?.show_function_help)
+        await reRenderEditor()
+    })
+
+    watch(() => editorConfig.value?.space_dot_omission, async () => {
+        console.log('是否显示空格省略:', editorConfig.value?.space_dot_omission)
         await reRenderEditor()
     })
 

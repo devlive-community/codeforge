@@ -12,8 +12,19 @@
       <Switch v-model="editorConfig.show_function_help"/>
     </Label>
 
+    <Label label="是否显示空格省略">
+      <Switch v-model="editorConfig.space_dot_omission"/>
+    </Label>
+
     <Label label="缩进空格数">
       <Number v-model="editorConfig.tab_size" :min="1" :max="8" placeholder="缩进空格数"/>
+    </Label>
+
+    <Label label="编辑器字体">
+      <div class="flex items-center space-x-2">
+        <Input v-model="editorConfig.font_family" class="w-1/3" disabled placeholder="编辑器字体"/>
+        <Button :icon="ALargeSmall" icon-only @click="selectFont"></Button>
+      </div>
     </Label>
 
     <Label label="字体大小">
@@ -27,12 +38,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useEditorConfig } from '../../composables/useEditorConfig'
+import {onMounted} from 'vue'
+import {useEditorConfig} from '../../composables/useEditorConfig'
 import Select from '../../ui/Select.vue'
 import Switch from '../../ui/Switch.vue'
 import Number from '../../ui/Number.vue'
 import Label from '../../ui/Label.vue'
+import Input from "../../ui/Input.vue";
+import Button from "../../ui/Button.vue";
+import {ALargeSmall} from "lucide-vue-next";
 
 const emit = defineEmits<{
   'settings-changed': [config: any]
@@ -42,7 +56,8 @@ const emit = defineEmits<{
 const {
   editorConfig,
   themeOptions,
-  loadConfig
+  loadConfig,
+  selectFont
 } = useEditorConfig(emit)
 
 onMounted(async () => {

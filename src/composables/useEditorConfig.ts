@@ -1,8 +1,8 @@
-import { ref, watch } from 'vue'
-import { debounce } from 'lodash-es'
-import { invoke } from '@tauri-apps/api/core'
-import { useToast } from '../plugins/toast'
-import { EditorConfig } from '../types/app.ts'
+import {ref, watch} from 'vue'
+import {debounce} from 'lodash-es'
+import {invoke} from '@tauri-apps/api/core'
+import {useToast} from '../plugins/toast'
+import {EditorConfig} from '../types/app.ts'
 
 interface ThemeOption
 {
@@ -20,52 +20,52 @@ export function useEditorConfig(emit?: any)
 
     // 主题选项
     const themeOptions = ref<ThemeOption[]>([
-        { label: 'abcdef', value: 'abcdef' },
-        { label: 'abyss', value: 'abyss' },
-        { label: 'androidstudio', value: 'androidstudio' },
-        { label: 'andromeda', value: 'andromeda' },
-        { label: 'atomone', value: 'atomone' },
-        { label: 'aura', value: 'aura' },
-        { label: 'basicDark', value: 'basicDark' },
-        { label: 'basicLight', value: 'basicLight' },
-        { label: 'bbedit', value: 'bbedit' },
-        { label: 'bespin', value: 'bespin' },
-        { label: 'consoleDark', value: 'consoleDark' },
-        { label: 'consoleLight', value: 'consoleLight' },
-        { label: 'copilot', value: 'copilot' },
-        { label: 'darcula', value: 'darcula' },
-        { label: 'dracula', value: 'dracula' },
-        { label: 'duotoneDark', value: 'duotoneDark' },
-        { label: 'duotoneLight', value: 'duotoneLight' },
-        { label: 'eclipse', value: 'eclipse' },
-        { label: 'githubDark', value: 'githubDark' },
-        { label: 'githubLight', value: 'githubLight' },
-        { label: 'gruvboxDark', value: 'gruvboxDark' },
-        { label: 'gruvboxLight', value: 'gruvboxLight' },
-        { label: 'kimbie', value: 'kimbie' },
-        { label: 'material', value: 'material' },
-        { label: 'materialDark', value: 'materialDark' },
-        { label: 'materialLight', value: 'materialLight' },
-        { label: 'monokai', value: 'monokai' },
-        { label: 'monokaiDimmed', value: 'monokaiDimmed' },
-        { label: 'noctisLilac', value: 'noctisLilac' },
-        { label: 'nord', value: 'nord' },
-        { label: 'okaidia', value: 'okaidia' },
-        { label: 'quietlight', value: 'quietlight' },
-        { label: 'red', value: 'red' },
-        { label: 'solarizedDark', value: 'solarizedDark' },
-        { label: 'solarizedLight', value: 'solarizedLight' },
-        { label: 'sublime', value: 'sublime' },
-        { label: 'tokyoNight', value: 'tokyoNight' },
-        { label: 'tokyoNightDay', value: 'tokyoNightDay' },
-        { label: 'tokyoNightStorm', value: 'tokyoNightStorm' },
-        { label: 'tomorrowNightBlue', value: 'tomorrowNightBlue' },
-        { label: 'vscodeDark', value: 'vscodeDark' },
-        { label: 'vscodeLight', value: 'vscodeLight' },
-        { label: 'whiteDark', value: 'whiteDark' },
-        { label: 'whiteLight', value: 'whiteLight' },
-        { label: 'xcodeDark', value: 'xcodeDark' },
-        { label: 'xcodeLight', value: 'xcodeLight' }
+        {label: 'abcdef', value: 'abcdef'},
+        {label: 'abyss', value: 'abyss'},
+        {label: 'androidstudio', value: 'androidstudio'},
+        {label: 'andromeda', value: 'andromeda'},
+        {label: 'atomone', value: 'atomone'},
+        {label: 'aura', value: 'aura'},
+        {label: 'basicDark', value: 'basicDark'},
+        {label: 'basicLight', value: 'basicLight'},
+        {label: 'bbedit', value: 'bbedit'},
+        {label: 'bespin', value: 'bespin'},
+        {label: 'consoleDark', value: 'consoleDark'},
+        {label: 'consoleLight', value: 'consoleLight'},
+        {label: 'copilot', value: 'copilot'},
+        {label: 'darcula', value: 'darcula'},
+        {label: 'dracula', value: 'dracula'},
+        {label: 'duotoneDark', value: 'duotoneDark'},
+        {label: 'duotoneLight', value: 'duotoneLight'},
+        {label: 'eclipse', value: 'eclipse'},
+        {label: 'githubDark', value: 'githubDark'},
+        {label: 'githubLight', value: 'githubLight'},
+        {label: 'gruvboxDark', value: 'gruvboxDark'},
+        {label: 'gruvboxLight', value: 'gruvboxLight'},
+        {label: 'kimbie', value: 'kimbie'},
+        {label: 'material', value: 'material'},
+        {label: 'materialDark', value: 'materialDark'},
+        {label: 'materialLight', value: 'materialLight'},
+        {label: 'monokai', value: 'monokai'},
+        {label: 'monokaiDimmed', value: 'monokaiDimmed'},
+        {label: 'noctisLilac', value: 'noctisLilac'},
+        {label: 'nord', value: 'nord'},
+        {label: 'okaidia', value: 'okaidia'},
+        {label: 'quietlight', value: 'quietlight'},
+        {label: 'red', value: 'red'},
+        {label: 'solarizedDark', value: 'solarizedDark'},
+        {label: 'solarizedLight', value: 'solarizedLight'},
+        {label: 'sublime', value: 'sublime'},
+        {label: 'tokyoNight', value: 'tokyoNight'},
+        {label: 'tokyoNightDay', value: 'tokyoNightDay'},
+        {label: 'tokyoNightStorm', value: 'tokyoNightStorm'},
+        {label: 'tomorrowNightBlue', value: 'tomorrowNightBlue'},
+        {label: 'vscodeDark', value: 'vscodeDark'},
+        {label: 'vscodeLight', value: 'vscodeLight'},
+        {label: 'whiteDark', value: 'whiteDark'},
+        {label: 'whiteLight', value: 'whiteLight'},
+        {label: 'xcodeDark', value: 'xcodeDark'},
+        {label: 'xcodeLight', value: 'xcodeLight'}
     ])
 
     // 加载配置
@@ -90,8 +90,8 @@ export function useEditorConfig(emit?: any)
                 throw new Error('全局配置未加载')
             }
 
-            globalConfig.value.editor = { ...updatedEditor }
-            await invoke('update_app_config', { config: globalConfig.value })
+            globalConfig.value.editor = {...updatedEditor}
+            await invoke('update_app_config', {config: globalConfig.value})
 
             toast.success('编辑器配置已保存')
 
@@ -119,6 +119,18 @@ export function useEditorConfig(emit?: any)
         updateConfig(config)
     }, 1000)
 
+    const selectFont = async () => {
+        try {
+            const fontName = await invoke<string | null>('open_font_picker')
+            if (fontName && editorConfig.value) {
+                editorConfig.value.font_family = fontName
+            }
+        }
+        catch (error) {
+            console.error('选择字体失败:', error)
+        }
+    }
+
     // 监听配置变化
     watch(editorConfig, (newConfig, oldConfig) => {
         // 只有在非初始加载时才触发更新
@@ -144,7 +156,8 @@ export function useEditorConfig(emit?: any)
             indent_with_tab: true,
             tab_size: 2,
             theme: 'githubLight',
-            font_size: 14
+            font_size: 14,
+            font_family: 'Roboto',
         }
     }
 
@@ -180,6 +193,7 @@ export function useEditorConfig(emit?: any)
         saveConfig,
         resetToDefault,
         getThemeByValue,
-        validateConfig
+        validateConfig,
+        selectFont
     }
 }

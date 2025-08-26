@@ -51,6 +51,8 @@ export interface EditorConfig
     indent_with_tab?: boolean
     tab_size?: number
     font_size?: number
+    font_family?: string
     show_line_numbers?: boolean
     show_function_help?: boolean
+    space_dot_omission?: boolean
 }
