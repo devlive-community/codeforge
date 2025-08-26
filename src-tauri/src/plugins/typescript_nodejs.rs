@@ -1,25 +1,25 @@
 use super::{LanguagePlugin, PluginConfig};
 use std::vec;
 
-pub struct JavaScriptNodeJsPlugin;
+pub struct TypeScriptNodeJsPlugin;
 
-impl LanguagePlugin for JavaScriptNodeJsPlugin {
+impl LanguagePlugin for TypeScriptNodeJsPlugin {
     fn get_order(&self) -> i32 {
-        13
+        16
     }
 
     fn get_language_name(&self) -> &'static str {
-        "JavaScript (Node.js)"
+        "TypeScript (Node.js)"
     }
 
     fn get_language_key(&self) -> &'static str {
-        "javascript-nodejs"
+        "typescript-nodejs"
     }
 
     fn get_file_extension(&self) -> String {
         self.get_config()
             .map(|config| config.extension.clone())
-            .unwrap_or_else(|| "js".to_string())
+            .unwrap_or_else(|| "ts".to_string())
     }
 
     fn get_version_args(&self) -> Vec<&'static str> {
@@ -33,13 +33,13 @@ impl LanguagePlugin for JavaScriptNodeJsPlugin {
     fn get_default_config(&self) -> PluginConfig {
         PluginConfig {
             enabled: true,
-            language: String::from("javascript-nodejs"),
+            language: String::from("typescript-nodejs"),
             before_compile: None,
-            extension: String::from("js"),
+            extension: String::from("ts"),
             execute_home: None,
             run_command: Some(String::from("node $filename")),
             after_compile: None,
-            template: Some(String::from("// 在这里输入 JavaScript (Node.js) 代码")),
+            template: Some(String::from("// 在这里输入 TypeScript (Node.js) 代码")),
             timeout: Some(30),
         }
     }

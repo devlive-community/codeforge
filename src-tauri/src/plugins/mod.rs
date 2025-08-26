@@ -124,16 +124,17 @@ pub trait LanguagePlugin: Send + Sync {
                 let language_name = self.get_language_key();
 
                 // 查找匹配的插件配置
-                let found_config = plugins
+                if let Some(found_config) = plugins
                     .iter()
                     .find(|config| config.language == language_name)
-                    .cloned();
-
-                debug!(
-                    "执行代码 -> 获取插件 [ {} ] 配置 {:?}",
-                    language_name, found_config
-                );
-                return found_config;
+                    .cloned()
+                {
+                    debug!(
+                        "执行代码 -> 获取插件 [ {} ] 配置 {:?}",
+                        language_name, found_config
+                    );
+                    return Some(found_config);
+                }
             }
         }
 
@@ -216,6 +217,11 @@ pub trait LanguagePlugin: Send + Sync {
                 }
 
                 let processed_cmd = before_cmd.replace("$filename", file_path);
+                info!(
+                    "执行代码 -> 插件 [ {} ] 处理 pre_execute_hook 处理命令 {}",
+                    self.get_language_key(),
+                    processed_cmd
+                );
                 self.handle_environment_setup(&processed_cmd)?;
             }
         }
@@ -302,6 +308,8 @@ pub trait LanguagePlugin: Send + Sync {
     }
 
     fn execute_cross_platform_command(&self, command: &str) -> Result<(), String> {
+        info!("执行命令: {}", command);
+
         let output = if cfg!(target_os = "windows") {
             std::process::Command::new("cmd")
                 .args(["/C", command])
@@ -314,11 +322,26 @@ pub trait LanguagePlugin: Send + Sync {
 
         let output = output.map_err(|e| format!("执行命令失败: {}", e))?;
 
+        debug!("命令退出状态: {:?}", output.status);
+        debug!("命令标准输出: {}", String::from_utf8_lossy(&output.stdout));
+        debug!("命令标准错误: {}", String::from_utf8_lossy(&output.stderr));
+
         if !output.status.success() {
-            return Err(format!(
-                "命令执行失败: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            let error_msg = if !stderr.is_empty() {
+                stderr.to_string()
+            } else if !stdout.is_empty() {
+                stdout.to_string()
+            } else {
+                format!(
+                    "命令执行失败，退出代码: {}",
+                    output.status.code().unwrap_or(-1)
+                )
+            };
+
+            return Err(format!("命令执行失败: {}", error_msg));
         }
 
         Ok(())
@@ -361,5 +384,8 @@ pub mod rust;
 pub mod scala;
 pub mod shell;
 pub mod swift;
+pub mod typescript;
+pub mod typescript_browser;
+pub mod typescript_nodejs;
 
 pub use manager::PluginManager;

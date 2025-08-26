@@ -4,7 +4,7 @@ use crate::plugins::c::CPlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::java::JavaPlugin;
-use crate::plugins::javascript_nodejs::LanguageNodeJsPlugin;
+use crate::plugins::javascript_nodejs::JavaScriptNodeJsPlugin;
 use crate::plugins::kotlin::KotlinPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
 use crate::plugins::python2::Python2Plugin;
@@ -14,6 +14,9 @@ use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
 use crate::plugins::shell::ShellPlugin;
 use crate::plugins::swift::SwiftPlugin;
+use crate::plugins::typescript::TypeScriptPlugin;
+use crate::plugins::typescript_browser::TypeScriptBrowserPlugin;
+use crate::plugins::typescript_nodejs::TypeScriptNodeJsPlugin;
 use std::collections::HashMap;
 
 pub struct PluginManager {
@@ -38,9 +41,18 @@ impl PluginManager {
         plugins.insert("c".to_string(), Box::new(CPlugin));
         plugins.insert("ruby".to_string(), Box::new(RubyPlugin));
         plugins.insert("applescript".to_string(), Box::new(AppleScriptPlugin));
+        plugins.insert("typescript".to_string(), Box::new(TypeScriptPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
-            Box::new(LanguageNodeJsPlugin),
+            Box::new(JavaScriptNodeJsPlugin),
+        );
+        plugins.insert(
+            "typescript-nodejs".to_string(),
+            Box::new(TypeScriptNodeJsPlugin),
+        );
+        plugins.insert(
+            "typescript-browser".to_string(),
+            Box::new(TypeScriptBrowserPlugin),
         );
 
         Self { plugins }
