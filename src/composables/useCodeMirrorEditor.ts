@@ -175,6 +175,7 @@ export function useCodeMirrorEditor(props: Props)
             case 'rust':
                 return rust()
             case 'c':
+            case 'cpp':
                 return cpp()
             case 'shell':
             case 'applescript':

@@ -2,8 +2,13 @@ name: Publish docs via GitHub Pages
 
 on:
   pull_request:
-    types: [closed]
+    types: [ closed ]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   deploy:

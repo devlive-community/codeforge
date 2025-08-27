@@ -2,6 +2,7 @@ use super::{LanguagePlugin, PluginConfig};
 use crate::plugins::applescript::AppleScriptPlugin;
 use crate::plugins::c::CPlugin;
 use crate::plugins::clojure::ClojurePlugin;
+use crate::plugins::cpp::CppPlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::java::JavaPlugin;
 use crate::plugins::javascript_browser::JavaScriptBrowserPlugin;
@@ -44,6 +45,7 @@ impl PluginManager {
         plugins.insert("ruby".to_string(), Box::new(RubyPlugin));
         plugins.insert("applescript".to_string(), Box::new(AppleScriptPlugin));
         plugins.insert("typescript".to_string(), Box::new(TypeScriptPlugin));
+        plugins.insert("cpp".to_string(), Box::new(CppPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(JavaScriptNodeJsPlugin),
