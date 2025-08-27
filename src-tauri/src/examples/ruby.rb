@@ -288,4 +288,4 @@ puts "🎯 CodeForge Ruby 代码执行完成!"
 puts "🎯 CodeForge Ruby execution completed!"
 puts ""
 puts "感谢使用 CodeForge 代码执行环境! 🚀"
-puts "Thank you for using CodeForge!
+puts "Thank you for using CodeForge!"
