@@ -77,9 +77,15 @@
           </template>
 
           <template #advanced>
-            <Label label="超时时间(秒)">
-              <Number v-model="pluginConfig.timeout" class="w-1/4" placeholder="超时时间(秒)，默认 30 秒"/>
-            </Label>
+            <div class="space-y-4">
+              <Label label="超时时间(秒)">
+                <Number v-model="pluginConfig.timeout" class="w-1/4" placeholder="超时时间(秒)，默认 30 秒"/>
+              </Label>
+
+              <Label label="输出类型">
+                <Select v-model="pluginConfig.console_type" placeholder="请选择输出类型" class="w-1/3" :options="consoleTypes"></Select>
+              </Label>
+            </div>
           </template>
         </Tabs>
       </template>
@@ -98,6 +104,7 @@ import Label from '../../ui/Label.vue'
 import Input from '../../ui/Input.vue'
 import {useLanguageSettings} from '../../composables/useLanguageSettings'
 import type PluginConfig from '../../types/plugin'
+import Select from "../../ui/Select.vue";
 
 const emit = defineEmits<{
   'settings-changed': [config: PluginConfig]
@@ -108,6 +115,7 @@ const {
   // 标签页状态
   activeTab,
   tabsData,
+  consoleTypes,
 
   // 插件配置
   activePlugin,

@@ -40,6 +40,7 @@ impl LanguagePlugin for NodeJSPlugin {
             after_compile: None,
             template: Some(String::from("// 在这里输入 Node.js 代码")),
             timeout: Some(30),
+            console_type: Some(String::from("console")),
         }
     }
 

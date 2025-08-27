@@ -1,6 +1,6 @@
-import { ref, type Ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { EnvInfo, Language, LanguageInfo } from '../types/app.ts'
+import {ref, type Ref} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
+import {EnvInfo, Language, LanguageInfo} from '../types/app.ts'
 
 export function useLanguageManager(
     code: Ref<string>,
@@ -25,6 +25,31 @@ export function useLanguageManager(
     const getLanguageDisplayName = (languageValue: string) => {
         const language = supportedLanguages.value.find(lang => lang.value === languageValue)
         return language ? language.name : languageValue
+    }
+
+    // 获取当前语言的插件配置
+    const getCurrentPluginConfig = () => {
+        if (!globalConfig.value) {
+            console.warn('globalConfig 还未加载，请先调用 initialize()')
+            return null
+        }
+
+        if (!currentLanguage.value) {
+            console.warn('currentLanguage 为空，请先设置语言')
+            return null
+        }
+
+        if (!globalConfig.value.plugins) {
+            console.warn('插件配置为空')
+            return null
+        }
+
+        return globalConfig.value.plugins.find((p: any) => p.language === currentLanguage.value && p.enabled) || null
+    }
+
+    const getCurrentConsoleType = () => {
+        const pluginConfig = getCurrentPluginConfig()
+        return pluginConfig?.console_type || 'console'
     }
 
     const refreshEnvInfo = async () => {
@@ -74,7 +99,7 @@ export function useLanguageManager(
             supportedLanguages.value = languages.map((language) => ({
                 name: language.name,
                 value: language.value,
-                svgUrl: `/icons/${ language.value.replace(/\d+$/, '') }.svg`
+                svgUrl: `/icons/${language.value.replace(/\d+$/, '')}.svg`
             }))
         }
         catch (error) {
@@ -110,7 +135,7 @@ export function useLanguageManager(
 
         refreshEnvInfo()
 
-        toast.info(`已切换到 ${ getLanguageDisplayName(newLanguage) }`)
+        toast.info(`已切换到 ${getLanguageDisplayName(newLanguage)}`)
     }
 
     const initialize = async () => {
@@ -139,10 +164,13 @@ export function useLanguageManager(
     return {
         currentLanguage,
         supportedLanguages,
+        globalConfig,
         envInfo,
         isLoadingEnvInfo,
         getLanguageDisplayName,
         handleLanguageChange,
-        initialize
+        initialize,
+        getCurrentPluginConfig,
+        getCurrentConsoleType
     }
 }

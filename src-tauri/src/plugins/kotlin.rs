@@ -68,6 +68,7 @@ impl LanguagePlugin for KotlinPlugin {
             after_compile: Some(String::from("rm -f *.class")),
             template: Some(String::from("// 在这里输入 Kotlin 代码")),
             timeout: Some(60),
+            console_type: Some(String::from("console")),
         }
     }
 

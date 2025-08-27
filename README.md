@@ -28,6 +28,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
 - **C++**
 - **Go**
 - **Groovy**
+- **HTML**
 - **Java**
 - **JavaScript (Browser)**
 - **JavaScript (jQuery)**
@@ -51,6 +52,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
 - Node.js 18+
 - Rust 1.8+
 - Tauri 2.x
+- Vue 3.x
 
 **构建步骤：**
 

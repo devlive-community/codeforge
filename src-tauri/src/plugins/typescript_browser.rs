@@ -70,6 +70,7 @@ impl LanguagePlugin for TypeScriptBrowserPlugin {
             after_compile: Some(String::from("rm -f *.js")),
             template: Some(String::from("// 在这里输入 TypeScript (Browser) 代码")),
             timeout: Some(30),
+            console_type: Some(String::from("console")),
         }
     }
 

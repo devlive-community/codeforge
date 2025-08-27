@@ -33,13 +33,21 @@
 
       <!-- 输出 -->
       <div class="w-2/5 flex flex-col border-l border-gray-200">
-        <OutputPanel v-if="activeTab === 'output'"
-                     class="flex-1"
-                     :output="output"
-                     :is-running="isRunning"
-                     :is-success="isSuccess"
-                     :execution-time="lastExecutionTime">
-        </OutputPanel>
+        <ConsoleOutput v-if="consoleType === 'console'"
+                       class="flex-1"
+                       :output="output"
+                       :is-running="isRunning"
+                       :is-success="isSuccess"
+                       :execution-time="lastExecutionTime">
+        </ConsoleOutput>
+
+        <!-- Web输出组件 -->
+        <WebOutput v-else-if="consoleType === 'web'"
+                   class="flex-1"
+                   :web-content="output"
+                   :is-running="isRunning"
+                   :execution-time="lastExecutionTime">
+        </WebOutput>
       </div>
     </div>
 
@@ -64,7 +72,8 @@
 import {onMounted, onUnmounted, ref, watch} from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
-import OutputPanel from './components/OutputPanel.vue'
+import ConsoleOutput from './components/ConsoleOutput.vue'
+import WebOutput from "./components/WebOutput.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
@@ -103,6 +112,7 @@ const {
   envInfo,
   isLoadingEnvInfo,
   getLanguageDisplayName,
+  getCurrentConsoleType,
   handleLanguageChange,
   initialize
 } = useLanguageManager(code, clearOutput, toast)
@@ -111,7 +121,6 @@ const {
   showAbout,
   showSettings,
   showUpdate,
-  activeTab,
   closeAbout,
   closeSettings,
   closeUpdate
@@ -125,6 +134,7 @@ const {
 
 // 强制刷新 CodeEditor 组件的 key
 const editorConfigKey = ref(0)
+const consoleType = ref('console')
 
 // 处理设置变更
 const handleSettingsChanged = (config: any) => {
@@ -148,6 +158,10 @@ watch(editorConfig, (newConfig) => {
     }, 50)
   }
 }, {deep: true})
+
+watch(currentLanguage, () => {
+  consoleType.value = getCurrentConsoleType()
+})
 
 const {initializeEventListeners, cleanupEventListeners} = useEventManager({
   showAbout,
@@ -173,6 +187,7 @@ onMounted(async () => {
   await initialize()
   await loadEditorConfig()
   await initializeEventListeners()
+  consoleType.value = getCurrentConsoleType()
 
   // 触发 app-ready 事件，通知主进程
   window.dispatchEvent(new CustomEvent('app-ready'))

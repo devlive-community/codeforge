@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeForge HTML 代码示例</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header {
+            text-align: center;
+            border: 2px solid #4CAF50;
+            padding: 20px;
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f8ff;
+            border-left: 4px solid #2196F3;
+            border-radius: 5px;
+        }
+
+        .output {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #45a049;
+        }
+
+        .fruit-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .fruit-list li {
+            background: #e8f5e8;
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 5px;
+            border-left: 3px solid #4CAF50;
+        }
+
+        .score-display {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .excellent {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .good {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .pass {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .improvement {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 头部信息 -->
+    <div class="header">
+        <h1>🎉 欢迎使用 CodeForge!</h1>
+        <h2>Welcome to CodeForge!</h2>
+        <hr>
+        <h3>CodeForge HTML</h3>
+    </div>
+
+    <!-- 基本输出示例 -->
+    <div class="section">
+        <h3>✅ 基本输出 (Basic Output)</h3>
+        <div class="output">
+            <div>✅ HTML 运行成功! (HTML is working!)</div>
+            <div>🌐 这是 HTML 程序 (This is HTML program)</div>
+        </div>
+    </div>
+
+    <!-- 变量操作 -->
+    <div class="section">
+        <h3>🔢 简单计算 (Simple Calculation)</h3>
+        <div class="button-container">
+            <button class="btn" onclick="performCalculation()">执行计算 / Execute Calculation</button>
+        </div>
+        <div class="output" id="calculationOutput">点击按钮执行计算...</div>
+    </div>
+
+    <!-- 字符串操作 -->
+    <div class="section">
+        <h3>📝 字符串操作 (String Operations)</h3>
+        <div class="output" id="stringOutput">
+            <div>平台名称 (Platform): <span id="platformName">CodeForge</span></div>
+            <div>语言版本 (Language): <span id="languageVersion">HTML</span></div>
+            <div>完整信息 (Full info): <span id="fullInfo">CodeForge - HTML</span></div>
+        </div>
+    </div>
+
+    <!-- 循环示例 -->
+    <div class="section">
+        <h3>🔄 循环输出 (Loop Output)</h3>
+        <div class="button-container">
+            <button class="btn" onclick="showLoop()">显示循环 / Show Loop</button>
+        </div>
+        <div class="output" id="loopOutput">点击按钮显示循环输出...</div>
+    </div>
+
+    <!-- 数组操作 -->
+    <div class="section">
+        <h3>🍎 水果列表 (Fruit List)</h3>
+        <ul class="fruit-list" id="fruitList">
+            <li>1. 苹果 🍎</li>
+            <li>2. 香蕉 🍌</li>
+            <li>3. 橙子 🍊</li>
+            <li>4. 葡萄 🍇</li>
+        </ul>
+    </div>
+
+    <!-- 条件判断 -->
+    <div class="section">
+        <h3>📊 成绩评估 (Score Evaluation)</h3>
+        <div class="button-container">
+            <input type="number" id="scoreInput" value="85" min="0" max="100" style="padding: 8px; margin: 5px;">
+            <button class="btn" onclick="evaluateScore()">评估成绩 / Evaluate Score</button>
+        </div>
+        <div class="score-display good" id="scoreResult">
+            当前成绩: 85 分 - 良好! (Good!)
+        </div>
+    </div>
+
+    <!-- DOM操作示例 -->
+    <div class="section">
+        <h3>🔍 DOM操作示例 (DOM Manipulation Example)</h3>
+        <div class="button-container">
+            <button class="btn" onclick="demonstrateDOM()">演示DOM操作 / Demonstrate DOM</button>
+        </div>
+        <div class="output" id="domOutput">点击按钮查看DOM操作...</div>
+    </div>
+
+    <!-- 函数示例 -->
+    <div class="section">
+        <h3>🎭 函数示例 (Function Example)</h3>
+        <div class="button-container">
+            <input type="text" id="userNameInput" placeholder="请输入您的姓名..." style="padding: 8px; margin: 5px; width: 200px;">
+            <button class="btn" onclick="greetUser()">问候用户 / Greet User</button>
+        </div>
+        <div class="output" id="greetingOutput">输入姓名后点击按钮...</div>
+    </div>
+
+    <!-- 结束信息 -->
+    <div class="section" style="text-align: center; background: #e8f5e8;">
+        <h3>🎯 CodeForge HTML 代码执行完成!</h3>
+        <h4>🎯 CodeForge HTML execution completed!</h4>
+        <p>感谢使用 CodeForge 代码执行环境! 🚀</p>
+        <p>Thank you for using CodeForge! 🚀</p>
+    </div>
+</div>
+
+<script>
+    // 简单计算函数
+    function performCalculation() {
+        const number1 = 10;
+        const number2 = 20;
+        const result = number1 + number2;
+
+        document.getElementById('calculationOutput').innerHTML =
+            `${number1} + ${number2} = ${result}`;
+    }
+
+    // 循环输出函数
+    function showLoop() {
+        let output = '';
+        for (let i = 1; i <= 5; i++) {
+            output += `第 ${i} 次输出 (Output #${i}): Hello from CodeForge!<br>`;
+        }
+        document.getElementById('loopOutput').innerHTML = output;
+    }
+
+    // 成绩评估函数
+    function evaluateScore() {
+        const score = parseInt(document.getElementById('scoreInput').value);
+        const resultDiv = document.getElementById('scoreResult');
+
+        let evaluation = '';
+        let className = '';
+
+        if (score >= 90) {
+            evaluation = '优秀! (Excellent!)';
+            className = 'excellent';
+        }
+        else if (score >= 80) {
+            evaluation = '良好! (Good!)';
+            className = 'good';
+        }
+        else if (score >= 60) {
+            evaluation = '及格 (Pass)';
+            className = 'pass';
+        }
+        else {
+            evaluation = '需要努力 (Need improvement)';
+            className = 'improvement';
+        }
+
+        resultDiv.textContent = `当前成绩: ${score} 分 - ${evaluation}`;
+        resultDiv.className = `score-display ${className}`;
+    }
+
+    // DOM操作演示
+    function demonstrateDOM() {
+        const now = new Date();
+        const element = document.getElementById('domOutput');
+
+        const output = `
+                <div>当前时间: ${now.toLocaleString()}</div>
+                <div>页面标题: ${document.title}</div>
+                <div>用户代理: ${navigator.userAgent.substring(0, 50)}...</div>
+                <div>页面URL: ${window.location.href}</div>
+            `;
+
+        element.innerHTML = output;
+    }
+
+    // 问候用户函数
+    function greetUser() {
+        const userName = document.getElementById('userNameInput').value || 'CodeForge用户';
+        const greeting = `Hello, ${userName}! 👋<br>欢迎来到 CodeForge HTML 环境!`;
+
+        document.getElementById('greetingOutput').innerHTML = greeting;
+    }
+
+    // 页面加载完成后的初始化
+    window.onload = function () {
+        console.log('🎉 CodeForge HTML 环境已就绪!');
+        console.log('Welcome to CodeForge HTML Environment!');
+    };
+</script>
+</body>
+</html>

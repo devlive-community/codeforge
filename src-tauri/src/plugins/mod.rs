@@ -41,6 +41,7 @@ pub struct PluginConfig {
     pub run_command: Option<String>,    // 插件执行的命令，例如 "python2 $filename"
     pub template: Option<String>,       // 插件的模板
     pub timeout: Option<u64>,           // 插件的超时时间
+    pub console_type: Option<String>,   // 插件的输出类型
 }
 
 // 语言插件接口
@@ -374,6 +375,7 @@ pub mod clojure;
 pub mod cpp;
 pub mod go;
 pub mod groovy;
+pub mod html;
 pub mod java;
 pub mod javascript_browser;
 pub mod javascript_jquery;

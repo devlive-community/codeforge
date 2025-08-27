@@ -54,6 +54,7 @@ impl LanguagePlugin for RustPlugin {
             after_compile: Some(String::from("rm -f /tmp/main")),
             template: Some(String::from("# 在这里输入 Rust 代码")),
             timeout: Some(30),
+            console_type: Some(String::from("console")),
         }
     }
 

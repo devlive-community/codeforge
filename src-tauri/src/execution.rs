@@ -136,7 +136,7 @@ pub async fn execute_code(
                 .unwrap()
                 .as_secs();
 
-            let _ = fs::remove_file(&file_path);
+            // let _ = fs::remove_file(&file_path);
             let _ = app.emit(
                 "code-execution-complete",
                 serde_json::json!({
@@ -212,7 +212,7 @@ pub async fn execute_code(
                 );
                 let _ = child.kill();
                 let _ = child.wait();
-                let _ = fs::remove_file(&file_path);
+                // let _ = fs::remove_file(&file_path);
 
                 // 从任务管理器中移除
                 {
@@ -235,7 +235,7 @@ pub async fn execute_code(
         if start_time.elapsed() > timeout {
             let _ = child.kill();
             let _ = child.wait();
-            let _ = fs::remove_file(&file_path);
+            // let _ = fs::remove_file(&file_path);
 
             // 从任务管理器中移除
             {
@@ -317,7 +317,7 @@ pub async fn execute_code(
                     .unwrap()
                     .as_secs();
 
-                let _ = fs::remove_file(&file_path);
+                // let _ = fs::remove_file(&file_path);
 
                 // 从任务管理器中移除
                 {
@@ -376,7 +376,7 @@ pub async fn execute_code(
             Err(e) => {
                 let _ = child.kill();
                 let _ = child.wait();
-                let _ = fs::remove_file(&file_path);
+                // let _ = fs::remove_file(&file_path);
 
                 // 从任务管理器中移除
                 {

@@ -1,7 +1,7 @@
-import { computed, nextTick, ref, watch } from 'vue'
-import { ContainerIcon, FileIcon, PickaxeIcon, Settings2 } from 'lucide-vue-next'
-import { usePluginConfig } from './usePluginConfig'
-import { useCodeMirrorEditor } from './useCodeMirrorEditor'
+import {computed, nextTick, ref, watch} from 'vue'
+import {ContainerIcon, FileIcon, PickaxeIcon, Settings2} from 'lucide-vue-next'
+import {usePluginConfig} from './usePluginConfig'
+import {useCodeMirrorEditor} from './useCodeMirrorEditor'
 
 export function useLanguageSettings(emit: any)
 {
@@ -30,6 +30,8 @@ export function useLanguageSettings(emit: any)
             icon: PickaxeIcon
         }
     ]
+
+    const consoleTypes = [{label: '控制台', value: 'console'}, {label: 'Web', value: 'web'}]
 
     // 插件配置管理
     const {
@@ -101,12 +103,12 @@ export function useLanguageSettings(emit: any)
         if (newLanguage) {
             await updateExtensions()
         }
-    }, { immediate: false })
+    }, {immediate: false})
 
     // 监听插件配置变化
     watch(() => pluginConfig.value?.template, (newTemplate) => {
         console.log('Template changed:', newTemplate)
-    }, { immediate: false })
+    }, {immediate: false})
 
     // 初始化所有功能
     const initialize = async () => {
@@ -132,6 +134,7 @@ export function useLanguageSettings(emit: any)
         // 标签页状态
         activeTab,
         tabsData,
+        consoleTypes,
 
         // 插件配置
         activePlugin,
