@@ -130,8 +130,8 @@ pub async fn execute_code(
     {
         Ok(child) => child,
         Err(e) => {
-            let execution_time = start_time.elapsed().as_millis();
-            let timestamp = SystemTime::now()
+            let _execution_time = start_time.elapsed().as_millis();
+            let _timestamp = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs();
