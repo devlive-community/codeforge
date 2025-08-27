@@ -4,6 +4,7 @@ use crate::plugins::c::CPlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::cpp::CppPlugin;
 use crate::plugins::go::GoPlugin;
+use crate::plugins::groovy::GroovyPlugin;
 use crate::plugins::java::JavaPlugin;
 use crate::plugins::javascript_browser::JavaScriptBrowserPlugin;
 use crate::plugins::javascript_jquery::JavaScriptJQueryPlugin;
@@ -46,6 +47,7 @@ impl PluginManager {
         plugins.insert("applescript".to_string(), Box::new(AppleScriptPlugin));
         plugins.insert("typescript".to_string(), Box::new(TypeScriptPlugin));
         plugins.insert("cpp".to_string(), Box::new(CppPlugin));
+        plugins.insert("groovy".to_string(), Box::new(GroovyPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(JavaScriptNodeJsPlugin),

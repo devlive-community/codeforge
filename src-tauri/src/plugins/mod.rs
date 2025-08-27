@@ -373,6 +373,7 @@ pub mod c;
 pub mod clojure;
 pub mod cpp;
 pub mod go;
+pub mod groovy;
 pub mod java;
 pub mod javascript_browser;
 pub mod javascript_jquery;
