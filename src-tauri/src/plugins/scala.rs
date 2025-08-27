@@ -41,6 +41,7 @@ impl LanguagePlugin for ScalaPlugin {
             after_compile: Some(String::from("rm -f *.class")),
             template: Some(String::from("// 在这里输入 Scala 代码")),
             timeout: Some(45),
+            console_type: Some(String::from("console")),
         }
     }
 

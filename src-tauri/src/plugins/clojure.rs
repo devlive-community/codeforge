@@ -41,6 +41,7 @@ impl LanguagePlugin for ClojurePlugin {
             after_compile: None,
             template: Some(String::from(";; 在这里输入 Clojure 代码")),
             timeout: Some(45),
+            console_type: Some(String::from("console")),
         }
     }
 

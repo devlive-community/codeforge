@@ -41,6 +41,7 @@ impl LanguagePlugin for JavaPlugin {
             after_compile: Some(String::from("rm -f *.class")),
             template: Some(String::from("// 在这里输入 Java 代码")),
             timeout: Some(30),
+            console_type: Some(String::from("console")),
         }
     }
 

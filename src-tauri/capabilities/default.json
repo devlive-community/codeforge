@@ -18,6 +18,24 @@
     },
     "shell:default",
     "shell:allow-open",
-    "dialog:default"
+    "dialog:default",
+    "fs:allow-read-text-file",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        {
+          "path": "/var/folders/**"
+        },
+        {
+          "path": "/tmp/**"
+        },
+        {
+          "path": "/private/var/folders/**"
+        },
+        {
+          "path": "**"
+        }
+      ]
+    }
   ]
 }

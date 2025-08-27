@@ -66,6 +66,7 @@ impl LanguagePlugin for CPlugin {
             after_compile: Some(String::from("rm -f $filename")),
             template: Some(String::from("// 在这里输入 C 代码")),
             timeout: Some(30),
+            console_type: Some(String::from("console")),
         }
     }
 
