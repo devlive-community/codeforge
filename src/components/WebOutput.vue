@@ -35,8 +35,8 @@
                 :srcdoc="processedContent"
                 class="w-full h-full border-0"
                 sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
-                @load="onFrameLoad"
-        ></iframe>
+                @load="onFrameLoad">
+        </iframe>
       </div>
 
       <!-- 空状态 -->

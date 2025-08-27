@@ -375,6 +375,7 @@ pub mod clojure;
 pub mod cpp;
 pub mod go;
 pub mod groovy;
+pub mod html;
 pub mod java;
 pub mod javascript_browser;
 pub mod javascript_jquery;

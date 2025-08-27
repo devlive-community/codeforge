@@ -5,6 +5,7 @@ import {go} from '@codemirror/lang-go'
 import {java} from '@codemirror/lang-java'
 import {rust} from '@codemirror/lang-rust'
 import {cpp} from '@codemirror/lang-cpp'
+import {html} from '@codemirror/lang-html'
 import {shell} from '@codemirror/legacy-modes/mode/shell'
 import {swift} from '@codemirror/legacy-modes/mode/swift'
 import {kotlin, scala} from '@codemirror/legacy-modes/mode/clike'
@@ -197,6 +198,8 @@ export function useCodeMirrorEditor(props: Props)
                 return javascript({typescript: true})
             case 'groovy':
                 return StreamLanguage.define(groovy)
+            case 'html':
+                return html()
             default:
                 return null
         }
