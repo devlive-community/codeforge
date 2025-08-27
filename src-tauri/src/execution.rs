@@ -130,8 +130,8 @@ pub async fn execute_code(
     {
         Ok(child) => child,
         Err(e) => {
-            let execution_time = start_time.elapsed().as_millis();
-            let timestamp = SystemTime::now()
+            let _execution_time = start_time.elapsed().as_millis();
+            let _timestamp = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs();
@@ -146,17 +146,10 @@ pub async fn execute_code(
             );
 
             error!("执行代码 -> 调用插件 [ {} ] 失败: {}", request.language, e);
-            return Ok(ExecutionResult {
-                success: false,
-                stdout: String::new(),
-                stderr: format!(
-                    "{} interpreter not found. Please install {} and ensure it's in your PATH.\n\nError: {}",
-                    request.language, request.language, e
-                ),
-                execution_time,
-                timestamp,
-                language: request.language,
-            });
+            return Err(format!(
+                "{} interpreter not found. Please install {} and ensure it's in your PATH.\n\nError: {}",
+                request.language, request.language, e
+            ));
         }
     };
 

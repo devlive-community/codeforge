@@ -10,6 +10,7 @@ import {swift} from '@codemirror/legacy-modes/mode/swift'
 import {kotlin, scala} from '@codemirror/legacy-modes/mode/clike'
 import {clojure} from '@codemirror/legacy-modes/mode/clojure'
 import {ruby} from '@codemirror/legacy-modes/mode/ruby'
+import {groovy} from '@codemirror/legacy-modes/mode/groovy'
 import {
     abcdef,
     abyss,
@@ -175,6 +176,7 @@ export function useCodeMirrorEditor(props: Props)
             case 'rust':
                 return rust()
             case 'c':
+            case 'cpp':
                 return cpp()
             case 'shell':
             case 'applescript':
@@ -193,6 +195,8 @@ export function useCodeMirrorEditor(props: Props)
             case 'typescript-browser':
             case 'typescript-nodejs':
                 return javascript({typescript: true})
+            case 'groovy':
+                return StreamLanguage.define(groovy)
             default:
                 return null
         }
