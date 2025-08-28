@@ -373,6 +373,7 @@ pub mod applescript;
 pub mod c;
 pub mod clojure;
 pub mod cpp;
+pub mod css;
 pub mod go;
 pub mod groovy;
 pub mod html;

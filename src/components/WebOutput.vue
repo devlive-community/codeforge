@@ -95,6 +95,26 @@ const processWebContent = async (content: string) => {
         }
       }
     }
+
+    // 处理 style 标签
+    const styleMatches = content.match(/<style[^>]*src="(file:\/\/[^"]*)"[^>]*><\/style>/gi)
+    if (styleMatches) {
+      for (const match of styleMatches) {
+        const pathMatch = match.match(/src="(file:\/\/[^"]*)"/)
+        if (pathMatch) {
+          const filePath = pathMatch[1].replace('file://', '')
+          try {
+            const fileContent = await readTextFile(filePath)
+            const inlineStyle = "<style>" + fileContent + "</style>"
+            result = result.replace(match, inlineStyle)
+          }
+          catch (error) {
+            console.error("读取CSS文件失败:", error)
+            result = result.replace(match, "<!-- 无法读取CSS文件: " + filePath + " -->")
+          }
+        }
+      }
+    }
   }
   catch (error) {
     console.error('无法导入 Tauri 文件系统插件:', error)
