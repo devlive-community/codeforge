@@ -3,6 +3,7 @@ use crate::plugins::applescript::AppleScriptPlugin;
 use crate::plugins::c::CPlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::cpp::CppPlugin;
+use crate::plugins::css::CssPlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::groovy::GroovyPlugin;
 use crate::plugins::html::HtmlPlugin;
@@ -18,6 +19,7 @@ use crate::plugins::ruby::RubyPlugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
 use crate::plugins::shell::ShellPlugin;
+use crate::plugins::svg::SvgPlugin;
 use crate::plugins::swift::SwiftPlugin;
 use crate::plugins::typescript::TypeScriptPlugin;
 use crate::plugins::typescript_browser::TypeScriptBrowserPlugin;
@@ -50,6 +52,8 @@ impl PluginManager {
         plugins.insert("cpp".to_string(), Box::new(CppPlugin));
         plugins.insert("groovy".to_string(), Box::new(GroovyPlugin));
         plugins.insert("html".to_string(), Box::new(HtmlPlugin));
+        plugins.insert("css".to_string(), Box::new(CssPlugin));
+        plugins.insert("svg".to_string(), Box::new(SvgPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(JavaScriptNodeJsPlugin),

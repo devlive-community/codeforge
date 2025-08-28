@@ -6,6 +6,8 @@ import {java} from '@codemirror/lang-java'
 import {rust} from '@codemirror/lang-rust'
 import {cpp} from '@codemirror/lang-cpp'
 import {html} from '@codemirror/lang-html'
+import {css} from '@codemirror/lang-css'
+import {xml} from '@codemirror/lang-xml'
 import {shell} from '@codemirror/legacy-modes/mode/shell'
 import {swift} from '@codemirror/legacy-modes/mode/swift'
 import {kotlin, scala} from '@codemirror/legacy-modes/mode/clike'
@@ -200,6 +202,10 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(groovy)
             case 'html':
                 return html()
+            case 'css':
+                return css()
+            case 'svg':
+                return xml()
             default:
                 return null
         }

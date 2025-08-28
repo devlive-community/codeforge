@@ -1,0 +1,231 @@
+<!-- SVG 示例代码 - CodeForge 代码执行环境 -->
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+    <!-- 定义渐变和滤镜 -->
+    <defs>
+        <!-- 线性渐变 -->
+        <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+        </linearGradient>
+
+        <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#ff9a9e;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#fecfef;stop-opacity:1" />
+        </linearGradient>
+
+        <radialGradient id="circleGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+        </radialGradient>
+
+        <!-- 阴影滤镜 -->
+        <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+            <feOffset dx="2" dy="2" result="offset" />
+            <feComponentTransfer>
+                <feFuncA type="linear" slope="0.5" />
+            </feComponentTransfer>
+            <feMerge>
+                <feMergeNode />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
+        </filter>
+
+        <!-- 模糊效果 -->
+        <filter id="blur" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
+        </filter>
+
+        <!-- 动画路径 -->
+        <path id="animationPath" d="M 50 300 Q 400 100 750 300" stroke="none" fill="none" />
+    </defs>
+
+    <!-- 背景 -->
+    <rect width="800" height="600" fill="url(#headerGradient)" opacity="0.1" />
+
+    <!-- 标题区域 -->
+    <rect x="50" y="30" width="700" height="80" rx="15" ry="15"
+          fill="url(#headerGradient)" filter="url(#dropShadow)" />
+
+    <!-- 标题文字 -->
+    <text x="400" y="65" text-anchor="middle" font-family="Arial, sans-serif"
+          font-size="28" font-weight="bold" fill="white">
+        CodeForge SVG 示例
+    </text>
+    <text x="400" y="90" text-anchor="middle" font-family="Arial, sans-serif"
+          font-size="14" fill="rgba(255,255,255,0.8)">
+        Scalable Vector Graphics Demo
+    </text>
+
+    <!-- 基础形状示例 -->
+    <g id="basicShapes">
+        <!-- 圆形 -->
+        <circle cx="150" cy="200" r="40" fill="url(#circleGradient)"
+                filter="url(#dropShadow)">
+            <animate attributeName="r" values="35;45;35" dur="2s" repeatCount="indefinite" />
+        </circle>
+        <text x="150" y="260" text-anchor="middle" font-family="Arial, sans-serif"
+              font-size="12" fill="#2c3e50">圆形动画
+        </text>
+
+        <!-- 矩形 -->
+        <rect x="220" y="160" width="80" height="80" rx="10" ry="10"
+              fill="#e74c3c" filter="url(#dropShadow)">
+            <animateTransform attributeName="transform" type="rotate"
+                              values="0 260 200;360 260 200;0 260 200"
+                              dur="3s" repeatCount="indefinite" />
+        </rect>
+        <text x="260" y="260" text-anchor="middle" font-family="Arial, sans-serif"
+              font-size="12" fill="#2c3e50">旋转矩形
+        </text>
+
+        <!-- 多边形（星形） -->
+        <polygon points="380,160 390,185 415,185 395,203 405,228 380,210 355,228 365,203 345,185 370,185"
+                 fill="#f39c12" stroke="#e67e22" stroke-width="2" filter="url(#dropShadow)">
+            <animateTransform attributeName="transform" type="scale"
+                              values="1;1.2;1" dur="1.5s" repeatCount="indefinite" />
+        </polygon>
+        <text x="380" y="260" text-anchor="middle" font-family="Arial, sans-serif"
+              font-size="12" fill="#2c3e50">缩放星形
+        </text>
+
+        <!-- 椭圆 -->
+        <ellipse cx="480" cy="200" rx="50" ry="30" fill="#9b59b6"
+                 filter="url(#dropShadow)" opacity="0.8">
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite" />
+        </ellipse>
+        <text x="480" y="260" text-anchor="middle" font-family="Arial, sans-serif"
+              font-size="12" fill="#2c3e50">透明椭圆
+        </text>
+
+        <!-- 路径绘制 -->
+        <path d="M 580 160 Q 620 180 650 160 T 720 180"
+              stroke="#2ecc71" stroke-width="4" fill="none" filter="url(#dropShadow)">
+            <animate attributeName="stroke-dasharray" values="0,200;100,200;200,200"
+                     dur="3s" repeatCount="indefinite" />
+        </path>
+        <text x="650" y="260" text-anchor="middle" font-family="Arial, sans-serif"
+              font-size="12" fill="#2c3e50">路径动画
+        </text>
+    </g>
+
+    <!-- 图表示例 -->
+    <g id="chart" transform="translate(50, 320)">
+        <text x="0" y="0" font-family="Arial, sans-serif" font-size="16"
+              font-weight="bold" fill="#2c3e50">数据可视化示例
+        </text>
+
+        <!-- 柱状图 -->
+        <g id="barChart" transform="translate(0, 20)">
+            <rect x="20" y="50" width="30" height="80" fill="#3498db" filter="url(#dropShadow)">
+                <animate attributeName="height" values="0;80;0" dur="4s" repeatCount="indefinite" />
+            </rect>
+            <rect x="60" y="30" width="30" height="100" fill="#e74c3c" filter="url(#dropShadow)">
+                <animate attributeName="height" values="0;100;0" dur="4s" begin="0.5s" repeatCount="indefinite" />
+            </rect>
+            <rect x="100" y="40" width="30" height="90" fill="#2ecc71" filter="url(#dropShadow)">
+                <animate attributeName="height" values="0;90;0" dur="4s" begin="1s" repeatCount="indefinite" />
+            </rect>
+            <rect x="140" y="20" width="30" height="110" fill="#f39c12" filter="url(#dropShadow)">
+                <animate attributeName="height" values="0;110;0" dur="4s" begin="1.5s" repeatCount="indefinite" />
+            </rect>
+
+            <!-- 坐标轴 -->
+            <line x1="10" y1="140" x2="180" y2="140" stroke="#2c3e50" stroke-width="2" />
+            <line x1="10" y1="10" x2="10" y2="140" stroke="#2c3e50" stroke-width="2" />
+
+            <!-- 标签 -->
+            <text x="35" y="155" text-anchor="middle" font-size="10" fill="#7f8c8d">A</text>
+            <text x="75" y="155" text-anchor="middle" font-size="10" fill="#7f8c8d">B</text>
+            <text x="115" y="155" text-anchor="middle" font-size="10" fill="#7f8c8d">C</text>
+            <text x="155" y="155" text-anchor="middle" font-size="10" fill="#7f8c8d">D</text>
+        </g>
+    </g>
+
+    <!-- 饼图示例 -->
+    <g id="pieChart" transform="translate(400, 320)">
+        <text x="0" y="0" font-family="Arial, sans-serif" font-size="16"
+              font-weight="bold" fill="#2c3e50">饼图示例
+        </text>
+
+        <g transform="translate(80, 80)">
+            <!-- 饼图扇形 -->
+            <path d="M 0 0 L 0 -50 A 50 50 0 0 1 35.36 -35.36 Z" fill="#3498db" filter="url(#dropShadow)">
+                <animateTransform attributeName="transform" type="rotate"
+                                  values="0;360;0" dur="8s" repeatCount="indefinite" />
+            </path>
+            <path d="M 0 0 L 35.36 -35.36 A 50 50 0 0 1 35.36 35.36 Z" fill="#e74c3c" filter="url(#dropShadow)">
+                <animateTransform attributeName="transform" type="rotate"
+                                  values="90;450;90" dur="8s" repeatCount="indefinite" />
+            </path>
+            <path d="M 0 0 L 35.36 35.36 A 50 50 0 0 1 -35.36 35.36 Z" fill="#2ecc71" filter="url(#dropShadow)">
+                <animateTransform attributeName="transform" type="rotate"
+                                  values="180;540;180" dur="8s" repeatCount="indefinite" />
+            </path>
+            <path d="M 0 0 L -35.36 35.36 A 50 50 0 0 1 0 -50 Z" fill="#f39c12" filter="url(#dropShadow)">
+                <animateTransform attributeName="transform" type="rotate"
+                                  values="270;630;270" dur="8s" repeatCount="indefinite" />
+            </path>
+
+            <!-- 中心圆 -->
+            <circle cx="0" cy="0" r="20" fill="white" filter="url(#dropShadow)" />
+            <text x="0" y="5" text-anchor="middle" font-size="12" font-weight="bold" fill="#2c3e50">统计</text>
+        </g>
+    </g>
+
+    <!-- 图标示例 -->
+    <g id="icons" transform="translate(50, 480)">
+        <text x="0" y="0" font-family="Arial, sans-serif" font-size="16"
+              font-weight="bold" fill="#2c3e50">图标示例
+        </text>
+
+        <!-- 心形图标 -->
+        <g transform="translate(50, 30)">
+            <path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.28 2,8.5C2,5.42 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.09C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.42 22,8.5C22,12.28 18.6,15.36 13.45,20.04L12,21.35Z"
+                  fill="#e74c3c" filter="url(#dropShadow)" transform="scale(1.5)">
+                <animate attributeName="fill" values="#e74c3c;#c0392b;#e74c3c" dur="1s" repeatCount="indefinite" />
+            </path>
+            <text x="0" y="45" text-anchor="middle" font-size="10" fill="#7f8c8d">心形</text>
+        </g>
+
+        <!-- 星形图标 -->
+        <g transform="translate(150, 30)">
+            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+                     fill="#f39c12" filter="url(#dropShadow)" transform="scale(1.5)">
+                <animateTransform attributeName="transform" type="rotate"
+                                  values="0 12 12;360 12 12" dur="3s" repeatCount="indefinite" />
+            </polygon>
+            <text x="0" y="45" text-anchor="middle" font-size="10" fill="#7f8c8d">旋转星</text>
+        </g>
+
+        <!-- 设置齿轮图标 -->
+        <g transform="translate(250, 30)">
+            <path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M10,22C9.75,22 9.54,21.82 9.5,21.58L9.13,18.93C8.5,18.68 7.96,18.34 7.44,17.94L4.95,18.95C4.73,19.03 4.46,18.95 4.34,18.73L2.34,15.27C2.21,15.05 2.27,14.78 2.46,14.63L4.57,12.97L4.5,12L4.57,11L2.46,9.37C2.27,9.22 2.21,8.95 2.34,8.73L4.34,5.27C4.46,5.05 4.73,4.96 4.95,5.05L7.44,6.05C7.96,5.66 8.5,5.32 9.13,5.07L9.5,2.42C9.54,2.18 9.75,2 10,2H14C14.25,2 14.46,2.18 14.5,2.42L14.87,5.07C15.5,5.32 16.04,5.66 16.56,6.05L19.05,5.05C19.27,4.96 19.54,5.05 19.66,5.27L21.66,8.73C21.79,8.95 21.73,9.22 21.54,9.37L19.43,11L19.5,12L19.43,13L21.54,14.63C21.73,14.78 21.79,15.05 21.66,15.27L19.66,18.73C19.54,18.95 19.27,19.04 19.05,18.95L16.56,17.95C16.04,18.34 15.5,18.68 14.87,18.93L14.5,21.58C14.46,21.82 14.25,22 14,22H10M11.25,4L10.88,6.61C9.68,6.86 8.62,7.5 7.85,8.39L5.44,7.35L4.69,8.65L6.8,10.2C6.4,11.37 6.4,12.64 6.8,13.8L4.68,15.36L5.43,16.66L7.86,15.62C8.63,16.5 9.68,17.14 10.87,17.38L11.24,20H12.76L13.13,17.39C14.32,17.14 15.37,16.5 16.14,15.62L18.57,16.66L19.32,15.36L17.2,13.81C17.6,12.64 17.6,11.37 17.2,10.2L19.31,8.65L18.56,7.35L16.15,8.39C15.38,7.5 14.32,6.86 13.12,6.62L12.75,4H11.25Z"
+                  fill="#95a5a6" filter="url(#dropShadow)" transform="scale(1.2)">
+                <animateTransform attributeName="transform" type="rotate"
+                                  values="0 12 12;360 12 12" dur="4s" repeatCount="indefinite" />
+            </path>
+            <text x="0" y="45" text-anchor="middle" font-size="10" fill="#7f8c8d">设置</text>
+        </g>
+    </g>
+
+    <!-- 动画路径上的元素 -->
+    <circle r="8" fill="#e74c3c">
+        <animateMotion dur="6s" repeatCount="indefinite">
+            <mpath href="#animationPath" />
+        </animateMotion>
+    </circle>
+
+    <!-- 文字动画 -->
+    <text x="400" y="560" text-anchor="middle" font-family="Arial, sans-serif"
+          font-size="18" font-weight="bold" fill="url(#headerGradient)">
+        感谢使用 CodeForge SVG 示例！
+        <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite" />
+    </text>
+
+    <!-- 版权信息 -->
+    <text x="400" y="585" text-anchor="middle" font-family="Arial, sans-serif"
+          font-size="10" fill="#7f8c8d" opacity="0.7">
+        CodeForge - Scalable Vector Graphics Demo
+    </text>
+</svg>
