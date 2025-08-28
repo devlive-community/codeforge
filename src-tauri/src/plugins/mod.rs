@@ -390,6 +390,7 @@ pub mod ruby;
 pub mod rust;
 pub mod scala;
 pub mod shell;
+pub mod svg;
 pub mod swift;
 pub mod typescript;
 pub mod typescript_browser;
