@@ -1,5 +1,7 @@
-import { EditorView, hoverTooltip } from '@codemirror/view'
+import {EditorView, hoverTooltip} from '@codemirror/view'
+
 1
+
 export function useCodeMirrorFunctionHelp()
 {
     // 提示框
@@ -10,7 +12,7 @@ export function useCodeMirrorFunctionHelp()
         dom.innerHTML = `
             <div class="relative mb-1">
                 <div class="px-2 py-1 bg-gray-800 text-white text-xs rounded">
-                    <span class="font-mono">${ text }</span>
+                    <span class="font-mono">${text}</span>
                 </div>
                 <!-- 小三角箭头 -->
                 <div class="absolute left-1/2 transform -translate-x-1/2 top-full">
@@ -19,12 +21,12 @@ export function useCodeMirrorFunctionHelp()
             </div>
         `
 
-        return { dom }
+        return {dom}
     }
 
     // 显示函数提示扩展
     const showFunctionHelpHover = hoverTooltip((view, pos, side) => {
-        let { from, to, text } = view.state.doc.lineAt(pos)
+        let {from, to, text} = view.state.doc.lineAt(pos)
         let start = pos, end = pos
         while (start > from && /\w/.test(text[start - from - 1])) {
             start--
@@ -44,7 +46,7 @@ export function useCodeMirrorFunctionHelp()
                 return createHelpTooltip(text.slice(start - from, end - from))
             }
         }
-    }, { hoverTime: 300 })
+    }, {hoverTime: 300})
 
     // 提示框样式主题
     const functionHelpTheme = EditorView.theme({
@@ -53,11 +55,16 @@ export function useCodeMirrorFunctionHelp()
             animation: 'fadeIn 0.2s ease-out'
         },
         '.cm-tooltip': {
-            border: 'none !important'
+            border: 'none !important',
+            backgroundColor: 'transparent !important',
+            boxShadow: 'none !important'
+        },
+        '.cm-tooltip-arrow': {
+            display: 'none !important'
         },
         '@keyframes fadeIn': {
-            'from': { opacity: '0', transform: 'translateY(-2px)' },
-            'to': { opacity: '1', transform: 'translateY(0)' }
+            'from': {opacity: '0', transform: 'translateY(-2px)'},
+            'to': {opacity: '1', transform: 'translateY(0)'}
         }
     })
 

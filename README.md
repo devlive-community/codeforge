@@ -34,7 +34,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
   <img src="public/icons/java.svg" width="60" alt="Java">
   <img src="public/icons/javascript-browser.svg" width="60" alt="JavaScript (Browser)">
   <img src="public/icons/javascript-jquery.svg" width="60" alt="JavaScript (jQuery)">
-  <img src="public/icons/nodejs.svg" width="60" alt="JavaScript (Node.js)">
+  <img src="public/icons/javascript-nodejs.svg" width="60" alt="JavaScript (Node.js)">
   <img src="public/icons/kotlin.svg" width="60" alt="Kotlin">
   <img src="public/icons/nodejs.svg" width="60" alt="Node.js">
   <img src="public/icons/php.svg" width="60" alt="PHP">

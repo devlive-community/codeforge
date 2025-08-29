@@ -9,7 +9,7 @@ impl LanguagePlugin for ShellPlugin {
     }
 
     fn get_language_name(&self) -> &'static str {
-        "Shell"
+        "ShellScript"
     }
 
     fn get_language_key(&self) -> &'static str {
