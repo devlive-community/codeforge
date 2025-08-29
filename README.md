@@ -24,6 +24,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
 
 <div style="display: flex; align-items: center; justify-content: center;">
   <img src="public/icons/c.svg" width="60" alt="C">
+  <img src="public/icons/cangjie.svg" width="60" alt="Cangjie">
   <img src="public/icons/clojure.svg" width="60" alt="Clojure">
   <img src="public/icons/cpp.svg" width="60" alt="C++">
   <img src="public/icons/css.svg" width="60" alt="CSS">
@@ -39,6 +40,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
   <img src="public/icons/php.svg" width="60" alt="PHP">
   <img src="public/icons/python.svg" width="60" alt="Python 2">
   <img src="public/icons/python.svg" width="60" alt="Python 3">
+  <img src="public/icons/r.svg" width="60" alt="R">
   <img src="public/icons/ruby.svg" width="60" alt="Ruby">
   <img src="public/icons/rust.svg" width="60" alt="Rust">
   <img src="public/icons/shell.svg" width="60" alt="Shell">
