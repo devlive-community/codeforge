@@ -15,6 +15,7 @@ import {kotlin, scala} from '@codemirror/legacy-modes/mode/clike'
 import {clojure} from '@codemirror/legacy-modes/mode/clojure'
 import {ruby} from '@codemirror/legacy-modes/mode/ruby'
 import {groovy} from '@codemirror/legacy-modes/mode/groovy'
+import {r} from "@codemirror/legacy-modes/mode/r"
 import {
     abcdef,
     abyss,
@@ -209,6 +210,8 @@ export function useCodeMirrorEditor(props: Props)
                 return xml()
             case 'php':
                 return php()
+            case 'r':
+                return StreamLanguage.define(r)
             default:
                 return null
         }

@@ -387,6 +387,7 @@ pub mod nodejs;
 pub mod php;
 pub mod python2;
 pub mod python3;
+pub mod r;
 pub mod ruby;
 pub mod rust;
 pub mod scala;

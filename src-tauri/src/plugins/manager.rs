@@ -16,6 +16,7 @@ use crate::plugins::nodejs::NodeJSPlugin;
 use crate::plugins::php::PHPPlugin;
 use crate::plugins::python2::Python2Plugin;
 use crate::plugins::python3::Python3Plugin;
+use crate::plugins::r::RPlugin;
 use crate::plugins::ruby::RubyPlugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
@@ -56,6 +57,7 @@ impl PluginManager {
         plugins.insert("css".to_string(), Box::new(CssPlugin));
         plugins.insert("svg".to_string(), Box::new(SvgPlugin));
         plugins.insert("php".to_string(), Box::new(PHPPlugin));
+        plugins.insert("r".to_string(), Box::new(RPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(JavaScriptNodeJsPlugin),
