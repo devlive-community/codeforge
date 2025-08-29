@@ -22,30 +22,32 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
 
 ## 支持的语言
 
-- **AppleScript**
-- **C**
-- **Clojure**
-- **C++**
-- **CSS**
-- **Go**
-- **Groovy**
-- **HTML**
-- **Java**
-- **JavaScript (Browser)**
-- **JavaScript (jQuery)**
-- **JavaScript (Node.js)**
-- **Kotlin**
-- **Node.js**
-- **Python 2**
-- **Python 3**
-- **Ruby**
-- **Rust**
-- **Shell**
-- **SVG**
-- **Swift**
-- **TypeScript**
-- **TypeScript (Browser)**
-- **TypeScript (Node.js)**
+<div style="display: flex; align-items: center; justify-content: center;">
+  <img src="public/icons/c.svg" width="60" alt="C">
+  <img src="public/icons/clojure.svg" width="60" alt="Clojure">
+  <img src="public/icons/cpp.svg" width="60" alt="C++">
+  <img src="public/icons/css.svg" width="60" alt="CSS">
+  <img src="public/icons/go.svg" width="60" alt="Go">
+  <img src="public/icons/groovy.svg" width="60" alt="Groovy">
+  <img src="public/icons/html.svg" width="60" alt="HTML">
+  <img src="public/icons/java.svg" width="60" alt="Java">
+  <img src="public/icons/javascript-browser.svg" width="60" alt="JavaScript (Browser)">
+  <img src="public/icons/javascript-jquery.svg" width="60" alt="JavaScript (jQuery)">
+  <img src="public/icons/nodejs.svg" width="60" alt="JavaScript (Node.js)">
+  <img src="public/icons/kotlin.svg" width="60" alt="Kotlin">
+  <img src="public/icons/nodejs.svg" width="60" alt="Node.js">
+  <img src="public/icons/php.svg" width="60" alt="PHP">
+  <img src="public/icons/python.svg" width="60" alt="Python 2">
+  <img src="public/icons/python.svg" width="60" alt="Python 3">
+  <img src="public/icons/ruby.svg" width="60" alt="Ruby">
+  <img src="public/icons/rust.svg" width="60" alt="Rust">
+  <img src="public/icons/shell.svg" width="60" alt="Shell">
+  <img src="public/icons/svg.svg" width="60" alt="SVG">
+  <img src="public/icons/swift.svg" width="60" alt="Swift">
+  <img src="public/icons/typescript.svg" width="60" alt="TypeScript">
+  <img src="public/icons/typescript-browser.svg" width="60" alt="TypeScript (Browser)">
+  <img src="public/icons/typescript-nodejs.svg" width="60" alt="TypeScript (Node.js)">
+</div>
 
 ## 安装
 
