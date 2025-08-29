@@ -5,7 +5,7 @@ pub struct RPlugin;
 
 impl LanguagePlugin for RPlugin {
     fn get_order(&self) -> i32 {
-        17
+        23
     }
 
     fn get_language_name(&self) -> &'static str {

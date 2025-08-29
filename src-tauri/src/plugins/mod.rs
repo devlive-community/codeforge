@@ -371,6 +371,7 @@ pub trait LanguagePlugin: Send + Sync {
 // 重新导出子模块
 pub mod applescript;
 pub mod c;
+pub mod cangjie;
 pub mod clojure;
 pub mod cpp;
 pub mod css;

@@ -1,6 +1,7 @@
 use super::{LanguagePlugin, PluginConfig};
 use crate::plugins::applescript::AppleScriptPlugin;
 use crate::plugins::c::CPlugin;
+use crate::plugins::cangjie::CangjiePlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::cpp::CppPlugin;
 use crate::plugins::css::CssPlugin;
@@ -58,6 +59,7 @@ impl PluginManager {
         plugins.insert("svg".to_string(), Box::new(SvgPlugin));
         plugins.insert("php".to_string(), Box::new(PHPPlugin));
         plugins.insert("r".to_string(), Box::new(RPlugin));
+        plugins.insert("cangjie".to_string(), Box::new(CangjiePlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(JavaScriptNodeJsPlugin),

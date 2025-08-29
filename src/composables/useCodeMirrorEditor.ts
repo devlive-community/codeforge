@@ -179,6 +179,7 @@ export function useCodeMirrorEditor(props: Props)
             case 'java':
                 return java()
             case 'rust':
+            case 'cangjie':
                 return rust()
             case 'c':
             case 'cpp':

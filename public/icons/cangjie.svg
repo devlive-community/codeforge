@@ -1,0 +1,17 @@
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+    <!-- 仓颉二字 -->
+    <text x="89" y="120"
+          font-family="'Microsoft YaHei', '微软雅黑', 'SimHei', '黑体', sans-serif"
+          font-size="90"
+          font-weight="bold"
+          text-anchor="middle"
+          fill="url(#textGradient)">仓颉
+    </text>
+
+    <defs>
+        <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#1976D2;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00C853;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+</svg>
