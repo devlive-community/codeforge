@@ -27,3 +27,5 @@ pnpm-lock.yaml
 *.json
 !config*.json
 go.mod
+.RData
+.Rhistory
