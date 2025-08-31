@@ -31,6 +31,9 @@ use plugins::PluginManager;
 use update::{check_for_updates, start_update};
 
 fn main() {
+    // 设置系统环境变量
+    let _ = fix_path_env::fix();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -54,6 +57,11 @@ fn main() {
             let menu = setup::menu::create_menu(app.handle())?;
             app.set_menu(menu)?;
             setup::menu::setup_menu_handler(app.handle());
+
+            info!(
+                "初始化 -> 系统环境变量 {:?}",
+                std::env::var(String::from("PATH")).unwrap_or(String::from(""))
+            );
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
