@@ -47,13 +47,13 @@ stats:
   description: 我们取得的成就
   items:
     - label: GitHub Stars
-      value: 10+
+      value: 20+
     - label: 跨平台性(Windows、macOS)
       value: 3+
     - label: 支持的语言
-      value: 10+
-    - label: 客户满意度
-      value: 100%
+      value: 20+
+    - label: 轻量级级别
+      value: 10 M+
 
 cta:
   title: 准备好开始了吗？
