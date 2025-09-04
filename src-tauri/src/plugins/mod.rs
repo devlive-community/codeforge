@@ -377,6 +377,7 @@ pub mod cpp;
 pub mod css;
 pub mod go;
 pub mod groovy;
+pub mod haskell;
 pub mod html;
 pub mod java;
 pub mod javascript_browser;

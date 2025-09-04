@@ -30,6 +30,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
   <img src="public/icons/css.svg" width="60" alt="CSS">
   <img src="public/icons/go.svg" width="60" alt="Go">
   <img src="public/icons/groovy.svg" width="60" alt="Groovy">
+  <img src="public/icons/haskell.svg" width="60" alt="Haskell">
   <img src="public/icons/html.svg" width="60" alt="HTML">
   <img src="public/icons/java.svg" width="60" alt="Java">
   <img src="public/icons/javascript-browser.svg" width="60" alt="JavaScript (Browser)">

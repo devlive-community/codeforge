@@ -16,6 +16,7 @@ import {clojure} from '@codemirror/legacy-modes/mode/clojure'
 import {ruby} from '@codemirror/legacy-modes/mode/ruby'
 import {groovy} from '@codemirror/legacy-modes/mode/groovy'
 import {r} from "@codemirror/legacy-modes/mode/r"
+import {haskell} from "@codemirror/legacy-modes/mode/haskell"
 import {
     abcdef,
     abyss,
@@ -213,6 +214,8 @@ export function useCodeMirrorEditor(props: Props)
                 return php()
             case 'r':
                 return StreamLanguage.define(r)
+            case 'haskell':
+                return StreamLanguage.define(haskell)
             default:
                 return null
         }
