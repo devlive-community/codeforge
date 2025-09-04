@@ -7,6 +7,7 @@ use crate::plugins::cpp::CppPlugin;
 use crate::plugins::css::CssPlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::groovy::GroovyPlugin;
+use crate::plugins::haskell::HaskellPlugin;
 use crate::plugins::html::HtmlPlugin;
 use crate::plugins::java::JavaPlugin;
 use crate::plugins::javascript_browser::JavaScriptBrowserPlugin;
@@ -60,6 +61,7 @@ impl PluginManager {
         plugins.insert("php".to_string(), Box::new(PHPPlugin));
         plugins.insert("r".to_string(), Box::new(RPlugin));
         plugins.insert("cangjie".to_string(), Box::new(CangjiePlugin));
+        plugins.insert("haskell".to_string(), Box::new(HaskellPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(JavaScriptNodeJsPlugin),
