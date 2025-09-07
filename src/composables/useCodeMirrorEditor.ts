@@ -17,6 +17,7 @@ import {ruby} from '@codemirror/legacy-modes/mode/ruby'
 import {groovy} from '@codemirror/legacy-modes/mode/groovy'
 import {r} from "@codemirror/legacy-modes/mode/r"
 import {haskell} from "@codemirror/legacy-modes/mode/haskell"
+import {lua} from "@codemirror/legacy-modes/mode/lua"
 import {
     abcdef,
     abyss,
@@ -216,6 +217,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(r)
             case 'haskell':
                 return StreamLanguage.define(haskell)
+            case 'lua':
+                return StreamLanguage.define(lua)
             default:
                 return null
         }
