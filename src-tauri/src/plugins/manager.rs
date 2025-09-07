@@ -14,6 +14,7 @@ use crate::plugins::javascript_browser::JavaScriptBrowserPlugin;
 use crate::plugins::javascript_jquery::JavaScriptJQueryPlugin;
 use crate::plugins::javascript_nodejs::JavaScriptNodeJsPlugin;
 use crate::plugins::kotlin::KotlinPlugin;
+use crate::plugins::lua::LuaPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
 use crate::plugins::php::PHPPlugin;
 use crate::plugins::python2::Python2Plugin;
@@ -62,6 +63,7 @@ impl PluginManager {
         plugins.insert("r".to_string(), Box::new(RPlugin));
         plugins.insert("cangjie".to_string(), Box::new(CangjiePlugin));
         plugins.insert("haskell".to_string(), Box::new(HaskellPlugin));
+        plugins.insert("lua".to_string(), Box::new(LuaPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(JavaScriptNodeJsPlugin),

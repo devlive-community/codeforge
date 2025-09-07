@@ -384,6 +384,7 @@ pub mod javascript_browser;
 pub mod javascript_jquery;
 pub mod javascript_nodejs;
 pub mod kotlin;
+pub mod lua;
 pub mod manager;
 pub mod nodejs;
 pub mod php;
