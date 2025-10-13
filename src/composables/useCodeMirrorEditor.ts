@@ -11,7 +11,7 @@ import {xml} from '@codemirror/lang-xml'
 import {php} from '@codemirror/lang-php'
 import {shell} from '@codemirror/legacy-modes/mode/shell'
 import {swift} from '@codemirror/legacy-modes/mode/swift'
-import {kotlin, scala, objectiveC} from '@codemirror/legacy-modes/mode/clike'
+import {kotlin, objectiveC, objectiveCpp, scala} from '@codemirror/legacy-modes/mode/clike'
 import {clojure} from '@codemirror/legacy-modes/mode/clojure'
 import {ruby} from '@codemirror/legacy-modes/mode/ruby'
 import {groovy} from '@codemirror/legacy-modes/mode/groovy'
@@ -221,6 +221,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(lua)
             case 'objective-c':
                 return StreamLanguage.define(objectiveC)
+            case 'objective-cpp':
+                return StreamLanguage.define(objectiveCpp)
             default:
                 return null
         }
@@ -289,7 +291,6 @@ export function useCodeMirrorEditor(props: Props)
         }
     }
 
-    // 其余代码完全保持不变...
     const loadEditorConfig = async () => {
         try {
             const globalConfig = await invoke<any>('get_app_config')
