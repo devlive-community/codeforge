@@ -39,6 +39,7 @@ CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发�
   <img src="public/icons/kotlin.svg" width="60" alt="Kotlin">
   <img src="public/icons/lua.svg" width="60" alt="Lua">
   <img src="public/icons/nodejs.svg" width="60" alt="Node.js">
+  <img src="public/icons/objective-c.svg" width="60" alt="Objective-C">
   <img src="public/icons/php.svg" width="60" alt="PHP">
   <img src="public/icons/python.svg" width="60" alt="Python 2">
   <img src="public/icons/python.svg" width="60" alt="Python 3">
