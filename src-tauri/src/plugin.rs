@@ -1,12 +1,42 @@
 use crate::plugins::{LanguageInfo, PluginManager};
 use log::{debug, error, info};
+use regex::Regex;
 use std::process::Command;
 use tauri::State;
 use tokio::sync::Mutex;
 
 pub type PluginManagerState = Mutex<PluginManager>;
 
-// 通用的环境信息获取函数
+fn extract_version(output: &str) -> String {
+    let output = output.trim();
+
+    let version_patterns = vec![
+        r"(?i)version\s+([0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9]+)?)",
+        r"(?i)version\s+([0-9]+\.[0-9]+(?:\.[0-9]+)?)",
+        r"\bv?([0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9]+)?)\b",
+        r"\bv?([0-9]+\.[0-9]+(?:\.[0-9]+)?)\b",
+        r#""([0-9]+\.[0-9]+\.[0-9]+)""#,
+    ];
+
+    for pattern in version_patterns {
+        if let Ok(re) = Regex::new(pattern) {
+            if let Some(cap) = re.captures(output) {
+                if let Some(version) = cap.get(1) {
+                    return version.as_str().to_string();
+                }
+            }
+        }
+    }
+
+    if let Some(first_line) = output.lines().next() {
+        if !first_line.is_empty() {
+            return first_line.to_string();
+        }
+    }
+
+    output.to_string()
+}
+
 #[tauri::command]
 pub async fn get_info(
     language: String,
@@ -44,19 +74,26 @@ pub async fn get_info(
                 .arg(plugin.get_path_command())
                 .output();
 
-            let mut version = String::from_utf8_lossy(&version_out.stdout)
+            let mut raw_version = String::from_utf8_lossy(&version_out.stdout)
                 .trim()
                 .to_string();
 
-            if version.is_empty() {
+            if raw_version.is_empty() {
                 info!(
                     "获取环境 -> 调用插件 [ {} ] 版本为空，通过 stderr 获取",
                     language
                 );
-                version = String::from_utf8_lossy(&version_out.stderr)
+                raw_version = String::from_utf8_lossy(&version_out.stderr)
                     .trim()
                     .to_string();
             }
+
+            let version = extract_version(&raw_version);
+            let final_version = if version.is_empty() {
+                raw_version
+            } else {
+                version
+            };
 
             let path = if let Ok(path_out) = path_result {
                 if path_out.status.success() {
@@ -71,7 +108,7 @@ pub async fn get_info(
             info!("获取环境 -> 调用插件 [ {} ] 完成", language);
             return Ok(LanguageInfo {
                 installed: true,
-                version,
+                version: final_version,
                 path,
                 language: plugin.get_language_name().to_string(),
             });
@@ -90,7 +127,6 @@ pub async fn get_info(
     })
 }
 
-// 获取支持的语言列表
 #[tauri::command]
 pub async fn get_supported_languages(
     plugin_manager: State<'_, PluginManagerState>,

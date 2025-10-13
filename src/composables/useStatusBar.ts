@@ -1,6 +1,6 @@
-import { type Ref } from 'vue'
-import { CheckCircle, Loader2, XCircle } from 'lucide-vue-next'
-import { EnvInfo } from '../types/app.ts'
+import {type Ref} from 'vue'
+import {CheckCircle, Loader2, XCircle} from 'lucide-vue-next'
+import {EnvInfo} from '../types/app.ts'
 
 export function useStatusBar(envInfo: Ref<EnvInfo>, isLoading: Ref<boolean>)
 {
@@ -31,14 +31,14 @@ export function useStatusBar(envInfo: Ref<EnvInfo>, isLoading: Ref<boolean>)
     // 计算状态文本
     const getStatusText = () => {
         if (isLoading.value) {
-            return `${ envInfo.value.language }: 检查环境中...`
+            return `${envInfo.value.language}: 检查环境中...`
         }
 
         if (envInfo.value.installed) {
-            return `${ envInfo.value.language }: ${ envInfo.value.version }`
+            return `${envInfo.value.language}: ${envInfo.value.version || '--'}`
         }
         else {
-            return `${ envInfo.value.language }: 环境未安装`
+            return `${envInfo.value.language}: 环境未安装`
         }
     }
 
