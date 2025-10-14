@@ -387,6 +387,8 @@ pub mod kotlin;
 pub mod lua;
 pub mod manager;
 pub mod nodejs;
+pub mod objective_c;
+pub mod objective_cpp;
 pub mod php;
 pub mod python2;
 pub mod python3;

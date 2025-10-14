@@ -16,6 +16,8 @@ use crate::plugins::javascript_nodejs::JavaScriptNodeJsPlugin;
 use crate::plugins::kotlin::KotlinPlugin;
 use crate::plugins::lua::LuaPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
+use crate::plugins::objective_c::ObjectiveCPlugin;
+use crate::plugins::objective_cpp::ObjectiveCppPlugin;
 use crate::plugins::php::PHPPlugin;
 use crate::plugins::python2::Python2Plugin;
 use crate::plugins::python3::Python3Plugin;
@@ -64,6 +66,8 @@ impl PluginManager {
         plugins.insert("cangjie".to_string(), Box::new(CangjiePlugin));
         plugins.insert("haskell".to_string(), Box::new(HaskellPlugin));
         plugins.insert("lua".to_string(), Box::new(LuaPlugin));
+        plugins.insert("objective-c".to_string(), Box::new(ObjectiveCPlugin));
+        plugins.insert("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin));
         plugins.insert(
             "javascript-nodejs".to_string(),
             Box::new(JavaScriptNodeJsPlugin),
