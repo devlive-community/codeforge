@@ -250,7 +250,7 @@ const getTabButtonClasses = (tab: Tab, _index: number) => {
 
   // 位置相关
   if (props.position === 'left' || props.position === 'right') {
-    baseClasses.push('my-0.5')
+    baseClasses.push('my-0.5', 'w-full')
   }
   else {
     baseClasses.push('mx-0.5')

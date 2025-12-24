@@ -4,12 +4,12 @@
           type="card"
           size="md"
           position="left"
-          :tab-button-class="['w-48']"
+          :tab-button-class="['!p-1', '!justify-start']"
           :nav-class="['max-h-[70vh] overflow-y-auto']"
           :tabs="tabsPluginData"
           @change="handleTabChange">
       <template #tab-button="{ tab }">
-        <div class="flex w-full px-3 py-2 space-x-2">
+        <div class="flex items-center w-full h-full px-3 py-2 space-x-2">
           <Switch v-model="pluginEnabledStates[tab.key as string]"
                   size="sm"
                   @click.stop
