@@ -5,8 +5,8 @@ import {useCodeMirrorEditor} from './useCodeMirrorEditor'
 
 export function useLanguageSettings(emit: any)
 {
-    // 标签页管理
     const activeTab = ref('general')
+    const pluginEnabledStates = ref<Record<string, boolean>>({})
 
     const tabsData = [
         {
@@ -33,13 +33,14 @@ export function useLanguageSettings(emit: any)
 
     const consoleTypes = [{label: '控制台', value: 'console'}, {label: 'Web', value: 'web'}]
 
-    // 插件配置管理
     const {
         activePlugin,
         tabsPluginData,
         pluginConfig,
+        globalConfig,
         handleTabChange,
         selectExecuteHome,
+        updateGlobalConfig,
         initializePlugin
     } = usePluginConfig(emit)
 
@@ -110,46 +111,70 @@ export function useLanguageSettings(emit: any)
         console.log('Template changed:', newTemplate)
     }, {immediate: false})
 
-    // 初始化所有功能
+    const handlePluginToggle = async (language: string, enabled: boolean, event: Event) => {
+        if (!globalConfig.value || !globalConfig.value.plugins) return
+
+        const plugin = globalConfig.value.plugins.find((p: any) => p.language === language)
+        if (plugin) {
+            plugin.enabled = enabled
+            await updateGlobalConfig(plugin)
+        }
+    }
+
+    const syncPluginStates = () => {
+        if (globalConfig.value && globalConfig.value.plugins) {
+            const states: Record<string, boolean> = {}
+            tabsPluginData.value.forEach((tab) => {
+                const plugin = globalConfig.value.plugins.find((p: any) => p.language === tab.key)
+                states[tab.key] = plugin?.enabled !== false
+            })
+            pluginEnabledStates.value = states
+        }
+    }
+
+    watch(tabsPluginData, () => {
+        syncPluginStates()
+    }, { immediate: true })
+
+    watch(pluginConfig, () => {
+        if (activePlugin.value && pluginConfig.value) {
+            pluginEnabledStates.value[activePlugin.value] = pluginConfig.value.enabled
+        }
+    }, { deep: true })
+
     const initialize = async () => {
         console.log('Component mounted')
 
-        // 先初始化插件配置
         await initializePlugin()
         console.log('Plugin initialized:', {
             activePlugin: activePlugin.value,
             template: pluginConfig.value?.template
         })
 
-        // 再初始化编辑器
+        syncPluginStates()
+
         await initializeEditor()
         console.log('Editor initialized')
 
-        // 更新扩展
         await updateExtensions()
         console.log('Extensions updated:', currentExtensions.value)
     }
 
     return {
-        // 标签页状态
         activeTab,
         tabsData,
         consoleTypes,
-
-        // 插件配置
         activePlugin,
         tabsPluginData,
         pluginConfig,
+        pluginEnabledStates,
         handleTabChange,
+        handlePluginToggle,
         selectExecuteHome,
-
-        // 编辑器状态
         isEditorReady,
         currentExtensions,
         currentLanguage,
         templateContent,
-
-        // 方法
         updateExtensions,
         initialize
     }

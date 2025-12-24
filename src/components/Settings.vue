@@ -18,7 +18,7 @@
 
       <!-- 语言配置 -->
       <template #language>
-        <Language v-if="activeTab === 'language'"/>
+        <Language v-if="activeTab === 'language'" @settings-changed="handleLanguageSettingsChanged"/>
       </template>
     </Tabs>
   </Modal>
@@ -43,6 +43,7 @@ const {
   activeTab,
   tabsData,
   handleEditorSettingsChanged,
+  handleLanguageSettingsChanged,
   handleEditorError,
   closeSettings,
   initialize

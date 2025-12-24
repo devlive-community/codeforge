@@ -29,7 +29,7 @@ export function usePluginConfig(emit?: any)
     const globalConfig = ref<any>(null)
 
     const pluginConfig = ref<PluginConfig>({
-        enabled: false,
+        enabled: true,
         execute_home: '',
         extension: '',
         language: '',
@@ -92,9 +92,8 @@ export function usePluginConfig(emit?: any)
             }
             else {
                 console.warn('未找到插件配置:', activePlugin.value)
-                // 创建默认配置
                 pluginConfig.value = {
-                    enabled: false,
+                    enabled: true,
                     execute_home: '',
                     extension: '',
                     language: activePlugin.value,
@@ -187,10 +186,9 @@ export function usePluginConfig(emit?: any)
         }
     }
 
-    // 重置插件配置
     const resetPluginConfig = (language: string) => {
         pluginConfig.value = {
-            enabled: false,
+            enabled: true,
             execute_home: '',
             extension: '',
             language: language,

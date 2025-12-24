@@ -8,6 +8,18 @@
           :nav-class="['max-h-[70vh] overflow-y-auto']"
           :tabs="tabsPluginData"
           @change="handleTabChange">
+      <template #tab-button="{ tab }">
+        <div class="flex w-full px-3 py-2 space-x-2">
+          <Switch v-model="pluginEnabledStates[tab.key as string]"
+                  size="sm"
+                  @click.stop
+                  @change="(value, event) => handlePluginToggle(tab.key as string, value, event)"/>
+          <div class="flex items-center space-x-2">
+            <img v-if="tab.svgUrl" :src="tab.svgUrl" class="w-5 h-5" :alt="tab.label"/>
+            <span>{{ tab.label }}</span>
+          </div>
+        </div>
+      </template>
       <template #[activePlugin]="{ tab }">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
           <img :src="`/icons/${activePlugin.replace(/\d+$/, '')}.svg`" class="w-6 h-6" :alt="tab.label"/>
@@ -21,6 +33,10 @@
               :nav-class="['w-full', 'justify-center']">
           <template #general>
             <div class="space-y-4">
+              <Label label="启用插件">
+                <Switch v-model="pluginConfig.enabled"/>
+              </Label>
+
               <Label label="编译前执行的命令">
                 <Input v-model="pluginConfig.before_compile" class="w-full" placeholder="编译前执行的命令"/>
               </Label>
@@ -94,17 +110,18 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted} from 'vue'
-import {Folder} from 'lucide-vue-next'
-import {Codemirror} from 'vue-codemirror'
+import { onMounted } from 'vue'
+import { Folder } from 'lucide-vue-next'
+import { Codemirror } from 'vue-codemirror'
 import Button from '../../ui/Button.vue'
 import Tabs from '../../ui/Tabs.vue'
 import Number from '../../ui/Number.vue'
 import Label from '../../ui/Label.vue'
 import Input from '../../ui/Input.vue'
-import {useLanguageSettings} from '../../composables/useLanguageSettings'
+import { useLanguageSettings } from '../../composables/useLanguageSettings'
 import type PluginConfig from '../../types/plugin'
 import Select from "../../ui/Select.vue";
+import Switch from '../../ui/Switch.vue'
 
 const emit = defineEmits<{
   'settings-changed': [config: PluginConfig]
@@ -112,23 +129,18 @@ const emit = defineEmits<{
 }>()
 
 const {
-  // 标签页状态
   activeTab,
   tabsData,
   consoleTypes,
-
-  // 插件配置
   activePlugin,
   tabsPluginData,
   pluginConfig,
+  pluginEnabledStates,
   handleTabChange,
+  handlePluginToggle,
   selectExecuteHome,
-
-  // 编辑器状态
   isEditorReady,
   currentExtensions,
-
-  // 方法
   initialize
 } = useLanguageSettings(emit)
 
