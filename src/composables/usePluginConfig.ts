@@ -27,6 +27,7 @@ export function usePluginConfig(emit?: any)
     const activeTab = ref('general')
     const tabsPluginData = ref<TabData[]>([])
     const globalConfig = ref<any>(null)
+    const isInitialLoad = ref(true)
 
     const pluginConfig = ref<PluginConfig>({
         enabled: true,
@@ -82,6 +83,8 @@ export function usePluginConfig(emit?: any)
     // 处理标签页切换
     const handleTabChange = () => {
         if (globalConfig.value && globalConfig.value.plugins && activePlugin.value) {
+            isInitialLoad.value = true
+
             const foundPlugin = globalConfig.value.plugins.find(
                 (plugin: any) => plugin.language === activePlugin.value
             )
@@ -104,6 +107,10 @@ export function usePluginConfig(emit?: any)
                     timeout: 30
                 }
             }
+
+            setTimeout(() => {
+                isInitialLoad.value = false
+            }, 100)
         }
     }
 
@@ -238,7 +245,7 @@ export function usePluginConfig(emit?: any)
 
     // 监听插件配置变化
     watch(pluginConfig, (newConfig, oldConfig) => {
-        if (oldConfig && newConfig.language) {
+        if (!isInitialLoad.value && oldConfig && newConfig.language) {
             console.log('插件配置变化:', oldConfig, '->', newConfig)
             debouncedUpdate(newConfig)
         }
