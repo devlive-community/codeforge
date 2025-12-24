@@ -28,6 +28,7 @@ export function usePluginConfig(emit?: any)
     const tabsPluginData = ref<TabData[]>([])
     const globalConfig = ref<any>(null)
     const isInitialLoad = ref(true)
+    const isSaving = ref(false)
 
     const pluginConfig = ref<PluginConfig>({
         enabled: true,
@@ -144,6 +145,8 @@ export function usePluginConfig(emit?: any)
         }
 
         try {
+            isSaving.value = true
+
             const pluginIndex = globalConfig.value.plugins.findIndex(
                 (plugin: any) => plugin.language === updatedPlugin.language
             )
@@ -178,6 +181,9 @@ export function usePluginConfig(emit?: any)
             if (emit) {
                 emit('error', '保存配置失败')
             }
+        }
+        finally {
+            isSaving.value = false
         }
     }
 
@@ -269,6 +275,7 @@ export function usePluginConfig(emit?: any)
         tabsPluginData,
         globalConfig,
         pluginConfig,
+        isSaving,
 
         // 方法
         getSupportedLanguages,
