@@ -93,10 +93,7 @@ impl EnvironmentManager {
         self.providers.insert(language, provider);
     }
 
-    pub async fn get_environment_info(
-        &self,
-        language: &str,
-    ) -> Result<EnvironmentInfo, String> {
+    pub async fn get_environment_info(&self, language: &str) -> Result<EnvironmentInfo, String> {
         let provider = self
             .providers
             .get(language)
@@ -106,7 +103,10 @@ impl EnvironmentManager {
 
         let current_version = provider.get_current_version().await.ok().flatten();
         let installed_versions = provider.get_installed_versions().await.unwrap_or_default();
-        let available_versions = provider.fetch_available_versions().await.unwrap_or_default();
+        let available_versions = provider
+            .fetch_available_versions()
+            .await
+            .unwrap_or_default();
 
         Ok(EnvironmentInfo {
             language: language.to_string(),

@@ -24,7 +24,9 @@ pub async fn download_and_install_version(
 ) -> Result<String, String> {
     info!("下载并安装 {} 版本 {}", language, version);
     let manager = env_manager.lock().await;
-    manager.download_and_install_version(&language, &version, app_handle).await
+    manager
+        .download_and_install_version(&language, &version, app_handle)
+        .await
 }
 
 #[tauri::command]

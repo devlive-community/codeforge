@@ -18,8 +18,8 @@ mod update;
 mod utils;
 
 use crate::env_commands::{
-    download_and_install_version, get_environment_info, get_supported_environment_languages,
-    switch_environment_version, EnvironmentManagerState,
+    EnvironmentManagerState, download_and_install_version, get_environment_info,
+    get_supported_environment_languages, switch_environment_version,
 };
 use crate::env_manager::EnvironmentManager;
 use crate::env_providers::ScalaEnvironmentProvider;

@@ -1,5 +1,5 @@
 use crate::env_manager::{
-    emit_download_progress, DownloadStatus, EnvironmentProvider, EnvironmentVersion,
+    DownloadStatus, EnvironmentProvider, EnvironmentVersion, emit_download_progress,
 };
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
@@ -45,7 +45,10 @@ impl ScalaEnvironmentProvider {
             error!("创建 Scala 安装目录失败: {}", e);
         }
 
-        Self { install_dir, cache_file }
+        Self {
+            install_dir,
+            cache_file,
+        }
     }
 
     fn get_default_install_dir() -> PathBuf {
@@ -147,17 +150,14 @@ impl ScalaEnvironmentProvider {
             request = request.header("Authorization", format!("token {}", token));
         }
 
-        let response = request
-            .send()
-            .await
-            .map_err(|e| {
-                // 如果请求失败，尝试使用缓存（即使过期）
-                if let Some(cached_releases) = self.read_cache_ignore_expiry() {
-                    warn!("GitHub API 请求失败，使用过期缓存: {}", e);
-                    return format!("GitHub API 请求失败，已使用缓存数据: {}", e);
-                }
-                format!("请求 GitHub API 失败: {}", e)
-            })?;
+        let response = request.send().await.map_err(|e| {
+            // 如果请求失败，尝试使用缓存（即使过期）
+            if let Some(cached_releases) = self.read_cache_ignore_expiry() {
+                warn!("GitHub API 请求失败，使用过期缓存: {}", e);
+                return format!("GitHub API 请求失败，已使用缓存数据: {}", e);
+            }
+            format!("请求 GitHub API 失败: {}", e)
+        })?;
 
         let status = response.status();
 
@@ -170,7 +170,10 @@ impl ScalaEnvironmentProvider {
                     if let Some(cached_releases) = self.read_cache_ignore_expiry() {
                         return Ok(cached_releases);
                     }
-                    format!("GitHub API 限流已超出。请稍后再试，或设置 GITHUB_TOKEN 环境变量以增加限额。详情: {}", body)
+                    format!(
+                        "GitHub API 限流已超出。请稍后再试，或设置 GITHUB_TOKEN 环境变量以增加限额。详情: {}",
+                        body
+                    )
                 } else {
                     format!("GitHub API 返回错误 ({}): {}", status, body)
                 }
@@ -204,18 +207,16 @@ impl ScalaEnvironmentProvider {
         }
 
         match std::fs::read_to_string(&self.cache_file) {
-            Ok(content) => {
-                match serde_json::from_str::<CachedReleases>(&content) {
-                    Ok(cached) => {
-                        info!("使用缓存的 Scala 版本列表（忽略过期时间）");
-                        Some(cached.releases)
-                    }
-                    Err(e) => {
-                        warn!("解析缓存文件失败: {}", e);
-                        None
-                    }
+            Ok(content) => match serde_json::from_str::<CachedReleases>(&content) {
+                Ok(cached) => {
+                    info!("使用缓存的 Scala 版本列表（忽略过期时间）");
+                    Some(cached.releases)
                 }
-            }
+                Err(e) => {
+                    warn!("解析缓存文件失败: {}", e);
+                    None
+                }
+            },
             Err(e) => {
                 warn!("读取缓存文件失败: {}", e);
                 None
@@ -288,8 +289,7 @@ impl ScalaEnvironmentProvider {
         );
 
         // 创建目标文件
-        let mut file = std::fs::File::create(dest)
-            .map_err(|e| format!("创建文件失败: {}", e))?;
+        let mut file = std::fs::File::create(dest).map_err(|e| format!("创建文件失败: {}", e))?;
 
         let mut downloaded: u64 = 0;
         let mut stream = response.bytes_stream();
@@ -329,7 +329,11 @@ impl ScalaEnvironmentProvider {
         app_handle: AppHandle,
         version: &str,
     ) -> Result<(), String> {
-        info!("开始解压: {} -> {}", archive_path.display(), dest_dir.display());
+        info!(
+            "开始解压: {} -> {}",
+            archive_path.display(),
+            dest_dir.display()
+        );
 
         emit_download_progress(
             &app_handle,
@@ -340,8 +344,7 @@ impl ScalaEnvironmentProvider {
             DownloadStatus::Extracting,
         );
 
-        std::fs::create_dir_all(dest_dir)
-            .map_err(|e| format!("创建目录失败: {}", e))?;
+        std::fs::create_dir_all(dest_dir).map_err(|e| format!("创建目录失败: {}", e))?;
 
         if archive_path.extension().and_then(|s| s.to_str()) == Some("zip") {
             // 解压 ZIP 文件
@@ -358,14 +361,14 @@ impl ScalaEnvironmentProvider {
     fn extract_zip(&self, archive_path: &PathBuf, dest_dir: &PathBuf) -> Result<(), String> {
         use zip::ZipArchive;
 
-        let file = std::fs::File::open(archive_path)
-            .map_err(|e| format!("打开压缩文件失败: {}", e))?;
+        let file =
+            std::fs::File::open(archive_path).map_err(|e| format!("打开压缩文件失败: {}", e))?;
 
-        let mut archive = ZipArchive::new(file)
-            .map_err(|e| format!("读取 ZIP 文件失败: {}", e))?;
+        let mut archive = ZipArchive::new(file).map_err(|e| format!("读取 ZIP 文件失败: {}", e))?;
 
         for i in 0..archive.len() {
-            let mut file = archive.by_index(i)
+            let mut file = archive
+                .by_index(i)
                 .map_err(|e| format!("读取 ZIP 条目失败: {}", e))?;
 
             let outpath = match file.enclosed_name() {
@@ -374,15 +377,13 @@ impl ScalaEnvironmentProvider {
             };
 
             if file.name().ends_with('/') {
-                std::fs::create_dir_all(&outpath)
-                    .map_err(|e| format!("创建目录失败: {}", e))?;
+                std::fs::create_dir_all(&outpath).map_err(|e| format!("创建目录失败: {}", e))?;
             } else {
                 if let Some(p) = outpath.parent() {
-                    std::fs::create_dir_all(p)
-                        .map_err(|e| format!("创建目录失败: {}", e))?;
+                    std::fs::create_dir_all(p).map_err(|e| format!("创建目录失败: {}", e))?;
                 }
-                let mut outfile = std::fs::File::create(&outpath)
-                    .map_err(|e| format!("创建文件失败: {}", e))?;
+                let mut outfile =
+                    std::fs::File::create(&outpath).map_err(|e| format!("创建文件失败: {}", e))?;
                 std::io::copy(&mut file, &mut outfile)
                     .map_err(|e| format!("解压文件失败: {}", e))?;
             }
@@ -392,8 +393,7 @@ impl ScalaEnvironmentProvider {
             {
                 use std::os::unix::fs::PermissionsExt;
                 if let Some(mode) = file.unix_mode() {
-                    std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode))
-                        .ok();
+                    std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode)).ok();
                 }
             }
         }
@@ -405,13 +405,14 @@ impl ScalaEnvironmentProvider {
         use flate2::read::GzDecoder;
         use tar::Archive;
 
-        let file = std::fs::File::open(archive_path)
-            .map_err(|e| format!("打开压缩文件失败: {}", e))?;
+        let file =
+            std::fs::File::open(archive_path).map_err(|e| format!("打开压缩文件失败: {}", e))?;
 
         let gz = GzDecoder::new(file);
         let mut archive = Archive::new(gz);
 
-        archive.unpack(dest_dir)
+        archive
+            .unpack(dest_dir)
             .map_err(|e| format!("解压 tar.gz 失败: {}", e))?;
 
         Ok(())
@@ -421,10 +422,12 @@ impl ScalaEnvironmentProvider {
     async fn update_plugin_config(&self, version: &str, install_path: &str) -> Result<(), String> {
         use crate::config::{get_app_config_internal, update_app_config};
 
-        info!("更新 Scala 插件配置: 版本={}, 路径={}", version, install_path);
+        info!(
+            "更新 Scala 插件配置: 版本={}, 路径={}",
+            version, install_path
+        );
 
-        let mut config = get_app_config_internal()
-            .map_err(|e| format!("获取配置失败: {}", e))?;
+        let mut config = get_app_config_internal().map_err(|e| format!("获取配置失败: {}", e))?;
 
         if let Some(ref mut plugins) = config.plugins {
             if let Some(scala_plugin) = plugins.iter_mut().find(|p| p.language == "scala") {
@@ -439,11 +442,15 @@ impl ScalaEnvironmentProvider {
                 };
                 scala_plugin.run_command = Some(String::from(run_cmd));
 
-                info!("已更新 Scala 插件配置: execute_home={}, run_command={}", install_path, run_cmd);
+                info!(
+                    "已更新 Scala 插件配置: execute_home={}, run_command={}",
+                    install_path, run_cmd
+                );
             }
         }
 
-        update_app_config(config).await
+        update_app_config(config)
+            .await
             .map_err(|e| format!("保存配置失败: {}", e))?;
 
         Ok(())
@@ -511,14 +518,15 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
             return Ok(installed);
         }
 
-        let entries = std::fs::read_dir(&self.install_dir)
-            .map_err(|e| format!("读取安装目录失败: {}", e))?;
+        let entries =
+            std::fs::read_dir(&self.install_dir).map_err(|e| format!("读取安装目录失败: {}", e))?;
 
         for entry in entries {
             if let Ok(entry) = entry {
                 let path = entry.path();
                 if path.is_dir() {
-                    let version = path.file_name()
+                    let version = path
+                        .file_name()
                         .and_then(|n| n.to_str())
                         .unwrap_or("")
                         .to_string();
@@ -584,15 +592,19 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
 
         // 下载文件
         let download_url = &version_info.download_url;
-        let file_name = download_url.split('/').last()
+        let file_name = download_url
+            .split('/')
+            .last()
             .ok_or_else(|| "无效的下载 URL".to_string())?;
         let temp_file = std::env::temp_dir().join(file_name);
 
-        self.download_file(download_url, &temp_file, app_handle.clone(), version).await?;
+        self.download_file(download_url, &temp_file, app_handle.clone(), version)
+            .await?;
 
         // 解压到安装目录
         let install_path = self.get_version_install_path(version);
-        self.extract_archive(&temp_file, &install_path, app_handle.clone(), version).await?;
+        self.extract_archive(&temp_file, &install_path, app_handle.clone(), version)
+            .await?;
 
         // 清理临时文件
         std::fs::remove_file(&temp_file).ok();
@@ -621,7 +633,8 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         }
 
         // 更新插件配置
-        self.update_plugin_config(version, &actual_install_path.to_string_lossy()).await?;
+        self.update_plugin_config(version, &actual_install_path.to_string_lossy())
+            .await?;
 
         emit_download_progress(
             &app_handle,
@@ -659,7 +672,8 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
             }
         }
 
-        self.update_plugin_config(version, &actual_install_path.to_string_lossy()).await?;
+        self.update_plugin_config(version, &actual_install_path.to_string_lossy())
+            .await?;
 
         info!("成功切换到 Scala {}", version);
         Ok(())
@@ -668,8 +682,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
     async fn get_current_version(&self) -> Result<Option<String>, String> {
         use crate::config::get_app_config_internal;
 
-        let config = get_app_config_internal()
-            .map_err(|e| format!("获取配置失败: {}", e))?;
+        let config = get_app_config_internal().map_err(|e| format!("获取配置失败: {}", e))?;
 
         if let Some(plugins) = config.plugins {
             if let Some(scala_plugin) = plugins.iter().find(|p| p.language == "scala") {

@@ -4,7 +4,7 @@
           type="card"
           size="md"
           position="left"
-          :tab-button-class="['!p-1']"
+          :tab-button-class="['!p-1 ']"
           :nav-class="['max-h-[70vh] overflow-y-auto']"
           :tabs="tabsPluginData"
           @change="handleTabChange">
