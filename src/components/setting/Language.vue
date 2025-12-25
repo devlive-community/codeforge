@@ -4,12 +4,12 @@
           type="card"
           size="md"
           position="left"
-          :tab-button-class="['!p-1', '!justify-start']"
+          :tab-button-class="['!p-1']"
           :nav-class="['max-h-[70vh] overflow-y-auto']"
           :tabs="tabsPluginData"
           @change="handleTabChange">
       <template #tab-button="{ tab }">
-        <div class="flex items-center w-full h-full px-3 py-2 space-x-2">
+        <div class="flex items-center w-full px-3 py-2 space-x-2">
           <Switch v-model="pluginEnabledStates[tab.key as string]"
                   size="sm"
                   @click.stop
@@ -21,19 +21,10 @@
         </div>
       </template>
       <template #[activePlugin]="{ tab }">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
-            <img :src="`/icons/${activePlugin.replace(/\d+$/, '')}.svg`" class="w-6 h-6" :alt="tab.label"/>
-            <span>{{ `语言 [ ${tab.label} ] 配置` }}</span>
-          </h3>
-          <div v-if="isSaving" class="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
-            <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>保存中...</span>
-          </div>
-        </div>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+          <img :src="`/icons/${activePlugin.replace(/\d+$/, '')}.svg`" class="w-6 h-6" :alt="tab.label"/>
+          <span>{{ `语言 [ ${tab.label} ] 配置` }}</span>
+        </h3>
 
         <Tabs v-model="activeTab"
               type="card"
@@ -75,17 +66,10 @@
           </template>
 
           <template #environment>
-            <Label label="语言环境目录">
-              <div class="flex gap-2">
-                <Input v-model="pluginConfig.execute_home" class="w-full" placeholder="选择语言环境目录路径"/>
-
-                <Button type="primary"
-                        :icon-only="true"
-                        :icon="Folder"
-                        @click="selectExecuteHome">
-                </Button>
-              </div>
-            </Label>
+            <EnvironmentManager :language="activePlugin"
+                                :execute-home="pluginConfig.execute_home as any"
+                                @update:execute-home="(value) => pluginConfig.execute_home = value"
+                                @select-directory="selectExecuteHome"/>
           </template>
 
           <template #template>
@@ -120,9 +104,7 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { Folder } from 'lucide-vue-next'
 import { Codemirror } from 'vue-codemirror'
-import Button from '../../ui/Button.vue'
 import Tabs from '../../ui/Tabs.vue'
 import Number from '../../ui/Number.vue'
 import Label from '../../ui/Label.vue'
@@ -131,6 +113,7 @@ import { useLanguageSettings } from '../../composables/useLanguageSettings'
 import type PluginConfig from '../../types/plugin'
 import Select from "../../ui/Select.vue";
 import Switch from '../../ui/Switch.vue'
+import EnvironmentManager from './EnvironmentManager.vue'
 
 const emit = defineEmits<{
   'settings-changed': [config: PluginConfig]
@@ -145,7 +128,6 @@ const {
   tabsPluginData,
   pluginConfig,
   pluginEnabledStates,
-  isSaving,
   handleTabChange,
   handlePluginToggle,
   selectExecuteHome,

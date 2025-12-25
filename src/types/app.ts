@@ -56,3 +56,31 @@ export interface EditorConfig
     show_function_help?: boolean
     space_dot_omission?: boolean
 }
+
+export interface EnvironmentVersion
+{
+    version: string
+    download_url: string
+    install_path: string | null
+    is_installed: boolean
+    size: number | null
+    release_date: string | null
+}
+
+export interface EnvironmentInfo
+{
+    language: string
+    current_version: string | null
+    installed_versions: EnvironmentVersion[]
+    available_versions: EnvironmentVersion[]
+}
+
+export interface DownloadProgress
+{
+    language: string
+    version: string
+    downloaded: number
+    total: number
+    percentage: number
+    status: 'downloading' | 'extracting' | 'installing' | 'completed' | 'failed'
+}

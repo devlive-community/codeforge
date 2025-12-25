@@ -1,7 +1,7 @@
 export default interface PluginConfig
 {
     enabled: boolean               // 插件是否启用
-    execute_home?: string   // 插件的执行路径
+    execute_home?: string | null  // 插件的执行路径
     extension: string      // 插件支持的文件扩展名
     language: string            // 插件所属语言
     before_compile?: string // 插件在编译前执行的命令

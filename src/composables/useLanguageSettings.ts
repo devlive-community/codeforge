@@ -112,7 +112,7 @@ export function useLanguageSettings(emit: any)
         console.log('Template changed:', newTemplate)
     }, {immediate: false})
 
-    const handlePluginToggle = async (language: string, enabled: boolean, event: Event) => {
+    const handlePluginToggle = async (language: string, enabled: boolean, _event: Event) => {
         if (!globalConfig.value || !globalConfig.value.plugins) return
 
         const plugin = globalConfig.value.plugins.find((p: any) => p.language === language)
