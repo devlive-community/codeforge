@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use log::{debug, error, info};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -43,7 +43,7 @@ pub enum DownloadStatus {
     Extracting,
     Installing,
     Completed,
-    Failed,
+    _Failed,
 }
 
 // 语言环境提供者特征
@@ -72,6 +72,7 @@ pub trait EnvironmentProvider: Send + Sync {
     async fn get_current_version(&self) -> Result<Option<String>, String>;
 
     // 获取安装目录
+    #[allow(dead_code)]
     fn get_install_dir(&self) -> PathBuf;
 }
 

@@ -1,9 +1,9 @@
 use crate::env_manager::{
     DownloadStatus, EnvironmentProvider, EnvironmentVersion, emit_download_progress,
 };
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tauri::AppHandle;
 
@@ -152,7 +152,7 @@ impl ScalaEnvironmentProvider {
 
         let response = request.send().await.map_err(|e| {
             // 如果请求失败，尝试使用缓存（即使过期）
-            if let Some(cached_releases) = self.read_cache_ignore_expiry() {
+            if let Some(_cached_releases) = self.read_cache_ignore_expiry() {
                 warn!("GitHub API 请求失败，使用过期缓存: {}", e);
                 return format!("GitHub API 请求失败，已使用缓存数据: {}", e);
             }
@@ -238,12 +238,10 @@ impl ScalaEnvironmentProvider {
 
         // 检查是否有包含 bin 目录的子目录
         if let Ok(entries) = std::fs::read_dir(&install_path) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_dir() && path.join("bin").exists() {
-                        return true;
-                    }
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() && path.join("bin").exists() {
+                    return true;
                 }
             }
         }
@@ -358,7 +356,7 @@ impl ScalaEnvironmentProvider {
         Ok(())
     }
 
-    fn extract_zip(&self, archive_path: &PathBuf, dest_dir: &PathBuf) -> Result<(), String> {
+    fn extract_zip(&self, archive_path: &PathBuf, dest_dir: &Path) -> Result<(), String> {
         use zip::ZipArchive;
 
         let file =
@@ -481,13 +479,11 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
                     let mut actual_path = version_dir.clone();
 
                     if let Ok(entries) = std::fs::read_dir(&version_dir) {
-                        for entry in entries {
-                            if let Ok(entry) = entry {
-                                let path = entry.path();
-                                if path.is_dir() && path.join("bin").exists() {
-                                    actual_path = path;
-                                    break;
-                                }
+                        for entry in entries.flatten() {
+                            let path = entry.path();
+                            if path.is_dir() && path.join("bin").exists() {
+                                actual_path = path;
+                                break;
                             }
                         }
                     }
@@ -521,40 +517,36 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         let entries =
             std::fs::read_dir(&self.install_dir).map_err(|e| format!("读取安装目录失败: {}", e))?;
 
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
-                if path.is_dir() {
-                    let version = path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("")
-                        .to_string();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                let version = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("")
+                    .to_string();
 
-                    if self.is_version_installed(&version) {
-                        // 查找实际的包含 bin 目录的路径
-                        let mut actual_install_path = path.clone();
-                        if let Ok(sub_entries) = std::fs::read_dir(&path) {
-                            for sub_entry in sub_entries {
-                                if let Ok(sub_entry) = sub_entry {
-                                    let sub_path = sub_entry.path();
-                                    if sub_path.is_dir() && sub_path.join("bin").exists() {
-                                        actual_install_path = sub_path;
-                                        break;
-                                    }
-                                }
+                if self.is_version_installed(&version) {
+                    // 查找实际的包含 bin 目录的路径
+                    let mut actual_install_path = path.clone();
+                    if let Ok(sub_entries) = std::fs::read_dir(&path) {
+                        for sub_entry in sub_entries.flatten() {
+                            let sub_path = sub_entry.path();
+                            if sub_path.is_dir() && sub_path.join("bin").exists() {
+                                actual_install_path = sub_path;
+                                break;
                             }
                         }
-
-                        installed.push(EnvironmentVersion {
-                            version: version.clone(),
-                            download_url: String::new(),
-                            install_path: Some(actual_install_path.to_string_lossy().to_string()),
-                            is_installed: true,
-                            size: None,
-                            release_date: None,
-                        });
                     }
+
+                    installed.push(EnvironmentVersion {
+                        version: version.clone(),
+                        download_url: String::new(),
+                        install_path: Some(actual_install_path.to_string_lossy().to_string()),
+                        is_installed: true,
+                        size: None,
+                        release_date: None,
+                    });
                 }
             }
         }
@@ -621,13 +613,11 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         // 查找解压后的实际目录（可能包含版本号前缀）
         let mut actual_install_path = install_path.clone();
         if let Ok(entries) = std::fs::read_dir(&install_path) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_dir() && path.join("bin").exists() {
-                        actual_install_path = path;
-                        break;
-                    }
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() && path.join("bin").exists() {
+                    actual_install_path = path;
+                    break;
                 }
             }
         }
@@ -661,13 +651,11 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         // 查找实际的安装目录
         let mut actual_install_path = install_path.clone();
         if let Ok(entries) = std::fs::read_dir(&install_path) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_dir() && path.join("bin").exists() {
-                        actual_install_path = path;
-                        break;
-                    }
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() && path.join("bin").exists() {
+                    actual_install_path = path;
+                    break;
                 }
             }
         }
