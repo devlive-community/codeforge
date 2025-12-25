@@ -21,29 +21,25 @@
                 :aria-controls="`tabpanel-${tab.key || tab.name || index}`"
                 role="tab"
                 :tabindex="isActiveTab(tab) ? 0 : -1">
-          <!-- 如果是组件图标 -->
-          <component v-if="tab.icon && !tab.svgIcon" :is="tab.icon" :class="iconClasses"/>
+          <slot name="tab-button" :tab="tab" :index="index" :isActive="isActiveTab(tab)">
+            <component v-if="tab.icon && !tab.svgIcon" :is="tab.icon" :class="iconClasses"/>
 
-          <!-- 如果是SVG字符串 -->
-          <div v-else-if="tab.svgIcon" v-html="tab.svgIcon" :class="iconClasses"/>
+            <div v-else-if="tab.svgIcon" v-html="tab.svgIcon" :class="iconClasses"/>
 
-          <!-- 如果是SVG URL -->
-          <img v-else-if="tab.svgUrl" :src="tab.svgUrl" :class="iconClasses" alt="icon"/>
+            <img v-else-if="tab.svgUrl" :src="tab.svgUrl" :class="iconClasses" alt="icon"/>
 
-          <!-- 文本 -->
-          <span v-if="tab.label || tab.name" class="tab-text">
-            {{ tab.label || tab.name }}
-          </span>
+            <span v-if="tab.label || tab.name" class="tab-text">
+              {{ tab.label || tab.name }}
+            </span>
 
-          <!-- 徽章 -->
-          <span v-if="tab.badge !== undefined && tab.badge !== null" :class="badgeClasses">
-            {{ tab.badge }}
-          </span>
+            <span v-if="tab.badge !== undefined && tab.badge !== null" :class="badgeClasses">
+              {{ tab.badge }}
+            </span>
 
-          <!-- 关闭按钮 -->
-          <button v-if="tab.closable && closable" @click.stop="closeTab(tab, index)" :class="closeButtonClasses" :aria-label="`关闭 ${tab.label || tab.name}`">
-            <X class="w-3 h-3"/>
-          </button>
+            <button v-if="tab.closable && closable" @click.stop="closeTab(tab, index)" :class="closeButtonClasses" :aria-label="`关闭 ${tab.label || tab.name}`">
+              <X class="w-3 h-3"/>
+            </button>
+          </slot>
         </button>
 
         <!-- 添加按钮 -->
@@ -254,7 +250,7 @@ const getTabButtonClasses = (tab: Tab, _index: number) => {
 
   // 位置相关
   if (props.position === 'left' || props.position === 'right') {
-    baseClasses.push('my-0.5')
+    baseClasses.push('my-0.5', 'w-full')
   }
   else {
     baseClasses.push('mx-0.5')

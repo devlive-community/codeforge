@@ -114,6 +114,7 @@ const {
   getLanguageDisplayName,
   getCurrentConsoleType,
   handleLanguageChange,
+  refreshLanguageList,
   initialize
 } = useLanguageManager(code, clearOutput, toast)
 
@@ -136,13 +137,13 @@ const {
 const editorConfigKey = ref(0)
 const consoleType = ref('console')
 
-// 处理设置变更
-const handleSettingsChanged = (config: any) => {
+const handleSettingsChanged = async (config: any) => {
   console.log('主组件接收到设置变更:', config)
-  // 延迟一点点再刷新，减少闪烁
   setTimeout(() => {
     editorConfigKey.value++
   }, 50)
+
+  await refreshLanguageList()
 }
 
 const loadExample = (content: string) => {

@@ -1,5 +1,5 @@
 <template>
-  <Modal v-model:show="isVisible" title="设置" size="4xl" :content-class="['min-h-[60vh]']" :close-on-backdrop="false" :close-on-esc="false" @close="closeSettings">
+  <Modal v-model:show="isVisible" title="设置" size="5xl" :content-class="['min-h-[60vh]']" :close-on-backdrop="false" :close-on-esc="false" @close="closeSettings">
     <Tabs v-model="activeTab"
           type="card"
           size="md"
@@ -18,7 +18,7 @@
 
       <!-- 语言配置 -->
       <template #language>
-        <Language v-if="activeTab === 'language'"/>
+        <Language v-if="activeTab === 'language'" @settings-changed="handleLanguageSettingsChanged"/>
       </template>
     </Tabs>
   </Modal>
@@ -43,6 +43,7 @@ const {
   activeTab,
   tabsData,
   handleEditorSettingsChanged,
+  handleLanguageSettingsChanged,
   handleEditorError,
   closeSettings,
   initialize

@@ -4,6 +4,9 @@
 )]
 
 mod config;
+mod env_commands;
+mod env_manager;
+mod env_providers;
 mod example;
 mod execution;
 mod font;
@@ -14,6 +17,12 @@ mod setup;
 mod update;
 mod utils;
 
+use crate::env_commands::{
+    EnvironmentManagerState, download_and_install_version, get_environment_info,
+    get_supported_environment_languages, switch_environment_version,
+};
+use crate::env_manager::EnvironmentManager;
+use crate::env_providers::ScalaEnvironmentProvider;
 use crate::execution::{
     ExecutionHistory, PluginManagerState as ExecutionPluginManagerState, clear_execution_history,
     execute_code, get_execution_history, is_execution_running, stop_execution,
@@ -34,6 +43,10 @@ fn main() {
     // 设置系统环境变量
     let _ = fix_path_env::fix();
 
+    // 初始化环境管理器
+    let mut env_manager = EnvironmentManager::new();
+    env_manager.register_provider(Box::new(ScalaEnvironmentProvider::new()));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -41,6 +54,7 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .manage(ExecutionHistory::default())
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
+        .manage(EnvironmentManagerState::new(env_manager))
         .setup(|app| {
             // 第一步：初始化配置系统
             if let Err(e) = init_config(Some(app.handle())) {
@@ -74,6 +88,11 @@ fn main() {
             // 信息相关命令
             get_info,
             get_supported_languages,
+            // 环境管理相关命令
+            get_environment_info,
+            download_and_install_version,
+            switch_environment_version,
+            get_supported_environment_languages,
             // 应用信息命令
             get_app_info,
             // 日志相关命令

@@ -96,11 +96,25 @@ export function useLanguageManager(
     const getSupportedLanguages = async () => {
         try {
             const languages = await invoke<Language[]>('get_supported_languages')
-            supportedLanguages.value = languages.map((language) => ({
+            const allLanguages = languages.map((language) => ({
                 name: language.name,
                 value: language.value,
                 svgUrl: `/icons/${language.value.replace(/\d+$/, '')}.svg`
             }))
+
+            if (globalConfig.value && globalConfig.value.plugins) {
+                const filtered = allLanguages.filter((language) => {
+                    const plugin = globalConfig.value.plugins.find((p: any) => p.language === language.value)
+                    const enabled = !plugin || plugin.enabled !== false
+                    console.log(`语言 ${language.name} (${language.value}): enabled=${enabled}`)
+                    return enabled
+                })
+                console.log('过滤后的语言列表:', filtered.map(l => l.name))
+                supportedLanguages.value = filtered
+            } else {
+                console.log('未找到配置，显示所有语言')
+                supportedLanguages.value = allLanguages
+            }
         }
         catch (error) {
             console.error('Error getting supported languages:', error)
@@ -138,14 +152,33 @@ export function useLanguageManager(
         toast.info(`已切换到 ${getLanguageDisplayName(newLanguage)}`)
     }
 
-    const initialize = async () => {
-        // 获取支持的语言列表
-        await getSupportedLanguages()
+    const refreshLanguageList = async () => {
+        console.log('=== 开始刷新语言列表 ===')
+        console.log('刷新前的语言列表:', supportedLanguages.value.map(l => l.name))
 
-        // 获取配置
+        await getConfigure()
+        console.log('配置已重新加载')
+
+        await getSupportedLanguages()
+        console.log('语言列表已重新获取:', supportedLanguages.value.map(l => l.name))
+
+        const currentStillAvailable = supportedLanguages.value.some(lang => lang.value === currentLanguage.value)
+        console.log(`当前语言 ${currentLanguage.value} 是否仍然可用:`, currentStillAvailable)
+
+        if (!currentStillAvailable && supportedLanguages.value.length > 0) {
+            currentLanguage.value = supportedLanguages.value[0].value
+            code.value = filterPluginTemplate(currentLanguage.value)
+            await refreshEnvInfo()
+            console.log('当前语言已禁用，切换到:', currentLanguage.value)
+        }
+        console.log('=== 刷新语言列表完成 ===')
+    }
+
+    const initialize = async () => {
         await getConfigure()
 
-        // 设置默认语言和初始代码模板
+        await getSupportedLanguages()
+
         if (supportedLanguages.value.length > 0) {
             currentLanguage.value = supportedLanguages.value[0].value
             console.log('当前语言:', currentLanguage.value)
@@ -169,6 +202,7 @@ export function useLanguageManager(
         isLoadingEnvInfo,
         getLanguageDisplayName,
         handleLanguageChange,
+        refreshLanguageList,
         initialize,
         getCurrentPluginConfig,
         getCurrentConsoleType

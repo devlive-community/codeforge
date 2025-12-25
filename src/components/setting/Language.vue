@@ -4,10 +4,22 @@
           type="card"
           size="md"
           position="left"
-          :tab-button-class="['w-48']"
+          :tab-button-class="['!p-1 ']"
           :nav-class="['max-h-[70vh] overflow-y-auto']"
           :tabs="tabsPluginData"
           @change="handleTabChange">
+      <template #tab-button="{ tab }">
+        <div class="flex items-center w-full px-3 py-2 space-x-2">
+          <Switch v-model="pluginEnabledStates[tab.key as string]"
+                  size="sm"
+                  @click.stop
+                  @change="(value, event) => handlePluginToggle(tab.key as string, value, event)"/>
+          <div class="flex items-center space-x-2">
+            <img v-if="tab.svgUrl" :src="tab.svgUrl" class="w-5 h-5" :alt="tab.label"/>
+            <span>{{ tab.label }}</span>
+          </div>
+        </div>
+      </template>
       <template #[activePlugin]="{ tab }">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
           <img :src="`/icons/${activePlugin.replace(/\d+$/, '')}.svg`" class="w-6 h-6" :alt="tab.label"/>
@@ -21,6 +33,10 @@
               :nav-class="['w-full', 'justify-center']">
           <template #general>
             <div class="space-y-4">
+              <Label label="启用插件">
+                <Switch v-model="pluginConfig.enabled"/>
+              </Label>
+
               <Label label="编译前执行的命令">
                 <Input v-model="pluginConfig.before_compile" class="w-full" placeholder="编译前执行的命令"/>
               </Label>
@@ -50,17 +66,10 @@
           </template>
 
           <template #environment>
-            <Label label="语言环境目录">
-              <div class="flex gap-2">
-                <Input v-model="pluginConfig.execute_home" class="w-full" placeholder="选择语言环境目录路径"/>
-
-                <Button type="primary"
-                        :icon-only="true"
-                        :icon="Folder"
-                        @click="selectExecuteHome">
-                </Button>
-              </div>
-            </Label>
+            <EnvironmentManager :language="activePlugin"
+                                :execute-home="pluginConfig.execute_home as any"
+                                @update:execute-home="(value) => pluginConfig.execute_home = value"
+                                @select-directory="selectExecuteHome"/>
           </template>
 
           <template #template>
@@ -94,17 +103,17 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted} from 'vue'
-import {Folder} from 'lucide-vue-next'
-import {Codemirror} from 'vue-codemirror'
-import Button from '../../ui/Button.vue'
+import { onMounted } from 'vue'
+import { Codemirror } from 'vue-codemirror'
 import Tabs from '../../ui/Tabs.vue'
 import Number from '../../ui/Number.vue'
 import Label from '../../ui/Label.vue'
 import Input from '../../ui/Input.vue'
-import {useLanguageSettings} from '../../composables/useLanguageSettings'
+import { useLanguageSettings } from '../../composables/useLanguageSettings'
 import type PluginConfig from '../../types/plugin'
 import Select from "../../ui/Select.vue";
+import Switch from '../../ui/Switch.vue'
+import EnvironmentManager from './EnvironmentManager.vue'
 
 const emit = defineEmits<{
   'settings-changed': [config: PluginConfig]
@@ -112,23 +121,18 @@ const emit = defineEmits<{
 }>()
 
 const {
-  // 标签页状态
   activeTab,
   tabsData,
   consoleTypes,
-
-  // 插件配置
   activePlugin,
   tabsPluginData,
   pluginConfig,
+  pluginEnabledStates,
   handleTabChange,
+  handlePluginToggle,
   selectExecuteHome,
-
-  // 编辑器状态
   isEditorReady,
   currentExtensions,
-
-  // 方法
   initialize
 } = useLanguageSettings(emit)
 

@@ -31,14 +31,21 @@ impl LanguagePlugin for ScalaPlugin {
     }
 
     fn get_default_config(&self) -> PluginConfig {
+        // Windows 使用 .bat，Unix-like 系统使用无后缀的可执行文件
+        let (run_cmd, after_cmd) = if cfg!(target_os = "windows") {
+            ("bin/scala.bat $filename", "del /f *.class")
+        } else {
+            ("bin/scala $filename", "rm -f *.class")
+        };
+
         PluginConfig {
             enabled: true,
             language: String::from("scala"),
             before_compile: None,
             extension: String::from("scala"),
             execute_home: None,
-            run_command: Some(String::from("scala $filename")),
-            after_compile: Some(String::from("rm -f *.class")),
+            run_command: Some(String::from(run_cmd)),
+            after_compile: Some(String::from(after_cmd)),
             template: Some(String::from("// 在这里输入 Scala 代码")),
             timeout: Some(45),
             console_type: Some(String::from("console")),

@@ -14,14 +14,16 @@ export function useSettings(emit: any)
         { key: 'language', label: '语言', icon: BracesIcon }
     ]
 
-    // 处理编辑器设置变更
     const handleEditorSettingsChanged = (config: any) => {
         console.log('设置模态框接收到编辑器配置变更:', config)
-        // 向上传递事件到主组件
         emit('settings-changed', config)
     }
 
-    // 处理编辑器错误
+    const handleLanguageSettingsChanged = (config: any) => {
+        console.log('设置模态框接收到语言配置变更:', config)
+        emit('settings-changed', config)
+    }
+
     const handleEditorError = (message: string) => {
         console.error('编辑器设置错误:', message)
     }
@@ -44,13 +46,11 @@ export function useSettings(emit: any)
     }
 
     return {
-        // 状态
         isVisible,
         activeTab,
         tabsData,
-
-        // 方法
         handleEditorSettingsChanged,
+        handleLanguageSettingsChanged,
         handleEditorError,
         closeSettings,
         initialize

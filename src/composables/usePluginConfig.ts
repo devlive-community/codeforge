@@ -27,9 +27,11 @@ export function usePluginConfig(emit?: any)
     const activeTab = ref('general')
     const tabsPluginData = ref<TabData[]>([])
     const globalConfig = ref<any>(null)
+    const isInitialLoad = ref(true)
+    const isSaving = ref(false)
 
     const pluginConfig = ref<PluginConfig>({
-        enabled: false,
+        enabled: true,
         execute_home: '',
         extension: '',
         language: '',
@@ -82,6 +84,8 @@ export function usePluginConfig(emit?: any)
     // 处理标签页切换
     const handleTabChange = () => {
         if (globalConfig.value && globalConfig.value.plugins && activePlugin.value) {
+            isInitialLoad.value = true
+
             const foundPlugin = globalConfig.value.plugins.find(
                 (plugin: any) => plugin.language === activePlugin.value
             )
@@ -92,9 +96,8 @@ export function usePluginConfig(emit?: any)
             }
             else {
                 console.warn('未找到插件配置:', activePlugin.value)
-                // 创建默认配置
                 pluginConfig.value = {
-                    enabled: false,
+                    enabled: true,
                     execute_home: '',
                     extension: '',
                     language: activePlugin.value,
@@ -105,6 +108,10 @@ export function usePluginConfig(emit?: any)
                     timeout: 30
                 }
             }
+
+            setTimeout(() => {
+                isInitialLoad.value = false
+            }, 100)
         }
     }
 
@@ -138,6 +145,8 @@ export function usePluginConfig(emit?: any)
         }
 
         try {
+            isSaving.value = true
+
             const pluginIndex = globalConfig.value.plugins.findIndex(
                 (plugin: any) => plugin.language === updatedPlugin.language
             )
@@ -173,6 +182,9 @@ export function usePluginConfig(emit?: any)
                 emit('error', '保存配置失败')
             }
         }
+        finally {
+            isSaving.value = false
+        }
     }
 
     // 防抖更新
@@ -187,10 +199,9 @@ export function usePluginConfig(emit?: any)
         }
     }
 
-    // 重置插件配置
     const resetPluginConfig = (language: string) => {
         pluginConfig.value = {
-            enabled: false,
+            enabled: true,
             execute_home: '',
             extension: '',
             language: language,
@@ -240,7 +251,7 @@ export function usePluginConfig(emit?: any)
 
     // 监听插件配置变化
     watch(pluginConfig, (newConfig, oldConfig) => {
-        if (oldConfig && newConfig.language) {
+        if (!isInitialLoad.value && oldConfig && newConfig.language) {
             console.log('插件配置变化:', oldConfig, '->', newConfig)
             debouncedUpdate(newConfig)
         }
@@ -264,6 +275,7 @@ export function usePluginConfig(emit?: any)
         tabsPluginData,
         globalConfig,
         pluginConfig,
+        isSaving,
 
         // 方法
         getSupportedLanguages,
