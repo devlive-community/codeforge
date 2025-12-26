@@ -73,6 +73,7 @@ export interface EnvironmentInfo
     current_version: string | null
     installed_versions: EnvironmentVersion[]
     available_versions: EnvironmentVersion[]
+    error?: string | null  // 错误信息（如获取可用版本失败）
 }
 
 export interface DownloadProgress

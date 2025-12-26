@@ -594,7 +594,12 @@ impl ClojureEnvironmentProvider {
         Ok(())
     }
 
-    async fn update_plugin_config(&self, version: &str, install_path: &str) -> Result<(), String> {
+    async fn update_plugin_config(
+        &self,
+        version: &str,
+        install_path: &str,
+        app_handle: &AppHandle,
+    ) -> Result<(), String> {
         use crate::config::{get_app_config_internal, update_app_config};
 
         info!(
@@ -616,7 +621,7 @@ impl ClojureEnvironmentProvider {
             }
         }
 
-        update_app_config(config)
+        update_app_config(config, app_handle.clone())
             .await
             .map_err(|e| format!("保存配置失败: {}", e))?;
 
@@ -794,7 +799,7 @@ impl EnvironmentProvider for ClojureEnvironmentProvider {
         // 清理临时解压目录
         std::fs::remove_dir_all(&temp_extract_dir).ok();
 
-        self.update_plugin_config(version, &install_path.to_string_lossy())
+        self.update_plugin_config(version, &install_path.to_string_lossy(), &app_handle)
             .await?;
 
         emit_download_progress(
@@ -810,7 +815,7 @@ impl EnvironmentProvider for ClojureEnvironmentProvider {
         Ok(install_path.to_string_lossy().to_string())
     }
 
-    async fn switch_version(&self, version: &str) -> Result<(), String> {
+    async fn switch_version(&self, version: &str, app_handle: AppHandle) -> Result<(), String> {
         info!("切换 Clojure 版本到 {}", version);
 
         if !self.is_version_installed(version) {
@@ -819,7 +824,7 @@ impl EnvironmentProvider for ClojureEnvironmentProvider {
 
         let install_path = self.get_version_install_path(version);
 
-        self.update_plugin_config(version, &install_path.to_string_lossy())
+        self.update_plugin_config(version, &install_path.to_string_lossy(), &app_handle)
             .await?;
 
         info!("成功切换到 Clojure {}", version);

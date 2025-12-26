@@ -414,7 +414,12 @@ impl ScalaEnvironmentProvider {
     }
 
     // 更新配置以使用新版本
-    async fn update_plugin_config(&self, version: &str, install_path: &str) -> Result<(), String> {
+    async fn update_plugin_config(
+        &self,
+        version: &str,
+        install_path: &str,
+        app_handle: &AppHandle,
+    ) -> Result<(), String> {
         use crate::config::{get_app_config_internal, update_app_config};
 
         info!(
@@ -444,7 +449,7 @@ impl ScalaEnvironmentProvider {
             }
         }
 
-        update_app_config(config)
+        update_app_config(config, app_handle.clone())
             .await
             .map_err(|e| format!("保存配置失败: {}", e))?;
 
@@ -622,7 +627,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         }
 
         // 更新插件配置
-        self.update_plugin_config(version, &actual_install_path.to_string_lossy())
+        self.update_plugin_config(version, &actual_install_path.to_string_lossy(), &app_handle)
             .await?;
 
         emit_download_progress(
@@ -638,7 +643,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         Ok(actual_install_path.to_string_lossy().to_string())
     }
 
-    async fn switch_version(&self, version: &str) -> Result<(), String> {
+    async fn switch_version(&self, version: &str, app_handle: AppHandle) -> Result<(), String> {
         info!("切换 Scala 版本到 {}", version);
 
         if !self.is_version_installed(version) {
@@ -659,7 +664,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
             }
         }
 
-        self.update_plugin_config(version, &actual_install_path.to_string_lossy())
+        self.update_plugin_config(version, &actual_install_path.to_string_lossy(), &app_handle)
             .await?;
 
         info!("成功切换到 Scala {}", version);

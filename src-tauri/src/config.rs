@@ -319,11 +319,24 @@ pub fn get_app_config_internal() -> Result<AppConfig, String> {
 }
 
 #[command]
-pub async fn update_app_config(config: AppConfig) -> Result<(), String> {
+pub async fn update_app_config(
+    config: AppConfig,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    use tauri::Emitter;
+
     let mut guard = get_config_manager()?;
     if let Some(config_manager) = guard.as_mut() {
         config_manager.config = config;
-        config_manager.save_config()
+        let result = config_manager.save_config();
+
+        // 保存成功后发送配置更新事件
+        if result.is_ok() {
+            app_handle.emit("config-updated", ()).ok();
+            info!("配置已更新，已发送 config-updated 事件");
+        }
+
+        result
     } else {
         Err("配置管理器未初始化".to_string())
     }

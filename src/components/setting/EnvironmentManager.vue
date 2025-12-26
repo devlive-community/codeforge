@@ -69,8 +69,16 @@
         </div>
       </div>
 
+      <!-- 获取可用版本错误信息 -->
+      <div v-if="environmentInfo?.error" class="mt-6 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+        <div class="flex items-center space-x-2 text-yellow-600 dark:text-yellow-400">
+          <AlertCircle class="w-5 h-5"/>
+          <span class="text-sm">{{ environmentInfo.error }}</span>
+        </div>
+      </div>
+
       <!-- 可用版本 -->
-      <div class="space-y-2 mt-4">
+      <div v-else class="space-y-2 mt-4">
         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">可下载版本</h4>
 
         <!-- 下载进度 -->
@@ -79,7 +87,8 @@
             <div class="flex items-center space-x-2">
               <svg class="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               <span class="text-sm font-medium text-blue-900 dark:text-blue-100">
                 {{ downloadStatusText }}
@@ -130,7 +139,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Folder, CheckCircle, AlertCircle, Download } from 'lucide-vue-next'
+import { AlertCircle, CheckCircle, Download, Folder } from 'lucide-vue-next'
 import { useEnvironmentManager } from '../../composables/useEnvironmentManager'
 import Label from '../../ui/Label.vue'
 import Input from '../../ui/Input.vue'
@@ -158,7 +167,9 @@ const {
 
 // 下载状态文本
 const downloadStatusText = computed(() => {
-  if (!downloadProgress.value) return ''
+  if (!downloadProgress.value) {
+    return ''
+  }
 
   switch (downloadProgress.value.status) {
     case 'downloading':
@@ -178,13 +189,17 @@ const downloadStatusText = computed(() => {
 
 // 显示所有可用版本（包括已安装的）
 const availableVersionsToShow = computed(() => {
-  if (!environmentInfo.value) return []
+  if (!environmentInfo.value) {
+    return []
+  }
   return environmentInfo.value.available_versions
 })
 
 // 格式化文件大小
 const formatSize = (bytes: number) => {
-  if (bytes === 0) return '0 B'
+  if (bytes === 0) {
+    return '0 B'
+  }
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
