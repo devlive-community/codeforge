@@ -42,108 +42,117 @@
       </div>
     </div>
 
+    <!-- 获取可用版本错误信息 -->
+    <div v-if="environmentInfo?.error" class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+      <div class="flex items-center space-x-2 text-yellow-600 dark:text-yellow-400">
+        <AlertCircle class="w-5 h-5"/>
+        <span class="text-sm">{{ environmentInfo.error }}</span>
+      </div>
+    </div>
+
     <!-- 版本管理 -->
     <div v-if="environmentInfo && !isLoading">
-      <!-- 已安装版本 -->
-      <div v-if="environmentInfo.installed_versions.length > 0" class="space-y-2">
-        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">已安装版本</h4>
-        <div class="space-y-2 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-          <div v-for="version in environmentInfo.installed_versions"
-               :key="version.version"
-               class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div class="flex items-center space-x-2">
-              <CheckCircle class="w-4 h-4 text-green-600 dark:text-green-400"/>
-              <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ version.version }}</span>
-              <span v-if="environmentInfo.current_version === version.version"
-                    class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
-                当前
-              </span>
-            </div>
-            <Button v-if="environmentInfo.current_version !== version.version"
-                    type="primary"
-                    size="sm"
-                    @click="handleSwitchVersion(version.version)">
-              切换
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 获取可用版本错误信息 -->
-      <div v-if="environmentInfo?.error" class="mt-6 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-        <div class="flex items-center space-x-2 text-yellow-600 dark:text-yellow-400">
-          <AlertCircle class="w-5 h-5"/>
-          <span class="text-sm">{{ environmentInfo.error }}</span>
-        </div>
-      </div>
-
-      <!-- 可用版本 -->
-      <div v-else class="space-y-2 mt-4">
-        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">可下载版本</h4>
-
-        <!-- 下载进度 -->
-        <div v-if="isDownloading && downloadProgress" class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-2">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <svg class="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span class="text-sm font-medium text-blue-900 dark:text-blue-100">
-                {{ downloadStatusText }}
-              </span>
-            </div>
-            <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">
-              {{ downloadProgress.percentage.toFixed(1) }}%
-            </span>
-          </div>
-          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div class="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
-                 :style="{ width: `${downloadProgress.percentage}%` }">
+      <Tabs v-model="activeVersionTab" type="card" size="sm" :tabs="versionTabs">
+        <!-- 已安装版本 -->
+        <template #installed>
+          <div v-if="environmentInfo.installed_versions.length > 0" class="space-y-2">
+            <div :class="environmentInfo.error ? 'max-h-76' : 'max-h-92'"
+                 class="space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+              <div v-for="version in environmentInfo.installed_versions"
+                   :key="version.version"
+                   class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="flex items-center space-x-2">
+                  <CheckCircle class="w-4 h-4 text-green-600 dark:text-green-400"/>
+                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ version.version }}</span>
+                  <span v-if="environmentInfo.current_version === version.version"
+                        class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                    当前
+                  </span>
+                </div>
+                <Button v-if="environmentInfo.current_version !== version.version"
+                        type="primary"
+                        size="sm"
+                        @click="handleSwitchVersion(version.version)">
+                  切换
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+          <div v-else class="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            暂无已安装版本
+          </div>
+        </template>
 
-        <div class="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-          <div v-for="version in availableVersionsToShow"
-               :key="version.version"
-               class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div class="flex flex-col">
-              <div class="flex items-center space-x-2">
-                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ version.version }}</span>
-                <span v-if="version.is_installed"
-                      class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">
-                  已安装
+        <!-- 可用版本 -->
+        <template #available>
+          <div class="space-y-2">
+            <!-- 下载进度 -->
+            <div v-if="isDownloading && downloadProgress" class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                  <svg class="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span class="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    {{ downloadStatusText }}
+                  </span>
+                </div>
+                <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                  {{ downloadProgress.percentage.toFixed(1) }}%
                 </span>
               </div>
-              <div class="flex items-center space-x-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                <span v-if="version.size">{{ formatSize(version.size) }}</span>
-                <span v-if="version.release_date">{{ formatDate(version.release_date) }}</span>
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                     :style="{ width: `${downloadProgress.percentage}%` }">
+                </div>
               </div>
             </div>
-            <Button v-if="!version.is_installed"
-                    type="primary"
-                    size="sm"
-                    :icon="Download"
-                    :disabled="isDownloading"
-                    @click="handleDownload(version.version)">
-              下载
-            </Button>
+
+            <div :class="environmentInfo.error ? 'max-h-76' : 'max-h-92'"
+                 class="space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+              <div v-for="version in availableVersionsToShow"
+                   :key="version.version"
+                   class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="flex flex-col">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ version.version }}</span>
+                    <span v-if="version.is_installed"
+                          class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">
+                      已安装
+                    </span>
+                  </div>
+                  <div class="flex items-center space-x-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <span v-if="version.size">{{ formatSize(version.size) }}</span>
+                    <span v-if="version.release_date">{{ formatDate(version.release_date) }}</span>
+                  </div>
+                </div>
+                <Button v-if="!version.is_installed"
+                        type="primary"
+                        size="sm"
+                        :icon="Download"
+                        :disabled="isDownloading"
+                        @click="handleDownload(version.version)">
+                  下载
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </template>
+      </Tabs>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { AlertCircle, CheckCircle, Download, Folder } from 'lucide-vue-next'
 import { useEnvironmentManager } from '../../composables/useEnvironmentManager'
 import Label from '../../ui/Label.vue'
 import Input from '../../ui/Input.vue'
 import Button from '../../ui/Button.vue'
+import Tabs from '../../ui/Tabs.vue'
 
 const props = defineProps<{
   language: string
@@ -164,6 +173,12 @@ const {
   downloadAndInstall,
   switchVersion
 } = useEnvironmentManager(props.language)
+
+const activeVersionTab = ref('installed')
+const versionTabs = computed(() => [
+  { key: 'installed', label: '已安装版本' },
+  { key: 'available', label: '可用版本', disabled: !!environmentInfo.value?.error }
+])
 
 // 下载状态文本
 const downloadStatusText = computed(() => {
