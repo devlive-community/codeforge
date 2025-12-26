@@ -18,7 +18,7 @@ pub async fn load_example(
     let manager = plugin_manager.lock().await;
     let plugin = manager
         .get_plugin(&language)
-        .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issus", language))?;
+        .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issues", language))?;
 
     // 获取该语言的文件扩展名
     let file_extension = plugin.get_file_extension();

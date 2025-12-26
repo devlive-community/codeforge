@@ -1,6 +1,6 @@
 use crate::env_manager::{EnvironmentInfo, EnvironmentManager};
 use log::info;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 
 pub type EnvironmentManagerState = Mutex<EnvironmentManager>;
@@ -24,20 +24,37 @@ pub async fn download_and_install_version(
 ) -> Result<String, String> {
     info!("下载并安装 {} 版本 {}", language, version);
     let manager = env_manager.lock().await;
-    manager
-        .download_and_install_version(&language, &version, app_handle)
-        .await
+    let result = manager
+        .download_and_install_version(&language, &version, app_handle.clone())
+        .await;
+
+    if result.is_ok() {
+        // 发送配置更新事件通知前端刷新配置
+        app_handle.emit("config-updated", ()).ok();
+        info!("已发送配置更新事件");
+    }
+
+    result
 }
 
 #[tauri::command]
 pub async fn switch_environment_version(
     language: String,
     version: String,
+    app_handle: AppHandle,
     env_manager: State<'_, EnvironmentManagerState>,
 ) -> Result<(), String> {
     info!("切换 {} 到版本 {}", language, version);
     let manager = env_manager.lock().await;
-    manager.switch_version(&language, &version).await
+    let result = manager.switch_version(&language, &version).await;
+
+    if result.is_ok() {
+        // 发送配置更新事件通知前端刷新配置
+        app_handle.emit("config-updated", ()).ok();
+        info!("已发送配置更新事件");
+    }
+
+    result
 }
 
 #[tauri::command]

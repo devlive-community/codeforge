@@ -8,7 +8,6 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tauri::AppHandle;
 
-// Scala 版本信息（从 GitHub API 获取）
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct GithubRelease {
     tag_name: String,
@@ -24,26 +23,24 @@ struct GithubAsset {
     size: u64,
 }
 
-// 缓存数据结构
 #[derive(Debug, Deserialize, Serialize)]
 struct CachedReleases {
     releases: Vec<GithubRelease>,
     cached_at: SystemTime,
 }
 
-pub struct ScalaEnvironmentProvider {
+pub struct ClojureEnvironmentProvider {
     install_dir: PathBuf,
     cache_file: PathBuf,
 }
 
-impl ScalaEnvironmentProvider {
+impl ClojureEnvironmentProvider {
     pub fn new() -> Self {
         let install_dir = Self::get_default_install_dir();
         let cache_file = install_dir.join("releases_cache.json");
 
-        // 确保安装目录存在
         if let Err(e) = std::fs::create_dir_all(&install_dir) {
-            error!("创建 Scala 安装目录失败: {}", e);
+            error!("创建 Clojure 安装目录失败: {}", e);
         }
 
         Self {
@@ -54,34 +51,30 @@ impl ScalaEnvironmentProvider {
 
     fn get_default_install_dir() -> PathBuf {
         let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        home_dir.join(".codeforge").join("scala")
+        home_dir.join(".codeforge").join("clojure")
     }
 
-    // 从缓存读取版本列表
     fn read_cache(&self) -> Option<Vec<GithubRelease>> {
         if !self.cache_file.exists() {
             return None;
         }
 
         match std::fs::read_to_string(&self.cache_file) {
-            Ok(content) => {
-                match serde_json::from_str::<CachedReleases>(&content) {
-                    Ok(cached) => {
-                        // 检查缓存是否过期（1小时）
-                        if let Ok(elapsed) = SystemTime::now().duration_since(cached.cached_at) {
-                            if elapsed < Duration::from_secs(3600) {
-                                info!("使用缓存的 Scala 版本列表（缓存时间: {:?}）", elapsed);
-                                return Some(cached.releases);
-                            } else {
-                                info!("缓存已过期（{:?}），将重新获取", elapsed);
-                            }
+            Ok(content) => match serde_json::from_str::<CachedReleases>(&content) {
+                Ok(cached) => {
+                    if let Ok(elapsed) = SystemTime::now().duration_since(cached.cached_at) {
+                        if elapsed < Duration::from_secs(3600) {
+                            info!("使用缓存的 Clojure 版本列表（缓存时间: {:?}）", elapsed);
+                            return Some(cached.releases);
+                        } else {
+                            info!("缓存已过期（{:?}），将重新获取", elapsed);
                         }
                     }
-                    Err(e) => {
-                        warn!("解析缓存文件失败: {}", e);
-                    }
                 }
-            }
+                Err(e) => {
+                    warn!("解析缓存文件失败: {}", e);
+                }
+            },
             Err(e) => {
                 warn!("读取缓存文件失败: {}", e);
             }
@@ -90,7 +83,6 @@ impl ScalaEnvironmentProvider {
         None
     }
 
-    // 写入缓存
     fn write_cache(&self, releases: &[GithubRelease]) {
         let cached = CachedReleases {
             releases: releases.to_vec(),
@@ -102,7 +94,7 @@ impl ScalaEnvironmentProvider {
                 if let Err(e) = std::fs::write(&self.cache_file, content) {
                     warn!("写入缓存文件失败: {}", e);
                 } else {
-                    info!("已缓存 Scala 版本列表");
+                    info!("已缓存 Clojure 版本列表");
                 }
             }
             Err(e) => {
@@ -111,48 +103,33 @@ impl ScalaEnvironmentProvider {
         }
     }
 
-    // 检测操作系统和架构，返回合适的下载文件模式
     fn get_download_pattern() -> &'static str {
-        if cfg!(target_os = "windows") {
-            "x86_64-pc-win32.zip"
-        } else if cfg!(target_os = "macos") {
-            if cfg!(target_arch = "aarch64") {
-                "aarch64-apple-darwin.tar.gz"
-            } else {
-                "x86_64-apple-darwin.tar.gz"
-            }
-        } else {
-            "x86_64-pc-linux.tar.gz"
-        }
+        // Clojure 工具包是跨平台的，文件名格式为 clojure-tools-{version}.tar.gz
+        "clojure-tools-"
     }
 
-    // 从 GitHub Releases 获取版本列表（支持缓存和 Token）
     async fn fetch_github_releases(&self) -> Result<Vec<GithubRelease>, String> {
-        // 先尝试从缓存读取
         if let Some(cached_releases) = self.read_cache() {
             return Ok(cached_releases);
         }
 
-        let url = "https://api.github.com/repos/scala/scala3/releases?per_page=20";
+        let url = "https://api.github.com/repos/clojure/brew-install/releases?per_page=20";
 
-        info!("从 GitHub API 获取 Scala 版本列表: {}", url);
+        info!("从 GitHub API 获取 Clojure 版本列表: {}", url);
 
         let client = reqwest::Client::builder()
             .user_agent("CodeForge")
             .build()
             .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
 
-        // 构建请求，如果有 GitHub Token 则添加认证头
         let mut request = client.get(url);
 
-        // 尝试从环境变量获取 GitHub Token
         if let Ok(token) = std::env::var("GITHUB_TOKEN") {
             info!("使用 GITHUB_TOKEN 进行认证");
             request = request.header("Authorization", format!("token {}", token));
         }
 
         let response = request.send().await.map_err(|e| {
-            // 如果请求失败，尝试使用缓存（即使过期）
             if let Some(_cached_releases) = self.read_cache_ignore_expiry() {
                 warn!("GitHub API 请求失败，使用过期缓存: {}", e);
                 return format!("GitHub API 请求失败，已使用缓存数据: {}", e);
@@ -162,12 +139,10 @@ impl ScalaEnvironmentProvider {
 
         let status = response.status();
 
-        // 处理 API 限流
         if status.as_u16() == 403 || status.as_u16() == 429 {
             let error_msg = if let Ok(body) = response.text().await {
                 if body.contains("rate limit") {
                     warn!("GitHub API 限流，尝试使用缓存");
-                    // 尝试使用缓存（即使过期）
                     if let Some(cached_releases) = self.read_cache_ignore_expiry() {
                         return Ok(cached_releases);
                     }
@@ -193,15 +168,13 @@ impl ScalaEnvironmentProvider {
             .await
             .map_err(|e| format!("解析 GitHub API 响应失败: {}", e))?;
 
-        info!("成功获取 {} 个 Scala 版本", releases.len());
+        info!("成功获取 {} 个 Clojure 版本", releases.len());
 
-        // 缓存结果
         self.write_cache(&releases);
 
         Ok(releases)
     }
 
-    // 读取缓存（忽略过期时间）- 用于 API 失败时的降级方案
     fn read_cache_ignore_expiry(&self) -> Option<Vec<GithubRelease>> {
         if !self.cache_file.exists() {
             return None;
@@ -210,7 +183,7 @@ impl ScalaEnvironmentProvider {
         match std::fs::read_to_string(&self.cache_file) {
             Ok(content) => match serde_json::from_str::<CachedReleases>(&content) {
                 Ok(cached) => {
-                    info!("使用缓存的 Scala 版本列表（忽略过期时间）");
+                    info!("使用缓存的 Clojure 版本列表（忽略过期时间）");
                     Some(cached.releases)
                 }
                 Err(e) => {
@@ -225,32 +198,29 @@ impl ScalaEnvironmentProvider {
         }
     }
 
-    // 获取指定版本的安装路径
     fn get_version_install_path(&self, version: &str) -> PathBuf {
         self.install_dir.join(version)
     }
 
-    // 检查版本是否已安装
     fn is_version_installed(&self, version: &str) -> bool {
         let install_path = self.get_version_install_path(version);
         if !install_path.exists() {
             return false;
         }
 
-        // 检查是否有包含 bin 目录的子目录
-        if let Ok(entries) = std::fs::read_dir(&install_path) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() && path.join("bin").exists() {
-                    return true;
-                }
-            }
+        // Clojure 安装后的 bin 目录结构
+        let bin_path = install_path.join("bin");
+        if !bin_path.exists() {
+            return false;
         }
 
-        false
+        // 检查 clojure 和 clj 脚本是否存在
+        let clojure_bin = bin_path.join("clojure");
+        let clj_bin = bin_path.join("clj");
+
+        clojure_bin.exists() && clj_bin.exists()
     }
 
-    // 下载文件并显示进度
     async fn download_file(
         &self,
         url: &str,
@@ -265,7 +235,7 @@ impl ScalaEnvironmentProvider {
             .build()
             .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
 
-        let response = download_with_fallback(&client, url, "scala", version).await?;
+        let response = download_with_fallback(&client, url, "clojure", version).await?;
 
         if !response.status().is_success() {
             return Err(format!("下载失败: HTTP {}", response.status()));
@@ -276,14 +246,13 @@ impl ScalaEnvironmentProvider {
 
         emit_download_progress(
             &app_handle,
-            "scala",
+            "clojure",
             version,
             0,
             total_size,
             DownloadStatus::Downloading,
         );
 
-        // 创建目标文件
         let mut file = std::fs::File::create(dest).map_err(|e| format!("创建文件失败: {}", e))?;
 
         let mut downloaded: u64 = 0;
@@ -299,11 +268,10 @@ impl ScalaEnvironmentProvider {
 
             downloaded += chunk.len() as u64;
 
-            // 每下载 1MB 发送一次进度更新
             if downloaded % (1024 * 1024) == 0 || downloaded == total_size {
                 emit_download_progress(
                     &app_handle,
-                    "scala",
+                    "clojure",
                     version,
                     downloaded,
                     total_size,
@@ -316,7 +284,6 @@ impl ScalaEnvironmentProvider {
         Ok(())
     }
 
-    // 解压文件
     async fn extract_archive(
         &self,
         archive_path: &PathBuf,
@@ -332,7 +299,7 @@ impl ScalaEnvironmentProvider {
 
         emit_download_progress(
             &app_handle,
-            "scala",
+            "clojure",
             version,
             0,
             0,
@@ -341,58 +308,10 @@ impl ScalaEnvironmentProvider {
 
         std::fs::create_dir_all(dest_dir).map_err(|e| format!("创建目录失败: {}", e))?;
 
-        if archive_path.extension().and_then(|s| s.to_str()) == Some("zip") {
-            // 解压 ZIP 文件
-            self.extract_zip(archive_path, dest_dir)?;
-        } else {
-            // 解压 tar.gz 文件
-            self.extract_tar_gz(archive_path, dest_dir)?;
-        }
+        // Clojure 在所有平台都使用 tar.gz 格式
+        self.extract_tar_gz(archive_path, dest_dir)?;
 
         info!("解压完成");
-        Ok(())
-    }
-
-    fn extract_zip(&self, archive_path: &PathBuf, dest_dir: &Path) -> Result<(), String> {
-        use zip::ZipArchive;
-
-        let file =
-            std::fs::File::open(archive_path).map_err(|e| format!("打开压缩文件失败: {}", e))?;
-
-        let mut archive = ZipArchive::new(file).map_err(|e| format!("读取 ZIP 文件失败: {}", e))?;
-
-        for i in 0..archive.len() {
-            let mut file = archive
-                .by_index(i)
-                .map_err(|e| format!("读取 ZIP 条目失败: {}", e))?;
-
-            let outpath = match file.enclosed_name() {
-                Some(path) => dest_dir.join(path),
-                None => continue,
-            };
-
-            if file.name().ends_with('/') {
-                std::fs::create_dir_all(&outpath).map_err(|e| format!("创建目录失败: {}", e))?;
-            } else {
-                if let Some(p) = outpath.parent() {
-                    std::fs::create_dir_all(p).map_err(|e| format!("创建目录失败: {}", e))?;
-                }
-                let mut outfile =
-                    std::fs::File::create(&outpath).map_err(|e| format!("创建文件失败: {}", e))?;
-                std::io::copy(&mut file, &mut outfile)
-                    .map_err(|e| format!("解压文件失败: {}", e))?;
-            }
-
-            // Unix 权限
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                if let Some(mode) = file.unix_mode() {
-                    std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode)).ok();
-                }
-            }
-        }
-
         Ok(())
     }
 
@@ -413,33 +332,103 @@ impl ScalaEnvironmentProvider {
         Ok(())
     }
 
-    // 更新配置以使用新版本
+    // 组织 Clojure 安装目录结构
+    fn organize_installation(
+        &self,
+        temp_dir: &Path,
+        install_path: &Path,
+    ) -> Result<(), String> {
+        std::fs::create_dir_all(install_path).map_err(|e| format!("创建安装目录失败: {}", e))?;
+
+        let tools_dir = temp_dir.join("clojure-tools");
+        if !tools_dir.exists() {
+            return Err("解压后未找到 clojure-tools 目录".to_string());
+        }
+
+        // 创建 bin 和 libexec 目录
+        let bin_dir = install_path.join("bin");
+        let libexec_dir = install_path.join("libexec");
+        std::fs::create_dir_all(&bin_dir).map_err(|e| format!("创建 bin 目录失败: {}", e))?;
+        std::fs::create_dir_all(&libexec_dir)
+            .map_err(|e| format!("创建 libexec 目录失败: {}", e))?;
+
+        // 移动脚本文件到 bin 目录，并替换 PREFIX 占位符
+        for script in &["clojure", "clj"] {
+            let src = tools_dir.join(script);
+            let dst = bin_dir.join(script);
+            if src.exists() {
+                // 读取脚本内容
+                let content = std::fs::read_to_string(&src)
+                    .map_err(|e| format!("读取 {} 失败: {}", script, e))?;
+
+                // 替换 PREFIX 占位符为实际的安装路径
+                let install_dir_str = install_path.to_string_lossy();
+                let modified_content = content.replace(
+                    "install_dir=PREFIX",
+                    &format!("install_dir={}", install_dir_str),
+                );
+
+                // 写入修改后的内容
+                std::fs::write(&dst, modified_content)
+                    .map_err(|e| format!("写入 {} 失败: {}", script, e))?;
+
+                // 设置可执行权限
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    std::fs::set_permissions(&dst, std::fs::Permissions::from_mode(0o755))
+                        .map_err(|e| format!("设置 {} 权限失败: {}", script, e))?;
+                }
+            }
+        }
+
+        // 移动 jar 文件和配置文件到 libexec 目录
+        let entries = std::fs::read_dir(&tools_dir)
+            .map_err(|e| format!("读取 clojure-tools 目录失败: {}", e))?;
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+
+            // 跳过脚本文件和 install.sh
+            if file_name == "clojure"
+                || file_name == "clj"
+                || file_name == "install.sh"
+                || file_name.ends_with(".1")
+            {
+                continue;
+            }
+
+            // 复制其他文件到 libexec
+            if path.is_file() {
+                let dst = libexec_dir.join(&file_name);
+                std::fs::copy(&path, &dst)
+                    .map_err(|e| format!("复制 {} 失败: {}", file_name, e))?;
+            }
+        }
+
+        info!("Clojure 安装目录组织完成: {}", install_path.display());
+        Ok(())
+    }
+
     async fn update_plugin_config(&self, version: &str, install_path: &str) -> Result<(), String> {
         use crate::config::{get_app_config_internal, update_app_config};
 
         info!(
-            "更新 Scala 插件配置: 版本={}, 路径={}",
+            "更新 Clojure 插件配置: 版本={}, 路径={}",
             version, install_path
         );
 
         let mut config = get_app_config_internal().map_err(|e| format!("获取配置失败: {}", e))?;
 
         if let Some(ref mut plugins) = config.plugins {
-            if let Some(scala_plugin) = plugins.iter_mut().find(|p| p.language == "scala") {
-                // execute_home 应该是包含 bin 目录的父目录
-                scala_plugin.execute_home = Some(install_path.to_string());
-
-                // 根据操作系统设置 run_command
-                let run_cmd = if cfg!(target_os = "windows") {
-                    "bin/scala.bat $filename"
-                } else {
-                    "bin/scala $filename"
-                };
-                scala_plugin.run_command = Some(String::from(run_cmd));
+            if let Some(clojure_plugin) = plugins.iter_mut().find(|p| p.language == "clojure") {
+                clojure_plugin.execute_home = Some(install_path.to_string());
+                clojure_plugin.run_command = Some(String::from("bin/clojure $filename"));
 
                 info!(
-                    "已更新 Scala 插件配置: execute_home={}, run_command={}",
-                    install_path, run_cmd
+                    "已更新 Clojure 插件配置: execute_home={}, run_command=bin/clojure $filename",
+                    install_path
                 );
             }
         }
@@ -453,9 +442,9 @@ impl ScalaEnvironmentProvider {
 }
 
 #[async_trait::async_trait]
-impl EnvironmentProvider for ScalaEnvironmentProvider {
+impl EnvironmentProvider for ClojureEnvironmentProvider {
     fn get_language(&self) -> &'static str {
-        "scala"
+        "clojure"
     }
 
     async fn fetch_available_versions(&self) -> Result<Vec<EnvironmentVersion>, String> {
@@ -465,27 +454,16 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         let mut versions = Vec::new();
 
         for release in releases {
-            // 查找匹配当前平台的资源
             if let Some(asset) = release.assets.iter().find(|a| a.name.contains(pattern)) {
                 let version = release.tag_name.trim_start_matches('v').to_string();
                 let is_installed = self.is_version_installed(&version);
 
-                // 如果已安装，查找实际的包含 bin 目录的路径
                 let install_path = if is_installed {
-                    let version_dir = self.get_version_install_path(&version);
-                    let mut actual_path = version_dir.clone();
-
-                    if let Ok(entries) = std::fs::read_dir(&version_dir) {
-                        for entry in entries.flatten() {
-                            let path = entry.path();
-                            if path.is_dir() && path.join("bin").exists() {
-                                actual_path = path;
-                                break;
-                            }
-                        }
-                    }
-
-                    Some(actual_path.to_string_lossy().to_string())
+                    Some(
+                        self.get_version_install_path(&version)
+                            .to_string_lossy()
+                            .to_string(),
+                    )
                 } else {
                     None
                 };
@@ -524,22 +502,10 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
                     .to_string();
 
                 if self.is_version_installed(&version) {
-                    // 查找实际的包含 bin 目录的路径
-                    let mut actual_install_path = path.clone();
-                    if let Ok(sub_entries) = std::fs::read_dir(&path) {
-                        for sub_entry in sub_entries.flatten() {
-                            let sub_path = sub_entry.path();
-                            if sub_path.is_dir() && sub_path.join("bin").exists() {
-                                actual_install_path = sub_path;
-                                break;
-                            }
-                        }
-                    }
-
                     installed.push(EnvironmentVersion {
                         version: version.clone(),
                         download_url: String::new(),
-                        install_path: Some(actual_install_path.to_string_lossy().to_string()),
+                        install_path: Some(path.to_string_lossy().to_string()),
                         is_installed: true,
                         size: None,
                         release_date: None,
@@ -556,30 +522,27 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         version: &str,
         app_handle: AppHandle,
     ) -> Result<String, String> {
-        info!("开始下载并安装 Scala {}", version);
+        info!("开始下载并安装 Clojure {}", version);
 
-        // 检查是否已安装
         if self.is_version_installed(version) {
-            return Err(format!("Scala {} 已经安装", version));
+            return Err(format!("Clojure {} 已经安装", version));
         }
 
         emit_download_progress(
             &app_handle,
-            "scala",
+            "clojure",
             version,
             0,
             0,
             DownloadStatus::Downloading,
         );
 
-        // 获取可用版本
         let available_versions = self.fetch_available_versions().await?;
         let version_info = available_versions
             .iter()
             .find(|v| v.version == version)
             .ok_or_else(|| format!("未找到版本: {}", version))?;
 
-        // 下载文件
         let download_url = &version_info.download_url;
         let file_name = download_url
             .split('/')
@@ -590,54 +553,47 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         self.download_file(download_url, &temp_file, app_handle.clone(), version)
             .await?;
 
-        // 解压到安装目录
         let install_path = self.get_version_install_path(version);
-        self.extract_archive(&temp_file, &install_path, app_handle.clone(), version)
+        let temp_extract_dir = std::env::temp_dir().join(format!("clojure-tools-{}", version));
+
+        self.extract_archive(&temp_file, &temp_extract_dir, app_handle.clone(), version)
             .await?;
 
-        // 清理临时文件
         std::fs::remove_file(&temp_file).ok();
 
         emit_download_progress(
             &app_handle,
-            "scala",
+            "clojure",
             version,
             0,
             0,
             DownloadStatus::Installing,
         );
 
-        // 查找解压后的实际目录（可能包含版本号前缀）
-        let mut actual_install_path = install_path.clone();
-        if let Ok(entries) = std::fs::read_dir(&install_path) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() && path.join("bin").exists() {
-                    actual_install_path = path;
-                    break;
-                }
-            }
-        }
+        // 组织安装目录结构
+        self.organize_installation(&temp_extract_dir, &install_path)?;
 
-        // 更新插件配置
-        self.update_plugin_config(version, &actual_install_path.to_string_lossy())
+        // 清理临时解压目录
+        std::fs::remove_dir_all(&temp_extract_dir).ok();
+
+        self.update_plugin_config(version, &install_path.to_string_lossy())
             .await?;
 
         emit_download_progress(
             &app_handle,
-            "scala",
+            "clojure",
             version,
             0,
             0,
             DownloadStatus::Completed,
         );
 
-        info!("Scala {} 安装成功", version);
-        Ok(actual_install_path.to_string_lossy().to_string())
+        info!("Clojure {} 安装成功", version);
+        Ok(install_path.to_string_lossy().to_string())
     }
 
     async fn switch_version(&self, version: &str) -> Result<(), String> {
-        info!("切换 Scala 版本到 {}", version);
+        info!("切换 Clojure 版本到 {}", version);
 
         if !self.is_version_installed(version) {
             return Err(format!("版本 {} 未安装", version));
@@ -645,22 +601,10 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
 
         let install_path = self.get_version_install_path(version);
 
-        // 查找实际的安装目录
-        let mut actual_install_path = install_path.clone();
-        if let Ok(entries) = std::fs::read_dir(&install_path) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() && path.join("bin").exists() {
-                    actual_install_path = path;
-                    break;
-                }
-            }
-        }
-
-        self.update_plugin_config(version, &actual_install_path.to_string_lossy())
+        self.update_plugin_config(version, &install_path.to_string_lossy())
             .await?;
 
-        info!("成功切换到 Scala {}", version);
+        info!("成功切换到 Clojure {}", version);
         Ok(())
     }
 
@@ -670,19 +614,14 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         let config = get_app_config_internal().map_err(|e| format!("获取配置失败: {}", e))?;
 
         if let Some(plugins) = config.plugins {
-            if let Some(scala_plugin) = plugins.iter().find(|p| p.language == "scala") {
-                if let Some(ref execute_home) = scala_plugin.execute_home {
-                    // 从路径中提取版本号
-                    // execute_home 格式: ~/.codeforge/scala/3.8.0-RC4/scala3-3.8.0-RC4-aarch64-apple-darwin
-                    // 我们需要提取 3.8.0-RC4
+            if let Some(clojure_plugin) = plugins.iter().find(|p| p.language == "clojure") {
+                if let Some(ref execute_home) = clojure_plugin.execute_home {
                     let path = PathBuf::from(execute_home);
 
-                    // 检查路径是否在安装目录下
                     if let Ok(relative) = path.strip_prefix(&self.install_dir) {
-                        // 获取第一个路径组件（版本号）
                         if let Some(version_component) = relative.components().next() {
                             if let Some(version) = version_component.as_os_str().to_str() {
-                                info!("当前 Scala 版本: {}", version);
+                                info!("当前 Clojure 版本: {}", version);
                                 return Ok(Some(version.to_string()));
                             }
                         }

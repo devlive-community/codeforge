@@ -22,7 +22,7 @@ use crate::env_commands::{
     get_supported_environment_languages, switch_environment_version,
 };
 use crate::env_manager::EnvironmentManager;
-use crate::env_providers::ScalaEnvironmentProvider;
+use crate::env_providers::{ClojureEnvironmentProvider, ScalaEnvironmentProvider};
 use crate::execution::{
     ExecutionHistory, PluginManagerState as ExecutionPluginManagerState, clear_execution_history,
     execute_code, get_execution_history, is_execution_running, stop_execution,
@@ -45,6 +45,7 @@ fn main() {
 
     // 初始化环境管理器
     let mut env_manager = EnvironmentManager::new();
+    env_manager.register_provider(Box::new(ClojureEnvironmentProvider::new()));
     env_manager.register_provider(Box::new(ScalaEnvironmentProvider::new()));
 
     tauri::Builder::default()

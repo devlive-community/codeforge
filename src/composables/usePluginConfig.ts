@@ -1,5 +1,6 @@
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { debounce } from 'lodash-es'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { useToast } from '../plugins/toast'
@@ -29,6 +30,8 @@ export function usePluginConfig(emit?: any)
     const globalConfig = ref<any>(null)
     const isInitialLoad = ref(true)
     const isSaving = ref(false)
+
+    let unlistenConfigUpdate: (() => void) | null = null
 
     const pluginConfig = ref<PluginConfig>({
         enabled: true,
@@ -265,6 +268,21 @@ export function usePluginConfig(emit?: any)
         if (newPlugin && newPlugin !== oldPlugin) {
             console.log('切换插件:', oldPlugin, '->', newPlugin)
             handleTabChange()
+        }
+    })
+
+    // 监听配置更新事件
+    onMounted(async () => {
+        unlistenConfigUpdate = await listen('config-updated', async () => {
+            console.log('收到配置更新事件，重新加载配置')
+            await getGlobalConfig()
+        })
+    })
+
+    // 清理事件监听
+    onUnmounted(() => {
+        if (unlistenConfigUpdate) {
+            unlistenConfigUpdate()
         }
     })
 

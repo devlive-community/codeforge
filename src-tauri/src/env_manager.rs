@@ -98,7 +98,7 @@ impl EnvironmentManager {
         let provider = self
             .providers
             .get(language)
-            .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issus", language))?;
+            .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issues", language))?;
 
         info!("获取 {} 环境信息", language);
 
@@ -126,7 +126,7 @@ impl EnvironmentManager {
         let provider = self
             .providers
             .get(language)
-            .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issus", language))?;
+            .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issues", language))?;
 
         info!("开始下载并安装 {} 版本 {}", language, version);
         provider.download_and_install(version, app_handle).await
@@ -136,7 +136,7 @@ impl EnvironmentManager {
         let provider = self
             .providers
             .get(language)
-            .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issus", language))?;
+            .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issues", language))?;
 
         info!("切换 {} 到版本 {}", language, version);
         provider.switch_version(version).await
@@ -174,4 +174,85 @@ pub fn emit_download_progress(
     if let Err(e) = app_handle.emit("env-download-progress", progress) {
         error!("发送下载进度事件失败: {}", e);
     }
+}
+
+// 将 GitHub 下载 URL 转换为 CDN 镜像 URL
+pub fn convert_to_cdn_url(
+    original_url: &str,
+    language: &str,
+    version: &str,
+) -> Result<String, String> {
+    use crate::config::get_app_config_internal;
+
+    let config = get_app_config_internal().map_err(|e| format!("获取配置失败: {}", e))?;
+
+    let mirror_config = config.environment_mirror.as_ref();
+    let enabled = mirror_config.and_then(|m| m.enabled).unwrap_or(false);
+
+    if !enabled {
+        return Ok(original_url.to_string());
+    }
+
+    let base_url = mirror_config
+        .and_then(|m| m.base_url.as_ref())
+        .ok_or_else(|| "CDN 基础 URL 未配置".to_string())?;
+
+    // 从原始 URL 中提取文件名
+    let file_name = original_url
+        .split('/')
+        .last()
+        .ok_or_else(|| "无效的下载 URL".to_string())?;
+
+    // 构建 CDN URL: {base_url}/{language}/{version}/{filename}
+    let cdn_url = format!(
+        "{}/{}/{}/{}",
+        base_url.trim_end_matches('/'),
+        language,
+        version,
+        file_name
+    );
+
+    info!("转换下载 URL: {} -> {}", original_url, cdn_url);
+    Ok(cdn_url)
+}
+
+// 尝试从 CDN 下载，失败则回退到原始 URL
+pub async fn download_with_fallback(
+    client: &reqwest::Client,
+    original_url: &str,
+    language: &str,
+    version: &str,
+) -> Result<reqwest::Response, String> {
+    // 首先尝试从 CDN 下载
+    match convert_to_cdn_url(original_url, language, version) {
+        Ok(cdn_url) if cdn_url != original_url => {
+            info!("尝试从 CDN 下载: {}", cdn_url);
+            match client.get(&cdn_url).send().await {
+                Ok(response) if response.status().is_success() => {
+                    info!("CDN 下载成功");
+                    return Ok(response);
+                }
+                Ok(response) => {
+                    info!("CDN 下载失败 (HTTP {}), 回退到原始 URL", response.status());
+                }
+                Err(e) => {
+                    info!("CDN 下载失败 ({}), 回退到原始 URL", e);
+                }
+            }
+        }
+        Ok(_) => {
+            info!("CDN 镜像未启用，使用原始 URL");
+        }
+        Err(e) => {
+            info!("CDN URL 转换失败 ({}), 使用原始 URL", e);
+        }
+    }
+
+    // 回退到原始 URL
+    info!("从原始 URL 下载: {}", original_url);
+    client
+        .get(original_url)
+        .send()
+        .await
+        .map_err(|e| format!("下载失败: {}", e))
 }
