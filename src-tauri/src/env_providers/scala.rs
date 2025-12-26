@@ -1,3 +1,4 @@
+use super::metadata::{Metadata, fetch_metadata_from_cdn, is_cdn_enabled, is_fallback_enabled};
 use crate::env_manager::{
     DownloadStatus, EnvironmentProvider, EnvironmentVersion, download_with_fallback,
     emit_download_progress,
@@ -250,6 +251,51 @@ impl ScalaEnvironmentProvider {
         false
     }
 
+    // 将 CDN metadata 转换为 EnvironmentVersion 列表
+    fn parse_metadata_to_versions(
+        &self,
+        metadata: Metadata,
+    ) -> Result<Vec<EnvironmentVersion>, String> {
+        let mut versions = Vec::new();
+
+        for release in metadata.releases {
+            let version = release.version.clone();
+            let is_installed = self.is_version_installed(&version);
+
+            // 如果已安装，查找实际的包含 bin 目录的路径
+            let install_path = if is_installed {
+                let version_dir = self.get_version_install_path(&version);
+                let mut actual_path = version_dir.clone();
+
+                if let Ok(entries) = std::fs::read_dir(&version_dir) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.is_dir() && path.join("bin").exists() {
+                            actual_path = path;
+                            break;
+                        }
+                    }
+                }
+
+                Some(actual_path.to_string_lossy().to_string())
+            } else {
+                None
+            };
+
+            versions.push(EnvironmentVersion {
+                version: version.clone(),
+                download_url: release.download_url.clone(),
+                fallback_url: Some(release.github_url.clone()),
+                install_path,
+                is_installed,
+                size: Some(release.size),
+                release_date: Some(release.published_at.clone()),
+            });
+        }
+
+        Ok(versions)
+    }
+
     // 下载文件并显示进度
     async fn download_file(
         &self,
@@ -464,6 +510,28 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
     }
 
     async fn fetch_available_versions(&self) -> Result<Vec<EnvironmentVersion>, String> {
+        // 检查 CDN 是否启用
+        if is_cdn_enabled() {
+            match fetch_metadata_from_cdn("scala").await {
+                Ok(metadata) => {
+                    info!("使用 CDN metadata 获取版本列表");
+                    return self.parse_metadata_to_versions(metadata);
+                }
+                Err(e) => {
+                    warn!("CDN metadata 获取失败: {}", e);
+
+                    // 检查是否启用 fallback
+                    if !is_fallback_enabled() {
+                        return Err(format!("CDN metadata 获取失败，未启用自动回退: {}", e));
+                    }
+
+                    info!("fallback 已启用，回退到 GitHub API");
+                }
+            }
+        } else {
+            info!("CDN 未启用，使用 GitHub API");
+        }
+
         let releases = self.fetch_github_releases().await?;
         let pattern = Self::get_download_pattern();
 
