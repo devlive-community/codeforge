@@ -203,6 +203,7 @@ export function useLanguageManager(
         getLanguageDisplayName,
         handleLanguageChange,
         refreshLanguageList,
+        refreshEnvInfo,
         initialize,
         getCurrentPluginConfig,
         getCurrentConsoleType

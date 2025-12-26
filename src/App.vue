@@ -52,7 +52,7 @@
     </div>
 
     <!-- 状态栏 -->
-    <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length"/>
+    <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
@@ -115,6 +115,7 @@ const {
   getCurrentConsoleType,
   handleLanguageChange,
   refreshLanguageList,
+  refreshEnvInfo,
   initialize
 } = useLanguageManager(code, clearOutput, toast)
 
