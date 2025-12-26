@@ -26,6 +26,7 @@ pub struct EditorConfig {
 pub struct EnvironmentMirrorConfig {
     pub enabled: Option<bool>,
     pub base_url: Option<String>,
+    pub fallback_enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,6 +61,7 @@ impl Default for AppConfig {
             environment_mirror: Some(EnvironmentMirrorConfig {
                 enabled: Some(true),
                 base_url: Some("http://cdn.global.devlive.top".to_string()),
+                fallback_enabled: Some(false),
             }),
         }
     }
@@ -129,6 +131,7 @@ impl ConfigManager {
                             config.environment_mirror = Some(EnvironmentMirrorConfig {
                                 enabled: Some(true),
                                 base_url: Some("http://cdn.global.devlive.top".to_string()),
+                                fallback_enabled: Some(false),
                             });
                             println!("读取配置 -> 添加默认 environment_mirror 配置");
                         }
@@ -241,6 +244,7 @@ impl ConfigManager {
             environment_mirror: Some(EnvironmentMirrorConfig {
                 enabled: Some(true),
                 base_url: Some("http://cdn.global.devlive.top".to_string()),
+                fallback_enabled: Some(false),
             }),
         }
     }

@@ -10,6 +10,7 @@ use tauri::{AppHandle, Emitter};
 pub struct EnvironmentVersion {
     pub version: String,
     pub download_url: String,
+    pub fallback_url: Option<String>, // 备用下载地址（如 GitHub URL）
     pub install_path: Option<String>,
     pub is_installed: bool,
     pub size: Option<u64>,
@@ -223,6 +224,15 @@ pub async fn download_with_fallback(
     language: &str,
     version: &str,
 ) -> Result<reqwest::Response, String> {
+    use crate::config::get_app_config_internal;
+
+    // 检查是否启用自动回退
+    let fallback_enabled = get_app_config_internal()
+        .ok()
+        .and_then(|config| config.environment_mirror)
+        .and_then(|mirror| mirror.fallback_enabled)
+        .unwrap_or(false);
+
     // 首先尝试从 CDN 下载
     match convert_to_cdn_url(original_url, language, version) {
         Ok(cdn_url) if cdn_url != original_url => {
@@ -233,10 +243,19 @@ pub async fn download_with_fallback(
                     return Ok(response);
                 }
                 Ok(response) => {
-                    info!("CDN 下载失败 (HTTP {}), 回退到原始 URL", response.status());
+                    let status = response.status();
+                    if fallback_enabled {
+                        info!("CDN 下载失败 (HTTP {}), 回退到原始 URL", status);
+                    } else {
+                        return Err(format!("CDN 下载失败 (HTTP {}), 未启用自动回退", status));
+                    }
                 }
                 Err(e) => {
-                    info!("CDN 下载失败 ({}), 回退到原始 URL", e);
+                    if fallback_enabled {
+                        info!("CDN 下载失败 ({}), 回退到原始 URL", e);
+                    } else {
+                        return Err(format!("CDN 下载失败 ({}), 未启用自动回退", e));
+                    }
                 }
             }
         }

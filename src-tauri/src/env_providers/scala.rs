@@ -493,6 +493,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
                 versions.push(EnvironmentVersion {
                     version: version.clone(),
                     download_url: asset.browser_download_url.clone(),
+                    fallback_url: None,
                     install_path,
                     is_installed,
                     size: Some(asset.size),
@@ -539,6 +540,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
                     installed.push(EnvironmentVersion {
                         version: version.clone(),
                         download_url: String::new(),
+                        fallback_url: None,
                         install_path: Some(actual_install_path.to_string_lossy().to_string()),
                         is_installed: true,
                         size: None,

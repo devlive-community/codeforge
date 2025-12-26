@@ -41,6 +41,33 @@
                  @input="handleCdnBaseUrlChange"/>
         </Label>
 
+        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div class="flex items-center space-x-3">
+            <div class="flex items-center">
+              <input
+                  id="fallback-enabled"
+                  v-model="fallbackEnabled"
+                  type="checkbox"
+                  :disabled="!cdnEnabled"
+                  class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  @change="handleFallbackEnabledChange">
+              <label for="fallback-enabled" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 cursor-pointer">
+                CDN 下载失败时自动回退到 GitHub 官方源
+              </label>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <div v-if="fallbackEnabled" class="flex items-center text-green-600 dark:text-green-400 text-sm">
+              <CheckCircle class="w-4 h-4 mr-1"/>
+              已启用
+            </div>
+            <div v-else class="flex items-center text-orange-500 dark:text-orange-400 text-sm">
+              <AlertCircle class="w-4 h-4 mr-1"/>
+              未启用
+            </div>
+          </div>
+        </div>
+
         <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <div class="flex items-start">
             <Info class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"/>
@@ -51,7 +78,8 @@
                 <li>URL 格式：<code class="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded">{base_url}/{language}/{version}/{filename}</code></li>
                 <li>例如：<code class="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded">http://cdn.global.devlive.top/clojure/1.12.4.1582/clojure-tools-1.12.4.1582.tar.gz</code>
                 </li>
-                <li>如果 CDN 下载失败，系统会自动回退到 GitHub 官方源</li>
+                <li>启用自动回退后，CDN 下载失败会自动使用 GitHub 官方源</li>
+                <li>关闭自动回退后，CDN 下载失败将直接报错，不会尝试其他源</li>
               </ul>
             </div>
           </div>
@@ -76,7 +104,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { CheckCircle, Globe, Info, XCircle } from 'lucide-vue-next'
+import { AlertCircle, CheckCircle, Globe, Info, XCircle } from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
 import Label from '../../ui/Label.vue'
 import { invoke } from '@tauri-apps/api/core'
@@ -93,14 +121,18 @@ const toast = useToast()
 // 状态
 const cdnEnabled = ref(false)
 const cdnBaseUrl = ref('')
+const fallbackEnabled = ref(false)
 const originalEnabled = ref(false)
 const originalBaseUrl = ref('')
+const originalFallbackEnabled = ref(false)
 const isSaving = ref(false)
 const isTesting = ref(false)
 
 // 计算是否有变更
 const hasChanges = computed(() => {
-  return cdnEnabled.value !== originalEnabled.value || cdnBaseUrl.value !== originalBaseUrl.value
+  return cdnEnabled.value !== originalEnabled.value ||
+      cdnBaseUrl.value !== originalBaseUrl.value ||
+      fallbackEnabled.value !== originalFallbackEnabled.value
 })
 
 // 加载配置
@@ -110,8 +142,10 @@ const loadCdnConfig = async () => {
     if (config.environment_mirror) {
       cdnEnabled.value = config.environment_mirror.enabled ?? false
       cdnBaseUrl.value = config.environment_mirror.base_url ?? ''
+      fallbackEnabled.value = config.environment_mirror.fallback_enabled ?? false
       originalEnabled.value = cdnEnabled.value
       originalBaseUrl.value = cdnBaseUrl.value
+      originalFallbackEnabled.value = fallbackEnabled.value
     }
   }
   catch (error) {
@@ -127,13 +161,15 @@ const saveCdnConfig = async () => {
     const config = await invoke<any>('get_app_config')
     config.environment_mirror = {
       enabled: cdnEnabled.value,
-      base_url: cdnBaseUrl.value
+      base_url: cdnBaseUrl.value,
+      fallback_enabled: fallbackEnabled.value
     }
 
     await invoke('update_app_config', { config })
 
     originalEnabled.value = cdnEnabled.value
     originalBaseUrl.value = cdnBaseUrl.value
+    originalFallbackEnabled.value = fallbackEnabled.value
 
     toast.success('CDN 配置已保存')
     emit('settings-changed', 'cdn', config.environment_mirror)
@@ -152,6 +188,7 @@ const saveCdnConfig = async () => {
 const resetCdnConfig = async () => {
   cdnEnabled.value = true
   cdnBaseUrl.value = 'http://cdn.global.devlive.top'
+  fallbackEnabled.value = false
 }
 
 // 测试连接
@@ -165,7 +202,7 @@ const testCdnConnection = async () => {
   try {
     // 简单的连通性测试：尝试访问 CDN URL
     const testUrl = cdnBaseUrl.value.replace(/\/$/, '')
-    const response = await fetch(testUrl, {
+    await fetch(testUrl, {
       method: 'HEAD',
       mode: 'no-cors'
     })
@@ -189,6 +226,11 @@ const handleCdnEnabledChange = () => {
 // 处理 URL 变化
 const handleCdnBaseUrlChange = () => {
   console.log('CDN URL 变化:', cdnBaseUrl.value)
+}
+
+// 处理自动回退状态变化
+const handleFallbackEnabledChange = () => {
+  console.log('CDN 自动回退状态变化:', fallbackEnabled.value)
 }
 
 // 生命周期
