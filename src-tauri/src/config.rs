@@ -23,6 +23,13 @@ pub struct EditorConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvironmentMirrorConfig {
+    pub enabled: Option<bool>,
+    pub base_url: Option<String>,
+    pub fallback_enabled: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub log_directory: Option<String>,
     pub auto_clear_logs: Option<bool>,
@@ -30,6 +37,7 @@ pub struct AppConfig {
     pub theme: Option<String>,
     pub plugins: Option<Vec<PluginConfig>>,
     pub editor: Option<EditorConfig>,
+    pub environment_mirror: Option<EnvironmentMirrorConfig>,
 }
 
 impl Default for AppConfig {
@@ -49,6 +57,11 @@ impl Default for AppConfig {
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
                 space_dot_omission: Some(false),
+            }),
+            environment_mirror: Some(EnvironmentMirrorConfig {
+                enabled: Some(true),
+                base_url: Some("http://cdn.global.devlive.top".to_string()),
+                fallback_enabled: Some(false),
             }),
         }
     }
@@ -111,6 +124,16 @@ impl ConfigManager {
                                 space_dot_omission: Some(false),
                             });
                             println!("读取配置 -> 添加默认 editor 配置");
+                        }
+
+                        // 检查并设置 environment_mirror 默认配置
+                        if config.environment_mirror.is_none() {
+                            config.environment_mirror = Some(EnvironmentMirrorConfig {
+                                enabled: Some(true),
+                                base_url: Some("http://cdn.global.devlive.top".to_string()),
+                                fallback_enabled: Some(false),
+                            });
+                            println!("读取配置 -> 添加默认 environment_mirror 配置");
                         }
 
                         Ok(config)
@@ -217,6 +240,11 @@ impl ConfigManager {
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
                 space_dot_omission: Some(false),
+            }),
+            environment_mirror: Some(EnvironmentMirrorConfig {
+                enabled: Some(true),
+                base_url: Some("http://cdn.global.devlive.top".to_string()),
+                fallback_enabled: Some(false),
             }),
         }
     }

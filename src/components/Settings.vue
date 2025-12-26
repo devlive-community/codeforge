@@ -20,6 +20,11 @@
       <template #language>
         <Language v-if="activeTab === 'language'" @settings-changed="handleLanguageSettingsChanged"/>
       </template>
+
+      <!-- 网络配置 -->
+      <template #network>
+        <Network v-if="activeTab === 'network'" @settings-changed="handleNetworkSettingsChanged" @error="handleEditorError"/>
+      </template>
     </Tabs>
   </Modal>
 </template>
@@ -31,6 +36,7 @@ import Tabs from '../ui/Tabs.vue'
 import General from './setting/General.vue'
 import Language from './setting/Language.vue'
 import Editor from './setting/Editor.vue'
+import Network from './setting/Network.vue'
 import { useSettings } from '../composables/useSettings.ts'
 
 const emit = defineEmits<{
@@ -44,6 +50,7 @@ const {
   tabsData,
   handleEditorSettingsChanged,
   handleLanguageSettingsChanged,
+  handleNetworkSettingsChanged,
   handleEditorError,
   closeSettings,
   initialize

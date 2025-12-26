@@ -1,5 +1,6 @@
 use crate::env_manager::{
-    DownloadStatus, EnvironmentProvider, EnvironmentVersion, emit_download_progress,
+    DownloadStatus, EnvironmentProvider, EnvironmentVersion, download_with_fallback,
+    emit_download_progress,
 };
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
@@ -264,11 +265,7 @@ impl ScalaEnvironmentProvider {
             .build()
             .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
 
-        let response = client
-            .get(url)
-            .send()
-            .await
-            .map_err(|e| format!("下载失败: {}", e))?;
+        let response = download_with_fallback(&client, url, "scala", version).await?;
 
         if !response.status().is_success() {
             return Err(format!("下载失败: HTTP {}", response.status()));
@@ -496,6 +493,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
                 versions.push(EnvironmentVersion {
                     version: version.clone(),
                     download_url: asset.browser_download_url.clone(),
+                    fallback_url: None,
                     install_path,
                     is_installed,
                     size: Some(asset.size),
@@ -542,6 +540,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
                     installed.push(EnvironmentVersion {
                         version: version.clone(),
                         download_url: String::new(),
+                        fallback_url: None,
                         install_path: Some(actual_install_path.to_string_lossy().to_string()),
                         is_installed: true,
                         size: None,
