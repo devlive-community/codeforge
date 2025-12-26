@@ -86,6 +86,30 @@ export function useEnvironmentManager(language: string) {
         }
     }
 
+    // 卸载版本
+    const uninstallVersion = async (version: string) => {
+        isLoading.value = true
+        error.value = null
+
+        try {
+            await invoke('uninstall_environment_version', {
+                language,
+                version
+            })
+
+            // 刷新环境信息
+            await fetchEnvironmentInfo()
+        }
+        catch (e) {
+            error.value = e as string
+            console.error('卸载版本失败:', e)
+            throw e
+        }
+        finally {
+            isLoading.value = false
+        }
+    }
+
     // 监听下载进度
     const setupProgressListener = async () => {
         unlistenProgress = await listen<DownloadProgress>('env-download-progress', (event) => {
@@ -117,6 +141,7 @@ export function useEnvironmentManager(language: string) {
         error,
         fetchEnvironmentInfo,
         downloadAndInstall,
-        switchVersion
+        switchVersion,
+        uninstallVersion
     }
 }

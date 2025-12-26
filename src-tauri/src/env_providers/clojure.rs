@@ -1,3 +1,4 @@
+use super::metadata::{Metadata, fetch_metadata_from_cdn, is_cdn_enabled, is_fallback_enabled};
 use crate::env_manager::{
     DownloadStatus, EnvironmentProvider, EnvironmentVersion, emit_download_progress,
 };
@@ -20,25 +21,6 @@ struct GithubAsset {
     name: String,
     browser_download_url: String,
     size: u64,
-}
-
-// CDN Metadata 结构
-#[derive(Debug, Deserialize, Serialize, Clone)]
-struct MetadataRelease {
-    version: String,                  // 版本号，如 "1.11.1.1262"
-    display_name: String,             // 显示名称，如 "Clojure 1.11.1.1262"
-    published_at: String,             // 发布时间
-    download_url: String,             // CDN 下载地址
-    github_url: String,               // GitHub 官方下载地址（作为备用）
-    file_name: String,                // 文件名，如 "clojure-tools-1.11.1.1262.tar.gz"
-    size: u64,                        // 文件大小（字节）
-    supported_platforms: Vec<String>, // 支持的平台，如 ["macos", "linux", "windows"]
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct Metadata {
-    language: String, // 语言名称 "clojure"
-    releases: Vec<MetadataRelease>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -183,56 +165,6 @@ impl ClojureEnvironmentProvider {
         }
 
         Ok(versions)
-    }
-
-    // 从 CDN 获取 metadata.json
-    async fn fetch_metadata_from_cdn(&self) -> Result<Metadata, String> {
-        use crate::config::get_app_config_internal;
-
-        let config = get_app_config_internal().map_err(|e| format!("读取配置失败: {}", e))?;
-
-        let cdn_enabled = config
-            .environment_mirror
-            .as_ref()
-            .and_then(|m| m.enabled)
-            .unwrap_or(false);
-
-        if !cdn_enabled {
-            return Err("CDN 未启用".to_string());
-        }
-
-        let base_url = config
-            .environment_mirror
-            .as_ref()
-            .and_then(|m| m.base_url.as_ref())
-            .ok_or("CDN 地址未配置")?;
-
-        let metadata_url = format!("{}/clojure/metadata.json", base_url);
-        info!("从 CDN 获取 Clojure metadata: {}", metadata_url);
-
-        let client = reqwest::Client::builder()
-            .user_agent("CodeForge")
-            .timeout(Duration::from_secs(30))
-            .build()
-            .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
-
-        let response = client
-            .get(&metadata_url)
-            .send()
-            .await
-            .map_err(|e| format!("请求 CDN metadata 失败: {}", e))?;
-
-        if !response.status().is_success() {
-            return Err(format!("CDN 返回错误状态码: {}", response.status()));
-        }
-
-        let metadata: Metadata = response
-            .json()
-            .await
-            .map_err(|e| format!("解析 metadata.json 失败: {}", e))?;
-
-        info!("成功从 CDN 获取 {} 个版本", metadata.releases.len());
-        Ok(metadata)
     }
 
     async fn fetch_github_releases(&self) -> Result<Vec<GithubRelease>, String> {
@@ -594,7 +526,12 @@ impl ClojureEnvironmentProvider {
         Ok(())
     }
 
-    async fn update_plugin_config(&self, version: &str, install_path: &str) -> Result<(), String> {
+    async fn update_plugin_config(
+        &self,
+        version: &str,
+        install_path: &str,
+        app_handle: &AppHandle,
+    ) -> Result<(), String> {
         use crate::config::{get_app_config_internal, update_app_config};
 
         info!(
@@ -616,7 +553,7 @@ impl ClojureEnvironmentProvider {
             }
         }
 
-        update_app_config(config)
+        update_app_config(config, app_handle.clone())
             .await
             .map_err(|e| format!("保存配置失败: {}", e))?;
 
@@ -631,30 +568,26 @@ impl EnvironmentProvider for ClojureEnvironmentProvider {
     }
 
     async fn fetch_available_versions(&self) -> Result<Vec<EnvironmentVersion>, String> {
-        use crate::config::get_app_config_internal;
-
-        // 优先尝试从 CDN 获取 metadata.json
-        match self.fetch_metadata_from_cdn().await {
-            Ok(metadata) => {
-                info!("使用 CDN metadata 获取版本列表");
-                return self.parse_metadata_to_versions(metadata);
-            }
-            Err(e) => {
-                warn!("CDN metadata 获取失败: {}", e);
-
-                // 检查是否启用 fallback
-                let fallback_enabled = get_app_config_internal()
-                    .ok()
-                    .and_then(|config| config.environment_mirror)
-                    .and_then(|mirror| mirror.fallback_enabled)
-                    .unwrap_or(false);
-
-                if !fallback_enabled {
-                    return Err(format!("CDN metadata 获取失败，未启用自动回退: {}", e));
+        // 检查 CDN 是否启用
+        if is_cdn_enabled() {
+            match fetch_metadata_from_cdn("clojure").await {
+                Ok(metadata) => {
+                    info!("使用 CDN metadata 获取版本列表");
+                    return self.parse_metadata_to_versions(metadata);
                 }
+                Err(e) => {
+                    warn!("CDN metadata 获取失败: {}", e);
 
-                info!("fallback 已启用，回退到 GitHub API");
+                    // 检查是否启用 fallback
+                    if !is_fallback_enabled() {
+                        return Err(format!("CDN metadata 获取失败，未启用自动回退: {}", e));
+                    }
+
+                    info!("fallback 已启用，回退到 GitHub API");
+                }
             }
+        } else {
+            info!("CDN 未启用，使用 GitHub API");
         }
 
         let releases = self.fetch_github_releases().await?;
@@ -794,7 +727,7 @@ impl EnvironmentProvider for ClojureEnvironmentProvider {
         // 清理临时解压目录
         std::fs::remove_dir_all(&temp_extract_dir).ok();
 
-        self.update_plugin_config(version, &install_path.to_string_lossy())
+        self.update_plugin_config(version, &install_path.to_string_lossy(), &app_handle)
             .await?;
 
         emit_download_progress(
@@ -810,7 +743,7 @@ impl EnvironmentProvider for ClojureEnvironmentProvider {
         Ok(install_path.to_string_lossy().to_string())
     }
 
-    async fn switch_version(&self, version: &str) -> Result<(), String> {
+    async fn switch_version(&self, version: &str, app_handle: AppHandle) -> Result<(), String> {
         info!("切换 Clojure 版本到 {}", version);
 
         if !self.is_version_installed(version) {
@@ -819,7 +752,7 @@ impl EnvironmentProvider for ClojureEnvironmentProvider {
 
         let install_path = self.get_version_install_path(version);
 
-        self.update_plugin_config(version, &install_path.to_string_lossy())
+        self.update_plugin_config(version, &install_path.to_string_lossy(), &app_handle)
             .await?;
 
         info!("成功切换到 Clojure {}", version);
@@ -853,5 +786,23 @@ impl EnvironmentProvider for ClojureEnvironmentProvider {
 
     fn get_install_dir(&self) -> PathBuf {
         self.install_dir.clone()
+    }
+
+    async fn uninstall_version(&self, version: &str) -> Result<(), String> {
+        let version_dir = self.install_dir.join(version);
+
+        if !version_dir.exists() {
+            return Err(format!("版本 {} 未安装", version));
+        }
+
+        let current_version = self.get_current_version().await.ok().flatten();
+        if current_version.as_deref() == Some(version) {
+            return Err(format!("无法卸载当前正在使用的版本 {}", version));
+        }
+
+        std::fs::remove_dir_all(&version_dir).map_err(|e| format!("删除版本目录失败: {}", e))?;
+
+        info!("已卸载 Clojure 版本 {}", version);
+        Ok(())
     }
 }

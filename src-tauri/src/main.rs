@@ -19,7 +19,7 @@ mod utils;
 
 use crate::env_commands::{
     EnvironmentManagerState, download_and_install_version, get_environment_info,
-    get_supported_environment_languages, switch_environment_version,
+    get_supported_environment_languages, switch_environment_version, uninstall_environment_version,
 };
 use crate::env_manager::EnvironmentManager;
 use crate::env_providers::{ClojureEnvironmentProvider, ScalaEnvironmentProvider};
@@ -93,6 +93,7 @@ fn main() {
             get_environment_info,
             download_and_install_version,
             switch_environment_version,
+            uninstall_environment_version,
             get_supported_environment_languages,
             // 应用信息命令
             get_app_info,

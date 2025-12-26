@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use log::{error, info};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -24,6 +24,7 @@ pub struct EnvironmentInfo {
     pub current_version: Option<String>,
     pub installed_versions: Vec<EnvironmentVersion>,
     pub available_versions: Vec<EnvironmentVersion>,
+    pub error: Option<String>, // 错误信息（如获取可用版本失败）
 }
 
 // 下载进度事件
@@ -67,7 +68,7 @@ pub trait EnvironmentProvider: Send + Sync {
     ) -> Result<String, String>;
 
     // 切换到指定版本
-    async fn switch_version(&self, version: &str) -> Result<(), String>;
+    async fn switch_version(&self, version: &str, app_handle: AppHandle) -> Result<(), String>;
 
     // 获取当前激活的版本
     async fn get_current_version(&self) -> Result<Option<String>, String>;
@@ -75,6 +76,9 @@ pub trait EnvironmentProvider: Send + Sync {
     // 获取安装目录
     #[allow(dead_code)]
     fn get_install_dir(&self) -> PathBuf;
+
+    // 卸载指定版本
+    async fn uninstall_version(&self, version: &str) -> Result<(), String>;
 }
 
 // 环境管理器
@@ -105,16 +109,22 @@ impl EnvironmentManager {
 
         let current_version = provider.get_current_version().await.ok().flatten();
         let installed_versions = provider.get_installed_versions().await.unwrap_or_default();
-        let available_versions = provider
-            .fetch_available_versions()
-            .await
-            .unwrap_or_default();
+
+        // 获取可用版本，如果失败也要返回已安装版本，并在错误信息中说明
+        let (available_versions, error) = match provider.fetch_available_versions().await {
+            Ok(versions) => (versions, None),
+            Err(e) => {
+                warn!("获取可用版本失败: {}", e);
+                (vec![], Some(format!("获取可用版本失败: {}", e)))
+            }
+        };
 
         Ok(EnvironmentInfo {
             language: language.to_string(),
             current_version,
             installed_versions,
             available_versions,
+            error,
         })
     }
 
@@ -133,18 +143,33 @@ impl EnvironmentManager {
         provider.download_and_install(version, app_handle).await
     }
 
-    pub async fn switch_version(&self, language: &str, version: &str) -> Result<(), String> {
+    pub async fn switch_version(
+        &self,
+        language: &str,
+        version: &str,
+        app_handle: AppHandle,
+    ) -> Result<(), String> {
         let provider = self
             .providers
             .get(language)
             .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issues", language))?;
 
         info!("切换 {} 到版本 {}", language, version);
-        provider.switch_version(version).await
+        provider.switch_version(version, app_handle).await
     }
 
     pub fn get_supported_languages(&self) -> Vec<String> {
         self.providers.keys().cloned().collect()
+    }
+
+    pub async fn uninstall_version(&self, language: &str, version: &str) -> Result<(), String> {
+        let provider = self
+            .providers
+            .get(language)
+            .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issues", language))?;
+
+        info!("卸载 {} 版本 {}", language, version);
+        provider.uninstall_version(version).await
     }
 }
 

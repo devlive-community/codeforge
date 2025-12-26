@@ -1,5 +1,6 @@
-import {ref, type Ref} from 'vue'
+import {ref, type Ref, onMounted, onUnmounted} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
+import {listen} from '@tauri-apps/api/event'
 import {EnvInfo, Language, LanguageInfo} from '../types/app.ts'
 
 export function useLanguageManager(
@@ -193,6 +194,22 @@ export function useLanguageManager(
             code.value = 'No supported languages found'
         }
     }
+
+    // 监听配置更新事件
+    let unlistenConfigUpdate: (() => void) | null = null
+
+    onMounted(async () => {
+        unlistenConfigUpdate = await listen('config-updated', async () => {
+            console.log('收到配置更新事件，重新加载环境信息')
+            await refreshEnvInfo()
+        })
+    })
+
+    onUnmounted(() => {
+        if (unlistenConfigUpdate) {
+            unlistenConfigUpdate()
+        }
+    })
 
     return {
         currentLanguage,

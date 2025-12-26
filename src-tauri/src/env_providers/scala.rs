@@ -1,3 +1,4 @@
+use super::metadata::{Metadata, fetch_metadata_from_cdn, is_cdn_enabled, is_fallback_enabled};
 use crate::env_manager::{
     DownloadStatus, EnvironmentProvider, EnvironmentVersion, download_with_fallback,
     emit_download_progress,
@@ -250,6 +251,51 @@ impl ScalaEnvironmentProvider {
         false
     }
 
+    // 将 CDN metadata 转换为 EnvironmentVersion 列表
+    fn parse_metadata_to_versions(
+        &self,
+        metadata: Metadata,
+    ) -> Result<Vec<EnvironmentVersion>, String> {
+        let mut versions = Vec::new();
+
+        for release in metadata.releases {
+            let version = release.version.clone();
+            let is_installed = self.is_version_installed(&version);
+
+            // 如果已安装，查找实际的包含 bin 目录的路径
+            let install_path = if is_installed {
+                let version_dir = self.get_version_install_path(&version);
+                let mut actual_path = version_dir.clone();
+
+                if let Ok(entries) = std::fs::read_dir(&version_dir) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.is_dir() && path.join("bin").exists() {
+                            actual_path = path;
+                            break;
+                        }
+                    }
+                }
+
+                Some(actual_path.to_string_lossy().to_string())
+            } else {
+                None
+            };
+
+            versions.push(EnvironmentVersion {
+                version: version.clone(),
+                download_url: release.download_url.clone(),
+                fallback_url: Some(release.github_url.clone()),
+                install_path,
+                is_installed,
+                size: Some(release.size),
+                release_date: Some(release.published_at.clone()),
+            });
+        }
+
+        Ok(versions)
+    }
+
     // 下载文件并显示进度
     async fn download_file(
         &self,
@@ -414,7 +460,12 @@ impl ScalaEnvironmentProvider {
     }
 
     // 更新配置以使用新版本
-    async fn update_plugin_config(&self, version: &str, install_path: &str) -> Result<(), String> {
+    async fn update_plugin_config(
+        &self,
+        version: &str,
+        install_path: &str,
+        app_handle: &AppHandle,
+    ) -> Result<(), String> {
         use crate::config::{get_app_config_internal, update_app_config};
 
         info!(
@@ -444,7 +495,7 @@ impl ScalaEnvironmentProvider {
             }
         }
 
-        update_app_config(config)
+        update_app_config(config, app_handle.clone())
             .await
             .map_err(|e| format!("保存配置失败: {}", e))?;
 
@@ -459,6 +510,28 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
     }
 
     async fn fetch_available_versions(&self) -> Result<Vec<EnvironmentVersion>, String> {
+        // 检查 CDN 是否启用
+        if is_cdn_enabled() {
+            match fetch_metadata_from_cdn("scala").await {
+                Ok(metadata) => {
+                    info!("使用 CDN metadata 获取版本列表");
+                    return self.parse_metadata_to_versions(metadata);
+                }
+                Err(e) => {
+                    warn!("CDN metadata 获取失败: {}", e);
+
+                    // 检查是否启用 fallback
+                    if !is_fallback_enabled() {
+                        return Err(format!("CDN metadata 获取失败，未启用自动回退: {}", e));
+                    }
+
+                    info!("fallback 已启用，回退到 GitHub API");
+                }
+            }
+        } else {
+            info!("CDN 未启用，使用 GitHub API");
+        }
+
         let releases = self.fetch_github_releases().await?;
         let pattern = Self::get_download_pattern();
 
@@ -622,7 +695,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         }
 
         // 更新插件配置
-        self.update_plugin_config(version, &actual_install_path.to_string_lossy())
+        self.update_plugin_config(version, &actual_install_path.to_string_lossy(), &app_handle)
             .await?;
 
         emit_download_progress(
@@ -638,7 +711,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
         Ok(actual_install_path.to_string_lossy().to_string())
     }
 
-    async fn switch_version(&self, version: &str) -> Result<(), String> {
+    async fn switch_version(&self, version: &str, app_handle: AppHandle) -> Result<(), String> {
         info!("切换 Scala 版本到 {}", version);
 
         if !self.is_version_installed(version) {
@@ -659,7 +732,7 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
             }
         }
 
-        self.update_plugin_config(version, &actual_install_path.to_string_lossy())
+        self.update_plugin_config(version, &actual_install_path.to_string_lossy(), &app_handle)
             .await?;
 
         info!("成功切换到 Scala {}", version);
@@ -698,5 +771,23 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
 
     fn get_install_dir(&self) -> PathBuf {
         self.install_dir.clone()
+    }
+
+    async fn uninstall_version(&self, version: &str) -> Result<(), String> {
+        let version_dir = self.install_dir.join(version);
+
+        if !version_dir.exists() {
+            return Err(format!("版本 {} 未安装", version));
+        }
+
+        let current_version = self.get_current_version().await.ok().flatten();
+        if current_version.as_deref() == Some(version) {
+            return Err(format!("无法卸载当前正在使用的版本 {}", version));
+        }
+
+        std::fs::remove_dir_all(&version_dir).map_err(|e| format!("删除版本目录失败: {}", e))?;
+
+        info!("已卸载 Scala 版本 {}", version);
+        Ok(())
     }
 }
