@@ -1,5 +1,5 @@
 import { nextTick, ref } from 'vue'
-import { BracesIcon, CodeIcon, ShieldIcon } from 'lucide-vue-next'
+import { BracesIcon, CodeIcon, Globe, ShieldIcon } from 'lucide-vue-next'
 
 export function useSettings(emit: any)
 {
@@ -11,7 +11,8 @@ export function useSettings(emit: any)
     const tabsData = [
         { key: 'general', label: '通用', icon: ShieldIcon },
         { key: 'editor', label: '编辑器', icon: CodeIcon },
-        { key: 'language', label: '语言', icon: BracesIcon }
+        { key: 'language', label: '语言', icon: BracesIcon },
+        { key: 'network', label: '网络', icon: Globe }
     ]
 
     const handleEditorSettingsChanged = (config: any) => {
@@ -21,6 +22,11 @@ export function useSettings(emit: any)
 
     const handleLanguageSettingsChanged = (config: any) => {
         console.log('设置模态框接收到语言配置变更:', config)
+        emit('settings-changed', config)
+    }
+
+    const handleNetworkSettingsChanged = (config: any) => {
+        console.log('设置模态框接收到网络配置变更:', config)
         emit('settings-changed', config)
     }
 
@@ -51,6 +57,7 @@ export function useSettings(emit: any)
         tabsData,
         handleEditorSettingsChanged,
         handleLanguageSettingsChanged,
+        handleNetworkSettingsChanged,
         handleEditorError,
         closeSettings,
         initialize
