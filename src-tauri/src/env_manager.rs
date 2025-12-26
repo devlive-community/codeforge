@@ -76,6 +76,9 @@ pub trait EnvironmentProvider: Send + Sync {
     // 获取安装目录
     #[allow(dead_code)]
     fn get_install_dir(&self) -> PathBuf;
+
+    // 卸载指定版本
+    async fn uninstall_version(&self, version: &str) -> Result<(), String>;
 }
 
 // 环境管理器
@@ -157,6 +160,16 @@ impl EnvironmentManager {
 
     pub fn get_supported_languages(&self) -> Vec<String> {
         self.providers.keys().cloned().collect()
+    }
+
+    pub async fn uninstall_version(&self, language: &str, version: &str) -> Result<(), String> {
+        let provider = self
+            .providers
+            .get(language)
+            .ok_or_else(|| format!("暂未支持 {} 语言，请前往 github 提供 issues", language))?;
+
+        info!("卸载 {} 版本 {}", language, version);
+        provider.uninstall_version(version).await
     }
 }
 

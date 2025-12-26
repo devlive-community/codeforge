@@ -93,12 +93,21 @@
                     当前
                   </span>
                 </div>
-                <Button v-if="environmentInfo.current_version !== version.version"
-                        type="primary"
-                        size="sm"
-                        @click="handleSwitchVersion(version.version)">
-                  切换
-                </Button>
+                <div class="flex items-center space-x-2">
+                  <Button v-if="environmentInfo.current_version !== version.version"
+                          type="primary"
+                          size="sm"
+                          @click="handleSwitchVersion(version.version)">
+                    切换
+                  </Button>
+                  <Button v-if="environmentInfo.current_version !== version.version"
+                          type="danger"
+                          size="sm"
+                          :icon="Trash2"
+                          @click="handleUninstall(version.version)">
+                    卸载
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -147,7 +156,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { AlertCircle, CheckCircle, Download, Folder } from 'lucide-vue-next'
+import { AlertCircle, CheckCircle, Download, Folder, Trash2 } from 'lucide-vue-next'
 import { useEnvironmentManager } from '../../composables/useEnvironmentManager'
 import Label from '../../ui/Label.vue'
 import Input from '../../ui/Input.vue'
@@ -171,7 +180,8 @@ const {
   isDownloading,
   error,
   downloadAndInstall,
-  switchVersion
+  switchVersion,
+  uninstallVersion
 } = useEnvironmentManager(props.language)
 
 const activeVersionTab = ref('installed')
@@ -253,6 +263,17 @@ const handleSwitchVersion = async (version: string) => {
   }
   catch (e) {
     console.error('切换版本失败:', e)
+  }
+}
+
+// 卸载版本
+const handleUninstall = async (version: string) => {
+  try {
+    await uninstallVersion(version)
+    console.log('卸载版本成功:', version)
+  }
+  catch (e) {
+    console.error('卸载版本失败:', e)
   }
 }
 

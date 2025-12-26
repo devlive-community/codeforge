@@ -704,4 +704,22 @@ impl EnvironmentProvider for ScalaEnvironmentProvider {
     fn get_install_dir(&self) -> PathBuf {
         self.install_dir.clone()
     }
+
+    async fn uninstall_version(&self, version: &str) -> Result<(), String> {
+        let version_dir = self.install_dir.join(version);
+
+        if !version_dir.exists() {
+            return Err(format!("版本 {} 未安装", version));
+        }
+
+        let current_version = self.get_current_version().await.ok().flatten();
+        if current_version.as_deref() == Some(version) {
+            return Err(format!("无法卸载当前正在使用的版本 {}", version));
+        }
+
+        std::fs::remove_dir_all(&version_dir).map_err(|e| format!("删除版本目录失败: {}", e))?;
+
+        info!("已卸载 Scala 版本 {}", version);
+        Ok(())
+    }
 }

@@ -58,3 +58,14 @@ pub async fn get_supported_environment_languages(
     let manager = env_manager.lock().await;
     Ok(manager.get_supported_languages())
 }
+
+#[tauri::command]
+pub async fn uninstall_environment_version(
+    language: String,
+    version: String,
+    env_manager: State<'_, EnvironmentManagerState>,
+) -> Result<(), String> {
+    info!("卸载 {} 版本 {}", language, version);
+    let manager = env_manager.lock().await;
+    manager.uninstall_version(&language, &version).await
+}
