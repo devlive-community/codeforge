@@ -42,6 +42,30 @@
       </div>
     </div>
 
+    <!-- 下载进度 -->
+    <div v-if="isDownloading && downloadProgress" class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <svg class="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="text-sm font-medium text-blue-900 dark:text-blue-100">
+            {{ downloadStatusText }}
+          </span>
+        </div>
+        <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">
+          {{ downloadProgress.percentage.toFixed(1) }}%
+        </span>
+      </div>
+      <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div class="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+             :style="{ width: `${downloadProgress.percentage}%` }">
+        </div>
+      </div>
+    </div>
+
     <!-- 获取可用版本错误信息 -->
     <div v-if="environmentInfo?.error" class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
       <div class="flex items-center space-x-2 text-yellow-600 dark:text-yellow-400">
@@ -56,7 +80,7 @@
         <!-- 已安装版本 -->
         <template #installed>
           <div v-if="environmentInfo.installed_versions.length > 0" class="space-y-2">
-            <div :class="environmentInfo.error ? 'max-h-76' : 'max-h-92'"
+            <div :class="environmentInfo.error || error ? 'max-h-76' : 'max-h-92'"
                  class="space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
               <div v-for="version in environmentInfo.installed_versions"
                    :key="version.version"
@@ -86,31 +110,7 @@
         <!-- 可用版本 -->
         <template #available>
           <div class="space-y-2">
-            <!-- 下载进度 -->
-            <div v-if="isDownloading && downloadProgress" class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-2">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <svg class="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span class="text-sm font-medium text-blue-900 dark:text-blue-100">
-                    {{ downloadStatusText }}
-                  </span>
-                </div>
-                <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                  {{ downloadProgress.percentage.toFixed(1) }}%
-                </span>
-              </div>
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div class="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
-                     :style="{ width: `${downloadProgress.percentage}%` }">
-                </div>
-              </div>
-            </div>
-
-            <div :class="environmentInfo.error ? 'max-h-76' : 'max-h-92'"
+            <div :class="environmentInfo.error || error ? 'max-h-76' : 'max-h-92'"
                  class="space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
               <div v-for="version in availableVersionsToShow"
                    :key="version.version"
