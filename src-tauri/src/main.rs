@@ -3,6 +3,7 @@
     windows_subsystem = "windows"
 )]
 
+mod cache;
 mod config;
 mod env_commands;
 mod env_manager;
@@ -17,6 +18,7 @@ mod setup;
 mod update;
 mod utils;
 
+use crate::cache::{clear_all_cache, clear_plugins_cache, get_cache_info};
 use crate::env_commands::{
     EnvironmentManagerState, download_and_install_version, get_environment_info,
     get_supported_environment_languages, switch_environment_version, uninstall_environment_version,
@@ -107,6 +109,10 @@ fn main() {
             get_app_config,
             update_app_config,
             get_config_path,
+            // 缓存相关命令
+            get_cache_info,
+            clear_plugins_cache,
+            clear_all_cache,
             // 更新相关命令
             check_for_updates,
             start_update,
