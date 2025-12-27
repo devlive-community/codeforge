@@ -75,9 +75,9 @@
               <p class="font-medium mb-2">CDN 镜像说明</p>
               <ul class="space-y-1 list-disc list-inside">
                 <li>CDN 镜像用于加速环境安装包的下载</li>
-                <li>URL 格式：<code class="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded">{base_url}/{language}/{version}/{filename}</code></li>
-                <li>例如：<code class="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded">http://cdn.global.devlive.top/clojure/1.12.4.1582/clojure-tools-1.12.4.1582.tar.gz</code>
-                </li>
+<!--                <li>URL 格式：<code class="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded">{base_url}/{language}/{version}/{filename}</code></li>-->
+<!--                <li>例如：<code class="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded">http://cdn.global.devlive.top/clojure/1.12.4.1582/clojure-tools-1.12.4.1582.tar.gz</code>-->
+<!--                </li>-->
                 <li>启用自动回退后，CDN 下载失败会自动使用 GitHub 官方源</li>
                 <li>关闭自动回退后，CDN 下载失败将直接报错，不会尝试其他源</li>
               </ul>

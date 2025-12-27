@@ -51,7 +51,7 @@ impl ClojureEnvironmentProvider {
 
     fn get_default_install_dir() -> PathBuf {
         let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        home_dir.join(".codeforge").join("clojure")
+        home_dir.join(".codeforge").join("plugins").join("clojure")
     }
 
     fn read_cache(&self) -> Option<Vec<GithubRelease>> {

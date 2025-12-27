@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
+import { join } from '@tauri-apps/api/path'
 import { useToast } from '../plugins/toast'
 
 export function useLogDirectory(emit: any)
@@ -97,7 +98,7 @@ export function useLogDirectory(emit: any)
 
     const openLogFile = async (filename: string) => {
         try {
-            const logPath = `${ currentLogDir.value }/${ filename }`
+            const logPath = await join(currentLogDir.value, filename)
             await openPath(logPath)
         }
         catch (error) {

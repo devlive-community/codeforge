@@ -55,7 +55,7 @@ impl ScalaEnvironmentProvider {
 
     fn get_default_install_dir() -> PathBuf {
         let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        home_dir.join(".codeforge").join("scala")
+        home_dir.join(".codeforge").join("plugins").join("scala")
     }
 
     // 从缓存读取版本列表

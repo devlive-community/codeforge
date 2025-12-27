@@ -25,6 +25,11 @@
       <template #network>
         <Network v-if="activeTab === 'network'" @settings-changed="handleNetworkSettingsChanged" @error="handleEditorError"/>
       </template>
+
+      <!-- 缓存管理 -->
+      <template #cache>
+        <Cache v-if="activeTab === 'cache'"/>
+      </template>
     </Tabs>
   </Modal>
 </template>
@@ -37,6 +42,7 @@ import General from './setting/General.vue'
 import Language from './setting/Language.vue'
 import Editor from './setting/Editor.vue'
 import Network from './setting/Network.vue'
+import Cache from './setting/Cache.vue'
 import { useSettings } from '../composables/useSettings.ts'
 
 const emit = defineEmits<{

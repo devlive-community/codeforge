@@ -107,11 +107,24 @@ fn get_effective_log_directory(app: &AppHandle) -> PathBuf {
 }
 
 // 获取默认日志目录
-fn get_default_log_directory(app: &AppHandle) -> PathBuf {
-    app.path()
-        .app_data_dir()
-        .expect("Failed to get app data dir")
-        .join("logs")
+fn get_default_log_directory(_app: &AppHandle) -> PathBuf {
+    let home_dir = dirs::home_dir().expect("Failed to get home directory");
+    let log_dir = home_dir.join(".codeforge").join("logs");
+
+    // 确保目录存在
+    if !log_dir.exists() {
+        if let Err(e) = fs::create_dir_all(&log_dir) {
+            eprintln!("Failed to create log directory: {}", e);
+            // 如果创建失败，回退到应用数据目录
+            return _app
+                .path()
+                .app_data_dir()
+                .expect("Failed to get app data dir")
+                .join("logs");
+        }
+    }
+
+    log_dir
 }
 
 // 公共函数，供其他模块调用

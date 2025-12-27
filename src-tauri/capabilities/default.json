@@ -12,6 +12,15 @@
       "identifier": "opener:allow-open-path",
       "allow": [
         {
+          "path": "$HOME/.codeforge/**"
+        },
+        {
+          "path": "$APPDATA/**"
+        },
+        {
+          "path": "$LOCALAPPDATA/**"
+        },
+        {
           "path": "**"
         }
       ]
@@ -20,9 +29,19 @@
     "shell:allow-open",
     "dialog:default",
     "fs:allow-read-text-file",
+    "fs:allow-read-dir",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-write-text-file",
+    "fs:allow-remove",
+    "fs:allow-mkdir",
+    "fs:allow-exists",
     {
       "identifier": "fs:scope",
       "allow": [
+        {
+          "path": "$HOME/.codeforge/**"
+        },
         {
           "path": "/var/folders/**"
         },
@@ -31,6 +50,12 @@
         },
         {
           "path": "/private/var/folders/**"
+        },
+        {
+          "path": "$APPDATA/**"
+        },
+        {
+          "path": "$LOCALAPPDATA/**"
         },
         {
           "path": "**"

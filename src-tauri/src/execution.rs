@@ -3,6 +3,7 @@ use log::{error, info, warn};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, OnceLock, mpsc};
 use std::thread;
@@ -32,6 +33,39 @@ fn init_task_manager() -> TaskManager {
     TASK_MANAGER
         .get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
         .clone()
+}
+
+// 获取 .codeforge 缓存目录
+fn get_codeforge_cache_dir(language: &str) -> Result<PathBuf, String> {
+    let home_dir = dirs::home_dir().ok_or("无法获取用户主目录")?;
+    let cache_dir = home_dir
+        .join(".codeforge")
+        .join("cache")
+        .join("plugins")
+        .join(language);
+
+    // 确保目录存在
+    fs::create_dir_all(&cache_dir).map_err(|e| format!("创建缓存目录失败: {}", e))?;
+
+    Ok(cache_dir)
+}
+
+// 检查是否应该过滤 stderr 行
+fn should_filter_stderr_line(language: &str, line: &str) -> bool {
+    match language {
+        "clojure" => {
+            // 过滤 Clojure 的常见警告信息
+            line.contains("WARNING: Implicit use of clojure.main")
+                || line.contains("WARNING: name already refers to:")
+        }
+        "scala" => {
+            // 过滤 Scala 的编译信息
+            line.contains("[0m[0m[33mCompiling project")
+                || line.contains("[0m[0m")
+                || line.starts_with("\u{001b}")
+        }
+        _ => false,
+    }
 }
 
 // 停止执行命令
@@ -80,13 +114,17 @@ pub async fn execute_code(
         .get_plugin(&request.language)
         .ok_or_else(|| format!("Unsupported language: {}", request.language))?;
 
-    let temp_dir = std::env::temp_dir();
-    let file_name = format!(
-        "Codeforge_{}.{}",
-        request.language,
-        plugin.get_file_extension()
-    );
-    let file_path = temp_dir.join(file_name.clone());
+    // 使用 .codeforge/cache/plugin/<language> 目录
+    let temp_dir = get_codeforge_cache_dir(&request.language)?;
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let file_work = format!("Codeforge_{}_{}", request.language, timestamp);
+    let work_dir = temp_dir.join(&file_work);
+    fs::create_dir_all(&work_dir).map_err(|e| format!("创建工作目录失败: {}", e))?;
+    let file_name = format!("{}.{}", file_work, plugin.get_file_extension());
+    let file_path = work_dir.join(&file_name);
 
     // 写入代码到临时文件
     fs::write(&file_path, &request.code)
@@ -274,14 +312,17 @@ pub async fn execute_code(
         // 读取并发送 stderr
         while let Ok(line) = stderr_rx.try_recv() {
             stderr_lines.push(line.clone());
-            let _ = app.emit(
-                "code-output",
-                serde_json::json!({
-                    "type": "stderr",
-                    "content": line,
-                    "language": request.language
-                }),
-            );
+            // 过滤掉特定语言的警告信息
+            if !should_filter_stderr_line(&request.language, &line) {
+                let _ = app.emit(
+                    "code-output",
+                    serde_json::json!({
+                        "type": "stderr",
+                        "content": line,
+                        "language": request.language
+                    }),
+                );
+            }
         }
 
         // 检查进程是否结束
@@ -301,14 +342,17 @@ pub async fn execute_code(
                 }
                 while let Ok(line) = stderr_rx.try_recv() {
                     stderr_lines.push(line.clone());
-                    let _ = app.emit(
-                        "code-output",
-                        serde_json::json!({
-                            "type": "stderr",
-                            "content": line,
-                            "language": request.language
-                        }),
-                    );
+                    // 过滤掉特定语言的警告信息
+                    if !should_filter_stderr_line(&request.language, &line) {
+                        let _ = app.emit(
+                            "code-output",
+                            serde_json::json!({
+                                "type": "stderr",
+                                "content": line,
+                                "language": request.language
+                            }),
+                        );
+                    }
                 }
 
                 let execution_time = start_time.elapsed().as_millis();
