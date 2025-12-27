@@ -66,7 +66,7 @@ pub async fn fetch_metadata_from_cdn(language: &str) -> Result<Metadata, String>
         .and_then(|m| m.base_url.as_ref())
         .ok_or("CDN 地址未配置")?;
 
-    let metadata_url = format!("{}/{}/metadata.json", base_url, language);
+    let metadata_url = format!("{}/global/plugins/{}/metadata.json", base_url, language);
     info!("从 CDN 获取 {} metadata: {}", language, metadata_url);
 
     let client = reqwest::Client::builder()

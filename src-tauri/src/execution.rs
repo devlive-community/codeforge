@@ -3,6 +3,7 @@ use log::{error, info, warn};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, OnceLock, mpsc};
 use std::thread;
@@ -32,6 +33,21 @@ fn init_task_manager() -> TaskManager {
     TASK_MANAGER
         .get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
         .clone()
+}
+
+// 获取 .codeforge 缓存目录
+fn get_codeforge_cache_dir(language: &str) -> Result<PathBuf, String> {
+    let home_dir = dirs::home_dir().ok_or("无法获取用户主目录")?;
+    let cache_dir = home_dir
+        .join(".codeforge")
+        .join("cache")
+        .join("plugins")
+        .join(language);
+
+    // 确保目录存在
+    fs::create_dir_all(&cache_dir).map_err(|e| format!("创建缓存目录失败: {}", e))?;
+
+    Ok(cache_dir)
 }
 
 // 停止执行命令
@@ -80,10 +96,16 @@ pub async fn execute_code(
         .get_plugin(&request.language)
         .ok_or_else(|| format!("Unsupported language: {}", request.language))?;
 
-    let temp_dir = std::env::temp_dir();
+    // 使用 .codeforge/cache/plugin/<language> 目录
+    let temp_dir = get_codeforge_cache_dir(&request.language)?;
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     let file_name = format!(
-        "Codeforge_{}.{}",
+        "Codeforge_{}_{}.{}",
         request.language,
+        timestamp,
         plugin.get_file_extension()
     );
     let file_path = temp_dir.join(file_name.clone());
