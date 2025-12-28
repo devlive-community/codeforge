@@ -43,6 +43,7 @@ footer:
 
 nav:
   - 发布日志:
+      - /release/25.0.5.md
       - /release/25.0.4.md
       - /release/25.0.3.md
       - /release/25.0.2.md
