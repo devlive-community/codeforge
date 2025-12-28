@@ -20,7 +20,7 @@
     </div>
 
     <!-- 内容区域 -->
-    <div class="flex-1 overflow-hidden relative min-h-screen">
+    <div class="flex-1 overflow-auto relative">
       <!-- 加载状态 -->
       <div v-if="isRunning && !webContent" class="absolute inset-0 flex items-center justify-center bg-gray-50">
         <div class="text-center">
@@ -127,7 +127,37 @@ const processWebContent = async (content: string) => {
 const onFrameLoad = () => {
   if (webFrame.value?.contentDocument) {
     const style = webFrame.value.contentDocument.createElement('style')
-    style.textContent = `body { margin: 0 !important; }`
+    style.textContent = `
+      body {
+        margin: 0 !important;
+      }
+
+      /* Webkit 滚动条美化 */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+
+      /* Firefox 滚动条美化 */
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: #888 #f1f1f1;
+      }
+    `
     webFrame.value.contentDocument.head.appendChild(style)
   }
 }
