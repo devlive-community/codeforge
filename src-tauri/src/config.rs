@@ -59,8 +59,8 @@ impl Default for AppConfig {
                 space_dot_omission: Some(false),
             }),
             environment_mirror: Some(EnvironmentMirrorConfig {
-                enabled: Some(true),
-                base_url: Some("http://cdn.global.devlive.top".to_string()),
+                enabled: Some(false),
+                base_url: Some("https://cdn.global.devlive.top".to_string()),
                 fallback_enabled: Some(false),
             }),
         }
@@ -129,8 +129,8 @@ impl ConfigManager {
                         // 检查并设置 environment_mirror 默认配置
                         if config.environment_mirror.is_none() {
                             config.environment_mirror = Some(EnvironmentMirrorConfig {
-                                enabled: Some(true),
-                                base_url: Some("http://cdn.global.devlive.top".to_string()),
+                                enabled: Some(false),
+                                base_url: Some("https://cdn.global.devlive.top".to_string()),
                                 fallback_enabled: Some(false),
                             });
                             println!("读取配置 -> 添加默认 environment_mirror 配置");
@@ -242,8 +242,8 @@ impl ConfigManager {
                 space_dot_omission: Some(false),
             }),
             environment_mirror: Some(EnvironmentMirrorConfig {
-                enabled: Some(true),
-                base_url: Some("http://cdn.global.devlive.top".to_string()),
+                enabled: Some(false),
+                base_url: Some("https://cdn.global.devlive.top".to_string()),
                 fallback_enabled: Some(false),
             }),
         }

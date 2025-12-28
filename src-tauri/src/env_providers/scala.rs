@@ -251,14 +251,52 @@ impl ScalaEnvironmentProvider {
         false
     }
 
+    // 获取当前系统平台
+    fn get_current_platform() -> &'static str {
+        if cfg!(target_os = "macos") {
+            if cfg!(target_arch = "aarch64") {
+                "macos-aarch64"
+            } else {
+                "macos-x86_64"
+            }
+        } else if cfg!(target_os = "linux") {
+            if cfg!(target_arch = "aarch64") {
+                "linux-aarch64"
+            } else {
+                "linux-x86_64"
+            }
+        } else if cfg!(target_os = "windows") {
+            "windows-x86_64"
+        } else {
+            "unknown"
+        }
+    }
+
     // 将 CDN metadata 转换为 EnvironmentVersion 列表
     fn parse_metadata_to_versions(
         &self,
         metadata: Metadata,
     ) -> Result<Vec<EnvironmentVersion>, String> {
+        let current_platform = Self::get_current_platform();
         let mut versions = Vec::new();
+        let mut seen_versions = std::collections::HashSet::new();
 
         for release in metadata.releases {
+            // 检查是否支持当前平台
+            let is_supported = release
+                .supported_platforms
+                .iter()
+                .any(|p| p == current_platform || p.starts_with(&format!("{}-", current_platform)));
+
+            if !is_supported {
+                continue;
+            }
+
+            // 避免重复版本（每个版本号只保留一个）
+            if !seen_versions.insert(release.version.clone()) {
+                continue;
+            }
+
             let version = release.version.clone();
             let is_installed = self.is_version_installed(&version);
 
@@ -291,6 +329,10 @@ impl ScalaEnvironmentProvider {
                 size: Some(release.size),
                 release_date: Some(release.published_at.clone()),
             });
+        }
+
+        if versions.is_empty() {
+            return Err(format!("没有找到支持 {} 平台的版本", current_platform));
         }
 
         Ok(versions)

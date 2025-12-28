@@ -12,43 +12,49 @@
                @load-example="loadExample">
     </AppHeader>
 
-    <div class="flex-1 flex overflow-hidden">
-      <!-- 代码编辑器 -->
-      <div class="flex-1 flex flex-col overflow-hidden">
-        <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-          <div class="flex items-center space-x-3">
-            <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-            <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
-          </div>
+    <div class="flex-1 overflow-hidden">
+      <ResizablePanels :min-left-width="400" :min-right-width="300">
+        <template #left>
+          <!-- 代码编辑器 -->
+          <div class="h-full flex flex-col overflow-hidden">
+            <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+              <div class="flex items-center space-x-3">
+                <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
+                <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+              </div>
 
-          <div class="flex items-center space-x-2 text-xs text-gray-500">
-            <span><strong>{{ (code || '').length }}</strong> 字符</span>
-            <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
+              <div class="flex items-center space-x-2 text-xs text-gray-500">
+                <span><strong>{{ (code || '').length }}</strong> 字符</span>
+                <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
+              </div>
+            </div>
+            <div class="flex-1 overflow-hidden">
+              <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+            </div>
           </div>
-        </div>
-        <div class="flex-1 overflow-hidden">
-          <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
-        </div>
-      </div>
+        </template>
 
-      <!-- 输出 -->
-      <div class="w-2/5 flex flex-col border-l border-gray-200">
-        <ConsoleOutput v-if="consoleType === 'console'"
+        <template #right>
+          <!-- 输出 -->
+          <div class="h-full flex flex-col border-l border-gray-200">
+            <ConsoleOutput v-if="consoleType === 'console'"
+                           class="flex-1"
+                           :output="output"
+                           :is-running="isRunning"
+                           :is-success="isSuccess"
+                           :execution-time="lastExecutionTime">
+            </ConsoleOutput>
+
+            <!-- Web输出组件 -->
+            <WebOutput v-else-if="consoleType === 'web'"
                        class="flex-1"
-                       :output="output"
+                       :web-content="output"
                        :is-running="isRunning"
-                       :is-success="isSuccess"
                        :execution-time="lastExecutionTime">
-        </ConsoleOutput>
-
-        <!-- Web输出组件 -->
-        <WebOutput v-else-if="consoleType === 'web'"
-                   class="flex-1"
-                   :web-content="output"
-                   :is-running="isRunning"
-                   :execution-time="lastExecutionTime">
-        </WebOutput>
-      </div>
+            </WebOutput>
+          </div>
+        </template>
+      </ResizablePanels>
     </div>
 
     <!-- 状态栏 -->
@@ -78,6 +84,7 @@ import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
 import Toast from './components/Toast.vue'
+import ResizablePanels from './components/ResizablePanels.vue'
 import {useToast} from './plugins/toast'
 
 // Composables
