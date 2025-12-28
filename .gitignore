@@ -30,3 +30,4 @@ go.mod
 .RData
 .Rhistory
 program
+.env
