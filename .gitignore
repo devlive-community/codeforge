@@ -31,3 +31,4 @@ go.mod
 .Rhistory
 program
 .env
+*.gz

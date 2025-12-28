@@ -72,6 +72,7 @@ function getConfig() {
     ossAccessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
     ossBucket: process.env.OSS_BUCKET,
     cdnDomain: process.env.CDN_DOMAIN, // 自定义 CDN 域名（可选）
+    githubToken: process.env.GITHUB_TOKEN, // GitHub Personal Access Token（可选，用于提高 API 速率限制）
     githubRepo: 'clojure/brew-install',
     ossPrefix: 'global/plugins/clojure/',
     tempDir: path.join(__dirname, '.temp-clojure'),
@@ -129,6 +130,11 @@ function httpGet(url, isJson = true) {
         'User-Agent': 'CodeForge-Sync-Script'
       }
     };
+
+    // 如果是 GitHub API 请求且配置了 Token，添加认证头
+    if (url.includes('api.github.com') && CONFIG.githubToken) {
+      options.headers['Authorization'] = `token ${CONFIG.githubToken}`;
+    }
 
     client.get(url, options, (res) => {
       if (res.statusCode === 302 || res.statusCode === 301) {

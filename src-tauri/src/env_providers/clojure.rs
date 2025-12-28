@@ -62,6 +62,11 @@ impl ClojureEnvironmentProvider {
         match std::fs::read_to_string(&self.cache_file) {
             Ok(content) => match serde_json::from_str::<CachedReleases>(&content) {
                 Ok(cached) => {
+                    if cached.releases.is_empty() {
+                        warn!("缓存的版本列表为空，将重新获取");
+                        return None;
+                    }
+
                     if let Ok(elapsed) = SystemTime::now().duration_since(cached.cached_at) {
                         if elapsed < Duration::from_secs(3600) {
                             info!("使用缓存的 Clojure 版本列表（缓存时间: {:?}）", elapsed);
@@ -185,8 +190,20 @@ impl ClojureEnvironmentProvider {
 
         let mut request = client.get(url);
 
-        if let Ok(token) = std::env::var("GITHUB_TOKEN") {
-            info!("使用 GITHUB_TOKEN 进行认证");
+        // 优先从配置读取 GitHub Token，其次从环境变量读取
+        let token = if let Ok(config) = crate::config::get_app_config_internal() {
+            config
+                .github
+                .and_then(|g| g.token)
+                .filter(|t| !t.is_empty())
+        } else {
+            None
+        };
+
+        let token = token.or_else(|| std::env::var("GITHUB_TOKEN").ok());
+
+        if let Some(token) = token {
+            info!("使用 GitHub Token 进行认证");
             request = request.header("Authorization", format!("token {}", token));
         }
 

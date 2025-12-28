@@ -99,6 +99,7 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -118,7 +119,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 
-// 状态
+// CDN 状态
 const cdnEnabled = ref(false)
 const cdnBaseUrl = ref('')
 const fallbackEnabled = ref(false)
