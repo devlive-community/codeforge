@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
 /**
- * 同步 Scala 版本到阿里云 OSS
+ * 同步 Go 版本到阿里云 OSS
  *
  * 功能：
- * 1. 从 GitHub API 获取 Scala 所有版本
+ * 1. 从 GitHub API 获取 Go 所有版本
  * 2. 下载版本文件
- * 3. 使用阿里云官方 ali-oss SDK 上传到 OSS /global/plugins/scala/ 目录
+ * 3. 使用阿里云官方 ali-oss SDK 上传到 OSS /global/plugins/go/ 目录
  * 4. 生成 metadata.json 文件
  *
  * 使用方法：
- * node scripts/sync-scala-versions.js
+ * node scripts/sync-go-versions.js
  *
  * 环境变量（可以在 .env 文件中配置）：
  * - OSS_REGION: 阿里云 OSS 区域
@@ -28,11 +28,9 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import OSS from 'ali-oss';
 
-// ES 模块中获取 __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 加载 .env 文件
 function loadEnv() {
   const envPath = path.join(__dirname, '..', '.env');
   if (fs.existsSync(envPath)) {
@@ -61,7 +59,6 @@ function loadEnv() {
   }
 }
 
-// 获取配置
 function getConfig() {
   return {
     ossRegion: process.env.OSS_REGION || 'oss-cn-hangzhou',
@@ -70,22 +67,21 @@ function getConfig() {
     ossBucket: process.env.OSS_BUCKET,
     cdnDomain: process.env.CDN_DOMAIN,
     githubToken: process.env.GITHUB_TOKEN,
-    githubRepo: 'lampepfl/dotty',
-    ossPrefix: 'global/plugins/scala/',
-    tempDir: path.join(__dirname, '.temp-scala'),
+    githubRepo: 'golang/go',
+    ossPrefix: 'global/plugins/go/',
+    tempDir: path.join(__dirname, '.temp-go'),
     platformMap: {
-      'aarch64-apple-darwin': 'macos-aarch64',
-      'x86_64-apple-darwin': 'macos-x86_64',
-      'aarch64-pc-linux': 'linux-aarch64',
-      'x86_64-pc-linux': 'linux-x86_64',
-      'x86_64-pc-win32': 'windows-x86_64'
+      'darwin-arm64': 'macos-aarch64',
+      'darwin-amd64': 'macos-x86_64',
+      'linux-arm64': 'linux-aarch64',
+      'linux-amd64': 'linux-x86_64',
+      'windows-amd64': 'windows-x86_64'
     }
   };
 }
 
 let CONFIG;
 
-// 验证配置
 function validateConfig() {
   const missing = [];
   if (!CONFIG.ossAccessKeyId) missing.push('OSS_ACCESS_KEY_ID');
@@ -107,21 +103,18 @@ function validateConfig() {
   console.log('');
 }
 
-// 创建临时目录
 function ensureTempDir() {
   if (!fs.existsSync(CONFIG.tempDir)) {
     fs.mkdirSync(CONFIG.tempDir, { recursive: true });
   }
 }
 
-// 清理临时目录
 function cleanupTempDir() {
   if (fs.existsSync(CONFIG.tempDir)) {
     fs.rmSync(CONFIG.tempDir, { recursive: true, force: true });
   }
 }
 
-// HTTP(S) GET 请求
 function httpGet(url, isJson = true) {
   return new Promise((resolve, reject) => {
     const client = url.startsWith('https') ? https : http;
@@ -163,7 +156,6 @@ function httpGet(url, isJson = true) {
   });
 }
 
-// 下载文件
 async function downloadFile(url, destPath) {
   console.log(`  下载: ${url}`);
   const data = await httpGet(url, false);
@@ -171,26 +163,22 @@ async function downloadFile(url, destPath) {
   return destPath;
 }
 
-// 获取 GitHub releases
-async function getGitHubReleases() {
-  console.log('正在获取 Scala 版本列表...');
-  const url = `https://api.github.com/repos/${CONFIG.githubRepo}/releases?per_page=10`;
+async function getGoReleases() {
+  console.log('正在获取 Go 版本列表...');
+  const url = 'https://go.dev/dl/?mode=json&include=all';
   return await httpGet(url);
 }
 
-// 计算文件 MD5
 function calculateMD5(filePath) {
   const buffer = fs.readFileSync(filePath);
   return crypto.createHash('md5').update(buffer).digest('hex');
 }
 
-// 获取文件大小
 function getFileSize(filePath) {
   const stats = fs.statSync(filePath);
   return stats.size;
 }
 
-// 创建 OSS 客户端
 function createOSSClient() {
   return new OSS({
     region: CONFIG.ossRegion,
@@ -200,7 +188,6 @@ function createOSSClient() {
   });
 }
 
-// 上传文件到 OSS
 async function uploadToOSS(client, localPath, ossPath) {
   try {
     await client.put(ossPath, localPath);
@@ -210,7 +197,6 @@ async function uploadToOSS(client, localPath, ossPath) {
   }
 }
 
-// 上传 metadata.json 到 OSS
 async function uploadMetadata(client, metadata) {
   try {
     const metadataJson = JSON.stringify(metadata, null, 2);
@@ -224,69 +210,71 @@ async function uploadMetadata(client, metadata) {
   }
 }
 
-// 主函数
 async function main() {
   try {
-    console.log('=== Scala 版本同步工具 ===\n');
+    console.log('=== Go 版本同步工具 ===\n');
 
     loadEnv();
-
     CONFIG = getConfig();
-
     validateConfig();
 
     const ossClient = createOSSClient();
-
     ensureTempDir();
 
-    const releases = await getGitHubReleases();
+    const releases = await getGoReleases();
     console.log(`找到 ${releases.length} 个版本\n`);
 
     const metadata = {
-      language: 'scala',
+      language: 'go',
       last_updated: new Date().toISOString(),
       releases: []
     };
 
+    const goOsMap = {
+      'darwin': ['macos-aarch64', 'macos-x86_64'],
+      'linux': ['linux-aarch64', 'linux-x86_64'],
+      'windows': ['windows-x86_64']
+    };
+
+    const goArchMap = {
+      'arm64': 'aarch64',
+      'amd64': 'x86_64'
+    };
+
     for (const release of releases) {
-      const version = release.tag_name;
+      const version = release.version.replace(/^go/, '');
       console.log(`处理版本: ${version}`);
 
-      const scalaAssets = release.assets.filter(a =>
-        a.name.endsWith('.tar.gz') && a.name.includes('scala3')
-      );
+      const archiveFiles = release.files.filter(f => f.kind === 'archive');
 
-      if (scalaAssets.length === 0) {
-        console.log(`  ⚠ 跳过: 未找到 tar.gz 文件`);
+      if (archiveFiles.length === 0) {
+        console.log(`  ⚠ 跳过: 未找到归档文件`);
         continue;
-      }
-
-      const versionClean = version.replace(/^v/, '');
-      const platformAssets = {};
-
-      for (const asset of scalaAssets) {
-        const platformMatch = asset.name.match(/scala3-[\d.]+-(?:RC\d+-)?([^.]+)\.tar\.gz/);
-        if (platformMatch) {
-          const githubPlatform = platformMatch[1];
-          const mappedPlatform = CONFIG.platformMap[githubPlatform];
-          if (mappedPlatform && !platformAssets[mappedPlatform]) {
-            platformAssets[mappedPlatform] = asset;
-          }
-        }
       }
 
       let processedCount = 0;
 
-      for (const [platform, asset] of Object.entries(platformAssets)) {
+      for (const file of archiveFiles) {
+        const mappedArch = goArchMap[file.arch] || file.arch;
+        const osPlatforms = goOsMap[file.os];
+
+        if (!osPlatforms) continue;
+
+        const platform = osPlatforms.find(p => p.includes(mappedArch));
+        if (!platform) continue;
+
         try {
-          const fileName = asset.name;
+          const fileName = file.filename;
           const localPath = path.join(CONFIG.tempDir, fileName);
-          await downloadFile(asset.browser_download_url, localPath);
+          const goDevUrl = `https://go.dev/dl/${fileName}`;
+
+          console.log(`  下载 ${fileName}...`);
+          await downloadFile(goDevUrl, localPath);
 
           const fileSize = getFileSize(localPath);
           const md5 = calculateMD5(localPath);
 
-          const ossPath = `${CONFIG.ossPrefix}${versionClean}/${fileName}`;
+          const ossPath = `${CONFIG.ossPrefix}${version}/${fileName}`;
           await uploadToOSS(ossClient, localPath, ossPath);
 
           const cdnUrl = CONFIG.cdnDomain
@@ -294,11 +282,11 @@ async function main() {
             : `https://${CONFIG.ossBucket}.${CONFIG.ossRegion}.aliyuncs.com/${ossPath}`;
 
           metadata.releases.push({
-            version: versionClean,
-            display_name: `Scala ${version}`,
-            published_at: release.published_at,
+            version: version,
+            display_name: `Go ${release.version}`,
+            published_at: new Date().toISOString(),
             download_url: cdnUrl,
-            github_url: asset.browser_download_url,
+            github_url: goDevUrl,
             file_name: fileName,
             size: fileSize,
             md5: md5,
@@ -308,14 +296,14 @@ async function main() {
           processedCount++;
           fs.unlinkSync(localPath);
         } catch (error) {
-          console.error(`  ✗ 处理文件 ${asset.name} 失败: ${error.message}`);
+          console.error(`  ✗ 处理文件 ${file.filename} 失败: ${error.message}`);
         }
       }
 
       if (processedCount > 0) {
-        console.log(`  ✓ 版本 ${version} 处理完成 (${processedCount} 个平台)\n`);
+        console.log(`  ✓ 版本 ${release.version} 处理完成 (${processedCount} 个平台)\n`);
       } else {
-        console.log(`  ⚠ 版本 ${version} 没有可用的平台文件\n`);
+        console.log(`  ⚠ 版本 ${release.version} 没有可用的平台文件\n`);
       }
     }
 

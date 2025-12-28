@@ -30,6 +30,11 @@ pub struct EnvironmentMirrorConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GithubConfig {
+    pub token: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub log_directory: Option<String>,
     pub auto_clear_logs: Option<bool>,
@@ -38,6 +43,7 @@ pub struct AppConfig {
     pub plugins: Option<Vec<PluginConfig>>,
     pub editor: Option<EditorConfig>,
     pub environment_mirror: Option<EnvironmentMirrorConfig>,
+    pub github: Option<GithubConfig>,
 }
 
 impl Default for AppConfig {
@@ -63,6 +69,7 @@ impl Default for AppConfig {
                 base_url: Some("https://cdn.global.devlive.top".to_string()),
                 fallback_enabled: Some(false),
             }),
+            github: Some(GithubConfig { token: None }),
         }
     }
 }
@@ -246,6 +253,7 @@ impl ConfigManager {
                 base_url: Some("https://cdn.global.devlive.top".to_string()),
                 fallback_enabled: Some(false),
             }),
+            github: Some(GithubConfig { token: None }),
         }
     }
 

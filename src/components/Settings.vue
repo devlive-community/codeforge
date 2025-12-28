@@ -30,6 +30,11 @@
       <template #cache>
         <Cache v-if="activeTab === 'cache'"/>
       </template>
+
+      <!-- 日志管理 -->
+      <template #logs>
+        <Logs v-if="activeTab === 'logs'" @settings-changed="handleNetworkSettingsChanged" @error="handleEditorError"/>
+      </template>
     </Tabs>
   </Modal>
 </template>
@@ -43,6 +48,7 @@ import Language from './setting/Language.vue'
 import Editor from './setting/Editor.vue'
 import Network from './setting/Network.vue'
 import Cache from './setting/Cache.vue'
+import Logs from './setting/Logs.vue'
 import { useSettings } from '../composables/useSettings.ts'
 
 const emit = defineEmits<{

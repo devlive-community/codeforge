@@ -1,131 +1,126 @@
 <template>
   <div>
-    <!-- 日志设置 -->
+    <!-- GitHub 配置 -->
     <div class="mb-6">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-        <FileText class="w-5 h-5 mr-2"/>
-        日志设置
+        <Github class="w-5 h-5 mr-2"/>
+        GitHub 配置
       </h3>
 
       <div class="space-y-4">
-        <Label label="当前日志目录">
-          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-            {{ currentLogDir || '加载中...' }}
-          </div>
+        <Label label="GitHub Token (可选)">
+          <Input v-model="githubToken"
+                 type="password"
+                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                 class="w-full"
+                 @input="handleGithubTokenChange"/>
         </Label>
 
-        <Label label="选择新的日志目录">
-          <div class="flex gap-2">
-            <input v-model="newLogDir"
-                   type="text"
-                   placeholder="选择或输入日志目录路径"
-                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                   readonly/>
-
-            <Button type="primary"
-                    :icon-only="true"
-                    :icon="Folder"
-                    @click="selectLogDirectory">
-            </Button>
-          </div>
-        </Label>
-
-        <!-- 操作按钮 -->
-        <div class="flex gap-3 pt-0.5">
-          <Button @click="applyLogDirChange"
-                  :disabled="!newLogDir || newLogDir === currentLogDir"
-                  type="secondary">
-            应用更改
-          </Button>
-          <Button @click="openLogDirectory" type="secondary">
-            打开日志目录
-          </Button>
-          <Button @click="resetLogDirectory"
-                  class="cursor-pointer px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors">
-            重置为默认
-          </Button>
-        </div>
-
-        <Label v-if="logFiles.length > 0" label="最近的日志文件">
-          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-32 overflow-y-auto">
-            <div v-for="file in logFiles.slice(0, 5)" :key="file"
-                 class="text-sm text-gray-600 dark:text-gray-400 font-mono py-1 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
-                 @click="openLogFile(file)">
-              {{ file }}
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div class="flex items-start">
+            <Info class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"/>
+            <div class="text-sm text-blue-800 dark:text-blue-300">
+              <p class="font-medium mb-2">GitHub Token 说明</p>
+              <ul class="space-y-1 list-disc list-inside">
+                <li>用于提高 GitHub API 请求速率限制（从 60次/小时 提升到 5000次/小时）</li>
+                <li>在 <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:text-blue-600 dark:hover:text-blue-200">GitHub Settings</a> 创建 Personal Access Token</li>
+                <li>Token 不需要任何权限（public access 即可）</li>
+                <li>留空则使用未认证模式访问 GitHub API</li>
+              </ul>
             </div>
           </div>
-        </Label>
-      </div>
-    </div>
+        </div>
 
-    <!-- 日志管理 -->
-    <div class="mb-6">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-        <Settings2 class="w-5 h-5 mr-2"/>
-        日志管理
-      </h3>
-
-      <div class="space-y-4">
-        <Label label="清理日志">
-          <div class="flex items-center gap-3">
-            <Select v-model="keepDays"
-                    class="w-36"
-                    :options="keepDaysOptions"
-                    placeholder="选择保留天数">
-            </Select>
-            <Button type="danger" @click="clearLogs">
-              立即清理
-            </Button>
-          </div>
-        </Label>
+        <!-- GitHub 操作按钮 -->
+        <div class="flex gap-3 pt-0.5">
+          <Button @click="saveGithubConfig" :disabled="!hasGithubChanges || isSavingGithub" :loading="isSavingGithub" type="primary">
+            {{ isSavingGithub ? '保存中...' : '保存 GitHub 配置' }}
+          </Button>
+          <Button @click="clearGithubToken" type="secondary">
+            清除 Token
+          </Button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { FileText, Folder, Settings2 } from 'lucide-vue-next'
-import Select from '../../ui/Select.vue'
+import { computed, onMounted, ref } from 'vue'
+import { Github, Info } from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
 import Label from '../../ui/Label.vue'
-import { useLogDirectory } from '../../composables/useLogDirectory'
-import { useLogCleanup } from '../../composables/useLogCleanup'
+import Input from '../../ui/Input.vue'
+import { invoke } from '@tauri-apps/api/core'
+import { useToast } from '../../plugins/toast'
 
 const emit = defineEmits<{
   'settings-changed': [type: string, value: any]
   'error': [message: string]
 }>()
 
-const {
-  currentLogDir,
-  newLogDir,
-  logFiles,
-  loadLogDirectory,
-  loadLogFiles,
-  selectLogDirectory,
-  applyLogDirChange,
-  openLogDirectory,
-  resetLogDirectory,
-  openLogFile
-} = useLogDirectory(emit)
+const toast = useToast()
 
-const {
-  keepDays,
-  keepDaysOptions,
-  clearLogs
-} = useLogCleanup(emit, loadLogFiles)
+const githubToken = ref('')
+const originalGithubToken = ref('')
+const isSavingGithub = ref(false)
 
-// 暴露方法给父组件
-defineExpose({
-  loadLogDirectory,
-  loadLogFiles,
-  clearLogs
+const hasGithubChanges = computed(() => {
+  return githubToken.value !== originalGithubToken.value
 })
 
-// 生命周期
+const loadGithubConfig = async () => {
+  try {
+    const config = await invoke<any>('get_app_config')
+    if (config.github) {
+      githubToken.value = config.github.token ?? ''
+      originalGithubToken.value = githubToken.value
+    }
+  }
+  catch (error) {
+    console.error('加载 GitHub 配置失败:', error)
+  }
+}
+
+const saveGithubConfig = async () => {
+  isSavingGithub.value = true
+  try {
+    const config = await invoke<any>('get_app_config')
+    config.github = {
+      token: githubToken.value
+    }
+
+    await invoke('update_app_config', { config })
+
+    originalGithubToken.value = githubToken.value
+
+    toast.success('GitHub 配置已保存')
+    emit('settings-changed', 'github', config.github)
+  }
+  catch (error) {
+    console.error('保存 GitHub 配置失败:', error)
+    toast.error('保存 GitHub 配置失败: ' + error)
+    emit('error', '保存 GitHub 配置失败')
+  }
+  finally {
+    isSavingGithub.value = false
+  }
+}
+
+const clearGithubToken = async () => {
+  githubToken.value = ''
+}
+
+const handleGithubTokenChange = () => {
+  console.log('GitHub Token 变化')
+}
+
+defineExpose({
+  loadGithubConfig,
+  saveGithubConfig
+})
+
 onMounted(async () => {
-  await loadLogDirectory()
-  await loadLogFiles()
+  await loadGithubConfig()
 })
 </script>
