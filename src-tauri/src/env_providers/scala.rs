@@ -283,9 +283,10 @@ impl ScalaEnvironmentProvider {
 
         for release in metadata.releases {
             // 检查是否支持当前平台
-            let is_supported = release.supported_platforms.iter().any(|p| {
-                p == current_platform || p.starts_with(&format!("{}-", current_platform))
-            });
+            let is_supported = release
+                .supported_platforms
+                .iter()
+                .any(|p| p == current_platform || p.starts_with(&format!("{}-", current_platform)));
 
             if !is_supported {
                 continue;
