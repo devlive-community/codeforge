@@ -1,6 +1,6 @@
 [package]
 name = "CodeForge"
-version = "25.0.5"
+version = "26.0.0"
 description = "CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发者、学生和编程爱好者设计。"
 authors = ["devlive-community"]
 edition = "2024"
