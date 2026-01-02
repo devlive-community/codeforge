@@ -27,20 +27,30 @@ impl LanguagePlugin for RustPlugin {
     }
 
     fn get_path_command(&self) -> String {
-        "rustc --print sysroot".to_string()
+        if let Some(execute_home) = self.get_execute_home() {
+            let rustc_bin = std::path::Path::new(&execute_home)
+                .join("rustc")
+                .join("bin");
+
+            if rustc_bin.exists() {
+                format!("{}/rustc --print sysroot", rustc_bin.display())
+            } else {
+                let bin_dir = std::path::Path::new(&execute_home).join("bin");
+                format!("{}/rustc --print sysroot", bin_dir.display())
+            }
+        } else {
+            "rustc --print sysroot".to_string()
+        }
     }
 
     fn get_execute_args(&self, file_path: &str) -> Vec<String> {
-        let cmd = if self.get_execute_home().is_some() {
-            format!("./rustc {} -o ./main && ./main", file_path)
-        } else {
-            format!(
-                "export PATH=$PATH:$HOME/.cargo/bin && rustc {} -o /tmp/main && /tmp/main",
-                file_path
-            )
-        };
-
-        vec!["-c".to_string(), cmd]
+        if let Some(config) = self.get_config() {
+            if let Some(run_cmd) = &config.run_command {
+                let full_cmd = run_cmd.replace("$filename", file_path);
+                return vec!["-c".to_string(), full_cmd];
+            }
+        }
+        vec![file_path.to_string()]
     }
 
     fn get_default_config(&self) -> PluginConfig {

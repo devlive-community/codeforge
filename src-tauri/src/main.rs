@@ -25,7 +25,8 @@ use crate::env_commands::{
 };
 use crate::env_manager::EnvironmentManager;
 use crate::env_providers::{
-    ClojureEnvironmentProvider, GoEnvironmentProvider, ScalaEnvironmentProvider,
+    ClojureEnvironmentProvider, GoEnvironmentProvider, RustEnvironmentProvider,
+    ScalaEnvironmentProvider,
 };
 use crate::execution::{
     ExecutionHistory, PluginManagerState as ExecutionPluginManagerState, clear_execution_history,
@@ -51,6 +52,7 @@ fn main() {
     let mut env_manager = EnvironmentManager::new();
     env_manager.register_provider(Box::new(ClojureEnvironmentProvider::new()));
     env_manager.register_provider(Box::new(GoEnvironmentProvider::new()));
+    env_manager.register_provider(Box::new(RustEnvironmentProvider::new()));
     env_manager.register_provider(Box::new(ScalaEnvironmentProvider::new()));
 
     tauri::Builder::default()
