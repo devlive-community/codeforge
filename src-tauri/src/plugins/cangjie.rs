@@ -86,6 +86,7 @@ impl LanguagePlugin for CangjiePlugin {
             )),
             timeout: Some(30),
             console_type: Some(String::from("console")),
+            icon_path: None,
         }
     }
 

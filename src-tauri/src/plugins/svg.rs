@@ -44,6 +44,7 @@ impl LanguagePlugin for SvgPlugin {
             )),
             timeout: Some(30),
             console_type: Some(String::from("web")),
+            icon_path: None,
         }
     }
 

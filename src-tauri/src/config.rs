@@ -41,6 +41,7 @@ pub struct AppConfig {
     pub keep_log_days: Option<u32>,
     pub theme: Option<String>,
     pub plugins: Option<Vec<PluginConfig>>,
+    pub custom_plugins: Option<Vec<PluginConfig>>,
     pub editor: Option<EditorConfig>,
     pub environment_mirror: Option<EnvironmentMirrorConfig>,
     pub github: Option<GithubConfig>,
@@ -54,6 +55,7 @@ impl Default for AppConfig {
             keep_log_days: Some(30),
             theme: Some("system".to_string()),
             plugins: Some(vec![]),
+            custom_plugins: Some(vec![]),
             editor: Some(EditorConfig {
                 indent_with_tab: Some(true),
                 tab_size: Some(2),
@@ -238,6 +240,7 @@ impl ConfigManager {
             keep_log_days: Some(30),
             theme: Some("system".to_string()),
             plugins: Self::get_default_plugins_config(app_handle),
+            custom_plugins: Some(vec![]),
             editor: Some(EditorConfig {
                 indent_with_tab: Some(true),
                 tab_size: Some(2),
@@ -277,6 +280,11 @@ impl ConfigManager {
 
     pub fn set_log_directory(&mut self, path: Option<String>) -> Result<(), String> {
         self.config.log_directory = path;
+        self.save_config()
+    }
+
+    pub fn update_config(&mut self, new_config: AppConfig) -> Result<(), String> {
+        self.config = new_config;
         self.save_config()
     }
 }

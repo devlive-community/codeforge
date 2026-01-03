@@ -10,4 +10,5 @@ export default interface PluginConfig
     template?: string       // 插件的模板
     timeout?: number       // 插件的超时时间
     console_type?: string // 插件的输出类型
+    icon_path?: string     // 自定义图标路径
 }

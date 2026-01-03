@@ -42,6 +42,7 @@ pub struct PluginConfig {
     pub template: Option<String>,       // 插件的模板
     pub timeout: Option<u64>,           // 插件的超时时间
     pub console_type: Option<String>,   // 插件的输出类型
+    pub icon_path: Option<String>,      // 自定义图标路径
 }
 
 // 语言插件接口
@@ -119,11 +120,10 @@ pub trait LanguagePlugin: Send + Sync {
     fn get_config(&self) -> Option<PluginConfig> {
         // 获取全局应用配置
         if let Ok(app_config) = get_app_config_internal() {
-            // 检查是否有插件配置
-            if let Some(ref plugins) = app_config.plugins {
-                // 根据当前插件的语言名称过滤配置
-                let language_name = self.get_language_key();
+            let language_name = self.get_language_key();
 
+            // 首先检查是否有插件配置
+            if let Some(ref plugins) = app_config.plugins {
                 // 查找匹配的插件配置
                 if let Some(found_config) = plugins
                     .iter()
@@ -132,6 +132,21 @@ pub trait LanguagePlugin: Send + Sync {
                 {
                     debug!(
                         "执行代码 -> 获取插件 [ {} ] 配置 {:?}",
+                        language_name, found_config
+                    );
+                    return Some(found_config);
+                }
+            }
+
+            // 如果在plugins中没找到，检查custom_plugins
+            if let Some(ref custom_plugins) = app_config.custom_plugins {
+                if let Some(found_config) = custom_plugins
+                    .iter()
+                    .find(|config| config.language == language_name)
+                    .cloned()
+                {
+                    debug!(
+                        "执行代码 -> 获取自定义插件 [ {} ] 配置 {:?}",
                         language_name, found_config
                     );
                     return Some(found_config);
@@ -375,6 +390,7 @@ pub mod cangjie;
 pub mod clojure;
 pub mod cpp;
 pub mod css;
+pub mod custom;
 pub mod go;
 pub mod groovy;
 pub mod haskell;

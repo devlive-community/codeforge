@@ -71,6 +71,7 @@ impl LanguagePlugin for LuaPlugin {
             template: Some(String::from("-- Lua 示例代码 - CodeForge 代码执行环境\n\n")),
             timeout: Some(30),
             console_type: Some(String::from("console")),
+            icon_path: None,
         }
     }
 

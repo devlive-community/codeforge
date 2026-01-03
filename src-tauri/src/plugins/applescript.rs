@@ -42,6 +42,7 @@ impl LanguagePlugin for AppleScriptPlugin {
             template: Some(String::from("-- 在这里输入 AppleScript 代码")),
             timeout: Some(45),
             console_type: Some(String::from("console")),
+            icon_path: None,
         }
     }
 

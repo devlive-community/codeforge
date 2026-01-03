@@ -69,6 +69,7 @@ impl LanguagePlugin for KotlinPlugin {
             template: Some(String::from("// 在这里输入 Kotlin 代码")),
             timeout: Some(60),
             console_type: Some(String::from("console")),
+            icon_path: None,
         }
     }
 

@@ -1,5 +1,5 @@
 import {ref, type Ref, onMounted, onUnmounted} from 'vue'
-import {invoke} from '@tauri-apps/api/core'
+import {invoke, convertFileSrc} from '@tauri-apps/api/core'
 import {listen} from '@tauri-apps/api/event'
 import {EnvInfo, Language, LanguageInfo} from '../types/app.ts'
 
@@ -97,15 +97,26 @@ export function useLanguageManager(
     const getSupportedLanguages = async () => {
         try {
             const languages = await invoke<Language[]>('get_supported_languages')
-            const allLanguages = languages.map((language) => ({
-                name: language.name,
-                value: language.value,
-                svgUrl: `/icons/${language.value.replace(/\d+$/, '')}.svg`
-            }))
+            const allLanguages = languages.map((language) => {
+                let customPlugin = globalConfig.value?.custom_plugins?.find((p: any) => p.language === language.value)
 
-            if (globalConfig.value && globalConfig.value.plugins) {
+                return {
+                    name: language.name,
+                    value: language.value,
+                    svgUrl: customPlugin?.icon_path
+                        ? convertFileSrc(customPlugin.icon_path)
+                        : `/icons/${language.value.replace(/\d+$/, '')}.svg`
+                }
+            })
+
+            if (globalConfig.value) {
                 const filtered = allLanguages.filter((language) => {
-                    const plugin = globalConfig.value.plugins.find((p: any) => p.language === language.value)
+                    let plugin = globalConfig.value.plugins?.find((p: any) => p.language === language.value)
+
+                    if (!plugin && globalConfig.value.custom_plugins) {
+                        plugin = globalConfig.value.custom_plugins.find((p: any) => p.language === language.value)
+                    }
+
                     const enabled = !plugin || plugin.enabled !== false
                     console.log(`语言 ${language.name} (${language.value}): enabled=${enabled}`)
                     return enabled
@@ -133,8 +144,14 @@ export function useLanguageManager(
     }
 
     const filterPluginTemplate = (plugin: any) => {
-        if (globalConfig.value && globalConfig.value.plugins) {
-            return globalConfig.value.plugins.find((p: any) => p.language === plugin)?.template || ''
+        if (globalConfig.value) {
+            let foundPlugin = globalConfig.value.plugins?.find((p: any) => p.language === plugin)
+
+            if (!foundPlugin && globalConfig.value.custom_plugins) {
+                foundPlugin = globalConfig.value.custom_plugins.find((p: any) => p.language === plugin)
+            }
+
+            return foundPlugin?.template || ''
         }
         return ''
     }
@@ -200,8 +217,8 @@ export function useLanguageManager(
 
     onMounted(async () => {
         unlistenConfigUpdate = await listen('config-updated', async () => {
-            console.log('收到配置更新事件，重新加载环境信息')
-            await refreshEnvInfo()
+            console.log('收到配置更新事件，重新加载语言列表和环境信息')
+            await refreshLanguageList()
         })
     })
 

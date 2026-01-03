@@ -71,6 +71,7 @@ impl LanguagePlugin for TypeScriptBrowserPlugin {
             template: Some(String::from("// 在这里输入 TypeScript (Browser) 代码")),
             timeout: Some(30),
             console_type: Some(String::from("console")),
+            icon_path: None,
         }
     }
 
