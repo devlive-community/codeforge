@@ -338,8 +338,7 @@ impl RustEnvironmentProvider {
         info!("合并 Rust 标准库到 rustc 目录");
 
         // 查找所有 rust-std-* 目录
-        let entries = fs::read_dir(install_path)
-            .map_err(|e| format!("读取安装目录失败: {}", e))?;
+        let entries = fs::read_dir(install_path).map_err(|e| format!("读取安装目录失败: {}", e))?;
 
         for entry in entries.flatten() {
             let path = entry.path();
@@ -352,7 +351,8 @@ impl RustEnvironmentProvider {
                         let std_rustlib_src = path.join("lib").join("rustlib");
 
                         // 目标路径: install_path/rustc/lib/rustlib/
-                        let rustc_rustlib_dst = install_path.join("rustc").join("lib").join("rustlib");
+                        let rustc_rustlib_dst =
+                            install_path.join("rustc").join("lib").join("rustlib");
 
                         if std_rustlib_src.exists() && rustc_rustlib_dst.exists() {
                             // 遍历标准库中的所有目标平台
@@ -361,12 +361,14 @@ impl RustEnvironmentProvider {
                                     let std_target_path = std_entry.path();
                                     if std_target_path.is_dir() {
                                         if let Some(target_name) = std_target_path.file_name() {
-                                            let dst_target_path = rustc_rustlib_dst.join(target_name);
+                                            let dst_target_path =
+                                                rustc_rustlib_dst.join(target_name);
 
                                             // 如果目标路径不存在，创建它
                                             if !dst_target_path.exists() {
-                                                fs::create_dir_all(&dst_target_path)
-                                                    .map_err(|e| format!("创建目标目录失败: {}", e))?;
+                                                fs::create_dir_all(&dst_target_path).map_err(
+                                                    |e| format!("创建目标目录失败: {}", e),
+                                                )?;
                                             }
 
                                             // 复制 lib 目录
@@ -374,7 +376,11 @@ impl RustEnvironmentProvider {
                                             let dst_lib = dst_target_path.join("lib");
 
                                             if std_lib_src.exists() {
-                                                info!("复制标准库: {} -> {}", std_lib_src.display(), dst_lib.display());
+                                                info!(
+                                                    "复制标准库: {} -> {}",
+                                                    std_lib_src.display(),
+                                                    dst_lib.display()
+                                                );
                                                 Self::copy_dir_all(&std_lib_src, &dst_lib)?;
                                             }
                                         }
@@ -398,7 +404,9 @@ impl RustEnvironmentProvider {
 
         for entry in fs::read_dir(src).map_err(|e| format!("读取目录失败: {}", e))? {
             let entry = entry.map_err(|e| format!("读取条目失败: {}", e))?;
-            let ty = entry.file_type().map_err(|e| format!("获取文件类型失败: {}", e))?;
+            let ty = entry
+                .file_type()
+                .map_err(|e| format!("获取文件类型失败: {}", e))?;
             let src_path = entry.path();
             let dst_path = dst.join(entry.file_name());
 

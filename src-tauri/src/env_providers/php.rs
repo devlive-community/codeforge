@@ -92,7 +92,8 @@ impl PhpEnvironmentProvider {
             .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
 
         // Linux 使用 php-builder 仓库
-        let repo_url = "https://api.github.com/repos/shivammathur/php-builder/releases?per_page=100";
+        let repo_url =
+            "https://api.github.com/repos/shivammathur/php-builder/releases?per_page=100";
 
         info!("使用仓库: {}", repo_url);
 
@@ -118,15 +119,19 @@ impl PhpEnvironmentProvider {
         for release in releases {
             if let Some(tag_name) = release["tag_name"].as_str() {
                 // Linux 版本标签格式为纯版本号或 php-版本号
-                let version = tag_name.trim_start_matches("php-").trim_start_matches("php_");
+                let version = tag_name
+                    .trim_start_matches("php-")
+                    .trim_start_matches("php_");
 
                 if let Some(assets) = release["assets"].as_array() {
                     for asset in assets {
                         if let Some(name) = asset["name"].as_str() {
                             // Linux: 匹配 ubuntu 和 debian 的 tar.xz 或 tar.zst 文件
                             // 文件名格式: php_8.3+ubuntu22.04_arm64.tar.xz 或 php_8.3+debian12.tar.xz
-                            let is_compressed = name.ends_with(".tar.xz") || name.ends_with(".tar.zst");
-                            let is_php_package = name.starts_with("php_") || name.starts_with("php-");
+                            let is_compressed =
+                                name.ends_with(".tar.xz") || name.ends_with(".tar.zst");
+                            let is_php_package =
+                                name.starts_with("php_") || name.starts_with("php-");
                             let is_not_debug = !name.contains("dbgsym");
 
                             // 匹配架构（如果文件名中包含架构信息）或默认 x86_64 包
@@ -145,7 +150,10 @@ impl PhpEnvironmentProvider {
                                         .unwrap_or("")
                                         .to_string();
 
-                                    info!("找到 PHP 版本: {} - {} - {}", version, name, download_url);
+                                    info!(
+                                        "找到 PHP 版本: {} - {} - {}",
+                                        version, name, download_url
+                                    );
 
                                     php_releases.push(PhpRelease {
                                         version: version.to_string(),
@@ -449,7 +457,9 @@ impl EnvironmentProvider for PhpEnvironmentProvider {
         } else {
             "tar.gz"
         };
-        let temp_file = self.install_dir.join(format!("php-{}.{}", version, file_ext));
+        let temp_file = self
+            .install_dir
+            .join(format!("php-{}.{}", version, file_ext));
 
         let should_download = if is_cdn_enabled() {
             let metadata = fetch_metadata_from_cdn("php").await;

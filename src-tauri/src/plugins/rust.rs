@@ -59,10 +59,16 @@ impl LanguagePlugin for RustPlugin {
 
         // 默认命令
         #[cfg(target_os = "windows")]
-        return vec!["/c".to_string(), format!("rustc {} -o main.exe && main.exe", file_path)];
+        return vec![
+            "/c".to_string(),
+            format!("rustc {} -o main.exe && main.exe", file_path),
+        ];
 
         #[cfg(not(target_os = "windows"))]
-        vec!["-c".to_string(), format!("rustc {} -o /tmp/main && /tmp/main", file_path)]
+        vec![
+            "-c".to_string(),
+            format!("rustc {} -o /tmp/main && /tmp/main", file_path),
+        ]
     }
 
     fn get_command(
