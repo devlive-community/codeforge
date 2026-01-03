@@ -1,11 +1,14 @@
 <template>
   <div class="-mt-2">
+    <div class="my-2">
+      <Button @click="showAddCustomLanguage = true" size="sm">添加自定义语言</Button>
+    </div>
     <Tabs v-model="activePlugin"
           type="card"
           size="md"
           position="left"
           :tab-button-class="['!p-1 ']"
-          :nav-class="['max-h-[70vh] overflow-y-auto']"
+          :nav-class="['max-h-[65vh] overflow-y-auto']"
           :tabs="tabsPluginData"
           @change="handleTabChange">
       <template #tab-button="{ tab }">
@@ -14,15 +17,22 @@
                   size="sm"
                   @click.stop
                   @change="(value, event) => handlePluginToggle(tab.key as string, value, event)"/>
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-2 flex-1">
             <img v-if="tab.svgUrl" :src="tab.svgUrl" class="w-5 h-5" :alt="tab.label"/>
             <span>{{ tab.label }}</span>
           </div>
+          <button v-if="isCustomLanguage(tab.key as string)"
+                  @click.stop="confirmDelete(tab.key as string)"
+                  class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 hover:cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
       </template>
       <template #[activePlugin]="{ tab }">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
-          <img :src="`/icons/${activePlugin.replace(/\d+$/, '')}.svg`" class="w-6 h-6" :alt="tab.label"/>
+          <img v-if="tab.svgUrl" :src="tab.svgUrl" class="w-6 h-6" :alt="tab.label"/>
           <span>{{ `语言 [ ${tab.label} ] 配置` }}</span>
         </h3>
 
@@ -99,26 +109,89 @@
         </Tabs>
       </template>
     </Tabs>
+
+    <Modal v-model:show="showAddCustomLanguage" :close-on-backdrop="false" :close-on-esc="false" title="添加自定义语言">
+      <div class="space-y-4">
+        <Label label="语言标识">
+          <Input v-model="newLanguage.language" class="w-full" placeholder="例如: dart, perl"/>
+        </Label>
+        <Label label="语言名称">
+          <Input v-model="newLanguageName" class="w-full" placeholder="例如: Dart, Perl"/>
+        </Label>
+        <Label label="文件扩展名">
+          <Input v-model="newLanguage.extension" class="w-full" placeholder="例如: dart, pl, sh"/>
+        </Label>
+        <Label label="语言图标">
+          <div class="flex items-center space-x-2">
+            <Button @click="selectIconFile" variant="outline" size="sm">选择图标文件</Button>
+            <span v-if="selectedIconFile" class="text-sm text-gray-600 dark:text-gray-400">{{ selectedIconFile.name }}</span>
+          </div>
+        </Label>
+        <div class="flex justify-end space-x-2">
+          <Button @click="showAddCustomLanguage = false" type="secondary" size="sm">取消</Button>
+          <Button @click="addCustomLanguage" size="sm">添加</Button>
+        </div>
+      </div>
+    </Modal>
+
+    <Modal v-model:show="showDeleteConfirm" title="确认删除" size="sm">
+      <div class="space-y-4">
+        <p class="text-gray-700 dark:text-gray-300">
+          确定要删除自定义语言 <strong>{{ languageToDelete }}</strong> 吗？
+        </p>
+        <div class="flex justify-end space-x-2">
+          <Button @click="showDeleteConfirm = false" type="secondary" size="sm">取消</Button>
+          <Button @click="deleteCustomLanguage" size="sm" class="bg-red-500 hover:bg-red-600 text-white">删除</Button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { readFile } from '@tauri-apps/plugin-fs'
 import { Codemirror } from 'vue-codemirror'
 import Tabs from '../../ui/Tabs.vue'
 import Number from '../../ui/Number.vue'
 import Label from '../../ui/Label.vue'
 import Input from '../../ui/Input.vue'
+import Button from '../../ui/Button.vue'
+import Modal from '../../ui/Modal.vue'
 import { useLanguageSettings } from '../../composables/useLanguageSettings'
 import type PluginConfig from '../../types/plugin'
 import Select from "../../ui/Select.vue";
 import Switch from '../../ui/Switch.vue'
 import EnvironmentManager from './EnvironmentManager.vue'
+import { useToast } from '../../plugins/toast'
 
 const emit = defineEmits<{
   'settings-changed': [config: PluginConfig]
   'error': [message: string]
 }>()
+
+const toast = useToast()
+const showAddCustomLanguage = ref(false)
+const showDeleteConfirm = ref(false)
+const languageToDelete = ref('')
+const newLanguageName = ref('')
+const newLanguageIcon = ref('')
+const selectedIconFile = ref<File | null>(null)
+const customLanguages = ref<string[]>([])
+const newLanguage = ref<PluginConfig>({
+  enabled: true,
+  execute_home: undefined,
+  extension: '',
+  language: '',
+  before_compile: undefined,
+  after_compile: undefined,
+  run_command: undefined,
+  template: undefined,
+  timeout: 30,
+  console_type: 'console'
+})
 
 const {
   activeTab,
@@ -133,10 +206,122 @@ const {
   selectExecuteHome,
   isEditorReady,
   currentExtensions,
-  initialize
+  initialize,
+  reloadLanguages
 } = useLanguageSettings(emit)
+
+const selectIconFile = async () => {
+  try {
+    const selected = await openDialog({
+      multiple: false,
+      filters: [{
+        name: '图片文件',
+        extensions: ['svg', 'png', 'jpg', 'jpeg', 'gif', 'webp']
+      }]
+    })
+
+    if (selected) {
+      const filePath = selected as string
+      const fileName = filePath.split('/').pop() || ''
+      selectedIconFile.value = { name: fileName } as File
+      newLanguageIcon.value = filePath
+    }
+  }
+  catch (error) {
+    toast.error('选择文件失败: ' + error)
+  }
+}
+
+const isCustomLanguage = (language: string) => {
+  return customLanguages.value.includes(language)
+}
+
+const confirmDelete = (language: string) => {
+  languageToDelete.value = language
+  showDeleteConfirm.value = true
+}
+
+const deleteCustomLanguage = async () => {
+  const language = languageToDelete.value
+  showDeleteConfirm.value = false
+
+  try {
+    await invoke('remove_custom_plugin', { language })
+    toast.success('自定义语言已删除')
+    await reloadLanguages()
+    await loadCustomLanguages()
+  }
+  catch (error: any) {
+    toast.error('删除失败: ' + error)
+  }
+}
+
+const loadCustomLanguages = async () => {
+  try {
+    const plugins = await invoke<PluginConfig[]>('get_custom_plugins')
+    customLanguages.value = plugins.map(p => p.language)
+  }
+  catch (error) {
+    console.error('加载自定义语言列表失败:', error)
+  }
+}
+
+const addCustomLanguage = async () => {
+  if (!newLanguage.value.language || !newLanguageName.value) {
+    toast.error('请填写语言标识和语言名称')
+    return
+  }
+
+  if (!newLanguage.value.extension) {
+    toast.error('请填写文件扩展名')
+    return
+  }
+
+  try {
+    if (selectedIconFile.value && newLanguageIcon.value) {
+      const fileData = await readFile(newLanguageIcon.value)
+      const iconData = Array.from(fileData)
+      const fileExtension = newLanguageIcon.value.split('.').pop() || 'svg'
+
+      const iconPath = await invoke<string>('save_custom_icon', {
+        language: newLanguage.value.language,
+        iconData: iconData,
+        fileExtension: fileExtension
+      })
+
+      newLanguage.value.icon_path = iconPath
+    }
+
+    await invoke('add_custom_plugin', { config: newLanguage.value })
+    toast.success('自定义语言添加成功')
+    showAddCustomLanguage.value = false
+
+    newLanguage.value = {
+      enabled: true,
+      execute_home: undefined,
+      extension: '',
+      language: '',
+      before_compile: undefined,
+      after_compile: undefined,
+      run_command: undefined,
+      template: undefined,
+      timeout: 30,
+      console_type: 'console'
+    }
+    newLanguageName.value = ''
+    newLanguageIcon.value = ''
+    selectedIconFile.value = null
+
+    await reloadLanguages()
+    await loadCustomLanguages()
+  }
+  catch (error: any) {
+    toast.error('添加失败: ' + error)
+  }
+}
 
 onMounted(async () => {
   await initialize()
+  await loadCustomLanguages()
 })
 </script>

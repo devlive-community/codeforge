@@ -44,6 +44,7 @@ impl LanguagePlugin for JavaScriptBrowserPlugin {
             template: Some(String::from("// 在这里输入 JavaScript (Browser) 代码")),
             timeout: Some(30),
             console_type: Some(String::from("web")),
+            icon_path: None,
         }
     }
 

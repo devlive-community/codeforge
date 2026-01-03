@@ -42,6 +42,7 @@ impl LanguagePlugin for RubyPlugin {
             template: Some(String::from("# 在这里输入 Ruby 代码")),
             timeout: Some(30),
             console_type: Some(String::from("console")),
+            icon_path: None,
         }
     }
 

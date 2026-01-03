@@ -5,6 +5,7 @@
 
 mod cache;
 mod config;
+mod custom_plugin_commands;
 mod env_commands;
 mod env_manager;
 mod env_providers;
@@ -19,6 +20,10 @@ mod update;
 mod utils;
 
 use crate::cache::{clear_all_cache, clear_plugins_cache, get_cache_info};
+use crate::custom_plugin_commands::{
+    add_custom_plugin, get_custom_plugins, remove_custom_plugin, save_custom_icon,
+    update_custom_plugin,
+};
 use crate::env_commands::{
     EnvironmentManagerState, download_and_install_version, get_environment_info,
     get_supported_environment_languages, switch_environment_version, uninstall_environment_version,
@@ -70,7 +75,20 @@ fn main() {
                 eprintln!("Failed to initialize config: {}", e);
             }
 
-            // 第二步：初始化日志系统
+            // 第二步：加载自定义插件
+            use tauri::Manager;
+            if let Some(plugin_manager_state) = app.try_state::<ExecutionPluginManagerState>() {
+                if let Ok(mut manager) = plugin_manager_state.try_lock() {
+                    if let Ok(app_config) = config::get_app_config_internal() {
+                        if let Some(custom_plugins) = app_config.custom_plugins {
+                            manager.load_custom_plugins(custom_plugins);
+                            info!("初始化 -> 已加载自定义插件");
+                        }
+                    }
+                }
+            }
+
+            // 第三步：初始化日志系统
             if let Err(e) = logger::setup_logger(app.handle()) {
                 eprintln!("Failed to setup logger: {}", e);
             }
@@ -115,6 +133,12 @@ fn main() {
             get_app_config,
             update_app_config,
             get_config_path,
+            // 自定义插件相关命令
+            add_custom_plugin,
+            update_custom_plugin,
+            remove_custom_plugin,
+            get_custom_plugins,
+            save_custom_icon,
             // 缓存相关命令
             get_cache_info,
             clear_plugins_cache,

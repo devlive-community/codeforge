@@ -42,7 +42,8 @@ export function useLanguageSettings(emit: any)
         handleTabChange,
         selectExecuteHome,
         updateGlobalConfig,
-        initializePlugin
+        initializePlugin,
+        getSupportedLanguages
     } = usePluginConfig(emit)
 
     // 编辑器状态
@@ -113,9 +114,14 @@ export function useLanguageSettings(emit: any)
     }, {immediate: false})
 
     const handlePluginToggle = async (language: string, enabled: boolean, _event: Event) => {
-        if (!globalConfig.value || !globalConfig.value.plugins) return
+        if (!globalConfig.value) return
 
-        const plugin = globalConfig.value.plugins.find((p: any) => p.language === language)
+        let plugin = globalConfig.value.plugins?.find((p: any) => p.language === language)
+
+        if (!plugin && globalConfig.value.custom_plugins) {
+            plugin = globalConfig.value.custom_plugins.find((p: any) => p.language === language)
+        }
+
         if (plugin) {
             plugin.enabled = enabled
             await updateGlobalConfig(plugin)
@@ -123,10 +129,15 @@ export function useLanguageSettings(emit: any)
     }
 
     const syncPluginStates = () => {
-        if (globalConfig.value && globalConfig.value.plugins) {
+        if (globalConfig.value) {
             const states: Record<string, boolean> = {}
             tabsPluginData.value.forEach((tab) => {
-                const plugin = globalConfig.value.plugins.find((p: any) => p.language === tab.key)
+                let plugin = globalConfig.value.plugins?.find((p: any) => p.language === tab.key)
+
+                if (!plugin && globalConfig.value.custom_plugins) {
+                    plugin = globalConfig.value.custom_plugins.find((p: any) => p.language === tab.key)
+                }
+
                 states[tab.key] = plugin?.enabled !== false
             })
             pluginEnabledStates.value = states
@@ -161,6 +172,12 @@ export function useLanguageSettings(emit: any)
         console.log('Extensions updated:', currentExtensions.value)
     }
 
+    const reloadLanguages = async () => {
+        await getSupportedLanguages()
+        await initializePlugin()
+        syncPluginStates()
+    }
+
     return {
         activeTab,
         tabsData,
@@ -178,6 +195,7 @@ export function useLanguageSettings(emit: any)
         currentLanguage,
         templateContent,
         updateExtensions,
-        initialize
+        initialize,
+        reloadLanguages
     }
 }

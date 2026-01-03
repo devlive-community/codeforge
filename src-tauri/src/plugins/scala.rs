@@ -49,6 +49,7 @@ impl LanguagePlugin for ScalaPlugin {
             template: Some(String::from("// 在这里输入 Scala 代码")),
             timeout: Some(45),
             console_type: Some(String::from("console")),
+            icon_path: None,
         }
     }
 

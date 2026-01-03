@@ -1,5 +1,5 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { debounce } from 'lodash-es'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
@@ -49,11 +49,20 @@ export function usePluginConfig(emit?: any)
     const getSupportedLanguages = async () => {
         try {
             const languages = await invoke<Language[]>('get_supported_languages')
-            tabsPluginData.value = languages.map((language) => ({
-                key: language.value,
-                label: language.name,
-                svgUrl: `/icons/${ language.value.replace(/\d+$/, '') }.svg`
-            }))
+
+            await getGlobalConfig()
+
+            tabsPluginData.value = languages.map((language) => {
+                let customPlugin = globalConfig.value?.custom_plugins?.find((p: any) => p.language === language.value)
+
+                return {
+                    key: language.value,
+                    label: language.name,
+                    svgUrl: customPlugin?.icon_path
+                        ? convertFileSrc(customPlugin.icon_path)
+                        : `/icons/${ language.value.replace(/\d+$/, '') }.svg`
+                }
+            })
 
             // 设置默认选中的插件
             if (tabsPluginData.value.length > 0 && !activePlugin.value) {
@@ -86,12 +95,18 @@ export function usePluginConfig(emit?: any)
 
     // 处理标签页切换
     const handleTabChange = () => {
-        if (globalConfig.value && globalConfig.value.plugins && activePlugin.value) {
+        if (globalConfig.value && activePlugin.value) {
             isInitialLoad.value = true
 
-            const foundPlugin = globalConfig.value.plugins.find(
+            let foundPlugin = globalConfig.value.plugins?.find(
                 (plugin: any) => plugin.language === activePlugin.value
             )
+
+            if (!foundPlugin && globalConfig.value.custom_plugins) {
+                foundPlugin = globalConfig.value.custom_plugins.find(
+                    (plugin: any) => plugin.language === activePlugin.value
+                )
+            }
 
             if (foundPlugin) {
                 pluginConfig.value = { ...foundPlugin }
@@ -142,25 +157,34 @@ export function usePluginConfig(emit?: any)
 
     // 更新全局配置
     const updateGlobalConfig = async (updatedPlugin: PluginConfig) => {
-        if (!globalConfig.value || !globalConfig.value.plugins) {
-            console.error('全局配置未加载或插件列表为空')
+        if (!globalConfig.value) {
+            console.error('全局配置未加载')
             return
         }
 
         try {
             isSaving.value = true
 
-            const pluginIndex = globalConfig.value.plugins.findIndex(
+            let pluginIndex = globalConfig.value.plugins?.findIndex(
                 (plugin: any) => plugin.language === updatedPlugin.language
-            )
+            ) ?? -1
 
-            if (pluginIndex !== -1) {
-                // 更新现有插件配置
-                globalConfig.value.plugins[pluginIndex] = { ...updatedPlugin }
+            let isCustomPlugin = false
+            if (pluginIndex === -1 && globalConfig.value.custom_plugins) {
+                pluginIndex = globalConfig.value.custom_plugins.findIndex(
+                    (plugin: any) => plugin.language === updatedPlugin.language
+                )
+                isCustomPlugin = pluginIndex !== -1
             }
-            else {
-                // 添加新的插件配置
+
+            if (isCustomPlugin && globalConfig.value.custom_plugins) {
+                globalConfig.value.custom_plugins[pluginIndex] = { ...updatedPlugin }
+            } else if (pluginIndex !== -1 && globalConfig.value.plugins) {
+                globalConfig.value.plugins[pluginIndex] = { ...updatedPlugin }
+            } else if (globalConfig.value.plugins) {
                 globalConfig.value.plugins.push({ ...updatedPlugin })
+            } else {
+                globalConfig.value.plugins = [{ ...updatedPlugin }]
             }
 
             await invoke('update_app_config', { config: globalConfig.value })
@@ -218,10 +242,18 @@ export function usePluginConfig(emit?: any)
 
     // 获取插件配置
     const getPluginConfig = (language: string) => {
-        if (globalConfig.value && globalConfig.value.plugins) {
-            return globalConfig.value.plugins.find(
+        if (globalConfig.value) {
+            let plugin = globalConfig.value.plugins?.find(
                 (plugin: any) => plugin.language === language
             )
+
+            if (!plugin && globalConfig.value.custom_plugins) {
+                plugin = globalConfig.value.custom_plugins.find(
+                    (plugin: any) => plugin.language === language
+                )
+            }
+
+            return plugin || null
         }
         return null
     }
@@ -274,7 +306,8 @@ export function usePluginConfig(emit?: any)
     // 监听配置更新事件
     onMounted(async () => {
         unlistenConfigUpdate = await listen('config-updated', async () => {
-            console.log('收到配置更新事件，重新加载配置')
+            console.log('收到配置更新事件，重新加载配置和语言列表')
+            await getSupportedLanguages()
             await getGlobalConfig()
         })
     })

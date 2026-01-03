@@ -5,6 +5,7 @@ use crate::plugins::cangjie::CangjiePlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::cpp::CppPlugin;
 use crate::plugins::css::CssPlugin;
+use crate::plugins::custom::CustomPlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::groovy::GroovyPlugin;
 use crate::plugins::haskell::HaskellPlugin;
@@ -35,61 +36,83 @@ use std::collections::HashMap;
 
 pub struct PluginManager {
     plugins: HashMap<String, Box<dyn LanguagePlugin>>,
+    builtin_languages: Vec<String>,
 }
 
 impl PluginManager {
     pub fn new() -> Self {
         let mut plugins: HashMap<String, Box<dyn LanguagePlugin>> = HashMap::new();
+        let mut builtin_languages = Vec::new();
 
-        plugins.insert("python2".to_string(), Box::new(Python2Plugin));
-        plugins.insert("python3".to_string(), Box::new(Python3Plugin));
-        plugins.insert("nodejs".to_string(), Box::new(NodeJSPlugin));
-        plugins.insert("go".to_string(), Box::new(GoPlugin));
-        plugins.insert("java".to_string(), Box::new(JavaPlugin));
-        plugins.insert("shell".to_string(), Box::new(ShellPlugin));
-        plugins.insert("rust".to_string(), Box::new(RustPlugin));
-        plugins.insert("swift".to_string(), Box::new(SwiftPlugin));
-        plugins.insert("scala".to_string(), Box::new(ScalaPlugin));
-        plugins.insert("kotlin".to_string(), Box::new(KotlinPlugin));
-        plugins.insert("clojure".to_string(), Box::new(ClojurePlugin));
-        plugins.insert("c".to_string(), Box::new(CPlugin));
-        plugins.insert("ruby".to_string(), Box::new(RubyPlugin));
-        plugins.insert("applescript".to_string(), Box::new(AppleScriptPlugin));
-        plugins.insert("typescript".to_string(), Box::new(TypeScriptPlugin));
-        plugins.insert("cpp".to_string(), Box::new(CppPlugin));
-        plugins.insert("groovy".to_string(), Box::new(GroovyPlugin));
-        plugins.insert("html".to_string(), Box::new(HtmlPlugin));
-        plugins.insert("css".to_string(), Box::new(CssPlugin));
-        plugins.insert("svg".to_string(), Box::new(SvgPlugin));
-        plugins.insert("php".to_string(), Box::new(PHPPlugin));
-        plugins.insert("r".to_string(), Box::new(RPlugin));
-        plugins.insert("cangjie".to_string(), Box::new(CangjiePlugin));
-        plugins.insert("haskell".to_string(), Box::new(HaskellPlugin));
-        plugins.insert("lua".to_string(), Box::new(LuaPlugin));
-        plugins.insert("objective-c".to_string(), Box::new(ObjectiveCPlugin));
-        plugins.insert("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin));
-        plugins.insert(
-            "javascript-nodejs".to_string(),
-            Box::new(JavaScriptNodeJsPlugin),
-        );
-        plugins.insert(
-            "typescript-nodejs".to_string(),
-            Box::new(TypeScriptNodeJsPlugin),
-        );
-        plugins.insert(
-            "typescript-browser".to_string(),
-            Box::new(TypeScriptBrowserPlugin),
-        );
-        plugins.insert(
-            "javascript-browser".to_string(),
-            Box::new(JavaScriptBrowserPlugin),
-        );
-        plugins.insert(
-            "javascript-jquery".to_string(),
-            Box::new(JavaScriptJQueryPlugin),
-        );
+        let builtin_plugins: Vec<(String, Box<dyn LanguagePlugin>)> = vec![
+            ("python2".to_string(), Box::new(Python2Plugin)),
+            ("python3".to_string(), Box::new(Python3Plugin)),
+            ("nodejs".to_string(), Box::new(NodeJSPlugin)),
+            ("go".to_string(), Box::new(GoPlugin)),
+            ("java".to_string(), Box::new(JavaPlugin)),
+            ("shell".to_string(), Box::new(ShellPlugin)),
+            ("rust".to_string(), Box::new(RustPlugin)),
+            ("swift".to_string(), Box::new(SwiftPlugin)),
+            ("scala".to_string(), Box::new(ScalaPlugin)),
+            ("kotlin".to_string(), Box::new(KotlinPlugin)),
+            ("clojure".to_string(), Box::new(ClojurePlugin)),
+            ("c".to_string(), Box::new(CPlugin)),
+            ("ruby".to_string(), Box::new(RubyPlugin)),
+            ("applescript".to_string(), Box::new(AppleScriptPlugin)),
+            ("typescript".to_string(), Box::new(TypeScriptPlugin)),
+            ("cpp".to_string(), Box::new(CppPlugin)),
+            ("groovy".to_string(), Box::new(GroovyPlugin)),
+            ("html".to_string(), Box::new(HtmlPlugin)),
+            ("css".to_string(), Box::new(CssPlugin)),
+            ("svg".to_string(), Box::new(SvgPlugin)),
+            ("php".to_string(), Box::new(PHPPlugin)),
+            ("r".to_string(), Box::new(RPlugin)),
+            ("cangjie".to_string(), Box::new(CangjiePlugin)),
+            ("haskell".to_string(), Box::new(HaskellPlugin)),
+            ("lua".to_string(), Box::new(LuaPlugin)),
+            ("objective-c".to_string(), Box::new(ObjectiveCPlugin)),
+            ("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin)),
+            (
+                "javascript-nodejs".to_string(),
+                Box::new(JavaScriptNodeJsPlugin),
+            ),
+            (
+                "typescript-nodejs".to_string(),
+                Box::new(TypeScriptNodeJsPlugin),
+            ),
+            (
+                "typescript-browser".to_string(),
+                Box::new(TypeScriptBrowserPlugin),
+            ),
+            (
+                "javascript-browser".to_string(),
+                Box::new(JavaScriptBrowserPlugin),
+            ),
+            (
+                "javascript-jquery".to_string(),
+                Box::new(JavaScriptJQueryPlugin),
+            ),
+        ];
 
-        Self { plugins }
+        for (key, plugin) in builtin_plugins {
+            builtin_languages.push(key.clone());
+            plugins.insert(key, plugin);
+        }
+
+        Self {
+            plugins,
+            builtin_languages,
+        }
+    }
+
+    pub fn load_custom_plugins(&mut self, custom_configs: Vec<PluginConfig>) {
+        for config in custom_configs {
+            if !self.builtin_languages.contains(&config.language) {
+                let custom_plugin = CustomPlugin::new(config.clone());
+                self.plugins
+                    .insert(config.language.clone(), Box::new(custom_plugin));
+            }
+        }
     }
 
     pub fn get_plugin(&self, language: &str) -> Option<&dyn LanguagePlugin> {
