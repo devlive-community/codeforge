@@ -29,7 +29,9 @@ dependencies = [
  "tempfile",
  "tokio",
  "uuid",
+ "xz2",
  "zip",
+ "zstd",
 ]
 
 [[package]]
