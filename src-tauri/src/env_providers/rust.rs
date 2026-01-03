@@ -332,6 +332,94 @@ impl RustEnvironmentProvider {
         Ok(())
     }
 
+    fn merge_rust_std(&self, install_path: &Path) -> Result<(), String> {
+        use std::fs;
+
+        info!("合并 Rust 标准库到 rustc 目录");
+
+        // 查找所有 rust-std-* 目录
+        let entries = fs::read_dir(install_path).map_err(|e| format!("读取安装目录失败: {}", e))?;
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name.starts_with("rust-std-") {
+                        info!("找到标准库组件: {}", name);
+
+                        // 源路径: install_path/rust-std-xxx/lib/rustlib/
+                        let std_rustlib_src = path.join("lib").join("rustlib");
+
+                        // 目标路径: install_path/rustc/lib/rustlib/
+                        let rustc_rustlib_dst =
+                            install_path.join("rustc").join("lib").join("rustlib");
+
+                        if std_rustlib_src.exists() && rustc_rustlib_dst.exists() {
+                            // 遍历标准库中的所有目标平台
+                            if let Ok(std_entries) = fs::read_dir(&std_rustlib_src) {
+                                for std_entry in std_entries.flatten() {
+                                    let std_target_path = std_entry.path();
+                                    if std_target_path.is_dir() {
+                                        if let Some(target_name) = std_target_path.file_name() {
+                                            let dst_target_path =
+                                                rustc_rustlib_dst.join(target_name);
+
+                                            // 如果目标路径不存在，创建它
+                                            if !dst_target_path.exists() {
+                                                fs::create_dir_all(&dst_target_path).map_err(
+                                                    |e| format!("创建目标目录失败: {}", e),
+                                                )?;
+                                            }
+
+                                            // 复制 lib 目录
+                                            let std_lib_src = std_target_path.join("lib");
+                                            let dst_lib = dst_target_path.join("lib");
+
+                                            if std_lib_src.exists() {
+                                                info!(
+                                                    "复制标准库: {} -> {}",
+                                                    std_lib_src.display(),
+                                                    dst_lib.display()
+                                                );
+                                                Self::copy_dir_all(&std_lib_src, &dst_lib)?;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        info!("标准库合并完成");
+        Ok(())
+    }
+
+    fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
+        use std::fs;
+
+        fs::create_dir_all(dst).map_err(|e| format!("创建目录失败: {}", e))?;
+
+        for entry in fs::read_dir(src).map_err(|e| format!("读取目录失败: {}", e))? {
+            let entry = entry.map_err(|e| format!("读取条目失败: {}", e))?;
+            let ty = entry
+                .file_type()
+                .map_err(|e| format!("获取文件类型失败: {}", e))?;
+            let src_path = entry.path();
+            let dst_path = dst.join(entry.file_name());
+
+            if ty.is_dir() {
+                Self::copy_dir_all(&src_path, &dst_path)?;
+            } else {
+                fs::copy(&src_path, &dst_path).map_err(|e| format!("复制文件失败: {}", e))?;
+            }
+        }
+
+        Ok(())
+    }
+
     async fn update_plugin_config(
         &self,
         version: &str,
@@ -350,6 +438,15 @@ impl RustEnvironmentProvider {
                 let rustc_bin = install_path.join("rustc").join("bin");
                 let has_rustc_dir = rustc_bin.exists();
 
+                // 使用相对路径，工作目录会被设置为 execute_home
+                #[cfg(target_os = "windows")]
+                let run_command = if has_rustc_dir {
+                    "rustc\\bin\\rustc $filename -o main.exe && main.exe".to_string()
+                } else {
+                    "bin\\rustc $filename -o main.exe && main.exe".to_string()
+                };
+
+                #[cfg(not(target_os = "windows"))]
                 let run_command = if has_rustc_dir {
                     "rustc/bin/rustc $filename -o /tmp/main && /tmp/main".to_string()
                 } else {
@@ -523,6 +620,9 @@ impl EnvironmentProvider for RustEnvironmentProvider {
         std::fs::remove_dir_all(&temp_extract_dir).ok();
         std::fs::remove_file(&temp_file).ok();
 
+        // 合并标准库到 rustc 目录
+        self.merge_rust_std(&install_path)?;
+
         self.update_plugin_config(version, app_handle.clone())
             .await?;
 
@@ -542,6 +642,10 @@ impl EnvironmentProvider for RustEnvironmentProvider {
         if !self.is_version_installed(version) {
             return Err(format!("版本 {} 未安装", version));
         }
+
+        // 切换版本时也需要确保标准库已合并
+        let install_path = self.get_version_install_path(version);
+        self.merge_rust_std(&install_path)?;
 
         self.update_plugin_config(version, app_handle).await?;
         info!("已切换到 Rust {}", version);

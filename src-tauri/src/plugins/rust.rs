@@ -47,10 +47,42 @@ impl LanguagePlugin for RustPlugin {
         if let Some(config) = self.get_config() {
             if let Some(run_cmd) = &config.run_command {
                 let full_cmd = run_cmd.replace("$filename", file_path);
+
+                // Windows 使用 cmd /c，Unix 使用 sh -c
+                #[cfg(target_os = "windows")]
+                return vec!["/c".to_string(), full_cmd];
+
+                #[cfg(not(target_os = "windows"))]
                 return vec!["-c".to_string(), full_cmd];
             }
         }
-        vec![file_path.to_string()]
+
+        // 默认命令
+        #[cfg(target_os = "windows")]
+        return vec![
+            "/c".to_string(),
+            format!("rustc {} -o main.exe && main.exe", file_path),
+        ];
+
+        #[cfg(not(target_os = "windows"))]
+        vec![
+            "-c".to_string(),
+            format!("rustc {} -o /tmp/main && /tmp/main", file_path),
+        ]
+    }
+
+    fn get_command(
+        &self,
+        _file_path: Option<&str>,
+        _is_version: bool,
+        _file_name: Option<String>,
+    ) -> String {
+        // Windows 使用 cmd，Unix 使用 sh
+        #[cfg(target_os = "windows")]
+        return "cmd".to_string();
+
+        #[cfg(not(target_os = "windows"))]
+        "sh".to_string()
     }
 
     fn get_default_config(&self) -> PluginConfig {
