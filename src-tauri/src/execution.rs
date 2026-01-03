@@ -160,12 +160,18 @@ pub async fn execute_code(
     );
 
     // 启动子进程
-    let mut child = match Command::new(&cmd)
+    let mut command = Command::new(&cmd);
+    command
         .args(&args)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
+        .stderr(Stdio::piped());
+
+    // 如果插件有 execute_home，设置工作目录
+    if let Some(execute_home) = plugin.get_execute_home() {
+        command.current_dir(&execute_home);
+    }
+
+    let mut child = match command.spawn() {
         Ok(child) => child,
         Err(e) => {
             let _execution_time = start_time.elapsed().as_millis();
