@@ -27,7 +27,12 @@ impl LanguagePlugin for JavaPlugin {
     }
 
     fn get_path_command(&self) -> String {
-        "System.out.println(System.getProperty(\"java.home\"));".to_string()
+        if let Some(execute_home) = self.get_execute_home() {
+            let java_bin = std::path::Path::new(&execute_home).join("bin").join("java");
+            format!("{} -version", java_bin.display())
+        } else {
+            "java -version".to_string()
+        }
     }
 
     fn get_default_config(&self) -> PluginConfig {
