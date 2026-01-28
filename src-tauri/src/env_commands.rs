@@ -46,9 +46,16 @@ pub async fn switch_environment_version(
 ) -> Result<(), String> {
     info!("切换 {} 到版本 {}", language, version);
     let manager = env_manager.lock().await;
-    manager
-        .switch_version(&language, &version, app_handle)
-        .await
+    let result = manager
+        .switch_version(&language, &version, app_handle.clone())
+        .await;
+
+    if result.is_ok() {
+        app_handle.emit("config-updated", ()).ok();
+        info!("已发送配置更新事件");
+    }
+
+    result
 }
 
 #[tauri::command]

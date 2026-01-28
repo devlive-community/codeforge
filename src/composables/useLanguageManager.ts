@@ -186,9 +186,10 @@ export function useLanguageManager(
         if (!currentStillAvailable && supportedLanguages.value.length > 0) {
             currentLanguage.value = supportedLanguages.value[0].value
             code.value = filterPluginTemplate(currentLanguage.value)
-            await refreshEnvInfo()
             console.log('当前语言已禁用，切换到:', currentLanguage.value)
         }
+
+        await refreshEnvInfo()
         console.log('=== 刷新语言列表完成 ===')
     }
 
