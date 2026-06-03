@@ -16,6 +16,11 @@
         <Editor v-if="activeTab === 'editor'" @settings-changed="handleEditorSettingsChanged" @error="handleEditorError"/>
       </template>
 
+      <!-- 快捷键配置 -->
+      <template #shortcut>
+        <Shortcut v-if="activeTab === 'shortcut'"/>
+      </template>
+
       <!-- 语言配置 -->
       <template #language>
         <Language v-if="activeTab === 'language'" @settings-changed="handleLanguageSettingsChanged"/>
@@ -46,6 +51,7 @@ import Tabs from '../ui/Tabs.vue'
 import General from './setting/General.vue'
 import Language from './setting/Language.vue'
 import Editor from './setting/Editor.vue'
+import Shortcut from './setting/Shortcut.vue'
 import Network from './setting/Network.vue'
 import Cache from './setting/Cache.vue'
 import Logs from './setting/Logs.vue'

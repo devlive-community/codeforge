@@ -196,6 +196,7 @@ import ExecutionHistory from './components/ExecutionHistory.vue'
 import {open as openDialog} from '@tauri-apps/plugin-dialog'
 import {invoke} from '@tauri-apps/api/core'
 import {useEventManager} from './composables/useEventManager'
+import {useShortcuts} from './composables/useShortcuts'
 import {useAppState} from './composables/useAppState'
 import {useEditorConfig} from './composables/useEditorConfig'
 import Update from './components/Update.vue'
@@ -577,10 +578,11 @@ const promptRunCopy = () => {
   runCode(buildRunBase())
 }
 
-// 设置关闭后刷新缓存的编辑器配置，使运行策略/文件大小上限等即时生效
+// 设置关闭后刷新缓存的编辑器配置与快捷键绑定，使其即时生效
 const onSettingsClose = async () => {
   closeSettings()
   await loadEditorConfig()
+  reloadShortcuts()
 }
 
 const handleSettingsChanged = async (config: any) => {
@@ -645,43 +647,27 @@ const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
     || showHistory.value || showViewer.value || showRunPrompt.value
 
-// 全局快捷键
+// 全局快捷键（绑定可在设置中自定义）
+const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
+
+const shortcutDispatch: Record<string, () => void> = {
+  run: () => handleRunCode(),
+  save: () => saveFile(),
+  saveAs: () => saveFileAs(),
+  open: () => handleOpenFileClick(),
+  newTab: () => handleNewTab(),
+  closeTab: () => handleCloseTab(activeTabId.value),
+  toggleSidebar: () => toggleSidebar()
+}
+
 const onGlobalKeydown = (e: KeyboardEvent) => {
-  const mod = e.metaKey || e.ctrlKey
-  if (!mod || isOverlayOpen()) {
+  if (isOverlayOpen()) {
     return
   }
-
-  switch (e.key.toLowerCase()) {
-    case 'enter':
-      e.preventDefault()
-      handleRunCode()
-      break
-    case 's':
-      e.preventDefault()
-      if (e.shiftKey) {
-        saveFileAs()
-      }
-      else {
-        saveFile()
-      }
-      break
-    case 'o':
-      e.preventDefault()
-      handleOpenFileClick()
-      break
-    case 'w':
-      e.preventDefault()
-      handleCloseTab(activeTabId.value)
-      break
-    case 'n':
-      e.preventDefault()
-      handleNewTab()
-      break
-    case 'b':
-      e.preventDefault()
-      toggleSidebar()
-      break
+  const action = matchShortcut(e)
+  if (action && shortcutDispatch[action]) {
+    e.preventDefault()
+    shortcutDispatch[action]()
   }
 }
 
