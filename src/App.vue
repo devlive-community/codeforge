@@ -7,7 +7,7 @@
                :current-layout="layoutMode"
                @run-code="handleRunCode"
                @stop-code="() => stopCode(currentLanguage)"
-               @language-change="handleLanguageChange"
+               @language-change="onLanguageChange"
                @layout-change="handleLayoutChange"
                @open-file="openFile"
                @save-file="saveFile"
@@ -134,6 +134,7 @@ import {useToast} from './plugins/toast'
 import {useCodeExecution} from './composables/useCodeExecution'
 import {useLanguageManager} from './composables/useLanguageManager'
 import {useFileManager} from './composables/useFileManager'
+import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useEventManager} from './composables/useEventManager'
 import {useAppState} from './composables/useAppState'
 import {useEditorConfig} from './composables/useEditorConfig'
@@ -166,15 +167,27 @@ const {
   getCurrentConsoleType,
   getCurrentPluginConfig,
   handleLanguageChange,
+  applyLanguage,
   refreshLanguageList,
   refreshEnvInfo,
   initialize
 } = useLanguageManager(code, clearOutput, toast)
 
+// 扩展名 ↔ 语言 注册表
+const {build: buildLanguageRegistry, detectLanguage} = useLanguageRegistry()
+
 // 本地文件管理（打开/保存/另存为）
 const getDefaultFileName = () => {
   const ext = getCurrentPluginConfig()?.extension || currentLanguage.value || 'txt'
   return `未命名.${ext}`
+}
+
+// 打开文件后按扩展名自动切换语言（不改动已载入的内容、不解除文件关联）
+const handleFileOpened = (filePath: string) => {
+  const detected = detectLanguage(filePath)
+  if (detected && detected !== currentLanguage.value) {
+    applyLanguage(detected)
+  }
 }
 
 const {
@@ -183,7 +196,13 @@ const {
   openFile,
   saveFile,
   resetFile
-} = useFileManager(code, toast, getDefaultFileName)
+} = useFileManager(code, toast, getDefaultFileName, handleFileOpened)
+
+// 手动切换语言（下拉框）：替换为模板并解除文件关联
+const onLanguageChange = (language: string) => {
+  handleLanguageChange(language)
+  resetFile()
+}
 
 const {
   showAbout,
@@ -254,6 +273,7 @@ const handleSettingsChanged = async (config: any) => {
   }, 50)
 
   await refreshLanguageList()
+  await buildLanguageRegistry()
 }
 
 const loadExample = (content: string) => {
@@ -274,8 +294,6 @@ watch(editorConfig, (newConfig) => {
 
 watch(currentLanguage, () => {
   consoleType.value = getCurrentConsoleType()
-  // 切换语言会替换为模板内容，不再对应原文件
-  resetFile()
 })
 
 const {initializeEventListeners, cleanupEventListeners} = useEventManager({
@@ -300,6 +318,7 @@ window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 
 onMounted(async () => {
   await initialize()
+  await buildLanguageRegistry()
   await loadEditorConfig()
   await initializeEventListeners()
   consoleType.value = getCurrentConsoleType()

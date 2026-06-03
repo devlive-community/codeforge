@@ -187,6 +187,15 @@ export function useLanguageManager(
         toast.info(`已切换到 ${getLanguageDisplayName(newLanguage)}`)
     }
 
+    // 仅切换语言（刷新环境信息），不改动编辑器内容——用于打开文件时按扩展名切语言
+    const applyLanguage = (newLanguage: string) => {
+        if (newLanguage === currentLanguage.value) {
+            return
+        }
+        currentLanguage.value = newLanguage
+        refreshEnvInfo()
+    }
+
     const refreshLanguageList = async () => {
         console.log('=== 开始刷新语言列表 ===')
         console.log('刷新前的语言列表:', supportedLanguages.value.map(l => l.name))
@@ -262,6 +271,7 @@ export function useLanguageManager(
         isLoadingEnvInfo,
         getLanguageDisplayName,
         handleLanguageChange,
+        applyLanguage,
         refreshLanguageList,
         refreshEnvInfo,
         initialize,

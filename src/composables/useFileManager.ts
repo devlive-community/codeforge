@@ -8,11 +8,13 @@ import {readTextFile, writeTextFile} from '@tauri-apps/plugin-fs'
  * @param code              编辑器内容（双向绑定的 ref）
  * @param toast             提示
  * @param getDefaultFileName 另存为时的建议文件名（通常根据当前语言扩展名生成）
+ * @param onOpened          打开文件后回调（内容已写入编辑器），用于按扩展名切换语言等
  */
 export function useFileManager(
     code: Ref<string>,
     toast: any,
-    getDefaultFileName: () => string
+    getDefaultFileName: () => string,
+    onOpened?: (filePath: string, content: string) => void
 )
 {
     // 当前关联的本地文件路径（未保存到磁盘时为 null）
@@ -41,6 +43,7 @@ export function useFileManager(
             code.value = content
             currentFilePath.value = selected
             savedContent.value = content
+            onOpened?.(selected, content)
             toast.success(`已打开 ${currentFileName.value}`)
         }
         catch (error) {
