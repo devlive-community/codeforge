@@ -1,27 +1,28 @@
 <template>
   <div class="-mt-2">
-    <div class="my-2">
-      <Button @click="showAddCustomLanguage = true"
-              size="sm"
-              :icon="Plus"
-              :icon-only="true"
-              title="添加自定义语言"/>
-    </div>
     <Tabs v-model="activePlugin"
           type="card"
           size="md"
           position="left"
           :tab-button-class="['!p-1 ']"
-          :nav-class="['max-h-[65vh] overflow-y-auto']"
+          :header-class="['w-64', 'flex-shrink-0']"
+          :nav-class="['max-h-[65vh]', 'overflow-y-auto', 'w-full']"
           :tabs="filteredPluginData"
           @change="handleTabChange">
       <template #nav-header>
-        <Input v-model="languageFilter"
-               :prefix-icon="Search"
-               clearable
-               size="sm"
-               class="w-full"
-               placeholder="筛选语言"/>
+        <div class="flex items-center space-x-2">
+          <Input v-model="languageFilter"
+                 :prefix-icon="Search"
+                 clearable
+                 size="sm"
+                 class="flex-1"
+                 placeholder="筛选语言"/>
+          <Button @click="showAddCustomLanguage = true"
+                  size="sm"
+                  :icon="Plus"
+                  :icon-only="true"
+                  title="添加自定义语言"/>
+        </div>
       </template>
       <template #tab-button="{ tab }">
         <div class="flex items-center w-full px-3 py-2 space-x-2">
