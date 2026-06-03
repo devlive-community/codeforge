@@ -28,33 +28,40 @@
       </Button>
 
       <Button type="info" :icon="FileCode" @click="loadExample">加载示例</Button>
-      <Button type="secondary" :icon="History" :icon-only="true" title="执行历史" @click="emit('show-history')"/>
+
+      <Tooltip text="执行历史">
+        <Button type="secondary" :icon="History" :icon-only="true" @click="emit('show-history')"/>
+      </Tooltip>
 
       <!-- 打开/保存文件 -->
-      <Button type="secondary" :icon="FolderOpen" :icon-only="true" title="打开文件" @click="emit('open-file')"/>
-      <Button type="secondary" :icon="Save" :icon-only="true" title="保存文件" @click="emit('save-file')"/>
+      <Tooltip text="打开文件">
+        <Button type="secondary" :icon="FolderOpen" :icon-only="true" @click="emit('open-file')"/>
+      </Tooltip>
+      <Tooltip text="保存文件">
+        <Button type="secondary" :icon="Save" :icon-only="true" @click="emit('save-file')"/>
+      </Tooltip>
     </div>
 
     <div class="flex items-center space-x-3">
       <!-- 侧栏开关 + 布局切换 -->
       <div class="flex items-center bg-gray-100 rounded-md p-0.5">
-        <button class="p-1.5 rounded transition-colors cursor-pointer"
-                :class="sidebarVisible ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-                :title="sidebarVisible ? '隐藏侧栏' : '显示侧栏'"
-                @click="emit('toggle-sidebar')">
-          <PanelLeft class="w-4 h-4"/>
-        </button>
+        <Tooltip :text="sidebarVisible ? '隐藏侧栏' : '显示侧栏'">
+          <button class="p-1.5 rounded transition-colors cursor-pointer"
+                  :class="sidebarVisible ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                  @click="emit('toggle-sidebar')">
+            <PanelLeft class="w-4 h-4"/>
+          </button>
+        </Tooltip>
 
         <div class="w-px h-4 bg-gray-300 mx-0.5"></div>
 
-        <button v-for="item in layoutOptions"
-                :key="item.value"
-                class="p-1.5 rounded transition-colors cursor-pointer"
-                :class="currentLayout === item.value ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-                :title="item.label"
-                @click="handleLayoutChange(item.value)">
-          <component :is="item.icon" class="w-4 h-4"/>
-        </button>
+        <Tooltip v-for="item in layoutOptions" :key="item.value" :text="item.label">
+          <button class="p-1.5 rounded transition-colors cursor-pointer"
+                  :class="currentLayout === item.value ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                  @click="handleLayoutChange(item.value)">
+            <component :is="item.icon" class="w-4 h-4"/>
+          </button>
+        </Tooltip>
       </div>
 
       <Button type="warning" :icon="CheckCircle" v-if="hasUpdate">
@@ -69,6 +76,7 @@ import {computed, onMounted, ref} from 'vue'
 import {CheckCircle, FileCode, FolderOpen, History, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Square} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
+import Tooltip from '../ui/Tooltip.vue'
 import {Language, LayoutMode} from '../types/app.ts'
 import {invoke} from "@tauri-apps/api/core";
 import {useUpdateManager} from "../composables/useUpdateManager.ts";
