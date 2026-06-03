@@ -15,9 +15,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
   RUST_VERSION: '1.85.0'
-  PNPM_VERSION: '8'
+  PNPM_VERSION: '8.15.9'
 
 jobs:
   # 构建发布版本
