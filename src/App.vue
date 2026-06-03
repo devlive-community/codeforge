@@ -145,6 +145,20 @@
                       :supported-languages="supportedLanguages"
                       @restore="restoreHistoryItem"/>
 
+    <!-- 运行未保存文件询问 -->
+    <Modal v-model:show="showRunPrompt" title="运行未保存的文件" size="sm">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-700 dark:text-gray-300">
+          当前文件 <strong>{{ currentFileName }}</strong> 有未保存的修改，如何运行？
+        </p>
+        <div class="flex justify-end space-x-2">
+          <Button type="secondary" size="sm" @click="showRunPrompt = false">取消</Button>
+          <Button type="info" size="sm" @click="promptRunCopy">运行副本(不保存)</Button>
+          <Button size="sm" @click="promptSaveAndRun">保存并运行</Button>
+        </div>
+      </div>
+    </Modal>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
@@ -174,6 +188,8 @@ import {useWorkspace} from './composables/useWorkspace'
 import EditorTabs from './components/EditorTabs.vue'
 import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
+import Modal from './ui/Modal.vue'
+import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
 import {open as openDialog} from '@tauri-apps/plugin-dialog'
 import {invoke} from '@tauri-apps/api/core'
@@ -432,28 +448,55 @@ const handleLayoutChange = (mode: LayoutMode) => {
   }
 }
 
-// 包装运行：仅编辑器模式下点击运行时自动展开控制台；关联文件则就地运行
+const buildRunBase = () => ({
+  language: currentLanguage.value,
+  envInstalled: envInfo.value.installed,
+  envLanguage: envInfo.value.language
+})
+
+// 运行未保存文件的询问弹窗
+const showRunPrompt = ref(false)
+
+// 包装运行：仅编辑器模式下点击运行时自动展开控制台；关联文件则按策略就地运行
 const handleRunCode = async () => {
   if (layoutMode.value === 'editor') {
     showConsole.value = true
   }
 
-  const base = {
-    language: currentLanguage.value,
-    envInstalled: envInfo.value.installed,
-    envLanguage: envInfo.value.language
+  // 草稿（无关联文件）：临时目录运行
+  if (!currentFilePath.value) {
+    runCode(buildRunBase())
+    return
+  }
+  // 无改动：直接就地运行
+  if (!isDirty.value) {
+    runCode({...buildRunBase(), filePath: currentFilePath.value})
+    return
   }
 
-  // 关联了本地文件：有改动先保存，再就地运行（工作目录为文件所在目录）
-  if (currentFilePath.value) {
-    if (isDirty.value) {
-      await saveFile()
-    }
-    runCode({...base, filePath: currentFilePath.value})
+  // 有未保存改动：按设置的策略处理
+  const strategy = editorConfig.value?.run_save_strategy || 'auto-save'
+  if (strategy === 'temp-copy') {
+    runCode(buildRunBase()) // 跑当前未保存内容的临时副本
+  }
+  else if (strategy === 'ask') {
+    showRunPrompt.value = true
   }
   else {
-    runCode(base)
+    await saveFile()
+    runCode({...buildRunBase(), filePath: currentFilePath.value})
   }
+}
+
+const promptSaveAndRun = async () => {
+  showRunPrompt.value = false
+  await saveFile()
+  runCode({...buildRunBase(), filePath: currentFilePath.value})
+}
+
+const promptRunCopy = () => {
+  showRunPrompt.value = false
+  runCode(buildRunBase())
 }
 
 const handleSettingsChanged = async (config: any) => {

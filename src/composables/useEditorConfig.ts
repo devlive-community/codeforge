@@ -161,6 +161,7 @@ export function useEditorConfig(emit?: any)
             layout: 'horizontal',
             last_direction: 'horizontal',
             max_open_file_size: 5,
+            run_save_strategy: 'auto-save',
         }
     }
 

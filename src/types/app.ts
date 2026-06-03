@@ -59,7 +59,10 @@ export interface EditorConfig
     layout?: LayoutMode
     last_direction?: SplitDirection
     max_open_file_size?: number
+    run_save_strategy?: RunSaveStrategy
 }
+
+export type RunSaveStrategy = 'auto-save' | 'ask' | 'temp-copy'
 
 export type SplitDirection = 'horizontal' | 'vertical'
 
