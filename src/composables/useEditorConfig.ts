@@ -158,6 +158,8 @@ export function useEditorConfig(emit?: any)
             theme: 'githubLight',
             font_size: 14,
             font_family: 'Roboto',
+            layout: 'horizontal',
+            last_direction: 'horizontal',
         }
     }
 

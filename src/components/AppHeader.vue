@@ -31,6 +31,18 @@
     </div>
 
     <div class="flex items-center space-x-3">
+      <!-- 布局切换 -->
+      <div class="flex items-center bg-gray-100 rounded-md p-0.5">
+        <button v-for="item in layoutOptions"
+                :key="item.value"
+                class="p-1.5 rounded transition-colors"
+                :class="currentLayout === item.value ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                :title="item.label"
+                @click="handleLayoutChange(item.value)">
+          <component :is="item.icon" class="w-4 h-4"/>
+        </button>
+      </div>
+
       <Button type="warning" :icon="CheckCircle" v-if="hasUpdate">
         有新版本
       </Button>
@@ -48,10 +60,10 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
-import {CheckCircle, FileCode, Play, Square, Trash2} from 'lucide-vue-next'
+import {CheckCircle, FileCode, Maximize2, PanelBottom, PanelRight, Play, Square, Trash2} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
-import {Language} from '../types/app.ts'
+import {Language, LayoutMode} from '../types/app.ts'
 import {invoke} from "@tauri-apps/api/core";
 import {useUpdateManager} from "../composables/useUpdateManager.ts";
 
@@ -60,6 +72,7 @@ const props = defineProps<{
   envInstalled: boolean
   supportedLanguages: Language[]
   currentLanguage: string
+  currentLayout: LayoutMode
 }>()
 
 const emit = defineEmits<{
@@ -69,7 +82,18 @@ const emit = defineEmits<{
   'show-settings': []
   'language-change': [language: string]
   'load-example': [content: string]
+  'layout-change': [mode: LayoutMode]
 }>()
+
+const layoutOptions: { value: LayoutMode; label: string; icon: any }[] = [
+  {value: 'horizontal', label: '左右布局', icon: PanelRight},
+  {value: 'vertical', label: '上下布局', icon: PanelBottom},
+  {value: 'editor', label: '仅编辑器', icon: Maximize2}
+]
+
+const handleLayoutChange = (mode: LayoutMode) => {
+  emit('layout-change', mode)
+}
 
 const {checkForUpdates} = useUpdateManager()
 

@@ -20,6 +20,8 @@ pub struct EditorConfig {
     pub show_line_numbers: Option<bool>,  // 是否显示行号
     pub show_function_help: Option<bool>, // 是否显示函数帮助
     pub space_dot_omission: Option<bool>, // 是否显示空格省略
+    pub layout: Option<String>,           // 编辑器/控制台布局: horizontal | vertical | editor
+    pub last_direction: Option<String>,   // 仅编辑器模式下控制台弹出方向: horizontal | vertical
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +67,8 @@ impl Default for AppConfig {
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
                 space_dot_omission: Some(false),
+                layout: Some("horizontal".to_string()),
+                last_direction: Some("horizontal".to_string()),
             }),
             environment_mirror: Some(EnvironmentMirrorConfig {
                 enabled: Some(false),
@@ -131,6 +135,8 @@ impl ConfigManager {
                                 show_line_numbers: Some(true),
                                 show_function_help: Some(false),
                                 space_dot_omission: Some(false),
+                                layout: Some("horizontal".to_string()),
+                                last_direction: Some("horizontal".to_string()),
                             });
                             println!("读取配置 -> 添加默认 editor 配置");
                         }
@@ -250,6 +256,8 @@ impl ConfigManager {
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
                 space_dot_omission: Some(false),
+                layout: Some("horizontal".to_string()),
+                last_direction: Some("horizontal".to_string()),
             }),
             environment_mirror: Some(EnvironmentMirrorConfig {
                 enabled: Some(false),
