@@ -44,3 +44,15 @@ pub fn read_directory_tree(path: String) -> Result<Vec<FileNode>, String> {
 
     Ok(nodes)
 }
+
+/// 读取文本文件内容（绕开 fs 插件 scope 限制）
+#[tauri::command]
+pub fn read_file_text(path: String) -> Result<String, String> {
+    fs::read_to_string(&path).map_err(|e| format!("读取文件失败: {}", e))
+}
+
+/// 写入文本文件内容
+#[tauri::command]
+pub fn write_file_text(path: String, content: String) -> Result<(), String> {
+    fs::write(&path, content).map_err(|e| format!("写入文件失败: {}", e))
+}

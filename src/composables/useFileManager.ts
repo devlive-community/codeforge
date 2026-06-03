@@ -1,6 +1,6 @@
 import {computed, type Ref} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
 import {open as openFileDialog, save as saveFileDialog} from '@tauri-apps/plugin-dialog'
-import {readTextFile, writeTextFile} from '@tauri-apps/plugin-fs'
 
 interface FileManagerOptions
 {
@@ -42,7 +42,7 @@ export function useFileManager(options: FileManagerOptions)
         try {
             onBeforeLoad?.()
 
-            const content = await readTextFile(filePath)
+            const content = await invoke<string>('read_file_text', {path: filePath})
             code.value = content
             currentFilePath.value = filePath
             savedContent.value = content
@@ -68,7 +68,7 @@ export function useFileManager(options: FileManagerOptions)
     }
 
     const writeToPath = async (path: string) => {
-        await writeTextFile(path, code.value)
+        await invoke('write_file_text', {path, content: code.value})
         currentFilePath.value = path
         savedContent.value = code.value
     }
