@@ -11,13 +11,12 @@ interface EventManagerOptions
     isRunning: Ref<boolean>
     isSuccess: Ref<boolean>
     lastExecutionTime: Ref<number>
-    currentLanguage: Ref<string>
     toast: any
-    handleRealtimeOutput: (currentLanguage: string, data: any) => void
-    handleExecutionComplete: (currentLanguage: string, data: any) => void
-    handleExecutionStopped: (currentLanguage: string, data: any) => void
-    handleExecutionTimeout: (currentLanguage: string, data: any) => void
-    handleExecutionError: (currentLanguage: string, data: any) => void
+    handleRealtimeOutput: (data: any) => void
+    handleExecutionComplete: (data: any) => void
+    handleExecutionStopped: (data: any) => void
+    handleExecutionTimeout: (data: any) => void
+    handleExecutionError: (data: any) => void
 }
 
 export function useEventManager(options: EventManagerOptions)
@@ -26,7 +25,6 @@ export function useEventManager(options: EventManagerOptions)
         showAbout,
         showSettings,
         showUpdate,
-        currentLanguage,
         handleRealtimeOutput,
         handleExecutionComplete,
         handleExecutionStopped,
@@ -48,38 +46,28 @@ export function useEventManager(options: EventManagerOptions)
     // 处理实时输出
     const handleRealtimeOutputWrapper = (event: any) => {
         const data: CodeOutputEvent = event.payload
-        console.log('实时输出:', data)
-        handleRealtimeOutput(currentLanguage.value, data)
+        handleRealtimeOutput(data)
     }
 
     // 处理执行状态事件
-    const handleExecutionStart = (event: any) => {
-        const data = event.payload
-        if (data.language === currentLanguage.value) {
-            console.log('代码开始执行')
-        }
+    const handleExecutionStart = (_event: any) => {
+        console.log('代码开始执行')
     }
 
     const handleExecutionCompleteWrapper = (event: any) => {
-        const data = event.payload
-        console.log('代码执行完成')
-        handleExecutionComplete(currentLanguage.value, data)
+        handleExecutionComplete(event.payload)
     }
 
     const handleExecutionStoppedWrapper = (event: any) => {
-        const data = event.payload
-        console.log('代码执行已停止')
-        handleExecutionStopped(currentLanguage.value, data)
+        handleExecutionStopped(event.payload)
     }
 
     const handleExecutionTimeoutWrapper = (event: any) => {
-        const data = event.payload
-        handleExecutionTimeout(currentLanguage.value, data)
+        handleExecutionTimeout(event.payload)
     }
 
     const handleExecutionErrorWrapper = (event: any) => {
-        const data = event.payload
-        handleExecutionError(currentLanguage.value, data)
+        handleExecutionError(event.payload)
     }
 
     const initializeEventListeners = async () => {

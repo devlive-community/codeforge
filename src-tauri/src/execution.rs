@@ -229,32 +229,32 @@ fn should_filter_stderr_line(language: &str, line: &str) -> bool {
     }
 }
 
-// 停止执行命令
+// 停止执行命令（按 task_id 停止指定的运行任务）
 #[tauri::command]
-pub async fn stop_execution(language: String) -> Result<bool, String> {
+pub async fn stop_execution(task_id: String) -> Result<bool, String> {
     let task_manager = init_task_manager();
     let mut guard = task_manager.lock().await;
 
-    if let Some(task) = guard.remove(&language) {
+    if let Some(task) = guard.remove(&task_id) {
         // 设置停止标志
         {
             let mut stop_flag = task.stop_flag.lock().await;
             *stop_flag = true;
         }
-        info!("停止执行 -> 成功设置停止标志给语言 [ {} ]", language);
+        info!("停止执行 -> 成功设置停止标志给任务 [ {} ]", task_id);
         Ok(true)
     } else {
-        warn!("停止执行 -> 语言 [ {} ] 没有正在运行的任务", language);
+        warn!("停止执行 -> 任务 [ {} ] 没有正在运行", task_id);
         Ok(false)
     }
 }
 
-// 检查是否有正在运行的任务
+// 检查指定任务是否正在运行
 #[tauri::command]
-pub async fn is_execution_running(language: String) -> Result<bool, String> {
+pub async fn is_execution_running(task_id: String) -> Result<bool, String> {
     let task_manager = init_task_manager();
     let guard = task_manager.lock().await;
-    Ok(guard.contains_key(&language))
+    Ok(guard.contains_key(&task_id))
 }
 
 // 通用的代码执行函数
@@ -265,31 +265,43 @@ pub async fn execute_code(
     plugin_manager: State<'_, PluginManagerState>,
     app: AppHandle,
 ) -> Result<ExecutionResult, String> {
-    info!("执行代码 -> 调用插件 [ {} ] 开始", request.language);
-
-    // 先停止之前可能正在运行的任务
-    let _ = stop_execution(request.language.clone()).await;
+    let task_id = request.task_id.clone();
+    info!(
+        "执行代码 -> 调用插件 [ {} ] 任务 [ {} ] 开始",
+        request.language, task_id
+    );
 
     let manager = plugin_manager.lock().await;
     let plugin = manager
         .get_plugin(&request.language)
         .ok_or_else(|| format!("Unsupported language: {}", request.language))?;
 
-    // 使用 .codeforge/cache/plugin/<language> 目录
-    let temp_dir = get_codeforge_cache_dir(&request.language)?;
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    let file_work = format!("Codeforge_{}_{}", request.language, timestamp);
-    let work_dir = temp_dir.join(&file_work);
-    fs::create_dir_all(&work_dir).map_err(|e| format!("创建工作目录失败: {}", e))?;
-    let file_name = format!("{}.{}", file_work, plugin.get_file_extension());
-    let file_path = work_dir.join(&file_name);
+    // 决定运行的文件与工作目录：
+    // - 提供了 file_path：就地运行该文件，工作目录为其所在目录（多文件 import/相对路径正确）
+    // - 否则：写入 .codeforge/cache/plugins/<language> 临时目录后运行
+    let (file_path, cwd): (PathBuf, Option<PathBuf>) = if let Some(fp) = request.file_path.clone() {
+        let p = PathBuf::from(&fp);
+        let dir = p.parent().map(|d| d.to_path_buf());
+        (p, dir)
+    } else {
+        let temp_dir = get_codeforge_cache_dir(&request.language)?;
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let file_work = format!("Codeforge_{}_{}", request.language, timestamp);
+        let work_dir = temp_dir.join(&file_work);
+        fs::create_dir_all(&work_dir).map_err(|e| format!("创建工作目录失败: {}", e))?;
+        let file_name = format!("{}.{}", file_work, plugin.get_file_extension());
+        let fp = work_dir.join(&file_name);
 
-    // 写入代码到临时文件
-    fs::write(&file_path, &request.code)
-        .map_err(|e| format!("Failed to write temporary file: {}", e))?;
+        // 写入代码到临时文件
+        fs::write(&fp, &request.code)
+            .map_err(|e| format!("Failed to write temporary file: {}", e))?;
+
+        let home = plugin.get_execute_home().map(PathBuf::from);
+        (fp, home)
+    };
 
     let _processed_code = plugin
         .pre_execute_hook(&request.code, file_path.to_str().unwrap())
@@ -316,7 +328,8 @@ pub async fn execute_code(
     let _ = app.emit(
         "code-execution-start",
         serde_json::json!({
-            "language": request.language
+            "language": request.language,
+            "task_id": task_id
         }),
     );
 
@@ -327,9 +340,9 @@ pub async fn execute_code(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    // 如果插件有 execute_home，设置工作目录
-    if let Some(execute_home) = plugin.get_execute_home() {
-        command.current_dir(&execute_home);
+    // 设置工作目录（就地运行为文件目录，否则为插件 execute_home）
+    if let Some(dir) = &cwd {
+        command.current_dir(dir);
     }
 
     let mut child = match command.spawn() {
@@ -346,6 +359,7 @@ pub async fn execute_code(
                 "code-execution-complete",
                 serde_json::json!({
                     "language": request.language,
+                    "task_id": task_id,
                     "success": false
                 }),
             );
@@ -366,7 +380,7 @@ pub async fn execute_code(
     {
         let mut guard = task_manager.lock().await;
         guard.insert(
-            request.language.clone(),
+            task_id.clone(),
             ExecutionTask {
                 language: request.language.clone(),
                 process_id: child.id(),
@@ -422,13 +436,14 @@ pub async fn execute_code(
                 // 从任务管理器中移除
                 {
                     let mut guard = task_manager.lock().await;
-                    guard.remove(&request.language);
+                    guard.remove(&task_id);
                 }
 
                 let _ = app.emit(
                     "code-execution-stopped",
                     serde_json::json!({
-                        "language": request.language
+                        "language": request.language,
+                        "task_id": task_id
                     }),
                 );
 
@@ -445,13 +460,14 @@ pub async fn execute_code(
             // 从任务管理器中移除
             {
                 let mut guard = task_manager.lock().await;
-                guard.remove(&request.language);
+                guard.remove(&task_id);
             }
 
             let _ = app.emit(
                 "code-execution-timeout",
                 serde_json::json!({
-                    "language": request.language
+                    "language": request.language,
+                    "task_id": task_id
                 }),
             );
 
@@ -471,7 +487,8 @@ pub async fn execute_code(
                 serde_json::json!({
                     "type": "stdout",
                     "content": line,
-                    "language": request.language
+                    "language": request.language,
+                    "task_id": task_id
                 }),
             );
         }
@@ -486,7 +503,8 @@ pub async fn execute_code(
                     serde_json::json!({
                         "type": "stderr",
                         "content": line,
-                        "language": request.language
+                        "language": request.language,
+                        "task_id": task_id
                     }),
                 );
             }
@@ -503,7 +521,8 @@ pub async fn execute_code(
                         serde_json::json!({
                             "type": "stdout",
                             "content": line,
-                            "language": request.language
+                            "language": request.language,
+                            "task_id": task_id
                         }),
                     );
                 }
@@ -516,7 +535,8 @@ pub async fn execute_code(
                             serde_json::json!({
                                 "type": "stderr",
                                 "content": line,
-                                "language": request.language
+                                "language": request.language,
+                                "task_id": task_id
                             }),
                         );
                     }
@@ -533,7 +553,7 @@ pub async fn execute_code(
                 // 从任务管理器中移除
                 {
                     let mut guard = task_manager.lock().await;
-                    guard.remove(&request.language);
+                    guard.remove(&task_id);
                 }
 
                 let mut result = ExecutionResult {
@@ -557,7 +577,8 @@ pub async fn execute_code(
                         serde_json::json!({
                             "type": "stdout",
                             "content": "代码执行成功 (无输出)",
-                            "language": request.language
+                            "language": request.language,
+                            "task_id": task_id
                         }),
                     );
                 }
@@ -566,6 +587,7 @@ pub async fn execute_code(
                     "code-execution-complete",
                     serde_json::json!({
                         "language": request.language,
+                        "task_id": task_id,
                         "success": result.success,
                         "execution_time": result.execution_time
                     }),
@@ -588,13 +610,14 @@ pub async fn execute_code(
                 // 从任务管理器中移除
                 {
                     let mut guard = task_manager.lock().await;
-                    guard.remove(&request.language);
+                    guard.remove(&task_id);
                 }
 
                 let _ = app.emit(
                     "code-execution-error",
                     serde_json::json!({
                         "language": request.language,
+                        "task_id": task_id,
                         "error": e.to_string()
                     }),
                 );

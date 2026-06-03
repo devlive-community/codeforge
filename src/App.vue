@@ -8,7 +8,7 @@
                :sidebar-visible="sidebarVisible"
                @toggle-sidebar="toggleSidebar"
                @run-code="handleRunCode"
-               @stop-code="() => stopCode(currentLanguage)"
+               @stop-code="stopCode"
                @language-change="onLanguageChange"
                @layout-change="handleLayoutChange"
                @open-file="handleOpenFileClick"
@@ -432,12 +432,28 @@ const handleLayoutChange = (mode: LayoutMode) => {
   }
 }
 
-// 包装运行：仅编辑器模式下点击运行时自动展开控制台
-const handleRunCode = () => {
+// 包装运行：仅编辑器模式下点击运行时自动展开控制台；关联文件则就地运行
+const handleRunCode = async () => {
   if (layoutMode.value === 'editor') {
     showConsole.value = true
   }
-  runCode(currentLanguage.value, envInfo.value.installed, envInfo.value.language)
+
+  const base = {
+    language: currentLanguage.value,
+    envInstalled: envInfo.value.installed,
+    envLanguage: envInfo.value.language
+  }
+
+  // 关联了本地文件：有改动先保存，再就地运行（工作目录为文件所在目录）
+  if (currentFilePath.value) {
+    if (isDirty.value) {
+      await saveFile()
+    }
+    runCode({...base, filePath: currentFilePath.value})
+  }
+  else {
+    runCode(base)
+  }
 }
 
 const handleSettingsChanged = async (config: any) => {
@@ -486,7 +502,6 @@ const {initializeEventListeners, cleanupEventListeners} = useEventManager({
   isRunning,
   isSuccess,
   lastExecutionTime,
-  currentLanguage,
   toast,
   handleRealtimeOutput,
   handleExecutionComplete,
