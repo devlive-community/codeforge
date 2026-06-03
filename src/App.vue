@@ -11,7 +11,7 @@
                @stop-code="() => stopCode(currentLanguage)"
                @language-change="onLanguageChange"
                @layout-change="handleLayoutChange"
-               @open-file="openFile"
+               @open-file="handleOpenFileClick"
                @save-file="saveFile"
                @show-settings="showSettings = true"
                @load-example="loadExample">
@@ -25,7 +25,7 @@
                  class="flex-shrink-0"
                  :style="{ width: `${sidebarWidth}px` }"
                  @open-folder="openFolder"
-                 @open-file="handleOpenFileFromTree"/>
+                 @open-file="smartOpen"/>
         <!-- 拖拽改变侧栏宽度 -->
         <div class="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
              @mousedown="startSidebarResize"></div>
@@ -129,6 +129,13 @@
     <!-- 更新组件 -->
     <Update v-if="showUpdate" @close="closeUpdate"/>
 
+    <!-- 只读大文件查看器 -->
+    <LargeFileViewer v-if="showViewer && viewerFile"
+                     :file-path="viewerFile.path"
+                     :line-count="viewerFile.lineCount"
+                     :size-bytes="viewerFile.sizeBytes"
+                     @close="closeViewer"/>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
@@ -157,7 +164,9 @@ import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
 import EditorTabs from './components/EditorTabs.vue'
 import Sidebar from './components/Sidebar.vue'
+import LargeFileViewer from './components/LargeFileViewer.vue'
 import {open as openDialog} from '@tauri-apps/plugin-dialog'
+import {invoke} from '@tauri-apps/api/core'
 import {useEventManager} from './composables/useEventManager'
 import {useAppState} from './composables/useAppState'
 import {useEditorConfig} from './composables/useEditorConfig'
@@ -240,7 +249,7 @@ const handleFileOpened = (filePath: string) => {
 const {
   currentFileName,
   isDirty,
-  openFile,
+  pickFile,
   openPath,
   saveFile,
   resetFile
@@ -312,14 +321,50 @@ const openFolder = async () => {
   }
 }
 
-// 文件树点击文件：已打开则切换到对应标签，否则在新标签打开
-const handleOpenFileFromTree = async (filePath: string) => {
-  const existing = editorTabs.value.find(t => t.filePath === filePath)
-  if (existing) {
-    switchTab(existing.id)
-    return
+// 只读大文件查看器状态
+const showViewer = ref(false)
+const viewerFile = ref<{ path: string, lineCount: number, sizeBytes: number } | null>(null)
+
+// 按文件大小决定：可编辑打开 / 只读查看
+const smartOpen = async (filePath: string) => {
+  try {
+    const meta = await invoke<{ size_bytes: number, line_count: number, is_text: boolean }>('get_text_file_meta', {path: filePath})
+    if (!meta.is_text) {
+      toast.error('不是文本文件，无法打开')
+      return
+    }
+
+    const limitBytes = (editorConfig.value?.max_open_file_size ?? 5) * 1024 * 1024
+    if (meta.size_bytes > limitBytes) {
+      // 超过可编辑上限 → 只读查看器
+      viewerFile.value = {path: filePath, lineCount: meta.line_count, sizeBytes: meta.size_bytes}
+      showViewer.value = true
+      return
+    }
+
+    // 已打开则切换到对应标签，否则在新标签打开
+    const existing = editorTabs.value.find(t => t.filePath === filePath)
+    if (existing) {
+      switchTab(existing.id)
+      return
+    }
+    await openPath(filePath)
   }
-  await openPath(filePath)
+  catch (error) {
+    toast.error('打开失败: ' + error)
+  }
+}
+
+const handleOpenFileClick = async () => {
+  const path = await pickFile()
+  if (path) {
+    await smartOpen(path)
+  }
+}
+
+const closeViewer = () => {
+  showViewer.value = false
+  viewerFile.value = null
 }
 
 const {

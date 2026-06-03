@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::fs;
+use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 
 #[derive(Serialize)]
@@ -71,4 +72,85 @@ pub fn read_file_text(path: String, max_size_mb: Option<u64>) -> Result<String, 
 #[tauri::command]
 pub fn write_file_text(path: String, content: String) -> Result<(), String> {
     fs::write(&path, content).map_err(|e| format!("写入文件失败: {}", e))
+}
+
+#[derive(Serialize)]
+pub struct TextFileMeta {
+    size_bytes: u64,
+    line_count: u64,
+    is_text: bool,
+}
+
+/// 获取文本文件元信息：大小、总行数、是否为文本（用于决定可编辑打开还是只读查看）。
+#[tauri::command]
+pub fn get_text_file_meta(path: String) -> Result<TextFileMeta, String> {
+    let meta = fs::metadata(&path).map_err(|e| format!("读取文件失败: {}", e))?;
+    let size_bytes = meta.len();
+
+    let file = fs::File::open(&path).map_err(|e| format!("读取文件失败: {}", e))?;
+    let mut reader = BufReader::new(file);
+    let mut buf = [0u8; 65536];
+    let mut line_count: u64 = 0;
+    let mut is_text = true;
+    let mut first = true;
+    let mut last_byte: u8 = 0;
+
+    loop {
+        let n = reader
+            .read(&mut buf)
+            .map_err(|e| format!("读取文件失败: {}", e))?;
+        if n == 0 {
+            break;
+        }
+        // 首块出现 NUL 字节则判定为二进制
+        if first {
+            if buf[..n].contains(&0) {
+                is_text = false;
+            }
+            first = false;
+        }
+        for &b in &buf[..n] {
+            if b == b'\n' {
+                line_count += 1;
+            }
+        }
+        last_byte = buf[n - 1];
+    }
+
+    // 末行无换行符时补 1
+    if size_bytes > 0 && last_byte != b'\n' {
+        line_count += 1;
+    }
+
+    Ok(TextFileMeta {
+        size_bytes,
+        line_count,
+        is_text,
+    })
+}
+
+/// 按行范围读取文件（只读查看器虚拟滚动用）。start 从 0 开始，返回 [start, start+count) 的行。
+#[tauri::command]
+pub fn read_file_lines(path: String, start: u64, count: u64) -> Result<Vec<String>, String> {
+    let file = fs::File::open(&path).map_err(|e| format!("读取文件失败: {}", e))?;
+    let reader = BufReader::new(file);
+
+    let mut lines: Vec<String> = Vec::new();
+    let end = start.saturating_add(count);
+
+    for (i, line) in reader.lines().enumerate() {
+        let idx = i as u64;
+        if idx < start {
+            continue;
+        }
+        if idx >= end {
+            break;
+        }
+        match line {
+            Ok(l) => lines.push(l),
+            Err(_) => lines.push(String::from("\u{FFFD}")), // 非 UTF-8 行占位
+        }
+    }
+
+    Ok(lines)
 }

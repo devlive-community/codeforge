@@ -59,9 +59,15 @@ export function useFileManager(options: FileManagerOptions)
         }
     }
 
-    const openFile = async () => {
+    // 仅弹出文件选择对话框，返回选中路径（不载入），供上层按大小决定打开方式
+    const pickFile = async (): Promise<string | null> => {
         const selected = await openFileDialog({multiple: false, directory: false})
-        if (!selected || typeof selected !== 'string') {
+        return selected && typeof selected === 'string' ? selected : null
+    }
+
+    const openFile = async () => {
+        const selected = await pickFile()
+        if (!selected) {
             return
         }
         await loadPath(selected)
@@ -116,6 +122,7 @@ export function useFileManager(options: FileManagerOptions)
     return {
         currentFileName,
         isDirty,
+        pickFile,
         openFile,
         openPath,
         saveFile,
