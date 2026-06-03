@@ -17,6 +17,8 @@ interface FileManagerOptions
     onBeforeLoad?: () => void
     // 打开文件后回调（内容已写入编辑器），用于按扩展名切换语言等
     onOpened?: (filePath: string, content: string) => void
+    // 打开文件大小上限(MB)，传给后端校验
+    getMaxFileSizeMb?: () => number | undefined
 }
 
 /**
@@ -25,7 +27,7 @@ interface FileManagerOptions
  */
 export function useFileManager(options: FileManagerOptions)
 {
-    const {code, toast, getDefaultFileName, currentFilePath, savedContent, onBeforeLoad, onOpened} = options
+    const {code, toast, getDefaultFileName, currentFilePath, savedContent, onBeforeLoad, onOpened, getMaxFileSizeMb} = options
 
     const currentFileName = computed(() => {
         if (!currentFilePath.value) {
@@ -42,7 +44,10 @@ export function useFileManager(options: FileManagerOptions)
         try {
             onBeforeLoad?.()
 
-            const content = await invoke<string>('read_file_text', {path: filePath})
+            const content = await invoke<string>('read_file_text', {
+                path: filePath,
+                maxSizeMb: getMaxFileSizeMb?.()
+            })
             code.value = content
             currentFilePath.value = filePath
             savedContent.value = content

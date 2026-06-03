@@ -256,7 +256,8 @@ const {
       newTab({language: currentLanguage.value})
     }
   },
-  onOpened: handleFileOpened
+  onOpened: handleFileOpened,
+  getMaxFileSizeMb: () => editorConfig.value?.max_open_file_size
 })
 
 // 手动切换语言（下拉框）：替换为模板并解除文件关联
