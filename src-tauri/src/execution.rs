@@ -1,11 +1,13 @@
 use crate::plugins::{CodeExecutionRequest, ExecutionResult, PluginManager};
 use log::{error, info, warn};
+use rusqlite::{Connection, params};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::sync::{Arc, OnceLock, mpsc};
+use std::sync::{Arc, Mutex as StdMutex, OnceLock, mpsc};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State};
@@ -21,8 +23,153 @@ pub struct ExecutionTask {
     pub stop_flag: Arc<Mutex<bool>>,
 }
 
-pub type ExecutionHistory = Mutex<Vec<ExecutionResult>>;
 pub type PluginManagerState = Mutex<PluginManager>;
+
+#[derive(Debug, Serialize)]
+pub struct ExecutionHistoryPage {
+    pub items: Vec<ExecutionResult>,
+    pub total: u64,
+}
+
+pub struct ExecutionHistory {
+    conn: StdMutex<Connection>,
+}
+
+impl ExecutionHistory {
+    pub fn new() -> Result<Self, String> {
+        let db_path = get_codeforge_db_path()?;
+        let conn =
+            Connection::open(&db_path).map_err(|e| format!("打开执行历史数据库失败: {}", e))?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS execution_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                success INTEGER NOT NULL,
+                code TEXT NOT NULL,
+                stdout TEXT NOT NULL,
+                stderr TEXT NOT NULL,
+                execution_time INTEGER NOT NULL,
+                timestamp INTEGER NOT NULL,
+                language TEXT NOT NULL
+            )",
+            [],
+        )
+        .map_err(|e| format!("初始化执行历史数据库失败: {}", e))?;
+
+        Ok(Self {
+            conn: StdMutex::new(conn),
+        })
+    }
+
+    fn insert(&self, result: &ExecutionResult) -> Result<(), String> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| "执行历史数据库锁错误".to_string())?;
+
+        conn.execute(
+            "INSERT INTO execution_history
+                (success, code, stdout, stderr, execution_time, timestamp, language)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                if result.success { 1 } else { 0 },
+                &result.code,
+                &result.stdout,
+                &result.stderr,
+                result.execution_time as i64,
+                result.timestamp as i64,
+                &result.language,
+            ],
+        )
+        .map_err(|e| format!("保存执行历史失败: {}", e))?;
+
+        Ok(())
+    }
+
+    fn list(&self) -> Result<Vec<ExecutionResult>, String> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| "执行历史数据库锁错误".to_string())?;
+        let mut statement = conn
+            .prepare(
+                "SELECT success, code, stdout, stderr, execution_time, timestamp, language
+                 FROM execution_history
+                 ORDER BY id ASC",
+            )
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        let rows = statement
+            .query_map([], |row| {
+                Ok(ExecutionResult {
+                    success: row.get::<_, i64>(0)? != 0,
+                    code: row.get(1)?,
+                    stdout: row.get(2)?,
+                    stderr: row.get(3)?,
+                    execution_time: row.get::<_, i64>(4)? as u128,
+                    timestamp: row.get::<_, i64>(5)? as u64,
+                    language: row.get(6)?,
+                })
+            })
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("读取执行历史失败: {}", e))
+    }
+
+    fn list_page(&self, offset: u64, limit: u64) -> Result<ExecutionHistoryPage, String> {
+        let limit = limit.clamp(1, 100);
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| "执行历史数据库锁错误".to_string())?;
+
+        let total = conn
+            .query_row("SELECT COUNT(*) FROM execution_history", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .map_err(|e| format!("统计执行历史失败: {}", e))? as u64;
+
+        let mut statement = conn
+            .prepare(
+                "SELECT success, code, stdout, stderr, execution_time, timestamp, language
+                 FROM execution_history
+                 ORDER BY id DESC
+                 LIMIT ?1 OFFSET ?2",
+            )
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        let rows = statement
+            .query_map(params![limit as i64, offset as i64], |row| {
+                Ok(ExecutionResult {
+                    success: row.get::<_, i64>(0)? != 0,
+                    code: row.get(1)?,
+                    stdout: row.get(2)?,
+                    stderr: row.get(3)?,
+                    execution_time: row.get::<_, i64>(4)? as u128,
+                    timestamp: row.get::<_, i64>(5)? as u64,
+                    language: row.get(6)?,
+                })
+            })
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        let items = rows
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        Ok(ExecutionHistoryPage { items, total })
+    }
+
+    fn clear(&self) -> Result<(), String> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| "执行历史数据库锁错误".to_string())?;
+        conn.execute("DELETE FROM execution_history", [])
+            .map_err(|e| format!("清空执行历史失败: {}", e))?;
+        Ok(())
+    }
+}
 
 // 全局任务管理器
 type TaskManager = Arc<Mutex<HashMap<String, ExecutionTask>>>;
@@ -48,6 +195,20 @@ fn get_codeforge_cache_dir(language: &str) -> Result<PathBuf, String> {
     fs::create_dir_all(&cache_dir).map_err(|e| format!("创建缓存目录失败: {}", e))?;
 
     Ok(cache_dir)
+}
+
+fn get_codeforge_db_path() -> Result<PathBuf, String> {
+    let home_dir = dirs::home_dir().ok_or("无法获取用户主目录")?;
+    let codeforge_dir = home_dir.join(".codeforge");
+    fs::create_dir_all(&codeforge_dir).map_err(|e| format!("创建配置目录失败: {}", e))?;
+    let db_path = codeforge_dir.join("codeforge.sqlite");
+    let old_db_path = codeforge_dir.join("execution_history.sqlite");
+
+    if !db_path.exists() && old_db_path.exists() {
+        fs::rename(&old_db_path, &db_path).map_err(|e| format!("迁移执行历史数据库失败: {}", e))?;
+    }
+
+    Ok(db_path)
 }
 
 // 检查是否应该过滤 stderr 行
@@ -377,6 +538,7 @@ pub async fn execute_code(
 
                 let mut result = ExecutionResult {
                     success: status.success(),
+                    code: request.code.clone(),
                     stdout: stdout_lines.join("\n"),
                     stderr: stderr_lines.join("\n"),
                     execution_time,
@@ -410,12 +572,7 @@ pub async fn execute_code(
                 );
 
                 drop(manager);
-                let mut history_guard = history.lock().await;
-                history_guard.push(result.clone());
-
-                if history_guard.len() > 100 {
-                    history_guard.remove(0);
-                }
+                history.insert(&result)?;
 
                 info!("执行代码 -> 调用插件 [ {} ] 完成", request.language);
                 return Ok(result);
@@ -453,14 +610,21 @@ pub async fn execute_code(
 pub async fn get_execution_history(
     history: State<'_, ExecutionHistory>,
 ) -> Result<Vec<ExecutionResult>, String> {
-    let history_guard = history.lock().await;
-    Ok(history_guard.clone())
+    history.list()
+}
+
+// 分页获取执行历史
+#[tauri::command]
+pub async fn get_execution_history_page(
+    offset: u64,
+    limit: u64,
+    history: State<'_, ExecutionHistory>,
+) -> Result<ExecutionHistoryPage, String> {
+    history.list_page(offset, limit)
 }
 
 // 清空执行历史
 #[tauri::command]
 pub async fn clear_execution_history(history: State<'_, ExecutionHistory>) -> Result<(), String> {
-    let mut history_guard = history.lock().await;
-    history_guard.clear();
-    Ok(())
+    history.clear()
 }

@@ -36,7 +36,8 @@ use crate::env_providers::{
 };
 use crate::execution::{
     ExecutionHistory, PluginManagerState as ExecutionPluginManagerState, clear_execution_history,
-    execute_code, get_execution_history, is_execution_running, stop_execution,
+    execute_code, get_execution_history, get_execution_history_page, is_execution_running,
+    stop_execution,
 };
 use crate::filesystem::{
     get_text_file_meta, read_directory_tree, read_file_lines, read_file_text, write_file_text,
@@ -71,7 +72,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(ExecutionHistory::default())
+        .manage(ExecutionHistory::new().expect("failed to initialize execution history database"))
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
         .manage(EnvironmentManagerState::new(env_manager))
         .setup(|app| {
@@ -116,6 +117,7 @@ fn main() {
             stop_execution,
             is_execution_running,
             get_execution_history,
+            get_execution_history_page,
             clear_execution_history,
             // 信息相关命令
             get_info,

@@ -1,6 +1,7 @@
 export interface ExecutionResult
 {
     success: boolean
+    code: string
     stdout: string
     stderr: string
     execution_time: number

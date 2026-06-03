@@ -13,6 +13,7 @@
                @layout-change="handleLayoutChange"
                @open-file="handleOpenFileClick"
                @save-file="saveFile"
+               @show-history="showHistory = true"
                @show-settings="showSettings = true"
                @load-example="loadExample">
     </AppHeader>
@@ -139,6 +140,11 @@
     <!-- 更新组件 -->
     <Update v-if="showUpdate" @close="closeUpdate"/>
 
+    <!-- 执行历史 -->
+    <ExecutionHistory v-model:show="showHistory"
+                      :supported-languages="supportedLanguages"
+                      @restore="restoreHistoryItem"/>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
@@ -147,7 +153,7 @@
 <script setup lang="ts">
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import {X} from 'lucide-vue-next'
-import {LayoutMode, SplitDirection} from './types/app.ts'
+import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import ConsoleOutput from './components/ConsoleOutput.vue'
@@ -168,6 +174,7 @@ import {useWorkspace} from './composables/useWorkspace'
 import EditorTabs from './components/EditorTabs.vue'
 import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
+import ExecutionHistory from './components/ExecutionHistory.vue'
 import {open as openDialog} from '@tauri-apps/plugin-dialog'
 import {invoke} from '@tauri-apps/api/core'
 import {useEventManager} from './composables/useEventManager'
@@ -176,6 +183,7 @@ import {useEditorConfig} from './composables/useEditorConfig'
 import Update from './components/Update.vue'
 
 const toast = useToast()
+const showHistory = ref(false)
 
 const {
   code,
@@ -446,6 +454,14 @@ const loadExample = (content: string) => {
   code.value = content || ''
   // 示例内容不对应任何本地文件，解除文件关联
   resetFile()
+}
+
+const restoreHistoryItem = (item: ExecutionResult) => {
+  applyLanguage(item.language)
+  code.value = item.code || ''
+  resetFile()
+  clearOutput()
+  toast.success('已恢复历史代码')
 }
 
 // 监听编辑器配置变化

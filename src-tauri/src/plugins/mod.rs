@@ -8,6 +8,7 @@ use std::path::PathBuf;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ExecutionResult {
     pub success: bool,
+    pub code: String,
     pub stdout: String,
     pub stderr: String,
     pub execution_time: u128,

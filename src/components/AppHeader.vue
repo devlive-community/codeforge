@@ -28,6 +28,7 @@
       </Button>
 
       <Button type="info" :icon="FileCode" @click="loadExample">加载示例</Button>
+      <Button type="secondary" :icon="History" :icon-only="true" title="执行历史" @click="emit('show-history')"/>
 
       <!-- 打开/保存文件 -->
       <Button type="secondary" :icon="FolderOpen" :icon-only="true" title="打开文件" @click="emit('open-file')"/>
@@ -65,7 +66,7 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
-import {CheckCircle, FileCode, FolderOpen, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Square} from 'lucide-vue-next'
+import {CheckCircle, FileCode, FolderOpen, History, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Square} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
 import {Language, LayoutMode} from '../types/app.ts'
@@ -90,6 +91,7 @@ const emit = defineEmits<{
   'layout-change': [mode: LayoutMode]
   'open-file': []
   'save-file': []
+  'show-history': []
   'toggle-sidebar': []
 }>()
 
