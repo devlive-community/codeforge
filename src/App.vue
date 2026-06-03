@@ -135,7 +135,7 @@
     <About v-if="showAbout" @close="closeAbout"/>
 
     <!-- 设置组件 -->
-    <Settings v-if="showSettings" @close="closeSettings" @settings-changed="handleSettingsChanged"/>
+    <Settings v-if="showSettings" @close="onSettingsClose" @settings-changed="handleSettingsChanged"/>
 
     <!-- 更新组件 -->
     <Update v-if="showUpdate" @close="closeUpdate"/>
@@ -497,6 +497,12 @@ const promptSaveAndRun = async () => {
 const promptRunCopy = () => {
   showRunPrompt.value = false
   runCode(buildRunBase())
+}
+
+// 设置关闭后刷新缓存的编辑器配置，使运行策略/文件大小上限等即时生效
+const onSettingsClose = async () => {
+  closeSettings()
+  await loadEditorConfig()
 }
 
 const handleSettingsChanged = async (config: any) => {
