@@ -23,7 +23,10 @@
         <Button size="sm" @click="emit('open-folder')">打开文件夹</Button>
       </div>
 
-      <FileTreeNode v-for="node in rootNodes" :key="node.path" :node="node" :depth="0"/>
+      <!-- w-max + min-w-full：长文件名时撑出横向滚动，同时高亮铺满整行 -->
+      <div v-else class="w-max min-w-full">
+        <FileTreeNode v-for="node in rootNodes" :key="node.path" :node="node" :depth="0"/>
+      </div>
     </div>
   </div>
 </template>

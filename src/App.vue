@@ -19,12 +19,17 @@
 
     <div class="flex-1 overflow-hidden flex">
       <!-- 左侧文件树侧栏 -->
-      <Sidebar v-if="sidebarVisible"
-               :root-dir="rootDir"
-               :active-path="currentFilePath"
-               class="w-60 flex-shrink-0"
-               @open-folder="openFolder"
-               @open-file="handleOpenFileFromTree"/>
+      <template v-if="sidebarVisible">
+        <Sidebar :root-dir="rootDir"
+                 :active-path="currentFilePath"
+                 class="flex-shrink-0"
+                 :style="{ width: `${sidebarWidth}px` }"
+                 @open-folder="openFolder"
+                 @open-file="handleOpenFileFromTree"/>
+        <!-- 拖拽改变侧栏宽度 -->
+        <div class="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
+             @mousedown="startSidebarResize"></div>
+      </template>
 
       <div class="flex-1 overflow-hidden">
       <!-- 编辑器代码片段 -->
@@ -266,8 +271,33 @@ const handleCloseTab = (id: string) => closeTab(id, {language: currentLanguage.v
 // ===== 侧栏 / 文件夹 =====
 const rootDir = ref<string | null>(null)
 const sidebarVisible = ref(localStorage.getItem('sidebar-visible') === 'true')
+const sidebarWidth = ref(Number(localStorage.getItem('sidebar-width')) || 240)
 
 watch(sidebarVisible, (v) => localStorage.setItem('sidebar-visible', String(v)))
+
+// 拖拽改变侧栏宽度
+let resizeStartX = 0
+let resizeStartWidth = 0
+const onSidebarResize = (e: MouseEvent) => {
+  const w = resizeStartWidth + (e.clientX - resizeStartX)
+  sidebarWidth.value = Math.max(160, Math.min(600, w))
+}
+const stopSidebarResize = () => {
+  document.removeEventListener('mousemove', onSidebarResize)
+  document.removeEventListener('mouseup', stopSidebarResize)
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+  localStorage.setItem('sidebar-width', String(sidebarWidth.value))
+}
+const startSidebarResize = (e: MouseEvent) => {
+  e.preventDefault()
+  resizeStartX = e.clientX
+  resizeStartWidth = sidebarWidth.value
+  document.addEventListener('mousemove', onSidebarResize)
+  document.addEventListener('mouseup', stopSidebarResize)
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor = 'col-resize'
+}
 
 const toggleSidebar = () => {
   sidebarVisible.value = !sidebarVisible.value

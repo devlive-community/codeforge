@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="flex items-center py-1 pr-2 cursor-pointer text-sm select-none"
+    <div class="flex items-center py-1 pr-4 cursor-pointer text-sm select-none w-full whitespace-nowrap"
          :class="isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'"
          :style="{ paddingLeft: `${depth * 12 + 8}px` }"
          @click="onClick">
@@ -13,7 +13,7 @@
                  class="w-4 h-4 mx-1 flex-shrink-0"
                  :class="node.is_dir ? 'text-blue-500' : 'text-gray-400'"/>
 
-      <span class="truncate">{{ node.name }}</span>
+      <span>{{ node.name }}</span>
     </div>
 
     <template v-if="node.is_dir && expanded">
