@@ -29,6 +29,10 @@ export function useLanguageRegistry()
                 if (!plugin?.language || !plugin?.extension) {
                     continue
                 }
+                // 禁用的语言不参与识别
+                if (plugin.enabled === false) {
+                    continue
+                }
                 const ext = normalizeExt(String(plugin.extension))
                 if (!ext) {
                     continue
@@ -55,17 +59,30 @@ export function useLanguageRegistry()
 
     const getExtension = (language: string) => langToExt.value[language] || ''
 
-    /**
-     * 根据文件名/路径推断语言，匹配不到返回 null。
-     * 同一扩展名对应多语言时，暂取第一个（后续可加优先级或让用户选）。
-     */
-    const detectLanguage = (filePathOrName: string): string | null => {
+    // 返回某文件名/路径对应的全部候选语言（同扩展名可能多个引擎）
+    const getCandidates = (filePathOrName: string): string[] => {
         const ext = filePathOrName.split('.').pop()
         if (!ext || ext === filePathOrName) {
+            return []
+        }
+        return extToLangs.value[normalizeExt(ext)] || []
+    }
+
+    /**
+     * 根据文件名/路径推断语言，匹配不到返回 null。
+     * 同一扩展名对应多语言（如 .js 的 Browser/jQuery/Node.js）时：
+     * - 若 preferred 已是候选之一，则保持 preferred（不切换）；
+     * - 否则取第一个候选作为默认。
+     */
+    const detectLanguage = (filePathOrName: string, preferred?: string): string | null => {
+        const candidates = getCandidates(filePathOrName)
+        if (candidates.length === 0) {
             return null
         }
-        const langs = extToLangs.value[normalizeExt(ext)]
-        return langs && langs.length > 0 ? langs[0] : null
+        if (preferred && candidates.includes(preferred)) {
+            return preferred
+        }
+        return candidates[0]
     }
 
     return {
@@ -73,6 +90,7 @@ export function useLanguageRegistry()
         extToLangs,
         build,
         getExtension,
+        getCandidates,
         detectLanguage
     }
 }

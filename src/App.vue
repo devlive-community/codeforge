@@ -174,7 +174,7 @@ const {
 } = useLanguageManager(code, clearOutput, toast)
 
 // 扩展名 ↔ 语言 注册表
-const {build: buildLanguageRegistry, detectLanguage} = useLanguageRegistry()
+const {build: buildLanguageRegistry, detectLanguage, getCandidates} = useLanguageRegistry()
 
 // 本地文件管理（打开/保存/另存为）
 const getDefaultFileName = () => {
@@ -184,9 +184,14 @@ const getDefaultFileName = () => {
 
 // 打开文件后按扩展名自动切换语言（不改动已载入的内容、不解除文件关联）
 const handleFileOpened = (filePath: string) => {
-  const detected = detectLanguage(filePath)
+  // 优先保持当前语言：当前引擎已匹配该扩展名时不切换（如已在某 JS 引擎上打开 .js）
+  const detected = detectLanguage(filePath, currentLanguage.value)
   if (detected && detected !== currentLanguage.value) {
     applyLanguage(detected)
+    // 同扩展名对应多个引擎时，提示可手动切换
+    if (getCandidates(filePath).length > 1) {
+      toast.info(`该类型可用多个运行引擎，已选「${getLanguageDisplayName(detected)}」，可在下拉手动切换`)
+    }
   }
 }
 
