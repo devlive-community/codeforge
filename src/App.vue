@@ -9,6 +9,8 @@
                @stop-code="() => stopCode(currentLanguage)"
                @language-change="handleLanguageChange"
                @layout-change="handleLayoutChange"
+               @open-file="openFile"
+               @save-file="saveFile"
                @show-settings="showSettings = true"
                @load-example="loadExample">
     </AppHeader>
@@ -23,6 +25,10 @@
                 <div class="flex items-center space-x-3">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
                   <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+                  <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+                    · {{ currentFileName }}
+                    <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
+                  </span>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500">
@@ -75,6 +81,10 @@
           <div class="flex items-center space-x-3">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
             <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+            <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+              · {{ currentFileName }}
+              <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
+            </span>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500">
@@ -123,6 +133,7 @@ import {useToast} from './plugins/toast'
 // Composables
 import {useCodeExecution} from './composables/useCodeExecution'
 import {useLanguageManager} from './composables/useLanguageManager'
+import {useFileManager} from './composables/useFileManager'
 import {useEventManager} from './composables/useEventManager'
 import {useAppState} from './composables/useAppState'
 import {useEditorConfig} from './composables/useEditorConfig'
@@ -153,11 +164,26 @@ const {
   isLoadingEnvInfo,
   getLanguageDisplayName,
   getCurrentConsoleType,
+  getCurrentPluginConfig,
   handleLanguageChange,
   refreshLanguageList,
   refreshEnvInfo,
   initialize
 } = useLanguageManager(code, clearOutput, toast)
+
+// 本地文件管理（打开/保存/另存为）
+const getDefaultFileName = () => {
+  const ext = getCurrentPluginConfig()?.extension || currentLanguage.value || 'txt'
+  return `未命名.${ext}`
+}
+
+const {
+  currentFileName,
+  isDirty,
+  openFile,
+  saveFile,
+  resetFile
+} = useFileManager(code, toast, getDefaultFileName)
 
 const {
   showAbout,
@@ -232,6 +258,8 @@ const handleSettingsChanged = async (config: any) => {
 
 const loadExample = (content: string) => {
   code.value = content || ''
+  // 示例内容不对应任何本地文件，解除文件关联
+  resetFile()
 }
 
 // 监听编辑器配置变化
@@ -246,6 +274,8 @@ watch(editorConfig, (newConfig) => {
 
 watch(currentLanguage, () => {
   consoleType.value = getCurrentConsoleType()
+  // 切换语言会替换为模板内容，不再对应原文件
+  resetFile()
 })
 
 const {initializeEventListeners, cleanupEventListeners} = useEventManager({

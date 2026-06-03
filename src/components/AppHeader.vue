@@ -28,6 +28,10 @@
       </Button>
 
       <Button type="info" :icon="FileCode" @click="loadExample">加载示例</Button>
+
+      <!-- 打开/保存文件 -->
+      <Button type="secondary" :icon="FolderOpen" :icon-only="true" title="打开文件" @click="emit('open-file')"/>
+      <Button type="secondary" :icon="Save" :icon-only="true" title="保存文件" @click="emit('save-file')"/>
     </div>
 
     <div class="flex items-center space-x-3">
@@ -52,7 +56,7 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
-import {CheckCircle, FileCode, Maximize2, PanelBottom, PanelRight, Play, Square} from 'lucide-vue-next'
+import {CheckCircle, FileCode, FolderOpen, Maximize2, PanelBottom, PanelRight, Play, Save, Square} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
 import {Language, LayoutMode} from '../types/app.ts'
@@ -74,6 +78,8 @@ const emit = defineEmits<{
   'language-change': [language: string]
   'load-example': [content: string]
   'layout-change': [mode: LayoutMode]
+  'open-file': []
+  'save-file': []
 }>()
 
 const layoutOptions: { value: LayoutMode; label: string; icon: any }[] = [
