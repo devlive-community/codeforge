@@ -53,8 +53,13 @@
                   <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
                 </div>
               </div>
-              <div class="flex-1 overflow-hidden">
+              <div class="flex-1 overflow-hidden relative">
                 <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+                <LargeFileViewer v-if="showViewer && viewerFile"
+                                 :file-path="viewerFile.path"
+                                 :line-count="viewerFile.lineCount"
+                                 :size-bytes="viewerFile.sizeBytes"
+                                 @close="closeViewer"/>
               </div>
             </div>
           </template>
@@ -110,8 +115,13 @@
             <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
           </div>
         </div>
-        <div class="flex-1 overflow-hidden">
+        <div class="flex-1 overflow-hidden relative">
           <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+          <LargeFileViewer v-if="showViewer && viewerFile"
+                           :file-path="viewerFile.path"
+                           :line-count="viewerFile.lineCount"
+                           :size-bytes="viewerFile.sizeBytes"
+                           @close="closeViewer"/>
         </div>
       </div>
       </div>
@@ -128,13 +138,6 @@
 
     <!-- 更新组件 -->
     <Update v-if="showUpdate" @close="closeUpdate"/>
-
-    <!-- 只读大文件查看器 -->
-    <LargeFileViewer v-if="showViewer && viewerFile"
-                     :file-path="viewerFile.path"
-                     :line-count="viewerFile.lineCount"
-                     :size-bytes="viewerFile.sizeBytes"
-                     @close="closeViewer"/>
 
     <!-- Toast 组件 -->
     <Toast/>

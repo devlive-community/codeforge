@@ -1,7 +1,10 @@
 use serde::Serialize;
+use std::collections::HashMap;
 use std::fs;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
+use std::sync::Mutex;
+use std::time::SystemTime;
 
 #[derive(Serialize)]
 pub struct FileNode {
@@ -81,16 +84,33 @@ pub struct TextFileMeta {
     is_text: bool,
 }
 
-/// 获取文本文件元信息：大小、总行数、是否为文本（用于决定可编辑打开还是只读查看）。
-#[tauri::command]
-pub fn get_text_file_meta(path: String) -> Result<TextFileMeta, String> {
-    let meta = fs::metadata(&path).map_err(|e| format!("读取文件失败: {}", e))?;
-    let size_bytes = meta.len();
+/// 每隔多少行记录一个字节偏移锚点（索引大小 = 行数 / STEP）
+const INDEX_STEP: u64 = 200;
 
-    let file = fs::File::open(&path).map_err(|e| format!("读取文件失败: {}", e))?;
+/// 文件行偏移索引：offsets[k] 为第 k*STEP 行起始的字节偏移，支持随机定位
+struct FileIndex {
+    offsets: Vec<u64>,
+    line_count: u64,
+    size: u64,
+    is_text: bool,
+    mtime: Option<SystemTime>,
+}
+
+static INDEX_CACHE: Mutex<Option<HashMap<String, FileIndex>>> = Mutex::new(None);
+
+/// 扫描整个文件构建行偏移索引（每个文件只做一次，结果缓存）
+fn build_index(path: &str) -> Result<FileIndex, String> {
+    let meta = fs::metadata(path).map_err(|e| format!("读取文件失败: {}", e))?;
+    let size = meta.len();
+    let mtime = meta.modified().ok();
+
+    let file = fs::File::open(path).map_err(|e| format!("读取文件失败: {}", e))?;
     let mut reader = BufReader::new(file);
     let mut buf = [0u8; 65536];
-    let mut line_count: u64 = 0;
+
+    let mut offsets: Vec<u64> = vec![0]; // 第 0 行从偏移 0 开始
+    let mut line_index: u64 = 0;
+    let mut offset: u64 = 0;
     let mut is_text = true;
     let mut first = true;
     let mut last_byte: u8 = 0;
@@ -102,7 +122,6 @@ pub fn get_text_file_meta(path: String) -> Result<TextFileMeta, String> {
         if n == 0 {
             break;
         }
-        // 首块出现 NUL 字节则判定为二进制
         if first {
             if buf[..n].contains(&0) {
                 is_text = false;
@@ -110,36 +129,87 @@ pub fn get_text_file_meta(path: String) -> Result<TextFileMeta, String> {
             first = false;
         }
         for &b in &buf[..n] {
+            offset += 1;
+            last_byte = b;
             if b == b'\n' {
-                line_count += 1;
+                line_index += 1;
+                // 此处 offset 即下一行（line_index 行）的起始
+                if line_index % INDEX_STEP == 0 {
+                    offsets.push(offset);
+                }
             }
         }
-        last_byte = buf[n - 1];
     }
 
-    // 末行无换行符时补 1
-    if size_bytes > 0 && last_byte != b'\n' {
-        line_count += 1;
-    }
+    let line_count = if size > 0 && last_byte != b'\n' {
+        line_index + 1
+    } else {
+        line_index
+    };
 
-    Ok(TextFileMeta {
-        size_bytes,
+    Ok(FileIndex {
+        offsets,
         line_count,
+        size,
         is_text,
+        mtime,
     })
 }
 
-/// 按行范围读取文件（只读查看器虚拟滚动用）。start 从 0 开始，返回 [start, start+count) 的行。
+/// 取得（或构建）文件索引，返回所需标量，避免长时间持锁。
+/// 回调在持锁状态下访问 &FileIndex，返回任意结果。
+fn with_index<T>(path: &str, f: impl FnOnce(&FileIndex) -> T) -> Result<T, String> {
+    let mtime = fs::metadata(path).ok().and_then(|m| m.modified().ok());
+
+    let mut guard = INDEX_CACHE.lock().map_err(|_| "索引缓存锁错误".to_string())?;
+    let cache = guard.get_or_insert_with(HashMap::new);
+
+    let stale = match cache.get(path) {
+        Some(idx) => idx.mtime != mtime,
+        None => true,
+    };
+    if stale {
+        let idx = build_index(path)?;
+        cache.insert(path.to_string(), idx);
+    }
+
+    let idx = cache.get(path).unwrap();
+    Ok(f(idx))
+}
+
+/// 获取文本文件元信息：大小、总行数、是否为文本（用于决定可编辑打开还是只读查看）。
+#[tauri::command]
+pub fn get_text_file_meta(path: String) -> Result<TextFileMeta, String> {
+    with_index(&path, |idx| TextFileMeta {
+        size_bytes: idx.size,
+        line_count: idx.line_count,
+        is_text: idx.is_text,
+    })
+}
+
+/// 按行范围读取文件（只读查看器虚拟滚动用）。借助行偏移索引随机定位，做到 O(窗口)。
 #[tauri::command]
 pub fn read_file_lines(path: String, start: u64, count: u64) -> Result<Vec<String>, String> {
-    let file = fs::File::open(&path).map_err(|e| format!("读取文件失败: {}", e))?;
-    let reader = BufReader::new(file);
+    // 取出最近的锚点偏移与其对应行号
+    let (anchor_offset, anchor_line) = with_index(&path, |idx| {
+        let mut k = (start / INDEX_STEP) as usize;
+        if k >= idx.offsets.len() {
+            k = idx.offsets.len() - 1;
+        }
+        (idx.offsets[k], k as u64 * INDEX_STEP)
+    })?;
 
-    let mut lines: Vec<String> = Vec::new();
+    let file = fs::File::open(&path).map_err(|e| format!("读取文件失败: {}", e))?;
+    let mut reader = BufReader::new(file);
+    reader
+        .seek(SeekFrom::Start(anchor_offset))
+        .map_err(|e| format!("定位文件失败: {}", e))?;
+
     let end = start.saturating_add(count);
+    let mut lines: Vec<String> = Vec::new();
 
     for (i, line) in reader.lines().enumerate() {
-        let idx = i as u64;
+        let idx = anchor_line + i as u64;
         if idx < start {
             continue;
         }
@@ -148,7 +218,7 @@ pub fn read_file_lines(path: String, start: u64, count: u64) -> Result<Vec<Strin
         }
         match line {
             Ok(l) => lines.push(l),
-            Err(_) => lines.push(String::from("\u{FFFD}")), // 非 UTF-8 行占位
+            Err(_) => lines.push(String::from("\u{FFFD}")),
         }
     }
 
