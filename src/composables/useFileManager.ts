@@ -1,26 +1,31 @@
-import {computed, ref, type Ref} from 'vue'
+import {computed, type Ref} from 'vue'
 import {open as openFileDialog, save as saveFileDialog} from '@tauri-apps/plugin-dialog'
 import {readTextFile, writeTextFile} from '@tauri-apps/plugin-fs'
 
-/**
- * 编辑器本地文件管理：打开、保存、另存为
- *
- * @param code              编辑器内容（双向绑定的 ref）
- * @param toast             提示
- * @param getDefaultFileName 另存为时的建议文件名（通常根据当前语言扩展名生成）
- * @param onOpened          打开文件后回调（内容已写入编辑器），用于按扩展名切换语言等
- */
-export function useFileManager(
-    code: Ref<string>,
-    toast: any,
-    getDefaultFileName: () => string,
-    onOpened?: (filePath: string, content: string) => void
-)
+interface FileManagerOptions
 {
-    // 当前关联的本地文件路径（未保存到磁盘时为 null）
-    const currentFilePath = ref<string | null>(null)
-    // 最近一次保存/打开时的内容，用于判断是否有未保存改动
-    const savedContent = ref<string | null>(null)
+    // 编辑器内容（双向绑定的 ref）
+    code: Ref<string>
+    toast: any
+    // 另存为时的建议文件名（通常根据当前语言扩展名生成）
+    getDefaultFileName: () => string
+    // 当前关联的本地文件路径（由上层注入，便于与多标签共享）
+    currentFilePath: Ref<string | null>
+    // 最近一次保存/打开时的内容，用于判断是否有未保存改动（由上层注入）
+    savedContent: Ref<string | null>
+    // 选定文件、即将载入前回调（如新建标签页）
+    onBeforeLoad?: () => void
+    // 打开文件后回调（内容已写入编辑器），用于按扩展名切换语言等
+    onOpened?: (filePath: string, content: string) => void
+}
+
+/**
+ * 编辑器本地文件管理：打开、保存、另存为。
+ * 文件状态 ref 由上层注入，以便与多标签工作区共享。
+ */
+export function useFileManager(options: FileManagerOptions)
+{
+    const {code, toast, getDefaultFileName, currentFilePath, savedContent, onBeforeLoad, onOpened} = options
 
     const currentFileName = computed(() => {
         if (!currentFilePath.value) {
@@ -38,6 +43,8 @@ export function useFileManager(
             if (!selected || typeof selected !== 'string') {
                 return
             }
+
+            onBeforeLoad?.()
 
             const content = await readTextFile(selected)
             code.value = content
@@ -93,7 +100,6 @@ export function useFileManager(
     }
 
     return {
-        currentFilePath,
         currentFileName,
         isDirty,
         openFile,

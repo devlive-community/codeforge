@@ -21,6 +21,7 @@
         <ResizablePanels :direction="effectiveDirection" :min-primary="minPrimary" :min-secondary="minSecondary">
           <template #primary>
             <div class="h-full flex flex-col overflow-hidden">
+              <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"/>
               <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
@@ -77,6 +78,7 @@
 
       <!-- 仅编辑器：控制台未展开时占满 -->
       <div v-else class="h-full flex flex-col overflow-hidden">
+        <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"/>
         <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
@@ -135,6 +137,8 @@ import {useCodeExecution} from './composables/useCodeExecution'
 import {useLanguageManager} from './composables/useLanguageManager'
 import {useFileManager} from './composables/useFileManager'
 import {useLanguageRegistry} from './composables/useLanguageRegistry'
+import {useWorkspace} from './composables/useWorkspace'
+import EditorTabs from './components/EditorTabs.vue'
 import {useEventManager} from './composables/useEventManager'
 import {useAppState} from './composables/useAppState'
 import {useEditorConfig} from './composables/useEditorConfig'
@@ -182,6 +186,25 @@ const getDefaultFileName = () => {
   return `未命名.${ext}`
 }
 
+// 文件状态（提升到此层，供文件管理与多标签工作区共享）
+const currentFilePath = ref<string | null>(null)
+const savedContent = ref<string | null>(null)
+const restoreFile = (filePath: string | null, saved: string | null) => {
+  currentFilePath.value = filePath
+  savedContent.value = saved
+}
+
+// 多标签工作区
+const {
+  tabs: editorTabs,
+  activeTabId,
+  switchTab,
+  newTab,
+  closeTab,
+  isActiveReusableScratch,
+  initFirstTab
+} = useWorkspace({code, currentLanguage, applyLanguage, currentFilePath, savedContent, restoreFile})
+
 // 打开文件后按扩展名自动切换语言（不改动已载入的内容、不解除文件关联）
 const handleFileOpened = (filePath: string) => {
   // 优先保持当前语言：当前引擎已匹配该扩展名时不切换（如已在某 JS 引擎上打开 .js）
@@ -201,13 +224,29 @@ const {
   openFile,
   saveFile,
   resetFile
-} = useFileManager(code, toast, getDefaultFileName, handleFileOpened)
+} = useFileManager({
+  code,
+  toast,
+  getDefaultFileName,
+  currentFilePath,
+  savedContent,
+  // 打开文件时若当前不是空白草稿，则在新标签页打开
+  onBeforeLoad: () => {
+    if (!isActiveReusableScratch()) {
+      newTab({language: currentLanguage.value})
+    }
+  },
+  onOpened: handleFileOpened
+})
 
 // 手动切换语言（下拉框）：替换为模板并解除文件关联
 const onLanguageChange = (language: string) => {
   handleLanguageChange(language)
   resetFile()
 }
+
+const handleNewTab = () => newTab({language: currentLanguage.value, code: ''})
+const handleCloseTab = (id: string) => closeTab(id, {language: currentLanguage.value})
 
 const {
   showAbout,
@@ -324,6 +363,8 @@ window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 onMounted(async () => {
   await initialize()
   await buildLanguageRegistry()
+  // 以当前内容初始化首个标签页
+  initFirstTab()
   await loadEditorConfig()
   await initializeEventListeners()
   consoleType.value = getCurrentConsoleType()
