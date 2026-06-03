@@ -2,6 +2,11 @@
   <div :class="containerClasses">
     <!-- Tab 头部导航 -->
     <div :class="headerClasses">
+      <!-- 导航头部插槽（如筛选框，位于标签列表上方） -->
+      <div v-if="$slots['nav-header']" class="w-full mb-2">
+        <slot name="nav-header"/>
+      </div>
+
       <div :class="navClasses" ref="tabsNav">
         <!-- 滑动指示器 -->
         <div v-if="showIndicator && type === 'line'" :class="indicatorClasses" :style="indicatorStyle"/>

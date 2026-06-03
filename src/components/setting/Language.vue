@@ -9,8 +9,16 @@
           position="left"
           :tab-button-class="['!p-1 ']"
           :nav-class="['max-h-[65vh] overflow-y-auto']"
-          :tabs="tabsPluginData"
+          :tabs="filteredPluginData"
           @change="handleTabChange">
+      <template #nav-header>
+        <Input v-model="languageFilter"
+               :prefix-icon="Search"
+               clearable
+               size="sm"
+               class="w-full"
+               placeholder="筛选语言"/>
+      </template>
       <template #tab-button="{ tab }">
         <div class="flex items-center w-full px-3 py-2 space-x-2">
           <Switch v-model="pluginEnabledStates[tab.key as string]"
@@ -149,7 +157,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { Search } from 'lucide-vue-next'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { readFile } from '@tauri-apps/plugin-fs'
@@ -173,6 +182,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const languageFilter = ref('')
 const showAddCustomLanguage = ref(false)
 const showDeleteConfirm = ref(false)
 const languageToDelete = ref('')
@@ -209,6 +219,19 @@ const {
   initialize,
   reloadLanguages
 } = useLanguageSettings(emit)
+
+// 根据筛选关键字过滤左侧语言列表（按名称或标识匹配）
+const filteredPluginData = computed(() => {
+  const keyword = languageFilter.value.trim().toLowerCase()
+  if (!keyword) {
+    return tabsPluginData.value
+  }
+  return tabsPluginData.value.filter((tab: any) => {
+    const label = String(tab.label || '').toLowerCase()
+    const key = String(tab.key || '').toLowerCase()
+    return label.includes(keyword) || key.includes(keyword)
+  })
+})
 
 const selectIconFile = async () => {
   try {
