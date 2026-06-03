@@ -7,7 +7,6 @@
                :current-layout="layoutMode"
                @run-code="handleRunCode"
                @stop-code="() => stopCode(currentLanguage)"
-               @clear-output="clearOutput"
                @language-change="handleLanguageChange"
                @layout-change="handleLayoutChange"
                @show-settings="showSettings = true"
@@ -53,7 +52,8 @@
                              :output="output"
                              :is-running="isRunning"
                              :is-success="isSuccess"
-                             :execution-time="lastExecutionTime">
+                             :execution-time="lastExecutionTime"
+                             @clear="clearOutput">
               </ConsoleOutput>
 
               <!-- Web输出组件 -->
@@ -61,7 +61,8 @@
                          class="flex-1"
                          :web-content="output"
                          :is-running="isRunning"
-                         :execution-time="lastExecutionTime">
+                         :execution-time="lastExecutionTime"
+                         @clear="clearOutput">
               </WebOutput>
             </div>
           </template>

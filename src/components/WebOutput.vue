@@ -16,6 +16,14 @@
           <Clock class="w-3 h-3"/>
           <span>{{ executionTime }} 毫秒</span>
         </div>
+
+        <!-- 清空按钮 -->
+        <button v-if="webContent && !isRunning"
+                @click="emit('clear')"
+                class="text-gray-400 hover:text-gray-600 transition-colors duration-200 p-1 rounded hover:bg-gray-200 cursor-pointer"
+                title="清空预览">
+          <Trash2 class="w-3 h-3"/>
+        </button>
       </div>
     </div>
 
@@ -53,12 +61,16 @@
 
 <script setup lang="ts">
 import {ref, watch} from 'vue'
-import {Clock, Globe, Loader} from 'lucide-vue-next'
+import {Clock, Globe, Loader, Trash2} from 'lucide-vue-next'
 
 const props = defineProps<{
   webContent?: string
   isRunning: boolean
   executionTime: number
+}>()
+
+const emit = defineEmits<{
+  clear: []
 }>()
 
 const webFrame = ref<HTMLIFrameElement>()

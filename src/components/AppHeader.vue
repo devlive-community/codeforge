@@ -35,7 +35,7 @@
       <div class="flex items-center bg-gray-100 rounded-md p-0.5">
         <button v-for="item in layoutOptions"
                 :key="item.value"
-                class="p-1.5 rounded transition-colors"
+                class="p-1.5 rounded transition-colors cursor-pointer"
                 :class="currentLayout === item.value ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
                 :title="item.label"
                 @click="handleLayoutChange(item.value)">
@@ -46,21 +46,13 @@
       <Button type="warning" :icon="CheckCircle" v-if="hasUpdate">
         有新版本
       </Button>
-
-      <!-- 清空输出按钮 -->
-      <Button @click="handleClearOutput"
-              :disabled="isRunning"
-              type="secondary"
-              :icon-only="true"
-              :icon="Trash2">
-      </Button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
-import {CheckCircle, FileCode, Maximize2, PanelBottom, PanelRight, Play, Square, Trash2} from 'lucide-vue-next'
+import {CheckCircle, FileCode, Maximize2, PanelBottom, PanelRight, Play, Square} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
 import {Language, LayoutMode} from '../types/app.ts'
@@ -78,7 +70,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'run-code': []
   'stop-code': []
-  'clear-output': []
   'show-settings': []
   'language-change': [language: string]
   'load-example': [content: string]
@@ -115,10 +106,6 @@ const handleRunCode = () => {
 
 const handleStopCode = () => {
   emit('stop-code')
-}
-
-const handleClearOutput = () => {
-  emit('clear-output')
 }
 
 const checkUpdater = async () => {
