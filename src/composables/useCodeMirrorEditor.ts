@@ -1,4 +1,5 @@
 import {nextTick, ref, watch} from 'vue'
+import {debounce} from 'lodash-es'
 import {python} from '@codemirror/lang-python'
 import {javascript} from '@codemirror/lang-javascript'
 import {go} from '@codemirror/lang-go'
@@ -72,7 +73,7 @@ import {StreamLanguage} from '@codemirror/language'
 import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
-import {EditorView} from "@codemirror/view";
+import {EditorView, keymap} from "@codemirror/view";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 
 interface Props
@@ -99,6 +100,48 @@ export function useCodeMirrorEditor(props: Props)
         show_line_numbers: false,
         show_function_help: false
     }
+
+    // 字体大小范围（与设置面板保持一致）
+    const MIN_FONT_SIZE = 1
+    const MAX_FONT_SIZE = 30
+    const DEFAULT_FONT_SIZE = 14
+
+    // 防抖持久化字体大小，避免连续快捷键导致频繁写盘
+    const persistFontSize = debounce(async (size: number) => {
+        try {
+            const globalConfig = await invoke<any>('get_app_config')
+            if (globalConfig) {
+                globalConfig.editor = {...(globalConfig.editor || {}), font_size: size}
+                await invoke('update_app_config', {config: globalConfig})
+            }
+        }
+        catch (error) {
+            console.error('保存字体大小失败:', error)
+        }
+    }, 500)
+
+    // 设置字体大小（内联样式响应式更新，无需重新渲染编辑器）
+    const setFontSize = (size: number) => {
+        const clamped = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, Math.round(size)))
+        if (editorConfig.value.font_size === clamped) {
+            return
+        }
+        editorConfig.value.font_size = clamped
+        persistFontSize(clamped)
+    }
+
+    const increaseFontSize = () => setFontSize((editorConfig.value?.font_size || DEFAULT_FONT_SIZE) + 1)
+    const decreaseFontSize = () => setFontSize((editorConfig.value?.font_size || DEFAULT_FONT_SIZE) - 1)
+    const resetFontSize = () => setFontSize(DEFAULT_FONT_SIZE)
+
+    // 字体缩放快捷键：Cmd/Ctrl +/-/0
+    const fontSizeKeymap = keymap.of([
+        {key: 'Mod-=', preventDefault: true, run: () => (increaseFontSize(), true)},
+        {key: 'Mod-+', preventDefault: true, run: () => (increaseFontSize(), true)},
+        {key: 'Shift-Mod-=', preventDefault: true, run: () => (increaseFontSize(), true)},
+        {key: 'Mod--', preventDefault: true, run: () => (decreaseFontSize(), true)},
+        {key: 'Mod-0', preventDefault: true, run: () => (resetFontSize(), true)}
+    ])
 
     // 主题映射
     const themeMap: Record<string, any> = {
@@ -248,6 +291,9 @@ export function useCodeMirrorEditor(props: Props)
 
         // 添加函数帮助主题
         result.push(functionHelpTheme)
+
+        // 字体缩放快捷键
+        result.push(fontSizeKeymap)
 
         // 设置字体
         const {fontFamilyTheme} = useCodeMirrorFontFamily(
@@ -401,6 +447,10 @@ export function useCodeMirrorEditor(props: Props)
         getAvailableThemes,
         getCurrentTheme,
         getThemeExtension,
-        getLanguageExtension
+        getLanguageExtension,
+        increaseFontSize,
+        decreaseFontSize,
+        resetFontSize,
+        setFontSize
     }
 }
