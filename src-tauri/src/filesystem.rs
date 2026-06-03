@@ -45,9 +45,20 @@ pub fn read_directory_tree(path: String) -> Result<Vec<FileNode>, String> {
     Ok(nodes)
 }
 
+/// 文本文件大小上限：5 MB，超过则拒绝打开，避免编辑器卡死
+const MAX_TEXT_FILE_SIZE: u64 = 5 * 1024 * 1024;
+
 /// 读取文本文件内容（绕开 fs 插件 scope 限制）
 #[tauri::command]
 pub fn read_file_text(path: String) -> Result<String, String> {
+    let meta = fs::metadata(&path).map_err(|e| format!("读取文件失败: {}", e))?;
+    if meta.len() > MAX_TEXT_FILE_SIZE {
+        return Err(format!(
+            "文件过大（{:.1} MB），超过 5 MB 上限，暂不支持打开",
+            meta.len() as f64 / 1024.0 / 1024.0
+        ));
+    }
+    // 二进制/非 UTF-8 文件会在此返回错误，避免塞入乱码内容
     fs::read_to_string(&path).map_err(|e| format!("读取文件失败: {}", e))
 }
 
