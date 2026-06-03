@@ -23,9 +23,11 @@
       <template v-if="sidebarVisible">
         <Sidebar :root-dir="rootDir"
                  :active-path="currentFilePath"
+                 :recent-folders="recentFolders"
                  class="flex-shrink-0"
                  :style="{ width: `${sidebarWidth}px` }"
                  @open-folder="openFolder"
+                 @open-recent="openFolderPath"
                  @open-file="smartOpen"/>
         <!-- 拖拽改变侧栏宽度 -->
         <div class="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
@@ -311,6 +313,33 @@ const rootDir = ref<string | null>(null)
 const sidebarVisible = ref(localStorage.getItem('sidebar-visible') === 'true')
 const sidebarWidth = ref(Number(localStorage.getItem('sidebar-width')) || 240)
 
+// 最近打开的文件夹
+const RECENT_FOLDERS_KEY = 'recent-folders'
+const LAST_ROOT_KEY = 'last-root-dir'
+const loadRecentFolders = (): string[] => {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_FOLDERS_KEY) || '[]')
+  }
+  catch {
+    return []
+  }
+}
+const recentFolders = ref<string[]>(loadRecentFolders())
+
+// 记住打开的文件夹（去重、置顶、最多 8 个），并记录为上次文件夹
+const rememberFolder = (path: string) => {
+  const list = [path, ...recentFolders.value.filter(p => p !== path)].slice(0, 8)
+  recentFolders.value = list
+  localStorage.setItem(RECENT_FOLDERS_KEY, JSON.stringify(list))
+  localStorage.setItem(LAST_ROOT_KEY, path)
+}
+
+const openFolderPath = (path: string) => {
+  rootDir.value = path
+  sidebarVisible.value = true
+  rememberFolder(path)
+}
+
 watch(sidebarVisible, (v) => localStorage.setItem('sidebar-visible', String(v)))
 
 // 拖拽改变侧栏宽度
@@ -344,8 +373,7 @@ const toggleSidebar = () => {
 const openFolder = async () => {
   const selected = await openDialog({directory: true, multiple: false})
   if (selected && typeof selected === 'string') {
-    rootDir.value = selected
-    sidebarVisible.value = true
+    openFolderPath(selected)
   }
 }
 
@@ -616,6 +644,12 @@ onMounted(async () => {
   await loadEditorConfig()
   await initializeEventListeners()
   consoleType.value = getCurrentConsoleType()
+
+  // 恢复上次打开的文件夹
+  const lastRoot = localStorage.getItem(LAST_ROOT_KEY)
+  if (lastRoot) {
+    rootDir.value = lastRoot
+  }
 
   window.addEventListener('keydown', onGlobalKeydown)
 

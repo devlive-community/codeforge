@@ -18,9 +18,23 @@
     </div>
 
     <div class="flex-1 overflow-auto py-1">
-      <div v-if="!rootDir" class="px-3 py-6 text-center">
-        <p class="text-xs text-gray-400 mb-3">未打开文件夹</p>
-        <Button size="sm" @click="emit('open-folder')">打开文件夹</Button>
+      <div v-if="!rootDir" class="px-3 py-6">
+        <div class="text-center">
+          <p class="text-xs text-gray-400 mb-3">未打开文件夹</p>
+          <Button size="sm" @click="emit('open-folder')">打开文件夹</Button>
+        </div>
+
+        <div v-if="recentFolders && recentFolders.length" class="mt-6">
+          <p class="text-xs font-semibold text-gray-400 mb-1 px-1">最近打开</p>
+          <button v-for="folder in recentFolders"
+                  :key="folder"
+                  class="w-full flex items-center space-x-2 px-2 py-1 rounded text-left text-sm text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  :title="folder"
+                  @click="emit('open-recent', folder)">
+            <Folder class="w-4 h-4 text-blue-500 flex-shrink-0"/>
+            <span class="truncate">{{ folderName(folder) }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- w-max + min-w-full：长文件名时撑出横向滚动，同时高亮铺满整行 -->
@@ -34,7 +48,7 @@
 <script setup lang="ts">
 import {computed, provide, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {FolderOpen, RefreshCw} from 'lucide-vue-next'
+import {Folder, FolderOpen, RefreshCw} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import FileTreeNode from './FileTreeNode.vue'
 
@@ -48,12 +62,16 @@ interface FileNode
 const props = defineProps<{
   rootDir: string | null
   activePath?: string | null
+  recentFolders?: string[]
 }>()
 
 const emit = defineEmits<{
   'open-folder': []
+  'open-recent': [path: string]
   'open-file': [path: string]
 }>()
+
+const folderName = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() || path
 
 const rootNodes = ref<FileNode[]>([])
 
