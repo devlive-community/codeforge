@@ -1,14 +1,6 @@
 <template>
   <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
     <div class="flex items-center space-x-3">
-      <!-- 侧栏开关 -->
-      <Button type="secondary"
-              :icon="PanelLeft"
-              :icon-only="true"
-              :title="sidebarVisible ? '隐藏侧栏' : '显示侧栏'"
-              :class="sidebarVisible ? 'text-blue-600' : ''"
-              @click="emit('toggle-sidebar')"/>
-
       <Select v-model="selectedLanguage"
               class="w-64"
               searchable
@@ -43,8 +35,17 @@
     </div>
 
     <div class="flex items-center space-x-3">
-      <!-- 布局切换 -->
+      <!-- 侧栏开关 + 布局切换 -->
       <div class="flex items-center bg-gray-100 rounded-md p-0.5">
+        <button class="p-1.5 rounded transition-colors cursor-pointer"
+                :class="sidebarVisible ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                :title="sidebarVisible ? '隐藏侧栏' : '显示侧栏'"
+                @click="emit('toggle-sidebar')">
+          <PanelLeft class="w-4 h-4"/>
+        </button>
+
+        <div class="w-px h-4 bg-gray-300 mx-0.5"></div>
+
         <button v-for="item in layoutOptions"
                 :key="item.value"
                 class="p-1.5 rounded transition-colors cursor-pointer"

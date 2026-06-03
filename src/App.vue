@@ -21,6 +21,7 @@
       <!-- 左侧文件树侧栏 -->
       <Sidebar v-if="sidebarVisible"
                :root-dir="rootDir"
+               :active-path="currentFilePath"
                class="w-60 flex-shrink-0"
                @open-folder="openFolder"
                @open-file="handleOpenFileFromTree"/>

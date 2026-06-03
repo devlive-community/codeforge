@@ -1,6 +1,7 @@
 <template>
   <div>
-    <div class="flex items-center py-1 pr-2 cursor-pointer hover:bg-gray-100 text-sm text-gray-700 select-none"
+    <div class="flex items-center py-1 pr-2 cursor-pointer text-sm select-none"
+         :class="isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'"
          :style="{ paddingLeft: `${depth * 12 + 8}px` }"
          @click="onClick">
       <ChevronRight v-if="node.is_dir"
@@ -22,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import {inject, ref} from 'vue'
+import {computed, inject, ref, type ComputedRef} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {ChevronRight, File, Folder, FolderOpen} from 'lucide-vue-next'
 
@@ -42,8 +43,11 @@ const expanded = ref(false)
 const children = ref<FileNode[]>([])
 const loaded = ref(false)
 
-// 由 Sidebar 提供的“打开文件”处理函数
+// 由 Sidebar 提供的“打开文件”处理函数与当前激活文件路径
 const openFile = inject<(path: string) => void>('treeOpenFile')
+const activePath = inject<ComputedRef<string | null>>('treeActivePath')
+
+const isActive = computed(() => !props.node.is_dir && activePath?.value === props.node.path)
 
 const onClick = async () => {
   if (props.node.is_dir) {

@@ -44,6 +44,7 @@ interface FileNode
 
 const props = defineProps<{
   rootDir: string | null
+  activePath?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -61,6 +62,8 @@ const rootName = computed(() => {
 })
 
 provide('treeOpenFile', (path: string) => emit('open-file', path))
+// 当前激活文件路径（用于文件树高亮选中项）
+provide('treeActivePath', computed(() => props.activePath ?? null))
 
 const loadRoot = async () => {
   if (!props.rootDir) {
