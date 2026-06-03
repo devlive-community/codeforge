@@ -23,6 +23,19 @@
                   :icon-only="true"
                   title="添加自定义语言"/>
         </div>
+
+        <!-- 无搜索结果提示 -->
+        <div v-if="languageFilter.trim() && filteredPluginData.length === 0"
+             class="mt-3 px-3 py-4 text-center rounded-lg bg-gray-50 dark:bg-gray-800">
+          <Search class="w-6 h-6 mx-auto text-gray-400"/>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">未找到匹配的语言</p>
+          <p class="mt-1 text-xs text-gray-400">
+            没有你需要的语言？
+            <button class="text-blue-500 hover:text-blue-600 hover:underline cursor-pointer" @click="openIssues">
+              提交 Issue 反馈
+            </button>
+          </p>
+        </div>
       </template>
       <template #tab-button="{ tab }">
         <div class="flex items-center w-full px-3 py-2 space-x-2">
@@ -166,6 +179,7 @@ import { computed, onMounted, ref } from 'vue'
 import { Plus, Search } from 'lucide-vue-next'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { open as openUrl } from '@tauri-apps/plugin-shell'
 import { readFile } from '@tauri-apps/plugin-fs'
 import { Codemirror } from 'vue-codemirror'
 import Tabs from '../../ui/Tabs.vue'
@@ -237,6 +251,15 @@ const filteredPluginData = computed(() => {
     return label.includes(keyword) || key.includes(keyword)
   })
 })
+
+const openIssues = async () => {
+  try {
+    await openUrl('https://github.com/devlive-community/codeforge/issues')
+  }
+  catch (error) {
+    toast.error('打开链接失败: ' + error)
+  }
+}
 
 const selectIconFile = async () => {
   try {
