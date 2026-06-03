@@ -11,6 +11,7 @@ mod env_manager;
 mod env_providers;
 mod example;
 mod execution;
+mod filesystem;
 mod font;
 mod logger;
 mod plugin;
@@ -36,6 +37,9 @@ use crate::env_providers::{
 use crate::execution::{
     ExecutionHistory, PluginManagerState as ExecutionPluginManagerState, clear_execution_history,
     execute_code, get_execution_history, is_execution_running, stop_execution,
+};
+use crate::filesystem::{
+    get_text_file_meta, read_directory_tree, read_file_lines, read_file_text, write_file_text,
 };
 use crate::plugin::{get_info, get_supported_languages};
 use crate::setup::app::get_app_info;
@@ -148,7 +152,13 @@ fn main() {
             check_for_updates,
             start_update,
             load_example,
-            open_font_picker
+            open_font_picker,
+            // 文件系统相关命令
+            read_directory_tree,
+            read_file_text,
+            write_file_text,
+            get_text_file_meta,
+            read_file_lines
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

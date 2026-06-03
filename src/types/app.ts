@@ -55,7 +55,14 @@ export interface EditorConfig
     show_line_numbers?: boolean
     show_function_help?: boolean
     space_dot_omission?: boolean
+    layout?: LayoutMode
+    last_direction?: SplitDirection
+    max_open_file_size?: number
 }
+
+export type SplitDirection = 'horizontal' | 'vertical'
+
+export type LayoutMode = SplitDirection | 'editor'
 
 export interface EnvironmentVersion
 {

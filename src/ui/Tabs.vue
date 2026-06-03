@@ -2,7 +2,12 @@
   <div :class="containerClasses">
     <!-- Tab 头部导航 -->
     <div :class="headerClasses">
-      <div :class="navClasses" ref="tabsNav">
+      <!-- 导航头部插槽（如筛选框，位于标签列表上方） -->
+      <div v-if="$slots['nav-header']" class="w-full mb-2">
+        <slot name="nav-header"/>
+      </div>
+
+      <div v-if="tabs.length > 0 || addable" :class="navClasses" ref="tabsNav">
         <!-- 滑动指示器 -->
         <div v-if="showIndicator && type === 'line'" :class="indicatorClasses" :style="indicatorStyle"/>
 
@@ -183,20 +188,21 @@ const containerClasses = computed(() => {
 })
 
 const headerClasses = computed(() => {
-  const baseClasses = ['flex', 'items-center', 'justify-between']
+  const baseClasses = ['flex', 'items-center']
 
   // 位置相关边框
   if (props.position === 'top') {
-    baseClasses.push('border-gray-200', 'dark:border-gray-700')
+    baseClasses.push('justify-between', 'border-gray-200', 'dark:border-gray-700')
   }
   else if (props.position === 'bottom') {
-    baseClasses.push('border-t', 'border-gray-200', 'dark:border-gray-700')
+    baseClasses.push('justify-between', 'border-t', 'border-gray-200', 'dark:border-gray-700')
   }
   else if (props.position === 'left') {
-    baseClasses.push('flex-col', 'border-gray-200', 'dark:border-gray-700', 'mr-4', 'border-b-0')
+    // 纵向排列时从顶部依次堆叠，避免 justify-between 把导航头部与列表拉开
+    baseClasses.push('justify-start', 'flex-col', 'border-gray-200', 'dark:border-gray-700', 'mr-4', 'border-b-0')
   }
   else if (props.position === 'right') {
-    baseClasses.push('flex-col', 'border-l', 'border-gray-200', 'dark:border-gray-700', 'ml-4', 'order-2', 'border-b-0')
+    baseClasses.push('justify-start', 'flex-col', 'border-l', 'border-gray-200', 'dark:border-gray-700', 'ml-4', 'order-2', 'border-b-0')
   }
 
   // 自定义类名

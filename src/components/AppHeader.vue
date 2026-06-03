@@ -28,19 +28,36 @@
       </Button>
 
       <Button type="info" :icon="FileCode" @click="loadExample">加载示例</Button>
+
+      <!-- 打开/保存文件 -->
+      <Button type="secondary" :icon="FolderOpen" :icon-only="true" title="打开文件" @click="emit('open-file')"/>
+      <Button type="secondary" :icon="Save" :icon-only="true" title="保存文件" @click="emit('save-file')"/>
     </div>
 
     <div class="flex items-center space-x-3">
+      <!-- 侧栏开关 + 布局切换 -->
+      <div class="flex items-center bg-gray-100 rounded-md p-0.5">
+        <button class="p-1.5 rounded transition-colors cursor-pointer"
+                :class="sidebarVisible ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                :title="sidebarVisible ? '隐藏侧栏' : '显示侧栏'"
+                @click="emit('toggle-sidebar')">
+          <PanelLeft class="w-4 h-4"/>
+        </button>
+
+        <div class="w-px h-4 bg-gray-300 mx-0.5"></div>
+
+        <button v-for="item in layoutOptions"
+                :key="item.value"
+                class="p-1.5 rounded transition-colors cursor-pointer"
+                :class="currentLayout === item.value ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                :title="item.label"
+                @click="handleLayoutChange(item.value)">
+          <component :is="item.icon" class="w-4 h-4"/>
+        </button>
+      </div>
+
       <Button type="warning" :icon="CheckCircle" v-if="hasUpdate">
         有新版本
-      </Button>
-
-      <!-- 清空输出按钮 -->
-      <Button @click="handleClearOutput"
-              :disabled="isRunning"
-              type="secondary"
-              :icon-only="true"
-              :icon="Trash2">
       </Button>
     </div>
   </div>
@@ -48,10 +65,10 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
-import {CheckCircle, FileCode, Play, Square, Trash2} from 'lucide-vue-next'
+import {CheckCircle, FileCode, FolderOpen, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Square} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
-import {Language} from '../types/app.ts'
+import {Language, LayoutMode} from '../types/app.ts'
 import {invoke} from "@tauri-apps/api/core";
 import {useUpdateManager} from "../composables/useUpdateManager.ts";
 
@@ -60,16 +77,31 @@ const props = defineProps<{
   envInstalled: boolean
   supportedLanguages: Language[]
   currentLanguage: string
+  currentLayout: LayoutMode
+  sidebarVisible: boolean
 }>()
 
 const emit = defineEmits<{
   'run-code': []
   'stop-code': []
-  'clear-output': []
   'show-settings': []
   'language-change': [language: string]
   'load-example': [content: string]
+  'layout-change': [mode: LayoutMode]
+  'open-file': []
+  'save-file': []
+  'toggle-sidebar': []
 }>()
+
+const layoutOptions: { value: LayoutMode; label: string; icon: any }[] = [
+  {value: 'horizontal', label: '左右布局', icon: PanelRight},
+  {value: 'vertical', label: '上下布局', icon: PanelBottom},
+  {value: 'editor', label: '仅编辑器', icon: Maximize2}
+]
+
+const handleLayoutChange = (mode: LayoutMode) => {
+  emit('layout-change', mode)
+}
 
 const {checkForUpdates} = useUpdateManager()
 
@@ -91,10 +123,6 @@ const handleRunCode = () => {
 
 const handleStopCode = () => {
   emit('stop-code')
-}
-
-const handleClearOutput = () => {
-  emit('clear-output')
 }
 
 const checkUpdater = async () => {

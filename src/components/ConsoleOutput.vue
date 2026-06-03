@@ -20,6 +20,14 @@
           <component :is="copyIcon" class="w-3 h-3"/>
         </button>
 
+        <!-- 清空按钮 -->
+        <button v-if="output && !isRunning"
+                @click="emit('clear')"
+                class="text-gray-400 hover:text-white transition-colors duration-200 p-1 rounded hover:bg-gray-700 cursor-pointer"
+                title="清空控制台">
+          <Trash2 class="w-3 h-3"/>
+        </button>
+
         <div v-if="executionTime > 0" class="text-xs text-gray-400 flex items-center space-x-1">
           <Clock class="w-3 h-3"/>
           <span>{{ executionTime }} 毫秒</span>
@@ -54,13 +62,17 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { Check, Clock, Copy, Loader, Terminal } from 'lucide-vue-next'
+import { Check, Clock, Copy, Loader, Terminal, Trash2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   output: string
   isRunning: boolean
   isSuccess: boolean
   executionTime: number
+}>()
+
+const emit = defineEmits<{
+  clear: []
 }>()
 
 const isCopied = ref(false)

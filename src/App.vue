@@ -4,57 +4,127 @@
                :env-installed="envInfo.installed"
                :supported-languages="supportedLanguages"
                :current-language="currentLanguage"
-               @run-code="() => runCode(currentLanguage, envInfo.installed, envInfo.language)"
+               :current-layout="layoutMode"
+               :sidebar-visible="sidebarVisible"
+               @toggle-sidebar="toggleSidebar"
+               @run-code="handleRunCode"
                @stop-code="() => stopCode(currentLanguage)"
-               @clear-output="clearOutput"
-               @language-change="handleLanguageChange"
+               @language-change="onLanguageChange"
+               @layout-change="handleLayoutChange"
+               @open-file="handleOpenFileClick"
+               @save-file="saveFile"
                @show-settings="showSettings = true"
                @load-example="loadExample">
     </AppHeader>
 
-    <div class="flex-1 overflow-hidden">
-      <ResizablePanels :min-left-width="400" :min-right-width="300">
-        <template #left>
-          <!-- 代码编辑器 -->
-          <div class="h-full flex flex-col overflow-hidden">
-            <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-              <div class="flex items-center space-x-3">
-                <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-                <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
-              </div>
+    <div class="flex-1 overflow-hidden flex">
+      <!-- 左侧文件树侧栏 -->
+      <template v-if="sidebarVisible">
+        <Sidebar :root-dir="rootDir"
+                 :active-path="currentFilePath"
+                 class="flex-shrink-0"
+                 :style="{ width: `${sidebarWidth}px` }"
+                 @open-folder="openFolder"
+                 @open-file="smartOpen"/>
+        <!-- 拖拽改变侧栏宽度 -->
+        <div class="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
+             @mousedown="startSidebarResize"></div>
+      </template>
 
-              <div class="flex items-center space-x-2 text-xs text-gray-500">
-                <span><strong>{{ (code || '').length }}</strong> 字符</span>
-                <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
+      <div class="flex-1 overflow-hidden">
+      <!-- 编辑器代码片段 -->
+      <template v-if="showConsole">
+        <ResizablePanels :direction="effectiveDirection" :min-primary="minPrimary" :min-secondary="minSecondary">
+          <template #primary>
+            <div class="h-full flex flex-col overflow-hidden">
+              <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"/>
+              <div v-if="!showViewer" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                  <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
+                  <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+                  <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+                    · {{ currentFileName }}
+                    <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
+                  </span>
+                </div>
+
+                <div class="flex items-center space-x-2 text-xs text-gray-500">
+                  <span><strong>{{ (code || '').length }}</strong> 字符</span>
+                  <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
+                </div>
+              </div>
+              <div class="flex-1 overflow-hidden relative">
+                <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+                <LargeFileViewer v-if="showViewer && viewerFile"
+                                 :file-path="viewerFile.path"
+                                 :line-count="viewerFile.lineCount"
+                                 :size-bytes="viewerFile.sizeBytes"
+                                 @close="closeViewer"/>
               </div>
             </div>
-            <div class="flex-1 overflow-hidden">
-              <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+          </template>
+
+          <template #secondary>
+            <!-- 输出 -->
+            <div class="h-full flex flex-col" :class="effectiveDirection === 'vertical' ? 'border-t border-gray-200' : 'border-l border-gray-200'">
+              <!-- 仅编辑器模式下提供收起控制台的入口 -->
+              <div v-if="layoutMode === 'editor'" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+                <h2 class="text-sm font-medium text-gray-700">控制台</h2>
+                <button class="text-gray-400 hover:text-gray-600 transition-colors" title="收起控制台" @click="showConsole = false">
+                  <X class="w-4 h-4"/>
+                </button>
+              </div>
+
+              <ConsoleOutput v-if="consoleType === 'console'"
+                             class="flex-1"
+                             :output="output"
+                             :is-running="isRunning"
+                             :is-success="isSuccess"
+                             :execution-time="lastExecutionTime"
+                             @clear="clearOutput">
+              </ConsoleOutput>
+
+              <!-- Web输出组件 -->
+              <WebOutput v-else-if="consoleType === 'web'"
+                         class="flex-1"
+                         :web-content="output"
+                         :is-running="isRunning"
+                         :execution-time="lastExecutionTime"
+                         @clear="clearOutput">
+              </WebOutput>
             </div>
-          </div>
-        </template>
+          </template>
+        </ResizablePanels>
+      </template>
 
-        <template #right>
-          <!-- 输出 -->
-          <div class="h-full flex flex-col border-l border-gray-200">
-            <ConsoleOutput v-if="consoleType === 'console'"
-                           class="flex-1"
-                           :output="output"
-                           :is-running="isRunning"
-                           :is-success="isSuccess"
-                           :execution-time="lastExecutionTime">
-            </ConsoleOutput>
-
-            <!-- Web输出组件 -->
-            <WebOutput v-else-if="consoleType === 'web'"
-                       class="flex-1"
-                       :web-content="output"
-                       :is-running="isRunning"
-                       :execution-time="lastExecutionTime">
-            </WebOutput>
+      <!-- 仅编辑器：控制台未展开时占满 -->
+      <div v-else class="h-full flex flex-col overflow-hidden">
+        <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"/>
+        <div v-if="!showViewer" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+          <div class="flex items-center space-x-3">
+            <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
+            <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+            <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+              · {{ currentFileName }}
+              <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
+            </span>
           </div>
-        </template>
-      </ResizablePanels>
+
+          <div class="flex items-center space-x-2 text-xs text-gray-500">
+            <span><strong>{{ (code || '').length }}</strong> 字符</span>
+            <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
+          </div>
+        </div>
+        <div class="flex-1 overflow-hidden relative">
+          <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+          <LargeFileViewer v-if="showViewer && viewerFile"
+                           :file-path="viewerFile.path"
+                           :line-count="viewerFile.lineCount"
+                           :size-bytes="viewerFile.sizeBytes"
+                           @close="closeViewer"/>
+        </div>
+      </div>
+      </div>
     </div>
 
     <!-- 状态栏 -->
@@ -75,7 +145,9 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref, watch} from 'vue'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
+import {X} from 'lucide-vue-next'
+import {LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import ConsoleOutput from './components/ConsoleOutput.vue'
@@ -90,6 +162,14 @@ import {useToast} from './plugins/toast'
 // Composables
 import {useCodeExecution} from './composables/useCodeExecution'
 import {useLanguageManager} from './composables/useLanguageManager'
+import {useFileManager} from './composables/useFileManager'
+import {useLanguageRegistry} from './composables/useLanguageRegistry'
+import {useWorkspace} from './composables/useWorkspace'
+import EditorTabs from './components/EditorTabs.vue'
+import Sidebar from './components/Sidebar.vue'
+import LargeFileViewer from './components/LargeFileViewer.vue'
+import {open as openDialog} from '@tauri-apps/plugin-dialog'
+import {invoke} from '@tauri-apps/api/core'
 import {useEventManager} from './composables/useEventManager'
 import {useAppState} from './composables/useAppState'
 import {useEditorConfig} from './composables/useEditorConfig'
@@ -120,11 +200,175 @@ const {
   isLoadingEnvInfo,
   getLanguageDisplayName,
   getCurrentConsoleType,
+  getCurrentPluginConfig,
   handleLanguageChange,
+  applyLanguage,
   refreshLanguageList,
   refreshEnvInfo,
   initialize
 } = useLanguageManager(code, clearOutput, toast)
+
+// 扩展名 ↔ 语言 注册表
+const {build: buildLanguageRegistry, detectLanguage, getCandidates} = useLanguageRegistry()
+
+// 本地文件管理（打开/保存/另存为）
+const getDefaultFileName = () => {
+  const ext = getCurrentPluginConfig()?.extension || currentLanguage.value || 'txt'
+  return `未命名.${ext}`
+}
+
+// 文件状态（提升到此层，供文件管理与多标签工作区共享）
+const currentFilePath = ref<string | null>(null)
+const savedContent = ref<string | null>(null)
+const restoreFile = (filePath: string | null, saved: string | null) => {
+  currentFilePath.value = filePath
+  savedContent.value = saved
+}
+
+// 多标签工作区
+const {
+  tabs: editorTabs,
+  activeTabId,
+  switchTab,
+  newTab,
+  closeTab,
+  isActiveReusableScratch,
+  initFirstTab
+} = useWorkspace({code, currentLanguage, applyLanguage, currentFilePath, savedContent, restoreFile})
+
+// 打开文件后按扩展名自动切换语言（不改动已载入的内容、不解除文件关联）
+const handleFileOpened = (filePath: string) => {
+  // 优先保持当前语言：当前引擎已匹配该扩展名时不切换（如已在某 JS 引擎上打开 .js）
+  const detected = detectLanguage(filePath, currentLanguage.value)
+  if (detected && detected !== currentLanguage.value) {
+    applyLanguage(detected)
+    // 同扩展名对应多个引擎时，提示可手动切换
+    if (getCandidates(filePath).length > 1) {
+      toast.info(`该类型可用多个运行引擎，已选「${getLanguageDisplayName(detected)}」，可在下拉手动切换`)
+    }
+  }
+}
+
+const {
+  currentFileName,
+  isDirty,
+  pickFile,
+  openPath,
+  saveFile,
+  resetFile
+} = useFileManager({
+  code,
+  toast,
+  getDefaultFileName,
+  currentFilePath,
+  savedContent,
+  // 打开文件时若当前不是空白草稿，则在新标签页打开
+  onBeforeLoad: () => {
+    if (!isActiveReusableScratch()) {
+      newTab({language: currentLanguage.value})
+    }
+  },
+  onOpened: handleFileOpened,
+  getMaxFileSizeMb: () => editorConfig.value?.max_open_file_size
+})
+
+// 手动切换语言（下拉框）：替换为模板并解除文件关联
+const onLanguageChange = (language: string) => {
+  handleLanguageChange(language)
+  resetFile()
+}
+
+const handleNewTab = () => newTab({language: currentLanguage.value, code: ''})
+const handleCloseTab = (id: string) => closeTab(id, {language: currentLanguage.value})
+
+// ===== 侧栏 / 文件夹 =====
+const rootDir = ref<string | null>(null)
+const sidebarVisible = ref(localStorage.getItem('sidebar-visible') === 'true')
+const sidebarWidth = ref(Number(localStorage.getItem('sidebar-width')) || 240)
+
+watch(sidebarVisible, (v) => localStorage.setItem('sidebar-visible', String(v)))
+
+// 拖拽改变侧栏宽度
+let resizeStartX = 0
+let resizeStartWidth = 0
+const onSidebarResize = (e: MouseEvent) => {
+  const w = resizeStartWidth + (e.clientX - resizeStartX)
+  sidebarWidth.value = Math.max(160, Math.min(600, w))
+}
+const stopSidebarResize = () => {
+  document.removeEventListener('mousemove', onSidebarResize)
+  document.removeEventListener('mouseup', stopSidebarResize)
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+  localStorage.setItem('sidebar-width', String(sidebarWidth.value))
+}
+const startSidebarResize = (e: MouseEvent) => {
+  e.preventDefault()
+  resizeStartX = e.clientX
+  resizeStartWidth = sidebarWidth.value
+  document.addEventListener('mousemove', onSidebarResize)
+  document.addEventListener('mouseup', stopSidebarResize)
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor = 'col-resize'
+}
+
+const toggleSidebar = () => {
+  sidebarVisible.value = !sidebarVisible.value
+}
+
+const openFolder = async () => {
+  const selected = await openDialog({directory: true, multiple: false})
+  if (selected && typeof selected === 'string') {
+    rootDir.value = selected
+    sidebarVisible.value = true
+  }
+}
+
+// 只读大文件查看器状态
+const showViewer = ref(false)
+const viewerFile = ref<{ path: string, lineCount: number, sizeBytes: number } | null>(null)
+
+// 按文件大小决定：可编辑打开 / 只读查看
+const smartOpen = async (filePath: string) => {
+  try {
+    const meta = await invoke<{ size_bytes: number, line_count: number, is_text: boolean }>('get_text_file_meta', {path: filePath})
+    if (!meta.is_text) {
+      toast.error('不是文本文件，无法打开')
+      return
+    }
+
+    const limitBytes = (editorConfig.value?.max_open_file_size ?? 5) * 1024 * 1024
+    if (meta.size_bytes > limitBytes) {
+      // 超过可编辑上限 → 只读查看器
+      viewerFile.value = {path: filePath, lineCount: meta.line_count, sizeBytes: meta.size_bytes}
+      showViewer.value = true
+      return
+    }
+
+    // 已打开则切换到对应标签，否则在新标签打开
+    const existing = editorTabs.value.find(t => t.filePath === filePath)
+    if (existing) {
+      switchTab(existing.id)
+      return
+    }
+    await openPath(filePath)
+  }
+  catch (error) {
+    toast.error('打开失败: ' + error)
+  }
+}
+
+const handleOpenFileClick = async () => {
+  const path = await pickFile()
+  if (path) {
+    await smartOpen(path)
+  }
+}
+
+const closeViewer = () => {
+  showViewer.value = false
+  viewerFile.value = null
+}
 
 const {
   showAbout,
@@ -145,6 +389,49 @@ const {
 const editorConfigKey = ref(0)
 const consoleType = ref('console')
 
+// ===== 布局管理 =====
+// 当前布局模式：horizontal(左右) / vertical(上下) / editor(仅编辑器)
+const layoutMode = computed<LayoutMode>(() => editorConfig.value?.layout || 'horizontal')
+
+// 控制台是否展开（仅编辑器模式下运行后才展开）
+const showConsole = ref(true)
+
+// 实际分割方向：仅编辑器模式按上次保存的方向弹出
+const effectiveDirection = computed<SplitDirection>(() => {
+  if (layoutMode.value === 'editor') {
+    return editorConfig.value?.last_direction || 'horizontal'
+  }
+  return layoutMode.value
+})
+
+// 不同方向使用不同的最小尺寸
+const minPrimary = computed(() => effectiveDirection.value === 'vertical' ? 200 : 400)
+const minSecondary = computed(() => effectiveDirection.value === 'vertical' ? 150 : 300)
+
+// 布局模式变化时同步控制台展开状态
+watch(layoutMode, (mode) => {
+  showConsole.value = mode !== 'editor'
+}, {immediate: true})
+
+const handleLayoutChange = (mode: LayoutMode) => {
+  if (!editorConfig.value) {
+    return
+  }
+  editorConfig.value.layout = mode
+  // 记录最近使用的分割方向，供仅编辑器模式弹出时复用
+  if (mode === 'horizontal' || mode === 'vertical') {
+    editorConfig.value.last_direction = mode
+  }
+}
+
+// 包装运行：仅编辑器模式下点击运行时自动展开控制台
+const handleRunCode = () => {
+  if (layoutMode.value === 'editor') {
+    showConsole.value = true
+  }
+  runCode(currentLanguage.value, envInfo.value.installed, envInfo.value.language)
+}
+
 const handleSettingsChanged = async (config: any) => {
   console.log('主组件接收到设置变更:', config)
   setTimeout(() => {
@@ -152,10 +439,13 @@ const handleSettingsChanged = async (config: any) => {
   }, 50)
 
   await refreshLanguageList()
+  await buildLanguageRegistry()
 }
 
 const loadExample = (content: string) => {
   code.value = content || ''
+  // 示例内容不对应任何本地文件，解除文件关联
+  resetFile()
 }
 
 // 监听编辑器配置变化
@@ -194,6 +484,9 @@ window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 
 onMounted(async () => {
   await initialize()
+  await buildLanguageRegistry()
+  // 以当前内容初始化首个标签页
+  initFirstTab()
   await loadEditorConfig()
   await initializeEventListeners()
   consoleType.value = getCurrentConsoleType()
