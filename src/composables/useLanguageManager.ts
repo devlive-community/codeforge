@@ -13,6 +13,9 @@ export function useLanguageManager(
     const supportedLanguages = ref<Language[]>([])
     const globalConfig = ref(null as any)
 
+    // 🔥 按语言缓存编辑器代码，切换语言时保留各语言已编写的代码
+    const codeCache = ref<Record<string, string>>({})
+
     // 🔥 添加加载状态
     const isLoadingEnvInfo = ref(false)
 
@@ -157,10 +160,24 @@ export function useLanguageManager(
     }
 
     const handleLanguageChange = async (newLanguage: string) => {
+        if (newLanguage === currentLanguage.value) {
+            return
+        }
+
+        // 保存当前语言的代码，避免切换语言后已编写的代码丢失
+        if (currentLanguage.value) {
+            codeCache.value[currentLanguage.value] = code.value
+        }
+
         currentLanguage.value = newLanguage
 
-        // 更新代码模板
-        code.value = filterPluginTemplate(newLanguage)
+        // 优先恢复该语言之前编写的代码，没有则使用代码模板
+        if (Object.prototype.hasOwnProperty.call(codeCache.value, newLanguage)) {
+            code.value = codeCache.value[newLanguage]
+        }
+        else {
+            code.value = filterPluginTemplate(newLanguage)
+        }
 
         // 清空输出
         clearOutput()
@@ -185,7 +202,14 @@ export function useLanguageManager(
 
         if (!currentStillAvailable && supportedLanguages.value.length > 0) {
             currentLanguage.value = supportedLanguages.value[0].value
-            code.value = filterPluginTemplate(currentLanguage.value)
+            // 恢复该语言已缓存的代码，没有则使用代码模板
+            if (Object.prototype.hasOwnProperty.call(codeCache.value, currentLanguage.value)) {
+                code.value = codeCache.value[currentLanguage.value]
+            }
+            else {
+                code.value = filterPluginTemplate(currentLanguage.value)
+                codeCache.value[currentLanguage.value] = code.value
+            }
             console.log('当前语言已禁用，切换到:', currentLanguage.value)
         }
 
@@ -205,6 +229,7 @@ export function useLanguageManager(
             const template = filterPluginTemplate(currentLanguage.value)
             console.log('使用的模板:', template)
             code.value = template
+            codeCache.value[currentLanguage.value] = template
 
             refreshEnvInfo()
         }
