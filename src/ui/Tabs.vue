@@ -7,7 +7,7 @@
         <slot name="nav-header"/>
       </div>
 
-      <div :class="navClasses" ref="tabsNav">
+      <div v-if="tabs.length > 0 || addable" :class="navClasses" ref="tabsNav">
         <!-- 滑动指示器 -->
         <div v-if="showIndicator && type === 'line'" :class="indicatorClasses" :style="indicatorStyle"/>
 
