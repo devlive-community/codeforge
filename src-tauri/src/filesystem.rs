@@ -161,7 +161,9 @@ fn build_index(path: &str) -> Result<FileIndex, String> {
 fn with_index<T>(path: &str, f: impl FnOnce(&FileIndex) -> T) -> Result<T, String> {
     let mtime = fs::metadata(path).ok().and_then(|m| m.modified().ok());
 
-    let mut guard = INDEX_CACHE.lock().map_err(|_| "索引缓存锁错误".to_string())?;
+    let mut guard = INDEX_CACHE
+        .lock()
+        .map_err(|_| "索引缓存锁错误".to_string())?;
     let cache = guard.get_or_insert_with(HashMap::new);
 
     let stale = match cache.get(path) {
