@@ -340,6 +340,55 @@ const openFolderPath = (path: string) => {
   rememberFolder(path)
 }
 
+// ===== 标签会话持久化 =====
+const SESSION_TABS_KEY = 'session-tabs'
+
+const persistSession = () => {
+  const paths = editorTabs.value.map(t => t.filePath).filter((p): p is string => !!p)
+  const activePath = editorTabs.value.find(t => t.id === activeTabId.value)?.filePath || null
+  localStorage.setItem(SESSION_TABS_KEY, JSON.stringify({paths, activePath}))
+}
+
+// 标签集合/文件/激活项变化时持久化（不含正文编辑，避免频繁写入）
+watch(
+    () => editorTabs.value.map(t => t.filePath || '').join('|') + '#' + activeTabId.value,
+    () => persistSession()
+)
+
+// 启动时恢复上次打开的文件标签（仅已保存且可读的文本文件）
+const restoreSession = async () => {
+  let saved: { paths: string[], activePath: string | null } | null = null
+  try {
+    saved = JSON.parse(localStorage.getItem(SESSION_TABS_KEY) || 'null')
+  }
+  catch {
+    saved = null
+  }
+  if (!saved || !saved.paths?.length) {
+    return
+  }
+
+  const limitBytes = (editorConfig.value?.max_open_file_size ?? 5) * 1024 * 1024
+  for (const p of saved.paths) {
+    try {
+      const meta = await invoke<{ size_bytes: number, is_text: boolean }>('get_text_file_meta', {path: p})
+      if (meta.is_text && meta.size_bytes <= limitBytes) {
+        await openPath(p)
+      }
+    }
+    catch {
+      // 跳过已删除/无法读取的文件
+    }
+  }
+
+  if (saved.activePath) {
+    const t = editorTabs.value.find(tab => tab.filePath === saved.activePath)
+    if (t) {
+      switchTab(t.id)
+    }
+  }
+}
+
 watch(sidebarVisible, (v) => localStorage.setItem('sidebar-visible', String(v)))
 
 // 拖拽改变侧栏宽度
@@ -650,6 +699,9 @@ onMounted(async () => {
   if (lastRoot) {
     rootDir.value = lastRoot
   }
+
+  // 恢复上次打开的文件标签
+  await restoreSession()
 
   window.addEventListener('keydown', onGlobalKeydown)
 
