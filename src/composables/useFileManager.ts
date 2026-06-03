@@ -37,25 +37,34 @@ export function useFileManager(options: FileManagerOptions)
     // 是否有未保存的改动
     const isDirty = computed(() => currentFilePath.value !== null && code.value !== savedContent.value)
 
-    const openFile = async () => {
+    // 载入指定路径的文件内容到编辑器
+    const loadPath = async (filePath: string) => {
         try {
-            const selected = await openFileDialog({multiple: false, directory: false})
-            if (!selected || typeof selected !== 'string') {
-                return
-            }
-
             onBeforeLoad?.()
 
-            const content = await readTextFile(selected)
+            const content = await readTextFile(filePath)
             code.value = content
-            currentFilePath.value = selected
+            currentFilePath.value = filePath
             savedContent.value = content
-            onOpened?.(selected, content)
+            onOpened?.(filePath, content)
             toast.success(`已打开 ${currentFileName.value}`)
         }
         catch (error) {
             toast.error('打开文件失败: ' + error)
         }
+    }
+
+    const openFile = async () => {
+        const selected = await openFileDialog({multiple: false, directory: false})
+        if (!selected || typeof selected !== 'string') {
+            return
+        }
+        await loadPath(selected)
+    }
+
+    // 打开指定路径（用于文件树点击等）
+    const openPath = async (filePath: string) => {
+        await loadPath(filePath)
     }
 
     const writeToPath = async (path: string) => {
@@ -103,6 +112,7 @@ export function useFileManager(options: FileManagerOptions)
         currentFileName,
         isDirty,
         openFile,
+        openPath,
         saveFile,
         saveFileAs,
         resetFile

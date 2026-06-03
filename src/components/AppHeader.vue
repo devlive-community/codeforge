@@ -1,6 +1,14 @@
 <template>
   <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
     <div class="flex items-center space-x-3">
+      <!-- 侧栏开关 -->
+      <Button type="secondary"
+              :icon="PanelLeft"
+              :icon-only="true"
+              :title="sidebarVisible ? '隐藏侧栏' : '显示侧栏'"
+              :class="sidebarVisible ? 'text-blue-600' : ''"
+              @click="emit('toggle-sidebar')"/>
+
       <Select v-model="selectedLanguage"
               class="w-64"
               searchable
@@ -56,7 +64,7 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
-import {CheckCircle, FileCode, FolderOpen, Maximize2, PanelBottom, PanelRight, Play, Save, Square} from 'lucide-vue-next'
+import {CheckCircle, FileCode, FolderOpen, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Square} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
 import {Language, LayoutMode} from '../types/app.ts'
@@ -69,6 +77,7 @@ const props = defineProps<{
   supportedLanguages: Language[]
   currentLanguage: string
   currentLayout: LayoutMode
+  sidebarVisible: boolean
 }>()
 
 const emit = defineEmits<{
@@ -80,6 +89,7 @@ const emit = defineEmits<{
   'layout-change': [mode: LayoutMode]
   'open-file': []
   'save-file': []
+  'toggle-sidebar': []
 }>()
 
 const layoutOptions: { value: LayoutMode; label: string; icon: any }[] = [

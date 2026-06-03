@@ -5,6 +5,8 @@
                :supported-languages="supportedLanguages"
                :current-language="currentLanguage"
                :current-layout="layoutMode"
+               :sidebar-visible="sidebarVisible"
+               @toggle-sidebar="toggleSidebar"
                @run-code="handleRunCode"
                @stop-code="() => stopCode(currentLanguage)"
                @language-change="onLanguageChange"
@@ -15,7 +17,15 @@
                @load-example="loadExample">
     </AppHeader>
 
-    <div class="flex-1 overflow-hidden">
+    <div class="flex-1 overflow-hidden flex">
+      <!-- 左侧文件树侧栏 -->
+      <Sidebar v-if="sidebarVisible"
+               :root-dir="rootDir"
+               class="w-60 flex-shrink-0"
+               @open-folder="openFolder"
+               @open-file="handleOpenFileFromTree"/>
+
+      <div class="flex-1 overflow-hidden">
       <!-- 编辑器代码片段 -->
       <template v-if="showConsole">
         <ResizablePanels :direction="effectiveDirection" :min-primary="minPrimary" :min-secondary="minSecondary">
@@ -98,6 +108,7 @@
           <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
         </div>
       </div>
+      </div>
     </div>
 
     <!-- 状态栏 -->
@@ -139,6 +150,8 @@ import {useFileManager} from './composables/useFileManager'
 import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
 import EditorTabs from './components/EditorTabs.vue'
+import Sidebar from './components/Sidebar.vue'
+import {open as openDialog} from '@tauri-apps/plugin-dialog'
 import {useEventManager} from './composables/useEventManager'
 import {useAppState} from './composables/useAppState'
 import {useEditorConfig} from './composables/useEditorConfig'
@@ -222,6 +235,7 @@ const {
   currentFileName,
   isDirty,
   openFile,
+  openPath,
   saveFile,
   resetFile
 } = useFileManager({
@@ -247,6 +261,34 @@ const onLanguageChange = (language: string) => {
 
 const handleNewTab = () => newTab({language: currentLanguage.value, code: ''})
 const handleCloseTab = (id: string) => closeTab(id, {language: currentLanguage.value})
+
+// ===== 侧栏 / 文件夹 =====
+const rootDir = ref<string | null>(null)
+const sidebarVisible = ref(localStorage.getItem('sidebar-visible') === 'true')
+
+watch(sidebarVisible, (v) => localStorage.setItem('sidebar-visible', String(v)))
+
+const toggleSidebar = () => {
+  sidebarVisible.value = !sidebarVisible.value
+}
+
+const openFolder = async () => {
+  const selected = await openDialog({directory: true, multiple: false})
+  if (selected && typeof selected === 'string') {
+    rootDir.value = selected
+    sidebarVisible.value = true
+  }
+}
+
+// 文件树点击文件：已打开则切换到对应标签，否则在新标签打开
+const handleOpenFileFromTree = async (filePath: string) => {
+  const existing = editorTabs.value.find(t => t.filePath === filePath)
+  if (existing) {
+    switchTab(existing.id)
+    return
+  }
+  await openPath(filePath)
+}
 
 const {
   showAbout,
