@@ -279,6 +279,7 @@ const {
   pickFile,
   openPath,
   saveFile,
+  saveFileAs,
   resetFile
 } = useFileManager({
   code,
@@ -562,6 +563,51 @@ const {initializeEventListeners, cleanupEventListeners} = useEventManager({
 // 禁用右键菜单
 window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 
+// 是否有弹窗/覆盖层打开（打开时不响应全局快捷键）
+const isOverlayOpen = () =>
+    showSettings.value || showAbout.value || showUpdate.value
+    || showHistory.value || showViewer.value || showRunPrompt.value
+
+// 全局快捷键
+const onGlobalKeydown = (e: KeyboardEvent) => {
+  const mod = e.metaKey || e.ctrlKey
+  if (!mod || isOverlayOpen()) {
+    return
+  }
+
+  switch (e.key.toLowerCase()) {
+    case 'enter':
+      e.preventDefault()
+      handleRunCode()
+      break
+    case 's':
+      e.preventDefault()
+      if (e.shiftKey) {
+        saveFileAs()
+      }
+      else {
+        saveFile()
+      }
+      break
+    case 'o':
+      e.preventDefault()
+      handleOpenFileClick()
+      break
+    case 'w':
+      e.preventDefault()
+      handleCloseTab(activeTabId.value)
+      break
+    case 'n':
+      e.preventDefault()
+      handleNewTab()
+      break
+    case 'b':
+      e.preventDefault()
+      toggleSidebar()
+      break
+  }
+}
+
 onMounted(async () => {
   await initialize()
   await buildLanguageRegistry()
@@ -571,11 +617,14 @@ onMounted(async () => {
   await initializeEventListeners()
   consoleType.value = getCurrentConsoleType()
 
+  window.addEventListener('keydown', onGlobalKeydown)
+
   // 触发 app-ready 事件，通知主进程
   window.dispatchEvent(new CustomEvent('app-ready'))
 })
 
 onUnmounted(() => {
   cleanupEventListeners()
+  window.removeEventListener('keydown', onGlobalKeydown)
 })
 </script>
