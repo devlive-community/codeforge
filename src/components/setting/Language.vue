@@ -1,7 +1,11 @@
 <template>
   <div class="-mt-2">
     <div class="my-2">
-      <Button @click="showAddCustomLanguage = true" size="sm">添加自定义语言</Button>
+      <Button @click="showAddCustomLanguage = true"
+              size="sm"
+              :icon="Plus"
+              :icon-only="true"
+              title="添加自定义语言"/>
     </div>
     <Tabs v-model="activePlugin"
           type="card"
@@ -158,7 +162,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Search } from 'lucide-vue-next'
+import { Plus, Search } from 'lucide-vue-next'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { readFile } from '@tauri-apps/plugin-fs'
