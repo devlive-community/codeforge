@@ -24,6 +24,10 @@ pub struct CodeExecutionRequest {
     pub task_id: String,
     // 关联的本地文件路径；存在则就地运行该文件（工作目录为其所在目录）
     pub file_path: Option<String>,
+    // 传给程序的标准输入
+    pub stdin: Option<String>,
+    // 追加到运行命令后的参数
+    pub args: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -81,6 +81,18 @@
                 </button>
               </div>
 
+              <!-- 运行输入：参数 + stdin -->
+              <div class="bg-gray-50 border-b border-gray-200 flex-shrink-0">
+                <button class="w-full flex items-center px-3 py-1 text-xs text-gray-500 hover:bg-gray-100 cursor-pointer" @click="showRunInput = !showRunInput">
+                  <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
+                  运行输入（参数 / stdin）
+                </button>
+                <div v-if="showRunInput" class="px-3 pb-2 space-y-1.5">
+                  <input v-model="runArgs" class="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="运行参数（空格分隔）"/>
+                  <textarea v-model="runStdin" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="标准输入 stdin（运行时喂给程序）"></textarea>
+                </div>
+              </div>
+
               <ConsoleOutput v-if="consoleType === 'console'"
                              class="flex-1"
                              :output="output"
@@ -172,7 +184,7 @@
 
 <script setup lang="ts">
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
-import {X} from 'lucide-vue-next'
+import {ChevronRight, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -546,10 +558,17 @@ const handleLayoutChange = (mode: LayoutMode) => {
   }
 }
 
+// 运行输入：参数 + stdin
+const showRunInput = ref(false)
+const runArgs = ref('')
+const runStdin = ref('')
+
 const buildRunBase = () => ({
   language: currentLanguage.value,
   envInstalled: envInfo.value.installed,
-  envLanguage: envInfo.value.language
+  envLanguage: envInfo.value.language,
+  args: runArgs.value.trim() ? runArgs.value.trim().split(/\s+/) : undefined,
+  stdin: runStdin.value || undefined
 })
 
 // 运行未保存文件的询问弹窗

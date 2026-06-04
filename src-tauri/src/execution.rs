@@ -4,7 +4,7 @@ use rusqlite::{Connection, params};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex as StdMutex, OnceLock, mpsc};
@@ -316,7 +316,11 @@ pub async fn execute_code(
     let start_time = std::time::Instant::now();
 
     let cmd = plugin.get_command(None, false, Some(file_path.to_string_lossy().to_string()));
-    let args = plugin.get_execute_args(file_path.to_str().unwrap());
+    let mut args = plugin.get_execute_args(file_path.to_str().unwrap());
+    // 追加用户自定义运行参数
+    if let Some(extra) = &request.args {
+        args.extend(extra.iter().cloned());
+    }
     info!(
         "执行代码 -> 调用插件 [ {} ] 执行命令 {} 携带参数 {}",
         request.language,
@@ -339,6 +343,13 @@ pub async fn execute_code(
         .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+
+    // 有标准输入则用管道写入，否则关闭 stdin 避免程序读取时挂起
+    if request.stdin.is_some() {
+        command.stdin(Stdio::piped());
+    } else {
+        command.stdin(Stdio::null());
+    }
 
     // 设置工作目录（就地运行为文件目录，否则为插件 execute_home）
     if let Some(dir) = &cwd {
@@ -371,6 +382,13 @@ pub async fn execute_code(
             ));
         }
     };
+
+    // 写入标准输入后关闭管道（让程序读到 EOF）
+    if let Some(input) = &request.stdin {
+        if let Some(mut stdin) = child.stdin.take() {
+            let _ = stdin.write_all(input.as_bytes());
+        }
+    }
 
     // 创建停止标志
     let stop_flag = Arc::new(tokio::sync::Mutex::new(false));
