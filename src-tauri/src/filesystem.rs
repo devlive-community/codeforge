@@ -54,6 +54,60 @@ pub fn read_directory_tree(path: String) -> Result<Vec<FileNode>, String> {
 /// 默认文本文件大小上限(MB)，超过则拒绝打开，避免编辑器卡死
 const DEFAULT_MAX_FILE_SIZE_MB: u64 = 5;
 
+/// 快速打开的文件数量上限
+const MAX_LIST_FILES: usize = 20000;
+
+/// 递归列出目录下所有文件（用于 Cmd+P 快速打开）。跳过隐藏目录与常见重目录。
+#[tauri::command]
+pub fn list_files(path: String) -> Result<Vec<String>, String> {
+    let root = Path::new(&path);
+    if !root.is_dir() {
+        return Err(format!("不是有效目录: {}", path));
+    }
+
+    let ignore = [
+        "node_modules",
+        "target",
+        "dist",
+        "build",
+        ".next",
+        ".cache",
+    ];
+    let mut files: Vec<String> = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+
+    while let Some(dir) = stack.pop() {
+        if files.len() >= MAX_LIST_FILES {
+            break;
+        }
+        let read = match fs::read_dir(&dir) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        for entry in read.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name == ".DS_Store" {
+                continue;
+            }
+            let p = entry.path();
+            if p.is_dir() {
+                // 跳过隐藏目录与常见重目录
+                if name.starts_with('.') || ignore.contains(&name.as_str()) {
+                    continue;
+                }
+                stack.push(p);
+            } else {
+                files.push(p.to_string_lossy().to_string());
+                if files.len() >= MAX_LIST_FILES {
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(files)
+}
+
 /// 读取文本文件内容（绕开 fs 插件 scope 限制）。
 /// max_size_mb 为打开大小上限(MB)，不传则用默认 5MB。
 #[tauri::command]

@@ -184,6 +184,12 @@
       </div>
     </Modal>
 
+    <!-- 快速打开文件 -->
+    <QuickOpen v-if="showQuickOpen && rootDir"
+               :root-dir="rootDir"
+               @select="smartOpen"
+               @close="showQuickOpen = false"/>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
@@ -213,6 +219,7 @@ import {useWorkspace} from './composables/useWorkspace'
 import EditorTabs from './components/EditorTabs.vue'
 import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
+import QuickOpen from './components/QuickOpen.vue'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
@@ -506,6 +513,16 @@ const handleOpenFileClick = async () => {
   }
 }
 
+// 快速打开（Cmd+P）
+const showQuickOpen = ref(false)
+const openQuickOpen = () => {
+  if (!rootDir.value) {
+    toast.info('请先打开文件夹')
+    return
+  }
+  showQuickOpen.value = true
+}
+
 const closeViewer = () => {
   showViewer.value = false
   viewerFile.value = null
@@ -690,13 +707,14 @@ window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 // 是否有弹窗/覆盖层打开（打开时不响应全局快捷键）
 const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
-    || showHistory.value || showViewer.value || showRunPrompt.value
+    || showHistory.value || showViewer.value || showRunPrompt.value || showQuickOpen.value
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
 
 const shortcutDispatch: Record<string, () => void> = {
   run: () => handleRunCode(),
+  quickOpen: () => openQuickOpen(),
   save: () => saveFile(),
   saveAs: () => saveFileAs(),
   open: () => handleOpenFileClick(),

@@ -13,6 +13,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
     {id: 'save', label: '保存文件', default: 'Mod+S'},
     {id: 'saveAs', label: '另存为', default: 'Mod+Shift+S'},
     {id: 'open', label: '打开文件', default: 'Mod+O'},
+    {id: 'quickOpen', label: '快速打开文件', default: 'Mod+P'},
     {id: 'newTab', label: '新建标签', default: 'Mod+N'},
     {id: 'closeTab', label: '关闭标签', default: 'Mod+W'},
     {id: 'toggleSidebar', label: '切换侧栏', default: 'Mod+B'}
