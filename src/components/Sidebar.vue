@@ -46,7 +46,8 @@
 
     <!-- 右键菜单 -->
     <div v-if="ctx.visible" class="fixed inset-0 z-40" @click="closeCtx" @contextmenu.prevent="closeCtx">
-      <div class="absolute bg-white rounded-md shadow-lg border border-gray-200 py-1 text-sm min-w-[150px]"
+      <div ref="menuRef"
+           class="absolute bg-white rounded-md shadow-lg border border-gray-200 py-1 text-sm min-w-[150px]"
            :style="{ top: `${ctx.y}px`, left: `${ctx.x}px` }"
            @click.stop>
         <template v-if="!ctx.node || ctx.node.is_dir">
@@ -54,7 +55,7 @@
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="promptCreate('folder')">新建文件夹</button>
         </template>
         <template v-if="ctx.node">
-          <div class="border-t border-gray-100 my-1"></div>
+          <div v-if="!ctx.node || ctx.node.is_dir" class="border-t border-gray-100 my-1"></div>
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="promptRename">重命名</button>
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer text-red-600" @click="confirmDelete">删除</button>
           <div class="border-t border-gray-100 my-1"></div>
@@ -90,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, provide, reactive, ref, watch} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, provide, reactive, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
 import {Folder, FolderOpen, RefreshCw} from 'lucide-vue-next'
@@ -198,11 +199,25 @@ onUnmounted(() => {
 const ctx = reactive<{ visible: boolean, x: number, y: number, node: FileNode | null }>({
   visible: false, x: 0, y: 0, node: null
 })
-const openCtx = (node: FileNode | null, e: MouseEvent) => {
+const menuRef = ref<HTMLElement | null>(null)
+const openCtx = async (node: FileNode | null, e: MouseEvent) => {
   ctx.node = node
   ctx.x = e.clientX
   ctx.y = e.clientY
   ctx.visible = true
+
+  // 渲染后测量并钳制进视口，避免靠近边缘时显示不全
+  await nextTick()
+  const el = menuRef.value
+  if (el) {
+    const rect = el.getBoundingClientRect()
+    if (ctx.x + rect.width > window.innerWidth) {
+      ctx.x = Math.max(4, window.innerWidth - rect.width - 4)
+    }
+    if (ctx.y + rect.height > window.innerHeight) {
+      ctx.y = Math.max(4, window.innerHeight - rect.height - 4)
+    }
+  }
 }
 const closeCtx = () => {
   ctx.visible = false
