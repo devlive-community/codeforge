@@ -19,6 +19,7 @@
         "height": 1200,
         "center": true,
         "devtools": true,
+        "dragDropEnabled": false,
         "additionalBrowserArgs": "--disable-context-menu"
       }
     ],

@@ -90,6 +90,8 @@ const onDragStart = (id: string, e: DragEvent) => {
   draggingId.value = id
   if (e.dataTransfer) {
     e.dataTransfer.effectAllowed = 'move'
+    // 部分 webview 需要写入数据才会真正启动拖拽
+    e.dataTransfer.setData('text/plain', id)
   }
 }
 const onDrop = (id: string) => {
