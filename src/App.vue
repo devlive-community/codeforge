@@ -86,6 +86,7 @@
                                  :line-count="viewerFile.lineCount"
                                  :size-bytes="viewerFile.sizeBytes"
                                  @close="closeViewer"/>
+                <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
               </div>
             </div>
           </template>
@@ -149,6 +150,7 @@
                            :line-count="viewerFile.lineCount"
                            :size-bytes="viewerFile.sizeBytes"
                            @close="closeViewer"/>
+          <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
         </div>
       </div>
       </div>
@@ -185,9 +187,6 @@
         </div>
       </div>
     </Modal>
-
-    <!-- AI 自然语言生成代码 -->
-    <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
 
     <!-- AI 助手 -->
     <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" @close="showAi = false" @insert-code="applyAiCode"/>
