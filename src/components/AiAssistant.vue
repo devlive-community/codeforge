@@ -2,14 +2,40 @@
   <div class="fixed top-0 right-0 bottom-0 w-[400px] max-w-[90vw] bg-white border-l border-gray-200 shadow-xl z-40 flex flex-col">
     <!-- 头部 -->
     <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 flex-shrink-0">
-      <div class="flex items-center space-x-2">
-        <Sparkles class="w-4 h-4 text-blue-500"/>
+      <div class="flex items-center space-x-2 min-w-0">
+        <Sparkles class="w-4 h-4 text-blue-500 flex-shrink-0"/>
         <span class="text-sm font-medium text-gray-700">AI 助手</span>
-        <span class="text-xs text-gray-400">{{ active.model }}</span>
+        <span class="text-xs text-gray-400 truncate">{{ active.model }}</span>
       </div>
-      <button class="text-gray-400 hover:text-gray-700" title="关闭" @click="emit('close')">
-        <X class="w-4 h-4"/>
-      </button>
+      <div class="flex items-center space-x-1 flex-shrink-0">
+        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="新对话" @click="newConversation">
+          <Plus class="w-4 h-4"/>
+        </button>
+        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" :class="{ 'text-blue-600': showHistory }" title="历史对话" @click="showHistory = !showHistory">
+          <History class="w-4 h-4"/>
+        </button>
+        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="关闭" @click="emit('close')">
+          <X class="w-4 h-4"/>
+        </button>
+      </div>
+    </div>
+
+    <!-- 历史对话列表 -->
+    <div v-if="showHistory" class="border-b border-gray-200 max-h-60 overflow-y-auto flex-shrink-0">
+      <div v-if="conversations.length === 0" class="px-4 py-4 text-center text-xs text-gray-400">暂无历史对话</div>
+      <div v-for="c in conversations"
+           :key="c.id"
+           class="group flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+           :class="{ 'bg-blue-50': c.id === currentId }"
+           @click="loadConversation(c.id)">
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-gray-700 truncate">{{ c.title }}</div>
+          <div class="text-[10px] text-gray-400">{{ formatTime(c.updatedAt) }}</div>
+        </div>
+        <button class="ml-2 p-0.5 rounded text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100" title="删除" @click.stop="deleteConversation(c.id)">
+          <Trash2 class="w-3.5 h-3.5"/>
+        </button>
+      </div>
     </div>
 
     <!-- 快捷动作 -->
@@ -17,7 +43,6 @@
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('解释下面的代码')">解释代码</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('找出下面代码中的 bug 并给出修复')">找 Bug</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('优化下面的代码并说明原因')">优化</button>
-      <button v-if="messages.length" class="ml-auto text-xs text-gray-400 hover:text-gray-600 cursor-pointer" @click="messages = []">清空</button>
     </div>
 
     <!-- 消息列表 -->
@@ -26,9 +51,8 @@
         向 AI 提问，或用上方快捷动作处理当前代码
       </div>
       <div v-for="(m, i) in messages" :key="i" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
-        <div v-if="m.role === 'user'" class="max-w-[90%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words bg-blue-500 text-white">
-          {{ m.content }}
-        </div>
+        <div v-if="m.role === 'user'" class="ai-markdown ai-user max-w-[90%] rounded-lg px-3 py-2 text-sm break-words bg-blue-500 text-white"
+             v-html="renderMd(m.content)"></div>
         <div v-else-if="m.content" class="ai-markdown max-w-[90%] rounded-lg px-3 py-2 text-sm break-words bg-gray-100 text-gray-800"
              v-html="renderMd(m.content)"></div>
       </div>
@@ -52,20 +76,17 @@
 import {nextTick, onMounted, onUnmounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
-import {Sparkles, X} from 'lucide-vue-next'
+import {History, Plus, Sparkles, Trash2, X} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import {useAiConfig} from '../composables/useAiConfig'
+import {useAiHistory, type AiMsg} from '../composables/useAiHistory'
 import {useToast} from '../plugins/toast'
 
 // html:false 不解析原始 HTML，规避 XSS
 const md = new MarkdownIt({html: false, linkify: true, breaks: true})
 const renderMd = (text: string) => md.render(text || '')
 
-interface Msg
-{
-  role: 'user' | 'assistant'
-  content: string
-}
+type Msg = AiMsg
 
 const props = defineProps<{
   code: string
@@ -76,15 +97,58 @@ const emit = defineEmits<{ close: [] }>()
 
 const toast = useToast()
 const {active, reload} = useAiConfig()
+const {conversations, saveConversation, remove} = useAiHistory()
 
 const messages = ref<Msg[]>([])
 const input = ref('')
 const sending = ref(false)
 const streamingIndex = ref(-1)
 const listRef = ref<HTMLElement | null>(null)
+const showHistory = ref(false)
+const currentId = ref<string | null>(null)
 
 let currentStreamId = ''
 let unlistenDelta: UnlistenFn | null = null
+
+const formatTime = (ts: number) => new Date(ts).toLocaleString()
+
+// 把当前对话写入历史
+const persistCurrent = () => {
+  if (messages.value.length === 0) {
+    return
+  }
+  const id = currentId.value || crypto.randomUUID()
+  const firstUser = messages.value.find(m => m.role === 'user')
+  const title = (firstUser?.content || 'AI 对话').replace(/\s+/g, ' ').slice(0, 30)
+  saveConversation({id, title, updatedAt: Date.now(), messages: messages.value.map(m => ({...m}))})
+  currentId.value = id
+}
+
+const newConversation = () => {
+  persistCurrent()
+  messages.value = []
+  currentId.value = null
+  showHistory.value = false
+}
+
+const loadConversation = (id: string) => {
+  persistCurrent()
+  const c = conversations.value.find(x => x.id === id)
+  if (c) {
+    messages.value = c.messages.map(m => ({...m}))
+    currentId.value = c.id
+  }
+  showHistory.value = false
+  scrollToBottom()
+}
+
+const deleteConversation = (id: string) => {
+  remove(id)
+  if (currentId.value === id) {
+    messages.value = []
+    currentId.value = null
+  }
+}
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -98,6 +162,14 @@ const scrollToBottom = () => {
 const waiting = () => sending.value && (streamingIndex.value < 0 || !messages.value[streamingIndex.value]?.content)
 
 onMounted(async () => {
+  // 恢复最近一次对话
+  if (conversations.value.length > 0) {
+    const latest = conversations.value[0]
+    messages.value = latest.messages.map(m => ({...m}))
+    currentId.value = latest.id
+    scrollToBottom()
+  }
+
   unlistenDelta = await listen<{ stream_id: string, delta: string }>('ai-stream-delta', (e) => {
     if (e.payload.stream_id === currentStreamId && streamingIndex.value >= 0) {
       messages.value[streamingIndex.value].content += e.payload.delta
@@ -158,6 +230,7 @@ const send = async (text?: string) => {
     sending.value = false
     streamingIndex.value = -1
     scrollToBottom()
+    persistCurrent()
   }
 }
 
@@ -217,4 +290,8 @@ const quick = (instruction: string) => {
 }
 .ai-markdown table { border-collapse: collapse; margin: 0.4rem 0; }
 .ai-markdown th, .ai-markdown td { border: 1px solid #e2e8f0; padding: 0.25rem 0.5rem; }
+
+/* 用户消息（蓝底）变体 */
+.ai-user code { background: rgba(255, 255, 255, 0.22); }
+.ai-user a { color: #fff; }
 </style>
