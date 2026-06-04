@@ -80,7 +80,7 @@
                 </div>
               </div>
               <div class="flex-1 overflow-hidden relative">
-                <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+                <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey" @ready="editorView = $event"/>
                 <LargeFileViewer v-if="showViewer && viewerFile"
                                  :file-path="viewerFile.path"
                                  :line-count="viewerFile.lineCount"
@@ -143,7 +143,7 @@
           </div>
         </div>
         <div class="flex-1 overflow-hidden relative">
-          <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+          <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey" @ready="editorView = $event"/>
           <LargeFileViewer v-if="showViewer && viewerFile"
                            :file-path="viewerFile.path"
                            :line-count="viewerFile.lineCount"
@@ -186,6 +186,9 @@
       </div>
     </Modal>
 
+    <!-- AI 自然语言生成代码 -->
+    <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
+
     <!-- AI 助手 -->
     <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" @close="showAi = false" @insert-code="applyAiCode"/>
 
@@ -226,6 +229,7 @@ import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
 import QuickOpen from './components/QuickOpen.vue'
 import AiAssistant from './components/AiAssistant.vue'
+import InlineGenerate from './components/InlineGenerate.vue'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
@@ -551,6 +555,31 @@ const applyAiCode = (codeText: string) => {
   code.value = codeText
 }
 
+// 当前 CodeMirror view（用于在光标处插入生成的代码）
+const editorView = ref<any>(null)
+
+// AI 自然语言生成
+const showGenerate = ref(false)
+const openGenerate = () => {
+  showGenerate.value = true
+}
+
+// 在光标处插入/替换选区为生成的代码
+const insertGeneratedCode = (text: string) => {
+  const view = editorView.value
+  if (view) {
+    const sel = view.state.selection.main
+    view.dispatch({
+      changes: {from: sel.from, to: sel.to, insert: text},
+      selection: {anchor: sel.from + text.length}
+    })
+    view.focus()
+  }
+  else {
+    code.value = text
+  }
+}
+
 // 快速打开（Cmd+P）
 const showQuickOpen = ref(false)
 const openQuickOpen = () => {
@@ -745,7 +774,8 @@ window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 // 是否有弹窗/覆盖层打开（打开时不响应全局快捷键）
 const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
-    || showHistory.value || showViewer.value || showRunPrompt.value || showQuickOpen.value
+    || showHistory.value || showViewer.value || showRunPrompt.value
+    || showQuickOpen.value || showGenerate.value
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
@@ -753,6 +783,7 @@ const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
 const shortcutDispatch: Record<string, () => void> = {
   run: () => handleRunCode(),
   quickOpen: () => openQuickOpen(),
+  generate: () => openGenerate(),
   save: () => saveFile(),
   saveAs: () => saveFileAs(),
   open: () => handleOpenFileClick(),
