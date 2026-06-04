@@ -40,6 +40,9 @@
       <Tooltip text="保存文件">
         <Button type="secondary" :icon="Save" :icon-only="true" @click="emit('save-file')"/>
       </Tooltip>
+      <Tooltip text="AI 助手">
+        <Button type="secondary" :icon="Sparkles" :icon-only="true" @click="emit('show-ai')"/>
+      </Tooltip>
     </div>
 
     <div class="flex items-center space-x-3">
@@ -73,7 +76,7 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
-import {CheckCircle, FileCode, FolderOpen, History, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Square} from 'lucide-vue-next'
+import {CheckCircle, FileCode, FolderOpen, History, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Sparkles, Square} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
 import Tooltip from '../ui/Tooltip.vue'
@@ -100,6 +103,7 @@ const emit = defineEmits<{
   'open-file': []
   'save-file': []
   'show-history': []
+  'show-ai': []
   'toggle-sidebar': []
 }>()
 

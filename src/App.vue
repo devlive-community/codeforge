@@ -14,6 +14,7 @@
                @open-file="handleOpenFileClick"
                @save-file="saveFile"
                @show-history="showHistory = true"
+               @show-ai="showAi = true"
                @show-settings="showSettings = true"
                @load-example="loadExample">
     </AppHeader>
@@ -184,6 +185,9 @@
       </div>
     </Modal>
 
+    <!-- AI 助手 -->
+    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" @close="showAi = false"/>
+
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
                :root-dir="rootDir"
@@ -220,6 +224,7 @@ import EditorTabs from './components/EditorTabs.vue'
 import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
 import QuickOpen from './components/QuickOpen.vue'
+import AiAssistant from './components/AiAssistant.vue'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
@@ -512,6 +517,9 @@ const handleOpenFileClick = async () => {
     await smartOpen(path)
   }
 }
+
+// AI 助手抽屉
+const showAi = ref(false)
 
 // 快速打开（Cmd+P）
 const showQuickOpen = ref(false)

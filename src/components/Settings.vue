@@ -21,6 +21,11 @@
         <Shortcut v-if="activeTab === 'shortcut'"/>
       </template>
 
+      <!-- AI 配置 -->
+      <template #ai>
+        <Ai v-if="activeTab === 'ai'"/>
+      </template>
+
       <!-- 语言配置 -->
       <template #language>
         <Language v-if="activeTab === 'language'" @settings-changed="handleLanguageSettingsChanged"/>
@@ -52,6 +57,7 @@ import General from './setting/General.vue'
 import Language from './setting/Language.vue'
 import Editor from './setting/Editor.vue'
 import Shortcut from './setting/Shortcut.vue'
+import Ai from './setting/Ai.vue'
 import Network from './setting/Network.vue'
 import Cache from './setting/Cache.vue'
 import Logs from './setting/Logs.vue'
