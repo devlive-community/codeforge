@@ -69,8 +69,7 @@ import {
 } from '@uiw/codemirror-themes-all'
 import {invoke} from '@tauri-apps/api/core'
 import {useToast} from '../plugins/toast'
-import {bracketMatching, foldGutter, foldKeymap, StreamLanguage} from '@codemirror/language'
-import {highlightSelectionMatches, searchKeymap} from '@codemirror/search'
+import {StreamLanguage} from '@codemirror/language'
 import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
@@ -293,14 +292,8 @@ export function useCodeMirrorEditor(props: Props)
         // 添加函数帮助主题
         result.push(functionHelpTheme)
 
-        // 编辑增强：括号匹配、代码折叠、选中项高亮
-        result.push(bracketMatching())
-        result.push(foldGutter())
-        result.push(highlightSelectionMatches())
-
-        // 字体缩放 + 搜索/替换 + 折叠 快捷键（Cmd+F 打开搜索）
+        // 字体缩放快捷键（搜索/替换、折叠、括号匹配等由 vue-codemirror 的 basicSetup 提供）
         result.push(fontSizeKeymap)
-        result.push(keymap.of([...searchKeymap, ...foldKeymap]))
 
         // 设置字体
         const {fontFamilyTheme} = useCodeMirrorFontFamily(
