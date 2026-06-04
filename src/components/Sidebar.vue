@@ -118,6 +118,8 @@ const emit = defineEmits<{
   'open-folder': []
   'open-recent': [path: string]
   'open-file': [path: string]
+  'renamed': [from: string, to: string]
+  'deleted': [path: string]
 }>()
 
 const folderName = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() || path
@@ -267,6 +269,7 @@ const submitName = async () => {
     if (nameModal.mode === 'rename') {
       const to = joinPath(dirOf(nameModal.node.path), name)
       await invoke('rename_path', {from: nameModal.node.path, to})
+      emit('renamed', nameModal.node.path, to)
       toast.success('已重命名')
     }
     else {
@@ -295,6 +298,7 @@ const doDelete = async () => {
   }
   try {
     await invoke('delete_path', {path: deleteModal.node.path})
+    emit('deleted', deleteModal.node.path)
     toast.success('已删除')
     deleteModal.show = false
     triggerRefresh()

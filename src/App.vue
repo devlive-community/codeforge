@@ -28,7 +28,9 @@
                  :style="{ width: `${sidebarWidth}px` }"
                  @open-folder="openFolder"
                  @open-recent="openFolderPath"
-                 @open-file="smartOpen"/>
+                 @open-file="smartOpen"
+                 @renamed="(from, to) => updateTabPath(from, to)"
+                 @deleted="(p) => detachTabPath(p)"/>
         <!-- 拖拽改变侧栏宽度 -->
         <div class="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
              @mousedown="startSidebarResize"></div>
@@ -259,6 +261,8 @@ const {
   switchTab,
   newTab,
   closeTab,
+  updateTabPath,
+  detachTabPath,
   isActiveReusableScratch,
   initFirstTab
 } = useWorkspace({code, currentLanguage, applyLanguage, currentFilePath, savedContent, restoreFile})
