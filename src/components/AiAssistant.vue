@@ -29,10 +29,10 @@
         <div v-if="m.role === 'user'" class="max-w-[90%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words bg-blue-500 text-white">
           {{ m.content }}
         </div>
-        <div v-else class="ai-markdown max-w-[90%] rounded-lg px-3 py-2 text-sm break-words bg-gray-100 text-gray-800"
+        <div v-else-if="m.content" class="ai-markdown max-w-[90%] rounded-lg px-3 py-2 text-sm break-words bg-gray-100 text-gray-800"
              v-html="renderMd(m.content)"></div>
       </div>
-      <div v-if="sending" class="flex justify-start">
+      <div v-if="waiting()" class="flex justify-start">
         <div class="bg-gray-100 text-gray-500 rounded-lg px-3 py-2 text-sm">思考中…</div>
       </div>
     </div>
@@ -49,8 +49,9 @@
 </template>
 
 <script setup lang="ts">
-import {nextTick, ref} from 'vue'
+import {nextTick, onMounted, onUnmounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
+import {listen, type UnlistenFn} from '@tauri-apps/api/event'
 import {Sparkles, X} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import {useAiConfig} from '../composables/useAiConfig'
@@ -79,7 +80,11 @@ const {active, reload} = useAiConfig()
 const messages = ref<Msg[]>([])
 const input = ref('')
 const sending = ref(false)
+const streamingIndex = ref(-1)
 const listRef = ref<HTMLElement | null>(null)
+
+let currentStreamId = ''
+let unlistenDelta: UnlistenFn | null = null
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -88,6 +93,22 @@ const scrollToBottom = () => {
     }
   })
 }
+
+// 等待中（首段未到达前显示"思考中"）
+const waiting = () => sending.value && (streamingIndex.value < 0 || !messages.value[streamingIndex.value]?.content)
+
+onMounted(async () => {
+  unlistenDelta = await listen<{ stream_id: string, delta: string }>('ai-stream-delta', (e) => {
+    if (e.payload.stream_id === currentStreamId && streamingIndex.value >= 0) {
+      messages.value[streamingIndex.value].content += e.payload.delta
+      scrollToBottom()
+    }
+  })
+})
+
+onUnmounted(() => {
+  unlistenDelta?.()
+})
 
 const send = async (text?: string) => {
   const content = (text ?? input.value).trim()
@@ -103,25 +124,39 @@ const send = async (text?: string) => {
 
   messages.value.push({role: 'user', content})
   input.value = ''
+
+  // 发给后端的对话（不含占位的空助手消息）
+  const payloadMessages = messages.value.map(m => ({role: m.role, content: m.content}))
+
+  // 占位的助手消息，流式追加
+  messages.value.push({role: 'assistant', content: ''})
+  streamingIndex.value = messages.value.length - 1
+
+  const streamId = crypto.randomUUID()
+  currentStreamId = streamId
   sending.value = true
   scrollToBottom()
 
   try {
-    const reply = await invoke<string>('ai_chat', {
+    await invoke('ai_chat_stream', {
+      streamId,
       provider: active.value.provider,
       baseUrl: active.value.baseUrl,
       apiKey: active.value.apiKey,
       model: active.value.model,
       system: `你是嵌入代码编辑器的编程助手。回答简洁、准确，必要时给出可运行的代码。当前编程语言：${props.language}。`,
-      messages: messages.value.map(m => ({role: m.role, content: m.content}))
+      messages: payloadMessages
     })
-    messages.value.push({role: 'assistant', content: reply || '(空响应)'})
+    if (!messages.value[streamingIndex.value].content) {
+      messages.value[streamingIndex.value].content = '(空响应)'
+    }
   }
   catch (error) {
-    messages.value.push({role: 'assistant', content: '❌ ' + error})
+    messages.value[streamingIndex.value].content += '\n\n❌ ' + error
   }
   finally {
     sending.value = false
+    streamingIndex.value = -1
     scrollToBottom()
   }
 }

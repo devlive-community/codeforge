@@ -21,7 +21,7 @@ mod setup;
 mod update;
 mod utils;
 
-use crate::ai::ai_chat;
+use crate::ai::{ai_chat, ai_chat_stream};
 use crate::cache::{clear_all_cache, clear_plugins_cache, get_cache_info};
 use crate::custom_plugin_commands::{
     add_custom_plugin, get_custom_plugins, remove_custom_plugin, save_custom_icon,
@@ -173,7 +173,8 @@ fn main() {
             watch_directory,
             list_files,
             // AI 助手
-            ai_chat
+            ai_chat,
+            ai_chat_stream
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
