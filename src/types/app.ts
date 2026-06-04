@@ -1,5 +1,6 @@
 export interface ExecutionResult
 {
+    id?: number
     success: boolean
     code: string
     stdout: string

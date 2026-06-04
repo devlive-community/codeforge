@@ -7,6 +7,9 @@ use std::path::PathBuf;
 // 通用结构定义
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ExecutionResult {
+    // 执行历史记录 id（运行后由后端填充；用于关联 AI 对话）
+    #[serde(default)]
+    pub id: Option<i64>,
     pub success: bool,
     pub code: String,
     pub stdout: String,

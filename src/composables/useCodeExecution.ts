@@ -12,6 +12,8 @@ export function useCodeExecution(toast: any)
 
     // 当前运行任务的唯一标识，用于事件路由（支持多标签并发运行）
     const currentTaskId = ref<string | null>(null)
+    // 最近一次执行记录 id，用于关联 AI 对话
+    const currentExecutionId = ref<number | null>(null)
 
     // 实时输出相关
     const realTimeOutput = ref('')
@@ -61,6 +63,9 @@ export function useCodeExecution(toast: any)
 
             lastExecutionTime.value = result.execution_time
             isSuccess.value = result.success
+            if (result.id != null) {
+                currentExecutionId.value = result.id
+            }
 
             if (result.success) {
                 toast.success(`代码执行成功，用时 ${ result.execution_time } 毫秒`)
@@ -180,6 +185,7 @@ export function useCodeExecution(toast: any)
         isSuccess,
         lastExecutionTime,
         currentTaskId,
+        currentExecutionId,
         runCode,
         stopCode,
         clearOutput,

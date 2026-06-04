@@ -8,11 +8,8 @@
         <span class="text-xs text-gray-400 truncate">{{ active.model }}</span>
       </div>
       <div class="flex items-center space-x-1 flex-shrink-0">
-        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="新对话" @click="newConversation">
-          <Plus class="w-4 h-4"/>
-        </button>
-        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" :class="{ 'text-blue-600': showHistory }" title="历史对话" @click="showHistory = !showHistory">
-          <History class="w-4 h-4"/>
+        <button v-if="messages.length" class="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100" title="清空对话" @click="clearChat">
+          <Trash2 class="w-4 h-4"/>
         </button>
         <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="关闭" @click="emit('close')">
           <X class="w-4 h-4"/>
@@ -20,33 +17,22 @@
       </div>
     </div>
 
-    <!-- 历史对话列表 -->
-    <div v-if="showHistory" class="border-b border-gray-200 max-h-60 overflow-y-auto flex-shrink-0">
-      <div v-if="conversations.length === 0" class="px-4 py-4 text-center text-xs text-gray-400">暂无历史对话</div>
-      <div v-for="c in conversations"
-           :key="c.id"
-           class="group flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
-           :class="{ 'bg-blue-50': c.id === currentId }"
-           @click="loadConversation(c.id)">
-        <div class="flex-1 min-w-0">
-          <div class="text-xs text-gray-700 truncate">{{ c.title }}</div>
-          <div class="text-[10px] text-gray-400">{{ formatTime(c.updated_at) }}</div>
-        </div>
-        <button class="ml-2 p-0.5 rounded text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100" title="删除" @click.stop="deleteConversation(c.id)">
-          <Trash2 class="w-3.5 h-3.5"/>
-        </button>
-      </div>
+    <!-- 关联状态 -->
+    <div class="px-4 py-1 text-xs border-b flex-shrink-0"
+         :class="executionId != null ? 'text-gray-500 bg-gray-50 border-gray-200' : 'text-amber-600 bg-amber-50 border-amber-100'">
+      {{ executionId != null ? `已关联运行 #${executionId}，对话随该次运行保存` : '临时会话：运行代码后对话才会保存' }}
     </div>
 
     <!-- 快捷动作 -->
-    <div class="flex items-center space-x-2 px-3 py-2 border-b border-gray-100 flex-shrink-0">
+    <div class="flex items-center flex-wrap gap-2 px-3 py-2 border-b border-gray-100 flex-shrink-0">
+      <button v-if="errorContext" class="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 cursor-pointer" @click="analyzeError">分析报错</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('解释下面的代码')">解释代码</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('找出下面代码中的 bug 并给出修复')">找 Bug</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('优化下面的代码并说明原因')">优化</button>
     </div>
 
     <!-- 消息列表 -->
-    <div ref="listRef" class="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+    <div ref="listRef" class="flex-1 overflow-y-auto px-3 py-3 space-y-3" @click="onCodeAction">
       <div v-if="messages.length === 0" class="text-center text-sm text-gray-400 mt-10">
         向 AI 提问，或用上方快捷动作处理当前代码
       </div>
@@ -63,6 +49,11 @@
 
     <!-- 输入 -->
     <div class="border-t border-gray-200 p-2 flex-shrink-0">
+      <div v-if="sending" class="mb-1.5 flex justify-center">
+        <button class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer" @click="stop">
+          停止生成
+        </button>
+      </div>
       <textarea v-model="input"
                 rows="2"
                 class="w-full text-sm border border-gray-300 rounded px-2 py-1.5 resize-none focus:outline-none focus:border-blue-400"
@@ -73,10 +64,10 @@
 </template>
 
 <script setup lang="ts">
-import {nextTick, onMounted, onUnmounted, ref} from 'vue'
+import {nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
-import {History, Plus, Sparkles, Trash2, X} from 'lucide-vue-next'
+import {Sparkles, Trash2, X} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import {useAiConfig} from '../composables/useAiConfig'
 import {useAiHistory, type AiMsg} from '../composables/useAiHistory'
@@ -84,73 +75,61 @@ import {useToast} from '../plugins/toast'
 
 // html:false 不解析原始 HTML，规避 XSS
 const md = new MarkdownIt({html: false, linkify: true, breaks: true})
+
+// 给代码块包一层工具条（复制 / 应用到编辑器）
+const defaultFence = md.renderer.rules.fence!.bind(md.renderer.rules)
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const rendered = defaultFence(tokens, idx, options, env, self)
+  return `<div class="ai-code"><div class="ai-code-bar">`
+      + `<button class="ai-code-btn" data-act="copy">复制</button>`
+      + `<button class="ai-code-btn" data-act="insert">应用到编辑器</button>`
+      + `</div>${rendered}</div>`
+}
+
 const renderMd = (text: string) => md.render(text || '')
 
-type Msg = AiMsg
+// 代码块按钮（事件委托）
+const onCodeAction = (e: MouseEvent) => {
+  const btn = (e.target as HTMLElement).closest('.ai-code-btn') as HTMLElement | null
+  if (!btn) {
+    return
+  }
+  const pre = btn.closest('.ai-code')?.querySelector('pre')
+  const codeText = pre?.textContent ?? ''
+  if (!codeText) {
+    return
+  }
+  if (btn.dataset.act === 'copy') {
+    navigator.clipboard.writeText(codeText)
+    toast.success('已复制代码')
+  }
+  else {
+    emit('insert-code', codeText)
+    toast.success('已应用到编辑器')
+  }
+}
 
 const props = defineProps<{
   code: string
   language: string
+  executionId: number | null
+  errorContext?: { code: string, error: string } | null
 }>()
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; 'insert-code': [code: string] }>()
 
 const toast = useToast()
 const {active, reload} = useAiConfig()
-const {conversations, reload: reloadHistory, saveConversation, getMessages, remove} = useAiHistory()
+const {saveConversation, getMessages, deleteConversation} = useAiHistory()
 
-const messages = ref<Msg[]>([])
+const messages = ref<AiMsg[]>([])
 const input = ref('')
 const sending = ref(false)
 const streamingIndex = ref(-1)
 const listRef = ref<HTMLElement | null>(null)
-const showHistory = ref(false)
-const currentId = ref<string | null>(null)
 
 let currentStreamId = ''
 let unlistenDelta: UnlistenFn | null = null
-
-const formatTime = (ts: number) => new Date(ts).toLocaleString()
-
-// 把当前对话写入历史（SQLite）
-const persistCurrent = async () => {
-  if (messages.value.length === 0) {
-    return
-  }
-  const id = currentId.value || crypto.randomUUID()
-  const firstUser = messages.value.find(m => m.role === 'user')
-  const title = (firstUser?.content || 'AI 对话').replace(/\s+/g, ' ').slice(0, 30)
-  currentId.value = id
-  try {
-    await saveConversation({id, title, updatedAt: Date.now(), messages: messages.value.map(m => ({...m}))})
-  }
-  catch (error) {
-    console.error('保存 AI 对话失败:', error)
-  }
-}
-
-const newConversation = async () => {
-  await persistCurrent()
-  messages.value = []
-  currentId.value = null
-  showHistory.value = false
-}
-
-const loadConversation = async (id: string) => {
-  await persistCurrent()
-  messages.value = await getMessages(id)
-  currentId.value = id
-  showHistory.value = false
-  scrollToBottom()
-}
-
-const deleteConversation = async (id: string) => {
-  await remove(id)
-  if (currentId.value === id) {
-    messages.value = []
-    currentId.value = null
-  }
-}
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -160,19 +139,41 @@ const scrollToBottom = () => {
   })
 }
 
-// 等待中（首段未到达前显示"思考中"）
 const waiting = () => sending.value && (streamingIndex.value < 0 || !messages.value[streamingIndex.value]?.content)
 
-onMounted(async () => {
-  // 加载历史并恢复最近一次对话
-  await reloadHistory()
-  if (conversations.value.length > 0) {
-    const latest = conversations.value[0]
-    messages.value = await getMessages(latest.id)
-    currentId.value = latest.id
-    scrollToBottom()
+// 载入当前执行对应的对话（无关联则清空）
+const loadForExecution = async () => {
+  if (props.executionId != null) {
+    messages.value = await getMessages(props.executionId)
   }
+  else {
+    messages.value = []
+  }
+  scrollToBottom()
+}
 
+// 仅在已关联执行时保存
+const persist = async () => {
+  if (props.executionId == null || messages.value.length === 0) {
+    return
+  }
+  try {
+    await saveConversation(props.executionId, messages.value.map(m => ({...m})))
+  }
+  catch (error) {
+    console.error('保存 AI 对话失败:', error)
+  }
+}
+
+const clearChat = async () => {
+  messages.value = []
+  if (props.executionId != null) {
+    await deleteConversation(props.executionId)
+  }
+}
+
+onMounted(async () => {
+  await loadForExecution()
   unlistenDelta = await listen<{ stream_id: string, delta: string }>('ai-stream-delta', (e) => {
     if (e.payload.stream_id === currentStreamId && streamingIndex.value >= 0) {
       messages.value[streamingIndex.value].content += e.payload.delta
@@ -184,6 +185,9 @@ onMounted(async () => {
 onUnmounted(() => {
   unlistenDelta?.()
 })
+
+// 切换到不同的执行 → 切换对应对话
+watch(() => props.executionId, loadForExecution)
 
 const send = async (text?: string) => {
   const content = (text ?? input.value).trim()
@@ -200,10 +204,8 @@ const send = async (text?: string) => {
   messages.value.push({role: 'user', content})
   input.value = ''
 
-  // 发给后端的对话（不含占位的空助手消息）
   const payloadMessages = messages.value.map(m => ({role: m.role, content: m.content}))
 
-  // 占位的助手消息，流式追加
   messages.value.push({role: 'assistant', content: ''})
   streamingIndex.value = messages.value.length - 1
 
@@ -233,8 +235,21 @@ const send = async (text?: string) => {
     sending.value = false
     streamingIndex.value = -1
     scrollToBottom()
-    persistCurrent()
+    persist()
   }
+}
+
+const stop = () => {
+  if (currentStreamId) {
+    invoke('stop_ai_stream', {streamId: currentStreamId})
+  }
+}
+
+const analyzeError = () => {
+  if (!props.errorContext) {
+    return
+  }
+  send(`这段代码运行报错了，请分析原因并给出修复：\n\n代码：\n\`\`\`${props.language}\n${props.errorContext.code}\n\`\`\`\n\n报错输出：\n\`\`\`\n${props.errorContext.error}\n\`\`\``)
 }
 
 const quick = (instruction: string) => {
@@ -297,4 +312,25 @@ const quick = (instruction: string) => {
 /* 用户消息（蓝底）变体 */
 .ai-user code { background: rgba(255, 255, 255, 0.22); }
 .ai-user a { color: #fff; }
+
+/* 代码块工具条 */
+.ai-code { margin: 0.4rem 0; }
+.ai-code .ai-code-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  padding: 0.2rem 0.3rem;
+  background: #0f172a;
+  border-top-left-radius: 0.375rem;
+  border-top-right-radius: 0.375rem;
+}
+.ai-code .ai-code-btn {
+  font-size: 11px;
+  color: #cbd5e1;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+.ai-code .ai-code-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.ai-code pre { margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
 </style>

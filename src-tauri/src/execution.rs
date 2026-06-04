@@ -61,7 +61,7 @@ impl ExecutionHistory {
         })
     }
 
-    fn insert(&self, result: &ExecutionResult) -> Result<(), String> {
+    fn insert(&self, result: &ExecutionResult) -> Result<i64, String> {
         let conn = self
             .conn
             .lock()
@@ -83,7 +83,7 @@ impl ExecutionHistory {
         )
         .map_err(|e| format!("保存执行历史失败: {}", e))?;
 
-        Ok(())
+        Ok(conn.last_insert_rowid())
     }
 
     fn list(&self) -> Result<Vec<ExecutionResult>, String> {
@@ -93,7 +93,7 @@ impl ExecutionHistory {
             .map_err(|_| "执行历史数据库锁错误".to_string())?;
         let mut statement = conn
             .prepare(
-                "SELECT success, code, stdout, stderr, execution_time, timestamp, language
+                "SELECT id, success, code, stdout, stderr, execution_time, timestamp, language
                  FROM execution_history
                  ORDER BY id ASC",
             )
@@ -102,13 +102,14 @@ impl ExecutionHistory {
         let rows = statement
             .query_map([], |row| {
                 Ok(ExecutionResult {
-                    success: row.get::<_, i64>(0)? != 0,
-                    code: row.get(1)?,
-                    stdout: row.get(2)?,
-                    stderr: row.get(3)?,
-                    execution_time: row.get::<_, i64>(4)? as u128,
-                    timestamp: row.get::<_, i64>(5)? as u64,
-                    language: row.get(6)?,
+                    id: Some(row.get::<_, i64>(0)?),
+                    success: row.get::<_, i64>(1)? != 0,
+                    code: row.get(2)?,
+                    stdout: row.get(3)?,
+                    stderr: row.get(4)?,
+                    execution_time: row.get::<_, i64>(5)? as u128,
+                    timestamp: row.get::<_, i64>(6)? as u64,
+                    language: row.get(7)?,
                 })
             })
             .map_err(|e| format!("读取执行历史失败: {}", e))?;
@@ -132,7 +133,7 @@ impl ExecutionHistory {
 
         let mut statement = conn
             .prepare(
-                "SELECT success, code, stdout, stderr, execution_time, timestamp, language
+                "SELECT id, success, code, stdout, stderr, execution_time, timestamp, language
                  FROM execution_history
                  ORDER BY id DESC
                  LIMIT ?1 OFFSET ?2",
@@ -142,13 +143,14 @@ impl ExecutionHistory {
         let rows = statement
             .query_map(params![limit as i64, offset as i64], |row| {
                 Ok(ExecutionResult {
-                    success: row.get::<_, i64>(0)? != 0,
-                    code: row.get(1)?,
-                    stdout: row.get(2)?,
-                    stderr: row.get(3)?,
-                    execution_time: row.get::<_, i64>(4)? as u128,
-                    timestamp: row.get::<_, i64>(5)? as u64,
-                    language: row.get(6)?,
+                    id: Some(row.get::<_, i64>(0)?),
+                    success: row.get::<_, i64>(1)? != 0,
+                    code: row.get(2)?,
+                    stdout: row.get(3)?,
+                    stderr: row.get(4)?,
+                    execution_time: row.get::<_, i64>(5)? as u128,
+                    timestamp: row.get::<_, i64>(6)? as u64,
+                    language: row.get(7)?,
                 })
             })
             .map_err(|e| format!("读取执行历史失败: {}", e))?;
@@ -575,6 +577,7 @@ pub async fn execute_code(
                 }
 
                 let mut result = ExecutionResult {
+                    id: None,
                     success: status.success(),
                     code: request.code.clone(),
                     stdout: stdout_lines.join("\n"),
@@ -612,7 +615,8 @@ pub async fn execute_code(
                 );
 
                 drop(manager);
-                history.insert(&result)?;
+                let row_id = history.insert(&result)?;
+                result.id = Some(row_id);
 
                 info!("执行代码 -> 调用插件 [ {} ] 完成", request.language);
                 return Ok(result);

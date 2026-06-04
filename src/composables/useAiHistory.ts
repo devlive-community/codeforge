@@ -1,4 +1,3 @@
-import {ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 
 export interface AiMsg
@@ -7,50 +6,25 @@ export interface AiMsg
     content: string
 }
 
-// 列表项（不含完整消息，按需再取）
-export interface AiConversationMeta
-{
-    id: string
-    title: string
-    updated_at: number
-}
-
-export interface AiConversation
-{
-    id: string
-    title: string
-    updatedAt: number
-    messages: AiMsg[]
-}
-
 /**
- * AI 对话历史，存于与执行历史相同的 SQLite 库（后端命令）。
+ * AI 对话与某次执行记录（executionId）绑定，存于与执行历史同一个 SQLite 库。
+ * 未关联执行的对话属临时会话，不保存。
  */
 export function useAiHistory()
 {
-    const conversations = ref<AiConversationMeta[]>([])
-
-    const reload = async () => {
-        try {
-            conversations.value = await invoke<AiConversationMeta[]>('list_ai_conversations')
-        }
-        catch (error) {
-            console.error('读取 AI 对话历史失败:', error)
-        }
-    }
-
-    const saveConversation = async (conv: AiConversation) => {
+    const saveConversation = async (executionId: number, messages: AiMsg[]) => {
         await invoke('save_ai_conversation', {
-            id: conv.id,
-            title: conv.title,
-            messages: JSON.stringify(conv.messages),
-            updatedAt: conv.updatedAt
+            executionId,
+            messages: JSON.stringify(messages),
+            updatedAt: Date.now()
         })
-        await reload()
     }
 
-    const getMessages = async (id: string): Promise<AiMsg[]> => {
-        const json = await invoke<string>('get_ai_conversation', {id})
+    const getMessages = async (executionId: number): Promise<AiMsg[]> => {
+        const json = await invoke<string>('get_ai_conversation', {executionId})
+        if (!json) {
+            return []
+        }
         try {
             return JSON.parse(json)
         }
@@ -59,10 +33,9 @@ export function useAiHistory()
         }
     }
 
-    const remove = async (id: string) => {
-        await invoke('delete_ai_conversation', {id})
-        await reload()
+    const deleteConversation = async (executionId: number) => {
+        await invoke('delete_ai_conversation', {executionId})
     }
 
-    return {conversations, reload, saveConversation, getMessages, remove}
+    return {saveConversation, getMessages, deleteConversation}
 }

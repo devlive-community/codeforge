@@ -14,7 +14,7 @@
                @open-file="handleOpenFileClick"
                @save-file="saveFile"
                @show-history="showHistory = true"
-               @show-ai="showAi = true"
+               @show-ai="handleShowAi"
                @show-settings="showSettings = true"
                @load-example="loadExample">
     </AppHeader>
@@ -80,12 +80,13 @@
                 </div>
               </div>
               <div class="flex-1 overflow-hidden relative">
-                <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+                <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey" @ready="editorView = $event"/>
                 <LargeFileViewer v-if="showViewer && viewerFile"
                                  :file-path="viewerFile.path"
                                  :line-count="viewerFile.lineCount"
                                  :size-bytes="viewerFile.sizeBytes"
                                  @close="closeViewer"/>
+                <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
               </div>
             </div>
           </template>
@@ -143,12 +144,13 @@
           </div>
         </div>
         <div class="flex-1 overflow-hidden relative">
-          <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey"/>
+          <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey" @ready="editorView = $event"/>
           <LargeFileViewer v-if="showViewer && viewerFile"
                            :file-path="viewerFile.path"
                            :line-count="viewerFile.lineCount"
                            :size-bytes="viewerFile.sizeBytes"
                            @close="closeViewer"/>
+          <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
         </div>
       </div>
       </div>
@@ -169,7 +171,8 @@
     <!-- 执行历史 -->
     <ExecutionHistory v-model:show="showHistory"
                       :supported-languages="supportedLanguages"
-                      @restore="restoreHistoryItem"/>
+                      @restore="restoreHistoryItem"
+                      @open-ai="openAiForExecution"/>
 
     <!-- 运行未保存文件询问 -->
     <Modal v-model:show="showRunPrompt" title="运行未保存的文件" size="sm">
@@ -186,7 +189,7 @@
     </Modal>
 
     <!-- AI 助手 -->
-    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" @close="showAi = false"/>
+    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" @close="showAi = false" @insert-code="applyAiCode"/>
 
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
@@ -225,6 +228,7 @@ import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
 import QuickOpen from './components/QuickOpen.vue'
 import AiAssistant from './components/AiAssistant.vue'
+import InlineGenerate from './components/InlineGenerate.vue'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
@@ -245,6 +249,7 @@ const {
   isRunning,
   isSuccess,
   lastExecutionTime,
+  currentExecutionId,
   runCode,
   stopCode,
   clearOutput,
@@ -518,8 +523,61 @@ const handleOpenFileClick = async () => {
   }
 }
 
-// AI 助手抽屉
+// AI 助手抽屉（绑定的执行 id：工具栏打开取最近一次运行，历史面板打开取指定运行）
 const showAi = ref(false)
+const aiExecutionId = ref<number | null>(null)
+// 失败运行的报错上下文，供"分析报错"快捷动作
+const aiErrorContext = ref<{ code: string, error: string } | null>(null)
+
+const combinedOutput = (item: ExecutionResult) =>
+    [item.stdout?.trim(), item.stderr?.trim()].filter(Boolean).join('\n\n')
+
+const handleShowAi = () => {
+  aiExecutionId.value = currentExecutionId.value
+  // 最近一次运行失败则带上报错
+  aiErrorContext.value = currentExecutionId.value != null && !isSuccess.value && output.value
+      ? {code: code.value, error: output.value}
+      : null
+  showAi.value = true
+}
+
+const openAiForExecution = (item: ExecutionResult) => {
+  aiExecutionId.value = item.id ?? null
+  aiErrorContext.value = item.success
+      ? null
+      : {code: item.code, error: combinedOutput(item) || '(无输出)'}
+  showAi.value = true
+}
+
+// 把 AI 代码块应用到编辑器（替换当前内容，可撤销）
+const applyAiCode = (codeText: string) => {
+  code.value = codeText
+}
+
+// 当前 CodeMirror view（用于在光标处插入生成的代码）
+const editorView = ref<any>(null)
+
+// AI 自然语言生成
+const showGenerate = ref(false)
+const openGenerate = () => {
+  showGenerate.value = true
+}
+
+// 在光标处插入/替换选区为生成的代码
+const insertGeneratedCode = (text: string) => {
+  const view = editorView.value
+  if (view) {
+    const sel = view.state.selection.main
+    view.dispatch({
+      changes: {from: sel.from, to: sel.to, insert: text},
+      selection: {anchor: sel.from + text.length}
+    })
+    view.focus()
+  }
+  else {
+    code.value = text
+  }
+}
 
 // 快速打开（Cmd+P）
 const showQuickOpen = ref(false)
@@ -715,7 +773,8 @@ window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 // 是否有弹窗/覆盖层打开（打开时不响应全局快捷键）
 const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
-    || showHistory.value || showViewer.value || showRunPrompt.value || showQuickOpen.value
+    || showHistory.value || showViewer.value || showRunPrompt.value
+    || showQuickOpen.value || showGenerate.value
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
@@ -723,6 +782,7 @@ const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
 const shortcutDispatch: Record<string, () => void> = {
   run: () => handleRunCode(),
   quickOpen: () => openQuickOpen(),
+  generate: () => openGenerate(),
   save: () => saveFile(),
   saveAs: () => saveFileAs(),
   open: () => handleOpenFileClick(),

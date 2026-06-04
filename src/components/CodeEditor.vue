@@ -6,7 +6,8 @@
                 :extensions="extensions"
                 :indent-with-tab="editorConfig?.indent_with_tab"
                 :tab-size="editorConfig?.tab_size"
-                @change="handleInput"/>
+                @change="handleInput"
+                @ready="onReady"/>
   </div>
 </template>
 
@@ -22,6 +23,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  'ready': [view: any]
 }>()
 
 const {
@@ -33,6 +35,10 @@ const {
 
 const handleInput = (value: string) => {
   emit('update:modelValue', value)
+}
+
+const onReady = (payload: any) => {
+  emit('ready', payload.view)
 }
 
 onMounted(async () => {
