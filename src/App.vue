@@ -186,7 +186,7 @@
     </Modal>
 
     <!-- AI 助手 -->
-    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" @close="showAi = false"/>
+    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="currentExecutionId" @close="showAi = false"/>
 
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
@@ -245,6 +245,7 @@ const {
   isRunning,
   isSuccess,
   lastExecutionTime,
+  currentExecutionId,
   runCode,
   stopCode,
   clearOutput,

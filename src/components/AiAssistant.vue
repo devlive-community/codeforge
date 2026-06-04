@@ -8,11 +8,8 @@
         <span class="text-xs text-gray-400 truncate">{{ active.model }}</span>
       </div>
       <div class="flex items-center space-x-1 flex-shrink-0">
-        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="新对话" @click="newConversation">
-          <Plus class="w-4 h-4"/>
-        </button>
-        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" :class="{ 'text-blue-600': showHistory }" title="历史对话" @click="showHistory = !showHistory">
-          <History class="w-4 h-4"/>
+        <button v-if="messages.length" class="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100" title="清空对话" @click="clearChat">
+          <Trash2 class="w-4 h-4"/>
         </button>
         <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="关闭" @click="emit('close')">
           <X class="w-4 h-4"/>
@@ -20,22 +17,10 @@
       </div>
     </div>
 
-    <!-- 历史对话列表 -->
-    <div v-if="showHistory" class="border-b border-gray-200 max-h-60 overflow-y-auto flex-shrink-0">
-      <div v-if="conversations.length === 0" class="px-4 py-4 text-center text-xs text-gray-400">暂无历史对话</div>
-      <div v-for="c in conversations"
-           :key="c.id"
-           class="group flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
-           :class="{ 'bg-blue-50': c.id === currentId }"
-           @click="loadConversation(c.id)">
-        <div class="flex-1 min-w-0">
-          <div class="text-xs text-gray-700 truncate">{{ c.title }}</div>
-          <div class="text-[10px] text-gray-400">{{ formatTime(c.updated_at) }}</div>
-        </div>
-        <button class="ml-2 p-0.5 rounded text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100" title="删除" @click.stop="deleteConversation(c.id)">
-          <Trash2 class="w-3.5 h-3.5"/>
-        </button>
-      </div>
+    <!-- 关联状态 -->
+    <div class="px-4 py-1 text-xs border-b flex-shrink-0"
+         :class="executionId != null ? 'text-gray-500 bg-gray-50 border-gray-200' : 'text-amber-600 bg-amber-50 border-amber-100'">
+      {{ executionId != null ? `已关联运行 #${executionId}，对话随该次运行保存` : '临时会话：运行代码后对话才会保存' }}
     </div>
 
     <!-- 快捷动作 -->
@@ -73,10 +58,10 @@
 </template>
 
 <script setup lang="ts">
-import {nextTick, onMounted, onUnmounted, ref} from 'vue'
+import {nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
-import {History, Plus, Sparkles, Trash2, X} from 'lucide-vue-next'
+import {Sparkles, Trash2, X} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import {useAiConfig} from '../composables/useAiConfig'
 import {useAiHistory, type AiMsg} from '../composables/useAiHistory'
@@ -86,71 +71,26 @@ import {useToast} from '../plugins/toast'
 const md = new MarkdownIt({html: false, linkify: true, breaks: true})
 const renderMd = (text: string) => md.render(text || '')
 
-type Msg = AiMsg
-
 const props = defineProps<{
   code: string
   language: string
+  executionId: number | null
 }>()
 
 const emit = defineEmits<{ close: [] }>()
 
 const toast = useToast()
 const {active, reload} = useAiConfig()
-const {conversations, reload: reloadHistory, saveConversation, getMessages, remove} = useAiHistory()
+const {saveConversation, getMessages, deleteConversation} = useAiHistory()
 
-const messages = ref<Msg[]>([])
+const messages = ref<AiMsg[]>([])
 const input = ref('')
 const sending = ref(false)
 const streamingIndex = ref(-1)
 const listRef = ref<HTMLElement | null>(null)
-const showHistory = ref(false)
-const currentId = ref<string | null>(null)
 
 let currentStreamId = ''
 let unlistenDelta: UnlistenFn | null = null
-
-const formatTime = (ts: number) => new Date(ts).toLocaleString()
-
-// 把当前对话写入历史（SQLite）
-const persistCurrent = async () => {
-  if (messages.value.length === 0) {
-    return
-  }
-  const id = currentId.value || crypto.randomUUID()
-  const firstUser = messages.value.find(m => m.role === 'user')
-  const title = (firstUser?.content || 'AI 对话').replace(/\s+/g, ' ').slice(0, 30)
-  currentId.value = id
-  try {
-    await saveConversation({id, title, updatedAt: Date.now(), messages: messages.value.map(m => ({...m}))})
-  }
-  catch (error) {
-    console.error('保存 AI 对话失败:', error)
-  }
-}
-
-const newConversation = async () => {
-  await persistCurrent()
-  messages.value = []
-  currentId.value = null
-  showHistory.value = false
-}
-
-const loadConversation = async (id: string) => {
-  await persistCurrent()
-  messages.value = await getMessages(id)
-  currentId.value = id
-  showHistory.value = false
-  scrollToBottom()
-}
-
-const deleteConversation = async (id: string) => {
-  await remove(id)
-  if (currentId.value === id) {
-    messages.value = []
-    currentId.value = null
-  }
-}
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -160,19 +100,41 @@ const scrollToBottom = () => {
   })
 }
 
-// 等待中（首段未到达前显示"思考中"）
 const waiting = () => sending.value && (streamingIndex.value < 0 || !messages.value[streamingIndex.value]?.content)
 
-onMounted(async () => {
-  // 加载历史并恢复最近一次对话
-  await reloadHistory()
-  if (conversations.value.length > 0) {
-    const latest = conversations.value[0]
-    messages.value = await getMessages(latest.id)
-    currentId.value = latest.id
-    scrollToBottom()
+// 载入当前执行对应的对话（无关联则清空）
+const loadForExecution = async () => {
+  if (props.executionId != null) {
+    messages.value = await getMessages(props.executionId)
   }
+  else {
+    messages.value = []
+  }
+  scrollToBottom()
+}
 
+// 仅在已关联执行时保存
+const persist = async () => {
+  if (props.executionId == null || messages.value.length === 0) {
+    return
+  }
+  try {
+    await saveConversation(props.executionId, messages.value.map(m => ({...m})))
+  }
+  catch (error) {
+    console.error('保存 AI 对话失败:', error)
+  }
+}
+
+const clearChat = async () => {
+  messages.value = []
+  if (props.executionId != null) {
+    await deleteConversation(props.executionId)
+  }
+}
+
+onMounted(async () => {
+  await loadForExecution()
   unlistenDelta = await listen<{ stream_id: string, delta: string }>('ai-stream-delta', (e) => {
     if (e.payload.stream_id === currentStreamId && streamingIndex.value >= 0) {
       messages.value[streamingIndex.value].content += e.payload.delta
@@ -184,6 +146,9 @@ onMounted(async () => {
 onUnmounted(() => {
   unlistenDelta?.()
 })
+
+// 切换到不同的执行 → 切换对应对话
+watch(() => props.executionId, loadForExecution)
 
 const send = async (text?: string) => {
   const content = (text ?? input.value).trim()
@@ -200,10 +165,8 @@ const send = async (text?: string) => {
   messages.value.push({role: 'user', content})
   input.value = ''
 
-  // 发给后端的对话（不含占位的空助手消息）
   const payloadMessages = messages.value.map(m => ({role: m.role, content: m.content}))
 
-  // 占位的助手消息，流式追加
   messages.value.push({role: 'assistant', content: ''})
   streamingIndex.value = messages.value.length - 1
 
@@ -233,7 +196,7 @@ const send = async (text?: string) => {
     sending.value = false
     streamingIndex.value = -1
     scrollToBottom()
-    persistCurrent()
+    persist()
   }
 }
 
