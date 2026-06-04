@@ -18,6 +18,19 @@
                @load-example="loadExample">
     </AppHeader>
 
+    <!-- 运行输入：参数 + stdin（任何布局/运行前都可填）-->
+    <div class="bg-gray-50 border-b border-gray-200 flex-shrink-0">
+      <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 cursor-pointer" @click="showRunInput = !showRunInput">
+        <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
+        运行输入（参数 / stdin）
+        <span v-if="!showRunInput && (runArgs || runStdin)" class="ml-2 text-blue-500">●</span>
+      </button>
+      <div v-if="showRunInput" class="px-4 pb-2 flex items-start space-x-2">
+        <input v-model="runArgs" class="flex-1 text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="运行参数（空格分隔）"/>
+        <textarea v-model="runStdin" rows="2" class="flex-1 text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="标准输入 stdin（运行时喂给程序）"></textarea>
+      </div>
+    </div>
+
     <div class="flex-1 overflow-hidden flex">
       <!-- 左侧文件树侧栏 -->
       <template v-if="sidebarVisible">
@@ -79,18 +92,6 @@
                 <button class="text-gray-400 hover:text-gray-600 transition-colors" title="收起控制台" @click="showConsole = false">
                   <X class="w-4 h-4"/>
                 </button>
-              </div>
-
-              <!-- 运行输入：参数 + stdin -->
-              <div class="bg-gray-50 border-b border-gray-200 flex-shrink-0">
-                <button class="w-full flex items-center px-3 py-1 text-xs text-gray-500 hover:bg-gray-100 cursor-pointer" @click="showRunInput = !showRunInput">
-                  <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
-                  运行输入（参数 / stdin）
-                </button>
-                <div v-if="showRunInput" class="px-3 pb-2 space-y-1.5">
-                  <input v-model="runArgs" class="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="运行参数（空格分隔）"/>
-                  <textarea v-model="runStdin" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="标准输入 stdin（运行时喂给程序）"></textarea>
-                </div>
               </div>
 
               <ConsoleOutput v-if="consoleType === 'console'"
