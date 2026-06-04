@@ -25,9 +25,15 @@
         运行输入（参数 / stdin）
         <span v-if="!showRunInput && (runArgs || runStdin)" class="ml-2 text-blue-500">●</span>
       </button>
-      <div v-if="showRunInput" class="px-4 pb-2 flex items-start space-x-2">
-        <input v-model="runArgs" class="flex-1 text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="运行参数（空格分隔）"/>
-        <textarea v-model="runStdin" rows="2" class="flex-1 text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="标准输入 stdin（运行时喂给程序）"></textarea>
+      <div v-if="showRunInput" class="px-4 pb-2 flex items-start space-x-3">
+        <div class="flex flex-col w-56 flex-shrink-0">
+          <label class="text-[11px] text-gray-400 mb-0.5">运行参数</label>
+          <input v-model="runArgs" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="空格分隔，如 --port 8080"/>
+        </div>
+        <div class="flex flex-col flex-1 min-w-0">
+          <label class="text-[11px] text-gray-400 mb-0.5">标准输入 (stdin)</label>
+          <textarea v-model="runStdin" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="运行时喂给程序的输入"></textarea>
+        </div>
       </div>
     </div>
 
