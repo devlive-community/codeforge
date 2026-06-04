@@ -187,7 +187,7 @@
     </Modal>
 
     <!-- AI 助手 -->
-    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" @close="showAi = false" @insert-code="applyAiCode"/>
+    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" @close="showAi = false" @insert-code="applyAiCode"/>
 
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
@@ -523,14 +523,26 @@ const handleOpenFileClick = async () => {
 // AI 助手抽屉（绑定的执行 id：工具栏打开取最近一次运行，历史面板打开取指定运行）
 const showAi = ref(false)
 const aiExecutionId = ref<number | null>(null)
+// 失败运行的报错上下文，供"分析报错"快捷动作
+const aiErrorContext = ref<{ code: string, error: string } | null>(null)
+
+const combinedOutput = (item: ExecutionResult) =>
+    [item.stdout?.trim(), item.stderr?.trim()].filter(Boolean).join('\n\n')
 
 const handleShowAi = () => {
   aiExecutionId.value = currentExecutionId.value
+  // 最近一次运行失败则带上报错
+  aiErrorContext.value = currentExecutionId.value != null && !isSuccess.value && output.value
+      ? {code: code.value, error: output.value}
+      : null
   showAi.value = true
 }
 
-const openAiForExecution = (id: number) => {
-  aiExecutionId.value = id
+const openAiForExecution = (item: ExecutionResult) => {
+  aiExecutionId.value = item.id ?? null
+  aiErrorContext.value = item.success
+      ? null
+      : {code: item.code, error: combinedOutput(item) || '(无输出)'}
   showAi.value = true
 }
 

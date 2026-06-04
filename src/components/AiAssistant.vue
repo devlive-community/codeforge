@@ -24,7 +24,8 @@
     </div>
 
     <!-- 快捷动作 -->
-    <div class="flex items-center space-x-2 px-3 py-2 border-b border-gray-100 flex-shrink-0">
+    <div class="flex items-center flex-wrap gap-2 px-3 py-2 border-b border-gray-100 flex-shrink-0">
+      <button v-if="errorContext" class="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 cursor-pointer" @click="analyzeError">分析报错</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('解释下面的代码')">解释代码</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('找出下面代码中的 bug 并给出修复')">找 Bug</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('优化下面的代码并说明原因')">优化</button>
@@ -112,6 +113,7 @@ const props = defineProps<{
   code: string
   language: string
   executionId: number | null
+  errorContext?: { code: string, error: string } | null
 }>()
 
 const emit = defineEmits<{ close: []; 'insert-code': [code: string] }>()
@@ -241,6 +243,13 @@ const stop = () => {
   if (currentStreamId) {
     invoke('stop_ai_stream', {streamId: currentStreamId})
   }
+}
+
+const analyzeError = () => {
+  if (!props.errorContext) {
+    return
+  }
+  send(`这段代码运行报错了，请分析原因并给出修复：\n\n代码：\n\`\`\`${props.language}\n${props.errorContext.code}\n\`\`\`\n\n报错输出：\n\`\`\`\n${props.errorContext.error}\n\`\`\``)
 }
 
 const quick = (instruction: string) => {

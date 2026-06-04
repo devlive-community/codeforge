@@ -153,7 +153,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:show': [value: boolean]
   restore: [item: ExecutionResult]
-  'open-ai': [executionId: number]
+  'open-ai': [item: ExecutionResult]
 }>()
 
 const toast = useToast()
@@ -288,7 +288,7 @@ const openAi = () => {
   if (selectedItem.value?.id == null) {
     return
   }
-  emit('open-ai', selectedItem.value.id)
+  emit('open-ai', selectedItem.value)
   visible.value = false
 }
 
