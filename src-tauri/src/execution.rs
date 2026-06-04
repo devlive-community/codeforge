@@ -1,11 +1,13 @@
 use crate::plugins::{CodeExecutionRequest, ExecutionResult, PluginManager};
 use log::{error, info, warn};
+use rusqlite::{Connection, params};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::sync::{Arc, OnceLock, mpsc};
+use std::sync::{Arc, Mutex as StdMutex, OnceLock, mpsc};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State};
@@ -21,8 +23,153 @@ pub struct ExecutionTask {
     pub stop_flag: Arc<Mutex<bool>>,
 }
 
-pub type ExecutionHistory = Mutex<Vec<ExecutionResult>>;
 pub type PluginManagerState = Mutex<PluginManager>;
+
+#[derive(Debug, Serialize)]
+pub struct ExecutionHistoryPage {
+    pub items: Vec<ExecutionResult>,
+    pub total: u64,
+}
+
+pub struct ExecutionHistory {
+    conn: StdMutex<Connection>,
+}
+
+impl ExecutionHistory {
+    pub fn new() -> Result<Self, String> {
+        let db_path = get_codeforge_db_path()?;
+        let conn =
+            Connection::open(&db_path).map_err(|e| format!("打开执行历史数据库失败: {}", e))?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS execution_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                success INTEGER NOT NULL,
+                code TEXT NOT NULL,
+                stdout TEXT NOT NULL,
+                stderr TEXT NOT NULL,
+                execution_time INTEGER NOT NULL,
+                timestamp INTEGER NOT NULL,
+                language TEXT NOT NULL
+            )",
+            [],
+        )
+        .map_err(|e| format!("初始化执行历史数据库失败: {}", e))?;
+
+        Ok(Self {
+            conn: StdMutex::new(conn),
+        })
+    }
+
+    fn insert(&self, result: &ExecutionResult) -> Result<(), String> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| "执行历史数据库锁错误".to_string())?;
+
+        conn.execute(
+            "INSERT INTO execution_history
+                (success, code, stdout, stderr, execution_time, timestamp, language)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                if result.success { 1 } else { 0 },
+                &result.code,
+                &result.stdout,
+                &result.stderr,
+                result.execution_time as i64,
+                result.timestamp as i64,
+                &result.language,
+            ],
+        )
+        .map_err(|e| format!("保存执行历史失败: {}", e))?;
+
+        Ok(())
+    }
+
+    fn list(&self) -> Result<Vec<ExecutionResult>, String> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| "执行历史数据库锁错误".to_string())?;
+        let mut statement = conn
+            .prepare(
+                "SELECT success, code, stdout, stderr, execution_time, timestamp, language
+                 FROM execution_history
+                 ORDER BY id ASC",
+            )
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        let rows = statement
+            .query_map([], |row| {
+                Ok(ExecutionResult {
+                    success: row.get::<_, i64>(0)? != 0,
+                    code: row.get(1)?,
+                    stdout: row.get(2)?,
+                    stderr: row.get(3)?,
+                    execution_time: row.get::<_, i64>(4)? as u128,
+                    timestamp: row.get::<_, i64>(5)? as u64,
+                    language: row.get(6)?,
+                })
+            })
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("读取执行历史失败: {}", e))
+    }
+
+    fn list_page(&self, offset: u64, limit: u64) -> Result<ExecutionHistoryPage, String> {
+        let limit = limit.clamp(1, 100);
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| "执行历史数据库锁错误".to_string())?;
+
+        let total = conn
+            .query_row("SELECT COUNT(*) FROM execution_history", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .map_err(|e| format!("统计执行历史失败: {}", e))? as u64;
+
+        let mut statement = conn
+            .prepare(
+                "SELECT success, code, stdout, stderr, execution_time, timestamp, language
+                 FROM execution_history
+                 ORDER BY id DESC
+                 LIMIT ?1 OFFSET ?2",
+            )
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        let rows = statement
+            .query_map(params![limit as i64, offset as i64], |row| {
+                Ok(ExecutionResult {
+                    success: row.get::<_, i64>(0)? != 0,
+                    code: row.get(1)?,
+                    stdout: row.get(2)?,
+                    stderr: row.get(3)?,
+                    execution_time: row.get::<_, i64>(4)? as u128,
+                    timestamp: row.get::<_, i64>(5)? as u64,
+                    language: row.get(6)?,
+                })
+            })
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        let items = rows
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("读取执行历史失败: {}", e))?;
+
+        Ok(ExecutionHistoryPage { items, total })
+    }
+
+    fn clear(&self) -> Result<(), String> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| "执行历史数据库锁错误".to_string())?;
+        conn.execute("DELETE FROM execution_history", [])
+            .map_err(|e| format!("清空执行历史失败: {}", e))?;
+        Ok(())
+    }
+}
 
 // 全局任务管理器
 type TaskManager = Arc<Mutex<HashMap<String, ExecutionTask>>>;
@@ -50,6 +197,20 @@ fn get_codeforge_cache_dir(language: &str) -> Result<PathBuf, String> {
     Ok(cache_dir)
 }
 
+pub fn get_codeforge_db_path() -> Result<PathBuf, String> {
+    let home_dir = dirs::home_dir().ok_or("无法获取用户主目录")?;
+    let codeforge_dir = home_dir.join(".codeforge");
+    fs::create_dir_all(&codeforge_dir).map_err(|e| format!("创建配置目录失败: {}", e))?;
+    let db_path = codeforge_dir.join("codeforge.sqlite");
+    let old_db_path = codeforge_dir.join("execution_history.sqlite");
+
+    if !db_path.exists() && old_db_path.exists() {
+        fs::rename(&old_db_path, &db_path).map_err(|e| format!("迁移执行历史数据库失败: {}", e))?;
+    }
+
+    Ok(db_path)
+}
+
 // 检查是否应该过滤 stderr 行
 fn should_filter_stderr_line(language: &str, line: &str) -> bool {
     match language {
@@ -68,32 +229,32 @@ fn should_filter_stderr_line(language: &str, line: &str) -> bool {
     }
 }
 
-// 停止执行命令
+// 停止执行命令（按 task_id 停止指定的运行任务）
 #[tauri::command]
-pub async fn stop_execution(language: String) -> Result<bool, String> {
+pub async fn stop_execution(task_id: String) -> Result<bool, String> {
     let task_manager = init_task_manager();
     let mut guard = task_manager.lock().await;
 
-    if let Some(task) = guard.remove(&language) {
+    if let Some(task) = guard.remove(&task_id) {
         // 设置停止标志
         {
             let mut stop_flag = task.stop_flag.lock().await;
             *stop_flag = true;
         }
-        info!("停止执行 -> 成功设置停止标志给语言 [ {} ]", language);
+        info!("停止执行 -> 成功设置停止标志给任务 [ {} ]", task_id);
         Ok(true)
     } else {
-        warn!("停止执行 -> 语言 [ {} ] 没有正在运行的任务", language);
+        warn!("停止执行 -> 任务 [ {} ] 没有正在运行", task_id);
         Ok(false)
     }
 }
 
-// 检查是否有正在运行的任务
+// 检查指定任务是否正在运行
 #[tauri::command]
-pub async fn is_execution_running(language: String) -> Result<bool, String> {
+pub async fn is_execution_running(task_id: String) -> Result<bool, String> {
     let task_manager = init_task_manager();
     let guard = task_manager.lock().await;
-    Ok(guard.contains_key(&language))
+    Ok(guard.contains_key(&task_id))
 }
 
 // 通用的代码执行函数
@@ -104,31 +265,43 @@ pub async fn execute_code(
     plugin_manager: State<'_, PluginManagerState>,
     app: AppHandle,
 ) -> Result<ExecutionResult, String> {
-    info!("执行代码 -> 调用插件 [ {} ] 开始", request.language);
-
-    // 先停止之前可能正在运行的任务
-    let _ = stop_execution(request.language.clone()).await;
+    let task_id = request.task_id.clone();
+    info!(
+        "执行代码 -> 调用插件 [ {} ] 任务 [ {} ] 开始",
+        request.language, task_id
+    );
 
     let manager = plugin_manager.lock().await;
     let plugin = manager
         .get_plugin(&request.language)
         .ok_or_else(|| format!("Unsupported language: {}", request.language))?;
 
-    // 使用 .codeforge/cache/plugin/<language> 目录
-    let temp_dir = get_codeforge_cache_dir(&request.language)?;
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    let file_work = format!("Codeforge_{}_{}", request.language, timestamp);
-    let work_dir = temp_dir.join(&file_work);
-    fs::create_dir_all(&work_dir).map_err(|e| format!("创建工作目录失败: {}", e))?;
-    let file_name = format!("{}.{}", file_work, plugin.get_file_extension());
-    let file_path = work_dir.join(&file_name);
+    // 决定运行的文件与工作目录：
+    // - 提供了 file_path：就地运行该文件，工作目录为其所在目录（多文件 import/相对路径正确）
+    // - 否则：写入 .codeforge/cache/plugins/<language> 临时目录后运行
+    let (file_path, cwd): (PathBuf, Option<PathBuf>) = if let Some(fp) = request.file_path.clone() {
+        let p = PathBuf::from(&fp);
+        let dir = p.parent().map(|d| d.to_path_buf());
+        (p, dir)
+    } else {
+        let temp_dir = get_codeforge_cache_dir(&request.language)?;
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let file_work = format!("Codeforge_{}_{}", request.language, timestamp);
+        let work_dir = temp_dir.join(&file_work);
+        fs::create_dir_all(&work_dir).map_err(|e| format!("创建工作目录失败: {}", e))?;
+        let file_name = format!("{}.{}", file_work, plugin.get_file_extension());
+        let fp = work_dir.join(&file_name);
 
-    // 写入代码到临时文件
-    fs::write(&file_path, &request.code)
-        .map_err(|e| format!("Failed to write temporary file: {}", e))?;
+        // 写入代码到临时文件
+        fs::write(&fp, &request.code)
+            .map_err(|e| format!("Failed to write temporary file: {}", e))?;
+
+        let home = plugin.get_execute_home();
+        (fp, home)
+    };
 
     let _processed_code = plugin
         .pre_execute_hook(&request.code, file_path.to_str().unwrap())
@@ -143,7 +316,11 @@ pub async fn execute_code(
     let start_time = std::time::Instant::now();
 
     let cmd = plugin.get_command(None, false, Some(file_path.to_string_lossy().to_string()));
-    let args = plugin.get_execute_args(file_path.to_str().unwrap());
+    let mut args = plugin.get_execute_args(file_path.to_str().unwrap());
+    // 追加用户自定义运行参数
+    if let Some(extra) = &request.args {
+        args.extend(extra.iter().cloned());
+    }
     info!(
         "执行代码 -> 调用插件 [ {} ] 执行命令 {} 携带参数 {}",
         request.language,
@@ -155,7 +332,8 @@ pub async fn execute_code(
     let _ = app.emit(
         "code-execution-start",
         serde_json::json!({
-            "language": request.language
+            "language": request.language,
+            "task_id": task_id
         }),
     );
 
@@ -166,9 +344,16 @@ pub async fn execute_code(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    // 如果插件有 execute_home，设置工作目录
-    if let Some(execute_home) = plugin.get_execute_home() {
-        command.current_dir(&execute_home);
+    // 有标准输入则用管道写入，否则关闭 stdin 避免程序读取时挂起
+    if request.stdin.is_some() {
+        command.stdin(Stdio::piped());
+    } else {
+        command.stdin(Stdio::null());
+    }
+
+    // 设置工作目录（就地运行为文件目录，否则为插件 execute_home）
+    if let Some(dir) = &cwd {
+        command.current_dir(dir);
     }
 
     let mut child = match command.spawn() {
@@ -185,6 +370,7 @@ pub async fn execute_code(
                 "code-execution-complete",
                 serde_json::json!({
                     "language": request.language,
+                    "task_id": task_id,
                     "success": false
                 }),
             );
@@ -197,6 +383,13 @@ pub async fn execute_code(
         }
     };
 
+    // 写入标准输入后关闭管道（让程序读到 EOF）
+    if let Some(input) = &request.stdin {
+        if let Some(mut stdin) = child.stdin.take() {
+            let _ = stdin.write_all(input.as_bytes());
+        }
+    }
+
     // 创建停止标志
     let stop_flag = Arc::new(tokio::sync::Mutex::new(false));
 
@@ -205,7 +398,7 @@ pub async fn execute_code(
     {
         let mut guard = task_manager.lock().await;
         guard.insert(
-            request.language.clone(),
+            task_id.clone(),
             ExecutionTask {
                 language: request.language.clone(),
                 process_id: child.id(),
@@ -261,13 +454,14 @@ pub async fn execute_code(
                 // 从任务管理器中移除
                 {
                     let mut guard = task_manager.lock().await;
-                    guard.remove(&request.language);
+                    guard.remove(&task_id);
                 }
 
                 let _ = app.emit(
                     "code-execution-stopped",
                     serde_json::json!({
-                        "language": request.language
+                        "language": request.language,
+                        "task_id": task_id
                     }),
                 );
 
@@ -284,13 +478,14 @@ pub async fn execute_code(
             // 从任务管理器中移除
             {
                 let mut guard = task_manager.lock().await;
-                guard.remove(&request.language);
+                guard.remove(&task_id);
             }
 
             let _ = app.emit(
                 "code-execution-timeout",
                 serde_json::json!({
-                    "language": request.language
+                    "language": request.language,
+                    "task_id": task_id
                 }),
             );
 
@@ -310,7 +505,8 @@ pub async fn execute_code(
                 serde_json::json!({
                     "type": "stdout",
                     "content": line,
-                    "language": request.language
+                    "language": request.language,
+                    "task_id": task_id
                 }),
             );
         }
@@ -325,7 +521,8 @@ pub async fn execute_code(
                     serde_json::json!({
                         "type": "stderr",
                         "content": line,
-                        "language": request.language
+                        "language": request.language,
+                        "task_id": task_id
                     }),
                 );
             }
@@ -342,7 +539,8 @@ pub async fn execute_code(
                         serde_json::json!({
                             "type": "stdout",
                             "content": line,
-                            "language": request.language
+                            "language": request.language,
+                            "task_id": task_id
                         }),
                     );
                 }
@@ -355,7 +553,8 @@ pub async fn execute_code(
                             serde_json::json!({
                                 "type": "stderr",
                                 "content": line,
-                                "language": request.language
+                                "language": request.language,
+                                "task_id": task_id
                             }),
                         );
                     }
@@ -372,11 +571,12 @@ pub async fn execute_code(
                 // 从任务管理器中移除
                 {
                     let mut guard = task_manager.lock().await;
-                    guard.remove(&request.language);
+                    guard.remove(&task_id);
                 }
 
                 let mut result = ExecutionResult {
                     success: status.success(),
+                    code: request.code.clone(),
                     stdout: stdout_lines.join("\n"),
                     stderr: stderr_lines.join("\n"),
                     execution_time,
@@ -395,7 +595,8 @@ pub async fn execute_code(
                         serde_json::json!({
                             "type": "stdout",
                             "content": "代码执行成功 (无输出)",
-                            "language": request.language
+                            "language": request.language,
+                            "task_id": task_id
                         }),
                     );
                 }
@@ -404,18 +605,14 @@ pub async fn execute_code(
                     "code-execution-complete",
                     serde_json::json!({
                         "language": request.language,
+                        "task_id": task_id,
                         "success": result.success,
                         "execution_time": result.execution_time
                     }),
                 );
 
                 drop(manager);
-                let mut history_guard = history.lock().await;
-                history_guard.push(result.clone());
-
-                if history_guard.len() > 100 {
-                    history_guard.remove(0);
-                }
+                history.insert(&result)?;
 
                 info!("执行代码 -> 调用插件 [ {} ] 完成", request.language);
                 return Ok(result);
@@ -431,13 +628,14 @@ pub async fn execute_code(
                 // 从任务管理器中移除
                 {
                     let mut guard = task_manager.lock().await;
-                    guard.remove(&request.language);
+                    guard.remove(&task_id);
                 }
 
                 let _ = app.emit(
                     "code-execution-error",
                     serde_json::json!({
                         "language": request.language,
+                        "task_id": task_id,
                         "error": e.to_string()
                     }),
                 );
@@ -453,14 +651,21 @@ pub async fn execute_code(
 pub async fn get_execution_history(
     history: State<'_, ExecutionHistory>,
 ) -> Result<Vec<ExecutionResult>, String> {
-    let history_guard = history.lock().await;
-    Ok(history_guard.clone())
+    history.list()
+}
+
+// 分页获取执行历史
+#[tauri::command]
+pub async fn get_execution_history_page(
+    offset: u64,
+    limit: u64,
+    history: State<'_, ExecutionHistory>,
+) -> Result<ExecutionHistoryPage, String> {
+    history.list_page(offset, limit)
 }
 
 // 清空执行历史
 #[tauri::command]
 pub async fn clear_execution_history(history: State<'_, ExecutionHistory>) -> Result<(), String> {
-    let mut history_guard = history.lock().await;
-    history_guard.clear();
-    Ok(())
+    history.clear()
 }

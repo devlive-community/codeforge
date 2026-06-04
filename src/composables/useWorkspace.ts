@@ -136,6 +136,89 @@ export function useWorkspace(deps: WorkspaceDeps)
         }
     }
 
+    // 关闭除 id 外的所有标签
+    const closeOthers = (id: string) => {
+        captureToActive()
+        const keep = tabs.value.find(t => t.id === id)
+        if (!keep) {
+            return
+        }
+        tabs.value = [keep]
+        if (activeTabId.value !== id) {
+            activeTabId.value = id
+            loadTab(keep)
+        }
+    }
+
+    // 关闭 id 右侧的所有标签
+    const closeToRight = (id: string) => {
+        const idx = tabs.value.findIndex(t => t.id === id)
+        if (idx === -1) {
+            return
+        }
+        captureToActive()
+        const activeRemoved = tabs.value.slice(idx + 1).some(t => t.id === activeTabId.value)
+        tabs.value = tabs.value.slice(0, idx + 1)
+        if (activeRemoved) {
+            activeTabId.value = id
+            const keep = tabs.value[idx]
+            if (keep) {
+                loadTab(keep)
+            }
+        }
+    }
+
+    // 拖拽排序：把 fromId 移动到 toId 的位置
+    const moveTab = (fromId: string, toId: string) => {
+        const from = tabs.value.findIndex(t => t.id === fromId)
+        const to = tabs.value.findIndex(t => t.id === toId)
+        if (from === -1 || to === -1 || from === to) {
+            return
+        }
+        const arr = [...tabs.value]
+        const [moved] = arr.splice(from, 1)
+        arr.splice(to, 0, moved)
+        tabs.value = arr
+    }
+
+    // 路径是否等于 target 或在其目录下
+    const isUnder = (p: string, target: string) =>
+        p === target || (p.startsWith(target) && (p[target.length] === '/' || p[target.length] === '\\'))
+
+    // 文件/目录被重命名后，同步相关标签的路径（含目录前缀）
+    const updateTabPath = (oldPath: string, newPath: string) => {
+        const remap = (p: string) => {
+            if (p === oldPath) return newPath
+            if (isUnder(p, oldPath)) return newPath + p.slice(oldPath.length)
+            return p
+        }
+        if (currentFilePath.value) {
+            const remapped = remap(currentFilePath.value)
+            if (remapped !== currentFilePath.value) {
+                currentFilePath.value = remapped
+            }
+        }
+        for (const t of tabs.value) {
+            if (t.filePath) {
+                t.filePath = remap(t.filePath)
+            }
+        }
+    }
+
+    // 文件/目录被删除后，解除相关标签的文件关联（内容保留，变为未命名）
+    const detachTabPath = (path: string) => {
+        if (currentFilePath.value && isUnder(currentFilePath.value, path)) {
+            currentFilePath.value = null
+            savedContent.value = null
+        }
+        for (const t of tabs.value) {
+            if (t.filePath && isUnder(t.filePath, path)) {
+                t.filePath = null
+                t.savedContent = null
+            }
+        }
+    }
+
     // 当前 tab 是否为可复用的空白草稿（未关联文件且内容为空）
     const isActiveReusableScratch = () => {
         const t = activeTab.value
@@ -150,6 +233,11 @@ export function useWorkspace(deps: WorkspaceDeps)
         switchTab,
         newTab,
         closeTab,
+        closeOthers,
+        closeToRight,
+        moveTab,
+        updateTabPath,
+        detachTabPath,
         isActiveReusableScratch
     }
 }

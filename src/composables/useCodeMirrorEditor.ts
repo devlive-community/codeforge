@@ -292,7 +292,7 @@ export function useCodeMirrorEditor(props: Props)
         // 添加函数帮助主题
         result.push(functionHelpTheme)
 
-        // 字体缩放快捷键
+        // 字体缩放快捷键（搜索/替换、折叠、括号匹配等由 vue-codemirror 的 basicSetup 提供）
         result.push(fontSizeKeymap)
 
         // 设置字体

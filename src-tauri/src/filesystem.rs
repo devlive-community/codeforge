@@ -1,3 +1,4 @@
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
@@ -5,6 +6,7 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::SystemTime;
+use tauri::{AppHandle, Emitter};
 
 #[derive(Serialize)]
 pub struct FileNode {
@@ -52,6 +54,53 @@ pub fn read_directory_tree(path: String) -> Result<Vec<FileNode>, String> {
 /// 默认文本文件大小上限(MB)，超过则拒绝打开，避免编辑器卡死
 const DEFAULT_MAX_FILE_SIZE_MB: u64 = 5;
 
+/// 快速打开的文件数量上限
+const MAX_LIST_FILES: usize = 20000;
+
+/// 递归列出目录下所有文件（用于 Cmd+P 快速打开）。跳过隐藏目录与常见重目录。
+#[tauri::command]
+pub fn list_files(path: String) -> Result<Vec<String>, String> {
+    let root = Path::new(&path);
+    if !root.is_dir() {
+        return Err(format!("不是有效目录: {}", path));
+    }
+
+    let ignore = ["node_modules", "target", "dist", "build", ".next", ".cache"];
+    let mut files: Vec<String> = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+
+    while let Some(dir) = stack.pop() {
+        if files.len() >= MAX_LIST_FILES {
+            break;
+        }
+        let read = match fs::read_dir(&dir) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        for entry in read.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name == ".DS_Store" {
+                continue;
+            }
+            let p = entry.path();
+            if p.is_dir() {
+                // 跳过隐藏目录与常见重目录
+                if name.starts_with('.') || ignore.contains(&name.as_str()) {
+                    continue;
+                }
+                stack.push(p);
+            } else {
+                files.push(p.to_string_lossy().to_string());
+                if files.len() >= MAX_LIST_FILES {
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(files)
+}
+
 /// 读取文本文件内容（绕开 fs 插件 scope 限制）。
 /// max_size_mb 为打开大小上限(MB)，不传则用默认 5MB。
 #[tauri::command]
@@ -75,6 +124,95 @@ pub fn read_file_text(path: String, max_size_mb: Option<u64>) -> Result<String, 
 #[tauri::command]
 pub fn write_file_text(path: String, content: String) -> Result<(), String> {
     fs::write(&path, content).map_err(|e| format!("写入文件失败: {}", e))
+}
+
+/// 新建空文件
+#[tauri::command]
+pub fn create_file(path: String) -> Result<(), String> {
+    if Path::new(&path).exists() {
+        return Err("文件已存在".to_string());
+    }
+    fs::write(&path, "").map_err(|e| format!("创建文件失败: {}", e))
+}
+
+/// 新建目录
+#[tauri::command]
+pub fn create_directory(path: String) -> Result<(), String> {
+    if Path::new(&path).exists() {
+        return Err("目录已存在".to_string());
+    }
+    fs::create_dir_all(&path).map_err(|e| format!("创建目录失败: {}", e))
+}
+
+/// 重命名/移动
+#[tauri::command]
+pub fn rename_path(from: String, to: String) -> Result<(), String> {
+    if Path::new(&to).exists() {
+        return Err("目标已存在".to_string());
+    }
+    fs::rename(&from, &to).map_err(|e| format!("重命名失败: {}", e))
+}
+
+/// 删除文件或目录（递归）
+#[tauri::command]
+pub fn delete_path(path: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    if p.is_dir() {
+        fs::remove_dir_all(p).map_err(|e| format!("删除目录失败: {}", e))
+    } else {
+        fs::remove_file(p).map_err(|e| format!("删除文件失败: {}", e))
+    }
+}
+
+// 全局目录监听器（保持存活；切换目录时替换旧的）
+static WATCHER: Mutex<Option<RecommendedWatcher>> = Mutex::new(None);
+
+/// 监听目录变化，变化时向前端发送 `fs-changed` 事件
+#[tauri::command]
+pub fn watch_directory(path: String, app: AppHandle) -> Result<(), String> {
+    let app_handle = app.clone();
+    let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
+        if res.is_ok() {
+            let _ = app_handle.emit("fs-changed", ());
+        }
+    })
+    .map_err(|e| format!("创建文件监听失败: {}", e))?;
+
+    watcher
+        .watch(Path::new(&path), RecursiveMode::Recursive)
+        .map_err(|e| format!("监听目录失败: {}", e))?;
+
+    // 替换旧监听器（drop 旧的即停止监听）
+    let mut guard = WATCHER.lock().map_err(|_| "监听锁错误".to_string())?;
+    *guard = Some(watcher);
+    Ok(())
+}
+
+/// 在系统文件管理器中显示该路径
+#[tauri::command]
+pub fn reveal_path(path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "macos")]
+    let result = Command::new("open").args(["-R", &path]).spawn();
+
+    #[cfg(target_os = "windows")]
+    let result = Command::new("explorer")
+        .arg(format!("/select,{}", path))
+        .spawn();
+
+    #[cfg(target_os = "linux")]
+    let result = {
+        let target = Path::new(&path)
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| Path::new(&path).to_path_buf());
+        Command::new("xdg-open").arg(target).spawn()
+    };
+
+    result
+        .map(|_| ())
+        .map_err(|e| format!("打开文件管理器失败: {}", e))
 }
 
 #[derive(Serialize)]

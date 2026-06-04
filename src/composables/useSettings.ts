@@ -1,5 +1,5 @@
 import { nextTick, ref } from 'vue'
-import { BracesIcon, CodeIcon, Database, FileText, Globe, ShieldIcon } from 'lucide-vue-next'
+import { BracesIcon, CodeIcon, Database, FileText, Globe, Keyboard, ShieldIcon, Sparkles } from 'lucide-vue-next'
 
 export function useSettings(emit: any)
 {
@@ -11,6 +11,8 @@ export function useSettings(emit: any)
     const tabsData = [
         { key: 'general', label: '通用', icon: ShieldIcon },
         { key: 'editor', label: '编辑器', icon: CodeIcon },
+        { key: 'shortcut', label: '快捷键', icon: Keyboard },
+        { key: 'ai', label: 'AI', icon: Sparkles },
         { key: 'language', label: '语言', icon: BracesIcon },
         { key: 'network', label: '网络', icon: Globe },
         { key: 'cache', label: '缓存', icon: Database },

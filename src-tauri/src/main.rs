@@ -3,6 +3,8 @@
     windows_subsystem = "windows"
 )]
 
+mod ai;
+mod ai_history;
 mod cache;
 mod config;
 mod custom_plugin_commands;
@@ -20,6 +22,11 @@ mod setup;
 mod update;
 mod utils;
 
+use crate::ai::{ai_chat, ai_chat_stream};
+use crate::ai_history::{
+    AiHistory, delete_ai_conversation, get_ai_conversation, list_ai_conversations,
+    save_ai_conversation,
+};
 use crate::cache::{clear_all_cache, clear_plugins_cache, get_cache_info};
 use crate::custom_plugin_commands::{
     add_custom_plugin, get_custom_plugins, remove_custom_plugin, save_custom_icon,
@@ -36,10 +43,13 @@ use crate::env_providers::{
 };
 use crate::execution::{
     ExecutionHistory, PluginManagerState as ExecutionPluginManagerState, clear_execution_history,
-    execute_code, get_execution_history, is_execution_running, stop_execution,
+    execute_code, get_execution_history, get_execution_history_page, is_execution_running,
+    stop_execution,
 };
 use crate::filesystem::{
-    get_text_file_meta, read_directory_tree, read_file_lines, read_file_text, write_file_text,
+    create_directory, create_file, delete_path, get_text_file_meta, list_files,
+    read_directory_tree, read_file_lines, read_file_text, rename_path, reveal_path,
+    watch_directory, write_file_text,
 };
 use crate::plugin::{get_info, get_supported_languages};
 use crate::setup::app::get_app_info;
@@ -71,7 +81,8 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(ExecutionHistory::default())
+        .manage(ExecutionHistory::new().expect("failed to initialize execution history database"))
+        .manage(AiHistory::new().expect("failed to initialize ai history database"))
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
         .manage(EnvironmentManagerState::new(env_manager))
         .setup(|app| {
@@ -116,6 +127,7 @@ fn main() {
             stop_execution,
             is_execution_running,
             get_execution_history,
+            get_execution_history_page,
             clear_execution_history,
             // 信息相关命令
             get_info,
@@ -158,7 +170,22 @@ fn main() {
             read_file_text,
             write_file_text,
             get_text_file_meta,
-            read_file_lines
+            read_file_lines,
+            create_file,
+            create_directory,
+            rename_path,
+            delete_path,
+            reveal_path,
+            watch_directory,
+            list_files,
+            // AI 助手
+            ai_chat,
+            ai_chat_stream,
+            // AI 对话历史
+            save_ai_conversation,
+            list_ai_conversations,
+            get_ai_conversation,
+            delete_ai_conversation
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

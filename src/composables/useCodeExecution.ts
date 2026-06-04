@@ -10,15 +10,33 @@ export function useCodeExecution(toast: any)
     const isSuccess = ref(false)
     const lastExecutionTime = ref(0)
 
+    // 当前运行任务的唯一标识，用于事件路由（支持多标签并发运行）
+    const currentTaskId = ref<string | null>(null)
+
     // 实时输出相关
     const realTimeOutput = ref('')
     const realTimeStderr = ref('')
 
-    const runCode = async (currentLanguage: string, envInstalled: boolean, envLanguage: string) => {
+    interface RunOptions
+    {
+        language: string
+        envInstalled: boolean
+        envLanguage: string
+        filePath?: string | null
+        args?: string[]
+        stdin?: string
+    }
+
+    const runCode = async (options: RunOptions) => {
+        const {language, envInstalled, envLanguage, filePath, args, stdin} = options
         if (!envInstalled) {
             toast.error(`${ envLanguage } 环境未安装`)
             return
         }
+
+        // 生成本次运行的 task_id，事件按它路由
+        const taskId = crypto.randomUUID()
+        currentTaskId.value = taskId
 
         isRunning.value = true
 
@@ -33,7 +51,11 @@ export function useCodeExecution(toast: any)
             const result: ExecutionResult = await invoke('execute_code', {
                 request: {
                     code: code.value,
-                    language: currentLanguage
+                    language,
+                    task_id: taskId,
+                    file_path: filePath || null,
+                    args: args && args.length ? args : null,
+                    stdin: stdin ? stdin : null
                 }
             })
 
@@ -54,14 +76,14 @@ export function useCodeExecution(toast: any)
         }
     }
 
-    const stopCode = async (currentLanguage: string) => {
-        if (!isRunning.value) {
+    const stopCode = async () => {
+        if (!isRunning.value || !currentTaskId.value) {
             return
         }
 
         try {
             const result = await invoke<boolean>('stop_execution', {
-                language: currentLanguage
+                taskId: currentTaskId.value
             })
 
             if (result) {
@@ -85,9 +107,9 @@ export function useCodeExecution(toast: any)
     }
 
     // 处理实时输出
-    const handleRealtimeOutput = (currentLanguage: string, data: any) => {
-        // 只处理当前语言的输出
-        if (data.language !== currentLanguage) {
+    const handleRealtimeOutput = (data: any) => {
+        // 只处理当前任务的输出
+        if (data.task_id !== currentTaskId.value) {
             return
         }
 
@@ -114,8 +136,8 @@ export function useCodeExecution(toast: any)
     }
 
     // 处理执行完成
-    const handleExecutionComplete = (currentLanguage: string, data: any) => {
-        if (data.language === currentLanguage) {
+    const handleExecutionComplete = (data: any) => {
+        if (data.task_id === currentTaskId.value) {
             isRunning.value = false
             isSuccess.value = data.success
             if (data.execution_time) {
@@ -125,8 +147,8 @@ export function useCodeExecution(toast: any)
     }
 
     // 处理执行停止
-    const handleExecutionStopped = (currentLanguage: string, data: any) => {
-        if (data.language === currentLanguage) {
+    const handleExecutionStopped = (data: any) => {
+        if (data.task_id === currentTaskId.value) {
             isRunning.value = false
             output.value += '\n\n🛑 代码执行已被用户停止'
             toast.warning('代码执行已停止')
@@ -134,8 +156,8 @@ export function useCodeExecution(toast: any)
     }
 
     // 处理执行超时
-    const handleExecutionTimeout = (currentLanguage: string, data: any) => {
-        if (data.language === currentLanguage) {
+    const handleExecutionTimeout = (data: any) => {
+        if (data.task_id === currentTaskId.value) {
             isRunning.value = false
             output.value += '\n\n⚠️ 代码执行超时（30秒）'
             toast.error('代码执行超时')
@@ -143,8 +165,8 @@ export function useCodeExecution(toast: any)
     }
 
     // 处理执行错误
-    const handleExecutionError = (currentLanguage: string, data: any) => {
-        if (data.language === currentLanguage) {
+    const handleExecutionError = (data: any) => {
+        if (data.task_id === currentTaskId.value) {
             isRunning.value = false
             output.value += `\n\n❌ 执行错误: ${ data.error }`
             toast.error('代码执行出错')
@@ -157,6 +179,7 @@ export function useCodeExecution(toast: any)
         isRunning,
         isSuccess,
         lastExecutionTime,
+        currentTaskId,
         runCode,
         stopCode,
         clearOutput,

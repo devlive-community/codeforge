@@ -3,10 +3,20 @@
               [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
     <div v-for="tab in tabs"
          :key="tab.id"
-         class="group flex items-center space-x-2 pl-3 pr-2 py-1.5 border-r border-gray-200 cursor-pointer max-w-[200px] flex-shrink-0"
-         :class="tab.id === activeId ? 'bg-white text-gray-800' : 'text-gray-500 hover:bg-gray-100'"
+         class="group flex items-center space-x-2 pl-3 pr-2 py-1.5 border-r border-gray-200 cursor-pointer max-w-[200px] flex-shrink-0 transition-colors"
+         :class="[
+           tab.id === activeId ? 'bg-white text-gray-800' : 'text-gray-500 hover:bg-gray-100',
+           dragOverId === tab.id ? 'border-l-2 border-l-blue-500' : ''
+         ]"
+         draggable="true"
          @click="emit('switch', tab.id)"
-         @mousedown.middle.prevent="emit('close', tab.id)">
+         @mousedown.middle.prevent="emit('close', tab.id)"
+         @contextmenu.prevent.stop="openMenu(tab, $event)"
+         @dragstart="onDragStart(tab.id, $event)"
+         @dragover.prevent="dragOverId = tab.id"
+         @dragleave="dragOverId === tab.id && (dragOverId = null)"
+         @drop.prevent="onDrop(tab.id)"
+         @dragend="onDragEnd">
       <img :src="iconUrl(tab.language)" class="w-4 h-4 flex-shrink-0" :alt="tab.language"/>
       <span class="text-xs truncate">{{ title(tab) }}</span>
       <span v-if="isDirty(tab)" class="text-amber-500 text-xs flex-shrink-0" title="未保存">●</span>
@@ -24,13 +34,29 @@
       <Plus class="w-4 h-4"/>
     </button>
   </div>
+
+  <!-- 标签右键菜单 -->
+  <div v-if="menu.visible" class="fixed inset-0 z-50" @click="closeMenu" @contextmenu.prevent="closeMenu">
+    <div class="absolute bg-white rounded-md shadow-lg border border-gray-200 py-1 text-sm min-w-[140px]"
+         :style="{ top: `${menu.y}px`, left: `${menu.x}px` }"
+         @click.stop>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="act(() => emit('close', menu.tabId!))">关闭</button>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="act(() => emit('close-others', menu.tabId!))">关闭其他</button>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="act(() => emit('close-right', menu.tabId!))">关闭右侧</button>
+      <template v-if="menuTabPath">
+        <div class="border-t border-gray-100 my-1"></div>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="act(() => emit('copy-path', menuTabPath!))">复制路径</button>
+      </template>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
+import {computed, reactive, ref} from 'vue'
 import {Plus, X} from 'lucide-vue-next'
 import type {WorkspaceTab} from '../composables/useWorkspace'
 
-defineProps<{
+const props = defineProps<{
   tabs: WorkspaceTab[]
   activeId: string
 }>()
@@ -39,6 +65,10 @@ const emit = defineEmits<{
   switch: [id: string]
   close: [id: string]
   new: []
+  'close-others': [id: string]
+  'close-right': [id: string]
+  'copy-path': [path: string]
+  move: [fromId: string, toId: string]
 }>()
 
 const title = (tab: WorkspaceTab) => {
@@ -51,4 +81,46 @@ const title = (tab: WorkspaceTab) => {
 const isDirty = (tab: WorkspaceTab) => tab.filePath !== null && tab.code !== tab.savedContent
 
 const iconUrl = (language: string) => `/icons/${language.replace(/\d+$/, '')}.svg`
+
+// ===== 拖拽排序 =====
+const draggingId = ref<string | null>(null)
+const dragOverId = ref<string | null>(null)
+
+const onDragStart = (id: string, e: DragEvent) => {
+  draggingId.value = id
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    // 部分 webview 需要写入数据才会真正启动拖拽
+    e.dataTransfer.setData('text/plain', id)
+  }
+}
+const onDrop = (id: string) => {
+  if (draggingId.value && draggingId.value !== id) {
+    emit('move', draggingId.value, id)
+  }
+  dragOverId.value = null
+}
+const onDragEnd = () => {
+  draggingId.value = null
+  dragOverId.value = null
+}
+
+// ===== 右键菜单 =====
+const menu = reactive<{ visible: boolean, x: number, y: number, tabId: string | null }>({
+  visible: false, x: 0, y: 0, tabId: null
+})
+const menuTabPath = computed(() => props.tabs.find(t => t.id === menu.tabId)?.filePath || null)
+const openMenu = (tab: WorkspaceTab, e: MouseEvent) => {
+  menu.tabId = tab.id
+  menu.x = e.clientX
+  menu.y = e.clientY
+  menu.visible = true
+}
+const closeMenu = () => {
+  menu.visible = false
+}
+const act = (fn: () => void) => {
+  fn()
+  closeMenu()
+}
 </script>
