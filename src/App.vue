@@ -737,7 +737,9 @@ const onGlobalKeydown = (e: KeyboardEvent) => {
   }
   const action = matchShortcut(e)
   if (action && shortcutDispatch[action]) {
+    // 捕获阶段拦截：阻止事件到达编辑器（避免 Cmd+Enter 等被插入换行）
     e.preventDefault()
+    e.stopPropagation()
     shortcutDispatch[action]()
   }
 }
@@ -760,7 +762,7 @@ onMounted(async () => {
   // 恢复上次打开的文件标签
   await restoreSession()
 
-  window.addEventListener('keydown', onGlobalKeydown)
+  window.addEventListener('keydown', onGlobalKeydown, true)
 
   // 触发 app-ready 事件，通知主进程
   window.dispatchEvent(new CustomEvent('app-ready'))
@@ -768,6 +770,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   cleanupEventListeners()
-  window.removeEventListener('keydown', onGlobalKeydown)
+  window.removeEventListener('keydown', onGlobalKeydown, true)
 })
 </script>
