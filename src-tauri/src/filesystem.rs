@@ -1,3 +1,4 @@
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
@@ -5,6 +6,7 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::SystemTime;
+use tauri::{AppHandle, Emitter};
 
 #[derive(Serialize)]
 pub struct FileNode {
@@ -113,6 +115,30 @@ pub fn delete_path(path: String) -> Result<(), String> {
     } else {
         fs::remove_file(p).map_err(|e| format!("删除文件失败: {}", e))
     }
+}
+
+// 全局目录监听器（保持存活；切换目录时替换旧的）
+static WATCHER: Mutex<Option<RecommendedWatcher>> = Mutex::new(None);
+
+/// 监听目录变化，变化时向前端发送 `fs-changed` 事件
+#[tauri::command]
+pub fn watch_directory(path: String, app: AppHandle) -> Result<(), String> {
+    let app_handle = app.clone();
+    let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
+        if res.is_ok() {
+            let _ = app_handle.emit("fs-changed", ());
+        }
+    })
+    .map_err(|e| format!("创建文件监听失败: {}", e))?;
+
+    watcher
+        .watch(Path::new(&path), RecursiveMode::Recursive)
+        .map_err(|e| format!("监听目录失败: {}", e))?;
+
+    // 替换旧监听器（drop 旧的即停止监听）
+    let mut guard = WATCHER.lock().map_err(|_| "监听锁错误".to_string())?;
+    *guard = Some(watcher);
+    Ok(())
 }
 
 /// 在系统文件管理器中显示该路径

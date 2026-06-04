@@ -41,7 +41,7 @@ use crate::execution::{
 };
 use crate::filesystem::{
     create_directory, create_file, delete_path, get_text_file_meta, read_directory_tree,
-    read_file_lines, read_file_text, rename_path, reveal_path, write_file_text,
+    read_file_lines, read_file_text, rename_path, reveal_path, watch_directory, write_file_text,
 };
 use crate::plugin::{get_info, get_supported_languages};
 use crate::setup::app::get_app_info;
@@ -166,7 +166,8 @@ fn main() {
             create_directory,
             rename_path,
             delete_path,
-            reveal_path
+            reveal_path,
+            watch_directory
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

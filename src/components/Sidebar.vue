@@ -90,8 +90,9 @@
 </template>
 
 <script setup lang="ts">
-import {computed, provide, reactive, ref, watch} from 'vue'
+import {computed, onMounted, onUnmounted, provide, reactive, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
+import {listen, type UnlistenFn} from '@tauri-apps/api/event'
 import {Folder, FolderOpen, RefreshCw} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
@@ -149,7 +150,23 @@ const loadRoot = async () => {
   }
 }
 
-watch(() => props.rootDir, loadRoot, {immediate: true})
+// 打开目录后启动文件监听（替换旧监听）
+const startWatching = async () => {
+  if (!props.rootDir) {
+    return
+  }
+  try {
+    await invoke('watch_directory', {path: props.rootDir})
+  }
+  catch (error) {
+    console.error('启动文件监听失败:', error)
+  }
+}
+
+watch(() => props.rootDir, async () => {
+  await loadRoot()
+  await startWatching()
+}, {immediate: true})
 
 // ===== 刷新信号：变更后通知已展开目录刷新（保留展开状态）=====
 const refreshSignal = ref(0)
@@ -158,6 +175,24 @@ const triggerRefresh = () => {
   refreshSignal.value++
   loadRoot()
 }
+
+// 文件系统变化（外部改动）防抖刷新
+let fsTimer: any = null
+let unlistenFs: UnlistenFn | null = null
+const debouncedRefresh = () => {
+  clearTimeout(fsTimer)
+  fsTimer = setTimeout(triggerRefresh, 300)
+}
+
+onMounted(async () => {
+  unlistenFs = await listen('fs-changed', debouncedRefresh)
+})
+
+onUnmounted(() => {
+  if (unlistenFs) {
+    unlistenFs()
+  }
+})
 
 // ===== 右键菜单 =====
 const ctx = reactive<{ visible: boolean, x: number, y: number, node: FileNode | null }>({
