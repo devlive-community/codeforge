@@ -14,7 +14,7 @@
                @open-file="handleOpenFileClick"
                @save-file="saveFile"
                @show-history="showHistory = true"
-               @show-ai="showAi = true"
+               @show-ai="handleShowAi"
                @show-settings="showSettings = true"
                @load-example="loadExample">
     </AppHeader>
@@ -169,7 +169,8 @@
     <!-- 执行历史 -->
     <ExecutionHistory v-model:show="showHistory"
                       :supported-languages="supportedLanguages"
-                      @restore="restoreHistoryItem"/>
+                      @restore="restoreHistoryItem"
+                      @open-ai="openAiForExecution"/>
 
     <!-- 运行未保存文件询问 -->
     <Modal v-model:show="showRunPrompt" title="运行未保存的文件" size="sm">
@@ -186,7 +187,7 @@
     </Modal>
 
     <!-- AI 助手 -->
-    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="currentExecutionId" @close="showAi = false"/>
+    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" @close="showAi = false"/>
 
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
@@ -519,8 +520,19 @@ const handleOpenFileClick = async () => {
   }
 }
 
-// AI 助手抽屉
+// AI 助手抽屉（绑定的执行 id：工具栏打开取最近一次运行，历史面板打开取指定运行）
 const showAi = ref(false)
+const aiExecutionId = ref<number | null>(null)
+
+const handleShowAi = () => {
+  aiExecutionId.value = currentExecutionId.value
+  showAi.value = true
+}
+
+const openAiForExecution = (id: number) => {
+  aiExecutionId.value = id
+  showAi.value = true
+}
 
 // 快速打开（Cmd+P）
 const showQuickOpen = ref(false)

@@ -45,7 +45,10 @@
               </span>
             </div>
             <div class="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>{{ formatTime(item.timestamp) }}</span>
+              <span class="flex items-center gap-1">
+                {{ formatTime(item.timestamp) }}
+                <Sparkles v-if="hasAi(item)" class="w-3 h-3 text-blue-500" title="有 AI 对话"/>
+              </span>
               <span>{{ item.execution_time }} ms</span>
             </div>
           </button>
@@ -74,6 +77,9 @@
             </div>
 
             <div class="flex items-center gap-2">
+              <Button v-if="selectedItem.id != null" type="secondary" variant="outline" size="sm" :icon="Sparkles" @click="openAi">
+                {{ hasAi(selectedItem) ? 'AI 对话' : '问 AI' }}
+              </Button>
               <Button type="secondary" variant="outline" size="sm" :icon="Copy" @click="copyOutput">
                 复制输出
               </Button>
@@ -127,7 +133,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { Copy, History, RefreshCw, RotateCcw, Trash2 } from 'lucide-vue-next'
+import { Copy, History, RefreshCw, RotateCcw, Sparkles, Trash2 } from 'lucide-vue-next'
 import Modal from '../ui/Modal.vue'
 import Button from '../ui/Button.vue'
 import type { ExecutionResult, Language } from '../types/app'
@@ -147,10 +153,14 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:show': [value: boolean]
   restore: [item: ExecutionResult]
+  'open-ai': [executionId: number]
 }>()
 
 const toast = useToast()
 const history = ref<ExecutionResult[]>([])
+// 有 AI 对话的执行 id 集合
+const aiConversationIds = ref<Set<number>>(new Set())
+const hasAi = (item: ExecutionResult) => item.id != null && aiConversationIds.value.has(item.id)
 const selectedItem = ref<ExecutionResult | null>(null)
 const isLoading = ref(false)
 const isLoadingMore = ref(false)
@@ -204,10 +214,21 @@ const loadHistoryPage = async (offset: number) => {
   }
 }
 
+const loadAiConversationIds = async () => {
+  try {
+    const ids = await invoke<number[]>('list_ai_conversation_ids')
+    aiConversationIds.value = new Set(ids)
+  }
+  catch {
+    aiConversationIds.value = new Set()
+  }
+}
+
 const reloadHistory = async () => {
   isLoading.value = true
   try {
     await loadHistoryPage(0)
+    await loadAiConversationIds()
   }
   catch (error) {
     toast.error('加载执行历史失败: ' + error)
@@ -260,6 +281,14 @@ const restoreSelected = () => {
     return
   }
   emit('restore', selectedItem.value)
+  visible.value = false
+}
+
+const openAi = () => {
+  if (selectedItem.value?.id == null) {
+    return
+  }
+  emit('open-ai', selectedItem.value.id)
   visible.value = false
 }
 
