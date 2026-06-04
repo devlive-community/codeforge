@@ -26,10 +26,11 @@
         向 AI 提问，或用上方快捷动作处理当前代码
       </div>
       <div v-for="(m, i) in messages" :key="i" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
-        <div class="max-w-[90%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words"
-             :class="m.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'">
+        <div v-if="m.role === 'user'" class="max-w-[90%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words bg-blue-500 text-white">
           {{ m.content }}
         </div>
+        <div v-else class="ai-markdown max-w-[90%] rounded-lg px-3 py-2 text-sm break-words bg-gray-100 text-gray-800"
+             v-html="renderMd(m.content)"></div>
       </div>
       <div v-if="sending" class="flex justify-start">
         <div class="bg-gray-100 text-gray-500 rounded-lg px-3 py-2 text-sm">思考中…</div>
@@ -51,8 +52,13 @@
 import {nextTick, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {Sparkles, X} from 'lucide-vue-next'
+import MarkdownIt from 'markdown-it'
 import {useAiConfig} from '../composables/useAiConfig'
 import {useToast} from '../plugins/toast'
+
+// html:false 不解析原始 HTML，规避 XSS
+const md = new MarkdownIt({html: false, linkify: true, breaks: true})
+const renderMd = (text: string) => md.render(text || '')
 
 interface Msg
 {
@@ -128,3 +134,52 @@ const quick = (instruction: string) => {
   send(`${instruction}：\n\n\`\`\`${props.language}\n${props.code}\n\`\`\``)
 }
 </script>
+
+<style>
+.ai-markdown p {
+  margin: 0.25rem 0;
+  line-height: 1.5;
+}
+.ai-markdown p:first-child { margin-top: 0; }
+.ai-markdown p:last-child { margin-bottom: 0; }
+.ai-markdown pre {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+  margin: 0.4rem 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.ai-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+.ai-markdown pre code {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+.ai-markdown ul, .ai-markdown ol {
+  padding-left: 1.2rem;
+  margin: 0.3rem 0;
+}
+.ai-markdown li { margin: 0.15rem 0; }
+.ai-markdown a { color: #2563eb; text-decoration: underline; }
+.ai-markdown h1, .ai-markdown h2, .ai-markdown h3 {
+  font-weight: 600;
+  margin: 0.5rem 0 0.3rem;
+}
+.ai-markdown blockquote {
+  border-left: 3px solid #cbd5e1;
+  padding-left: 0.6rem;
+  color: #64748b;
+  margin: 0.3rem 0;
+}
+.ai-markdown table { border-collapse: collapse; margin: 0.4rem 0; }
+.ai-markdown th, .ai-markdown td { border: 1px solid #e2e8f0; padding: 0.25rem 0.5rem; }
+</style>
