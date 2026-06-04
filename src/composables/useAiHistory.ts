@@ -1,9 +1,18 @@
 import {ref} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
 
 export interface AiMsg
 {
     role: 'user' | 'assistant'
     content: string
+}
+
+// 列表项（不含完整消息，按需再取）
+export interface AiConversationMeta
+{
+    id: string
+    title: string
+    updated_at: number
 }
 
 export interface AiConversation
@@ -14,42 +23,46 @@ export interface AiConversation
     messages: AiMsg[]
 }
 
-const STORAGE_KEY = 'ai-conversations'
-const MAX = 50
-
-const load = (): AiConversation[] => {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    }
-    catch {
-        return []
-    }
-}
-
-const persist = (list: AiConversation[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX)))
-}
-
+/**
+ * AI 对话历史，存于与执行历史相同的 SQLite 库（后端命令）。
+ */
 export function useAiHistory()
 {
-    const conversations = ref<AiConversation[]>(load())
+    const conversations = ref<AiConversationMeta[]>([])
 
-    const reload = () => {
-        conversations.value = load()
+    const reload = async () => {
+        try {
+            conversations.value = await invoke<AiConversationMeta[]>('list_ai_conversations')
+        }
+        catch (error) {
+            console.error('读取 AI 对话历史失败:', error)
+        }
     }
 
-    // 保存/更新一条会话（置顶）
-    const saveConversation = (conv: AiConversation) => {
-        const list = conversations.value.filter(c => c.id !== conv.id)
-        list.unshift(conv)
-        conversations.value = list.slice(0, MAX)
-        persist(conversations.value)
+    const saveConversation = async (conv: AiConversation) => {
+        await invoke('save_ai_conversation', {
+            id: conv.id,
+            title: conv.title,
+            messages: JSON.stringify(conv.messages),
+            updatedAt: conv.updatedAt
+        })
+        await reload()
     }
 
-    const remove = (id: string) => {
-        conversations.value = conversations.value.filter(c => c.id !== id)
-        persist(conversations.value)
+    const getMessages = async (id: string): Promise<AiMsg[]> => {
+        const json = await invoke<string>('get_ai_conversation', {id})
+        try {
+            return JSON.parse(json)
+        }
+        catch {
+            return []
+        }
     }
 
-    return {conversations, reload, saveConversation, remove}
+    const remove = async (id: string) => {
+        await invoke('delete_ai_conversation', {id})
+        await reload()
+    }
+
+    return {conversations, reload, saveConversation, getMessages, remove}
 }

@@ -4,6 +4,7 @@
 )]
 
 mod ai;
+mod ai_history;
 mod cache;
 mod config;
 mod custom_plugin_commands;
@@ -22,6 +23,10 @@ mod update;
 mod utils;
 
 use crate::ai::{ai_chat, ai_chat_stream};
+use crate::ai_history::{
+    AiHistory, delete_ai_conversation, get_ai_conversation, list_ai_conversations,
+    save_ai_conversation,
+};
 use crate::cache::{clear_all_cache, clear_plugins_cache, get_cache_info};
 use crate::custom_plugin_commands::{
     add_custom_plugin, get_custom_plugins, remove_custom_plugin, save_custom_icon,
@@ -77,6 +82,7 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .manage(ExecutionHistory::new().expect("failed to initialize execution history database"))
+        .manage(AiHistory::new().expect("failed to initialize ai history database"))
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
         .manage(EnvironmentManagerState::new(env_manager))
         .setup(|app| {
@@ -174,7 +180,12 @@ fn main() {
             list_files,
             // AI 助手
             ai_chat,
-            ai_chat_stream
+            ai_chat_stream,
+            // AI 对话历史
+            save_ai_conversation,
+            list_ai_conversations,
+            get_ai_conversation,
+            delete_ai_conversation
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

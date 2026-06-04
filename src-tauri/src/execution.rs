@@ -197,7 +197,7 @@ fn get_codeforge_cache_dir(language: &str) -> Result<PathBuf, String> {
     Ok(cache_dir)
 }
 
-fn get_codeforge_db_path() -> Result<PathBuf, String> {
+pub fn get_codeforge_db_path() -> Result<PathBuf, String> {
     let home_dir = dirs::home_dir().ok_or("无法获取用户主目录")?;
     let codeforge_dir = home_dir.join(".codeforge");
     fs::create_dir_all(&codeforge_dir).map_err(|e| format!("创建配置目录失败: {}", e))?;

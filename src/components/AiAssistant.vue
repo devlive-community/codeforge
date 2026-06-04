@@ -30,7 +30,7 @@
            @click="loadConversation(c.id)">
         <div class="flex-1 min-w-0">
           <div class="text-xs text-gray-700 truncate">{{ c.title }}</div>
-          <div class="text-[10px] text-gray-400">{{ formatTime(c.updatedAt) }}</div>
+          <div class="text-[10px] text-gray-400">{{ formatTime(c.updated_at) }}</div>
         </div>
         <button class="ml-2 p-0.5 rounded text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100" title="删除" @click.stop="deleteConversation(c.id)">
           <Trash2 class="w-3.5 h-3.5"/>
@@ -97,7 +97,7 @@ const emit = defineEmits<{ close: [] }>()
 
 const toast = useToast()
 const {active, reload} = useAiConfig()
-const {conversations, saveConversation, remove} = useAiHistory()
+const {conversations, reload: reloadHistory, saveConversation, getMessages, remove} = useAiHistory()
 
 const messages = ref<Msg[]>([])
 const input = ref('')
@@ -112,38 +112,40 @@ let unlistenDelta: UnlistenFn | null = null
 
 const formatTime = (ts: number) => new Date(ts).toLocaleString()
 
-// 把当前对话写入历史
-const persistCurrent = () => {
+// 把当前对话写入历史（SQLite）
+const persistCurrent = async () => {
   if (messages.value.length === 0) {
     return
   }
   const id = currentId.value || crypto.randomUUID()
   const firstUser = messages.value.find(m => m.role === 'user')
   const title = (firstUser?.content || 'AI 对话').replace(/\s+/g, ' ').slice(0, 30)
-  saveConversation({id, title, updatedAt: Date.now(), messages: messages.value.map(m => ({...m}))})
   currentId.value = id
+  try {
+    await saveConversation({id, title, updatedAt: Date.now(), messages: messages.value.map(m => ({...m}))})
+  }
+  catch (error) {
+    console.error('保存 AI 对话失败:', error)
+  }
 }
 
-const newConversation = () => {
-  persistCurrent()
+const newConversation = async () => {
+  await persistCurrent()
   messages.value = []
   currentId.value = null
   showHistory.value = false
 }
 
-const loadConversation = (id: string) => {
-  persistCurrent()
-  const c = conversations.value.find(x => x.id === id)
-  if (c) {
-    messages.value = c.messages.map(m => ({...m}))
-    currentId.value = c.id
-  }
+const loadConversation = async (id: string) => {
+  await persistCurrent()
+  messages.value = await getMessages(id)
+  currentId.value = id
   showHistory.value = false
   scrollToBottom()
 }
 
-const deleteConversation = (id: string) => {
-  remove(id)
+const deleteConversation = async (id: string) => {
+  await remove(id)
   if (currentId.value === id) {
     messages.value = []
     currentId.value = null
@@ -162,10 +164,11 @@ const scrollToBottom = () => {
 const waiting = () => sending.value && (streamingIndex.value < 0 || !messages.value[streamingIndex.value]?.content)
 
 onMounted(async () => {
-  // 恢复最近一次对话
+  // 加载历史并恢复最近一次对话
+  await reloadHistory()
   if (conversations.value.length > 0) {
     const latest = conversations.value[0]
-    messages.value = latest.messages.map(m => ({...m}))
+    messages.value = await getMessages(latest.id)
     currentId.value = latest.id
     scrollToBottom()
   }
