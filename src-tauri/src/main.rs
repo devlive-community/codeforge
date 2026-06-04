@@ -22,7 +22,7 @@ mod setup;
 mod update;
 mod utils;
 
-use crate::ai::{ai_chat, ai_chat_stream};
+use crate::ai::{ai_chat, ai_chat_stream, stop_ai_stream};
 use crate::ai_history::{
     AiHistory, delete_ai_conversation, get_ai_conversation, list_ai_conversation_ids,
     save_ai_conversation,
@@ -181,6 +181,7 @@ fn main() {
             // AI 助手
             ai_chat,
             ai_chat_stream,
+            stop_ai_stream,
             // AI 对话历史（绑定执行记录）
             save_ai_conversation,
             list_ai_conversation_ids,

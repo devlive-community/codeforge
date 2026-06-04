@@ -1,7 +1,28 @@
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::collections::BTreeSet;
+use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
+
+// 被请求停止的流式任务 id 集合
+static AI_CANCELLED: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+
+/// 请求停止指定的流式生成
+#[tauri::command]
+pub fn stop_ai_stream(stream_id: String) {
+    if let Ok(mut set) = AI_CANCELLED.lock() {
+        set.insert(stream_id);
+    }
+}
+
+// 取出并清除取消标记，返回是否被取消
+fn take_cancelled(stream_id: &str) -> bool {
+    AI_CANCELLED
+        .lock()
+        .map(|mut s| s.remove(stream_id))
+        .unwrap_or(false)
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChatMessage {
@@ -187,6 +208,10 @@ pub async fn ai_chat_stream(
     let mut buf = String::new();
 
     while let Some(chunk) = stream.next().await {
+        // 收到停止请求则中断
+        if take_cancelled(&stream_id) {
+            return Ok(());
+        }
         let chunk = chunk.map_err(|e| format!("读取流失败: {}", e))?;
         buf.push_str(&String::from_utf8_lossy(&chunk));
 
@@ -223,6 +248,8 @@ pub async fn ai_chat_stream(
         }
     }
 
+    // 清理可能残留的取消标记
+    let _ = take_cancelled(&stream_id);
     Ok(())
 }
 

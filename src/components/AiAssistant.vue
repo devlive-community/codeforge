@@ -48,6 +48,11 @@
 
     <!-- 输入 -->
     <div class="border-t border-gray-200 p-2 flex-shrink-0">
+      <div v-if="sending" class="mb-1.5 flex justify-center">
+        <button class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer" @click="stop">
+          停止生成
+        </button>
+      </div>
       <textarea v-model="input"
                 rows="2"
                 class="w-full text-sm border border-gray-300 rounded px-2 py-1.5 resize-none focus:outline-none focus:border-blue-400"
@@ -229,6 +234,12 @@ const send = async (text?: string) => {
     streamingIndex.value = -1
     scrollToBottom()
     persist()
+  }
+}
+
+const stop = () => {
+  if (currentStreamId) {
+    invoke('stop_ai_stream', {streamId: currentStreamId})
   }
 }
 
