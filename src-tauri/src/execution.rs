@@ -299,7 +299,7 @@ pub async fn execute_code(
         fs::write(&fp, &request.code)
             .map_err(|e| format!("Failed to write temporary file: {}", e))?;
 
-        let home = plugin.get_execute_home().map(PathBuf::from);
+        let home = plugin.get_execute_home();
         (fp, home)
     };
 

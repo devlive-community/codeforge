@@ -120,6 +120,7 @@ pub async fn ai_chat(
 
 /// 流式 AI 对话。逐段通过 `ai-stream-delta` 事件返回，完成时命令 Promise resolve。
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn ai_chat_stream(
     app: AppHandle,
     stream_id: String,
