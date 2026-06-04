@@ -31,7 +31,7 @@
     </div>
 
     <!-- 消息列表 -->
-    <div ref="listRef" class="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+    <div ref="listRef" class="flex-1 overflow-y-auto px-3 py-3 space-y-3" @click="onCodeAction">
       <div v-if="messages.length === 0" class="text-center text-sm text-gray-400 mt-10">
         向 AI 提问，或用上方快捷动作处理当前代码
       </div>
@@ -69,7 +69,39 @@ import {useToast} from '../plugins/toast'
 
 // html:false 不解析原始 HTML，规避 XSS
 const md = new MarkdownIt({html: false, linkify: true, breaks: true})
+
+// 给代码块包一层工具条（复制 / 应用到编辑器）
+const defaultFence = md.renderer.rules.fence!.bind(md.renderer.rules)
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const rendered = defaultFence(tokens, idx, options, env, self)
+  return `<div class="ai-code"><div class="ai-code-bar">`
+      + `<button class="ai-code-btn" data-act="copy">复制</button>`
+      + `<button class="ai-code-btn" data-act="insert">应用到编辑器</button>`
+      + `</div>${rendered}</div>`
+}
+
 const renderMd = (text: string) => md.render(text || '')
+
+// 代码块按钮（事件委托）
+const onCodeAction = (e: MouseEvent) => {
+  const btn = (e.target as HTMLElement).closest('.ai-code-btn') as HTMLElement | null
+  if (!btn) {
+    return
+  }
+  const pre = btn.closest('.ai-code')?.querySelector('pre')
+  const codeText = pre?.textContent ?? ''
+  if (!codeText) {
+    return
+  }
+  if (btn.dataset.act === 'copy') {
+    navigator.clipboard.writeText(codeText)
+    toast.success('已复制代码')
+  }
+  else {
+    emit('insert-code', codeText)
+    toast.success('已应用到编辑器')
+  }
+}
 
 const props = defineProps<{
   code: string
@@ -77,7 +109,7 @@ const props = defineProps<{
   executionId: number | null
 }>()
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; 'insert-code': [code: string] }>()
 
 const toast = useToast()
 const {active, reload} = useAiConfig()
@@ -260,4 +292,25 @@ const quick = (instruction: string) => {
 /* 用户消息（蓝底）变体 */
 .ai-user code { background: rgba(255, 255, 255, 0.22); }
 .ai-user a { color: #fff; }
+
+/* 代码块工具条 */
+.ai-code { margin: 0.4rem 0; }
+.ai-code .ai-code-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  padding: 0.2rem 0.3rem;
+  background: #0f172a;
+  border-top-left-radius: 0.375rem;
+  border-top-right-radius: 0.375rem;
+}
+.ai-code .ai-code-btn {
+  font-size: 11px;
+  color: #cbd5e1;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+.ai-code .ai-code-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.ai-code pre { margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
 </style>

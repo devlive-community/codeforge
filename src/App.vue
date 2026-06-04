@@ -187,7 +187,7 @@
     </Modal>
 
     <!-- AI 助手 -->
-    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" @close="showAi = false"/>
+    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" @close="showAi = false" @insert-code="applyAiCode"/>
 
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
@@ -532,6 +532,11 @@ const handleShowAi = () => {
 const openAiForExecution = (id: number) => {
   aiExecutionId.value = id
   showAi.value = true
+}
+
+// 把 AI 代码块应用到编辑器（替换当前内容，可撤销）
+const applyAiCode = (codeText: string) => {
+  code.value = codeText
 }
 
 // 快速打开（Cmd+P）
