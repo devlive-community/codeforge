@@ -23,6 +23,7 @@
     "@codemirror/lang-xml": "^6.1.0",
     "@codemirror/language": "^6.11.2",
     "@codemirror/legacy-modes": "^6.5.1",
+    "@codemirror/search": "^6.7.0",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.1",
     "@tauri-apps/api": "^2",
