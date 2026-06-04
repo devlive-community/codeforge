@@ -136,6 +136,51 @@ export function useWorkspace(deps: WorkspaceDeps)
         }
     }
 
+    // 关闭除 id 外的所有标签
+    const closeOthers = (id: string) => {
+        captureToActive()
+        const keep = tabs.value.find(t => t.id === id)
+        if (!keep) {
+            return
+        }
+        tabs.value = [keep]
+        if (activeTabId.value !== id) {
+            activeTabId.value = id
+            loadTab(keep)
+        }
+    }
+
+    // 关闭 id 右侧的所有标签
+    const closeToRight = (id: string) => {
+        const idx = tabs.value.findIndex(t => t.id === id)
+        if (idx === -1) {
+            return
+        }
+        captureToActive()
+        const activeRemoved = tabs.value.slice(idx + 1).some(t => t.id === activeTabId.value)
+        tabs.value = tabs.value.slice(0, idx + 1)
+        if (activeRemoved) {
+            activeTabId.value = id
+            const keep = tabs.value[idx]
+            if (keep) {
+                loadTab(keep)
+            }
+        }
+    }
+
+    // 拖拽排序：把 fromId 移动到 toId 的位置
+    const moveTab = (fromId: string, toId: string) => {
+        const from = tabs.value.findIndex(t => t.id === fromId)
+        const to = tabs.value.findIndex(t => t.id === toId)
+        if (from === -1 || to === -1 || from === to) {
+            return
+        }
+        const arr = [...tabs.value]
+        const [moved] = arr.splice(from, 1)
+        arr.splice(to, 0, moved)
+        tabs.value = arr
+    }
+
     // 路径是否等于 target 或在其目录下
     const isUnder = (p: string, target: string) =>
         p === target || (p.startsWith(target) && (p[target.length] === '/' || p[target.length] === '\\'))
@@ -188,6 +233,9 @@ export function useWorkspace(deps: WorkspaceDeps)
         switchTab,
         newTab,
         closeTab,
+        closeOthers,
+        closeToRight,
+        moveTab,
         updateTabPath,
         detachTabPath,
         isActiveReusableScratch

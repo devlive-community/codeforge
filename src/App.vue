@@ -42,7 +42,8 @@
         <ResizablePanels :direction="effectiveDirection" :min-primary="minPrimary" :min-secondary="minSecondary">
           <template #primary>
             <div class="h-full flex flex-col overflow-hidden">
-              <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"/>
+              <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
+                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
               <div v-if="!showViewer" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
@@ -104,7 +105,8 @@
 
       <!-- 仅编辑器：控制台未展开时占满 -->
       <div v-else class="h-full flex flex-col overflow-hidden">
-        <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"/>
+        <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
+                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
         <div v-if="!showViewer" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
@@ -261,6 +263,9 @@ const {
   switchTab,
   newTab,
   closeTab,
+  closeOthers,
+  closeToRight,
+  moveTab,
   updateTabPath,
   detachTabPath,
   isActiveReusableScratch,
@@ -312,6 +317,16 @@ const onLanguageChange = (language: string) => {
 
 const handleNewTab = () => newTab({language: currentLanguage.value, code: ''})
 const handleCloseTab = (id: string) => closeTab(id, {language: currentLanguage.value})
+
+const handleCopyPath = async (path: string) => {
+  try {
+    await navigator.clipboard.writeText(path)
+    toast.success('已复制路径')
+  }
+  catch (error) {
+    toast.error('复制失败: ' + error)
+  }
+}
 
 // ===== 侧栏 / 文件夹 =====
 const rootDir = ref<string | null>(null)
