@@ -65,14 +65,7 @@ pub fn list_files(path: String) -> Result<Vec<String>, String> {
         return Err(format!("不是有效目录: {}", path));
     }
 
-    let ignore = [
-        "node_modules",
-        "target",
-        "dist",
-        "build",
-        ".next",
-        ".cache",
-    ];
+    let ignore = ["node_modules", "target", "dist", "build", ".next", ".cache"];
     let mut files: Vec<String> = Vec::new();
     let mut stack = vec![root.to_path_buf()];
 
