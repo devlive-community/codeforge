@@ -77,6 +77,71 @@ pub fn write_file_text(path: String, content: String) -> Result<(), String> {
     fs::write(&path, content).map_err(|e| format!("写入文件失败: {}", e))
 }
 
+/// 新建空文件
+#[tauri::command]
+pub fn create_file(path: String) -> Result<(), String> {
+    if Path::new(&path).exists() {
+        return Err("文件已存在".to_string());
+    }
+    fs::write(&path, "").map_err(|e| format!("创建文件失败: {}", e))
+}
+
+/// 新建目录
+#[tauri::command]
+pub fn create_directory(path: String) -> Result<(), String> {
+    if Path::new(&path).exists() {
+        return Err("目录已存在".to_string());
+    }
+    fs::create_dir_all(&path).map_err(|e| format!("创建目录失败: {}", e))
+}
+
+/// 重命名/移动
+#[tauri::command]
+pub fn rename_path(from: String, to: String) -> Result<(), String> {
+    if Path::new(&to).exists() {
+        return Err("目标已存在".to_string());
+    }
+    fs::rename(&from, &to).map_err(|e| format!("重命名失败: {}", e))
+}
+
+/// 删除文件或目录（递归）
+#[tauri::command]
+pub fn delete_path(path: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    if p.is_dir() {
+        fs::remove_dir_all(p).map_err(|e| format!("删除目录失败: {}", e))
+    } else {
+        fs::remove_file(p).map_err(|e| format!("删除文件失败: {}", e))
+    }
+}
+
+/// 在系统文件管理器中显示该路径
+#[tauri::command]
+pub fn reveal_path(path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "macos")]
+    let result = Command::new("open").args(["-R", &path]).spawn();
+
+    #[cfg(target_os = "windows")]
+    let result = Command::new("explorer")
+        .arg(format!("/select,{}", path))
+        .spawn();
+
+    #[cfg(target_os = "linux")]
+    let result = {
+        let target = Path::new(&path)
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| Path::new(&path).to_path_buf());
+        Command::new("xdg-open").arg(target).spawn()
+    };
+
+    result
+        .map(|_| ())
+        .map_err(|e| format!("打开文件管理器失败: {}", e))
+}
+
 #[derive(Serialize)]
 pub struct TextFileMeta {
     size_bytes: u64,
