@@ -89,6 +89,7 @@
                   <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
                     <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
                   </span>
+                  <span v-else-if="ghostActive" class="text-blue-500">Tab 接受 · Esc 取消</span>
                   <span><strong>{{ (code || '').length }}</strong> 字符</span>
                   <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
                 </div>
@@ -156,6 +157,7 @@
             <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
               <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
             </span>
+            <span v-else-if="ghostActive" class="text-blue-500">Tab 接受 · Esc 取消</span>
             <span><strong>{{ (code || '').length }}</strong> 字符</span>
             <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
           </div>
@@ -301,7 +303,7 @@ import SnippetManager from './components/SnippetManager.vue'
 import {initSnippets} from './composables/useSnippets'
 import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './composables/useKvStore'
 import {useAiConfig} from './composables/useAiConfig'
-import {setGhost, clearGhostIn} from './editor/aiComplete'
+import {setGhost, clearGhostIn, ghostActive} from './editor/aiComplete'
 import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'

@@ -1,5 +1,9 @@
 import {Decoration, EditorView, WidgetType, keymap} from '@codemirror/view'
 import {Prec, StateEffect, StateField} from '@codemirror/state'
+import {ref} from 'vue'
+
+// 当前是否有幽灵补全显示（供界面提示「Tab 接受」）
+export const ghostActive = ref(false)
 
 export interface Ghost
 {
@@ -114,4 +118,12 @@ export const clearGhostIn = (view: EditorView | null | undefined) => {
     }
 }
 
-export const aiCompleteExtension = [ghostField, ghostKeymap, ghostTheme]
+// 每次更新后同步幽灵补全显示状态到响应式信号
+const ghostWatcher = EditorView.updateListener.of((u) => {
+    const active = u.state.field(ghostField, false) != null
+    if (active !== ghostActive.value) {
+        ghostActive.value = active
+    }
+})
+
+export const aiCompleteExtension = [ghostField, ghostKeymap, ghostTheme, ghostWatcher]
