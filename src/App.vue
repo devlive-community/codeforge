@@ -150,6 +150,14 @@
                         :is-running="isRunning"
                         :execution-time="lastExecutionTime"
                         @clear="clearOutput"/>
+
+              <!-- Markdown 预览 -->
+              <MarkdownView v-else-if="consoleType === 'markdown'"
+                            class="flex-1"
+                            :output="output"
+                            :is-running="isRunning"
+                            :execution-time="lastExecutionTime"
+                            @clear="clearOutput"/>
             </div>
           </template>
         </ResizablePanels>
@@ -320,6 +328,7 @@ import CodeEditor from './components/CodeEditor.vue'
 import ConsoleOutput from './components/ConsoleOutput.vue'
 import WebOutput from "./components/WebOutput.vue";
 import JsonView from "./components/JsonView.vue";
+import MarkdownView from "./components/MarkdownView.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'

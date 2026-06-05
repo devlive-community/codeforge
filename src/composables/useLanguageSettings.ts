@@ -33,7 +33,7 @@ export function useLanguageSettings(emit: any)
         }
     ]
 
-    const consoleTypes = [{label: '控制台', value: 'console'}, {label: 'Web', value: 'web'}, {label: 'JSON', value: 'json'}]
+    const consoleTypes = [{label: '控制台', value: 'console'}, {label: 'Web', value: 'web'}, {label: 'JSON', value: 'json'}, {label: 'Markdown', value: 'markdown'}]
 
     const {
         activePlugin,
