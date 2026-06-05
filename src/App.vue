@@ -86,7 +86,7 @@
                                  :line-count="viewerFile.lineCount"
                                  :size-bytes="viewerFile.sizeBytes"
                                  @close="closeViewer"/>
-                <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
+                <InlineGenerate v-if="showGenerate" :language="currentLanguage" :selection="generateSelection" @insert="insertGeneratedCode" @close="showGenerate = false"/>
               </div>
             </div>
           </template>
@@ -150,7 +150,7 @@
                            :line-count="viewerFile.lineCount"
                            :size-bytes="viewerFile.sizeBytes"
                            @close="closeViewer"/>
-          <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
+          <InlineGenerate v-if="showGenerate" :language="currentLanguage" :selection="generateSelection" @insert="insertGeneratedCode" @close="showGenerate = false"/>
         </div>
       </div>
       </div>
@@ -557,9 +557,14 @@ const applyAiCode = (codeText: string) => {
 // 当前 CodeMirror view（用于在光标处插入生成的代码）
 const editorView = ref<any>(null)
 
-// AI 自然语言生成
+// AI 自然语言生成 / 选区改写
 const showGenerate = ref(false)
+const generateSelection = ref('')
 const openGenerate = () => {
+  const view = editorView.value
+  generateSelection.value = view
+      ? view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)
+      : ''
   showGenerate.value = true
 }
 
