@@ -219,6 +219,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {debounce} from 'lodash-es'
 import {ChevronRight, FolderOpen, History, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
@@ -710,6 +711,52 @@ const showRunInput = ref(false)
 const runArgs = ref('')
 const runStdin = ref('')
 const runEnv = ref('')
+
+// ===== 按文件记忆运行配置（args/stdin/env）=====
+const RUN_CONFIGS_KEY = 'run-configs'
+type RunConfig = { args: string, stdin: string, env: string }
+const loadRunConfigs = (): Record<string, RunConfig> => {
+  try {
+    return JSON.parse(localStorage.getItem(RUN_CONFIGS_KEY) || '{}')
+  }
+  catch {
+    return {}
+  }
+}
+// 把当前输入写入指定文件的配置（全空则删除该条）
+const saveRunConfig = (path: string) => {
+  const map = loadRunConfigs()
+  if (!runArgs.value && !runStdin.value && !runEnv.value) {
+    delete map[path]
+  }
+  else {
+    map[path] = {args: runArgs.value, stdin: runStdin.value, env: runEnv.value}
+  }
+  localStorage.setItem(RUN_CONFIGS_KEY, JSON.stringify(map))
+}
+// 载入指定文件的配置（无则清空）
+const loadRunConfig = (path: string | null) => {
+  const cfg = path ? loadRunConfigs()[path] : null
+  runArgs.value = cfg?.args || ''
+  runStdin.value = cfg?.stdin || ''
+  runEnv.value = cfg?.env || ''
+}
+
+// 切换文件时：保存旧文件输入、载入新文件输入
+watch(currentFilePath, (np, op) => {
+  if (op) {
+    saveRunConfig(op)
+  }
+  loadRunConfig(np)
+})
+
+// 编辑输入时防抖保存到当前文件
+const persistRunConfig = debounce(() => {
+  if (currentFilePath.value) {
+    saveRunConfig(currentFilePath.value)
+  }
+}, 400)
+watch([runArgs, runStdin, runEnv], () => persistRunConfig())
 
 // 解析环境变量文本（KEY=值，按换行或分号分隔）
 const parseEnv = (text: string): Record<string, string> => {
