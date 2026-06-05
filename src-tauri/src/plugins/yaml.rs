@@ -17,8 +17,17 @@ impl LanguagePlugin for YamlPlugin {
     }
 
     fn get_file_extension(&self) -> String {
+        // extension 可能是多个（如 "yaml,yml"），文件名取第一个
         self.get_config()
-            .map(|config| config.extension.clone())
+            .map(|config| {
+                config
+                    .extension
+                    .split(',')
+                    .next()
+                    .unwrap_or("yaml")
+                    .trim()
+                    .to_string()
+            })
             .unwrap_or_else(|| "yaml".to_string())
     }
 
@@ -35,7 +44,7 @@ impl LanguagePlugin for YamlPlugin {
             enabled: true,
             language: String::from("yaml"),
             before_compile: None,
-            extension: String::from("yaml"),
+            extension: String::from("yaml,yml"),
             execute_home: None,
             run_command: Some(String::from("cat $filename")),
             after_compile: None,
