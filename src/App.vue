@@ -153,7 +153,11 @@
           <div class="flex items-center space-x-3">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
             <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
-            <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+            <template v-if="currentFilePath">
+              <span class="text-gray-400 text-xs">·</span>
+              <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+            </template>
+            <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center">
               · {{ currentFileName }}
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
             </span>
