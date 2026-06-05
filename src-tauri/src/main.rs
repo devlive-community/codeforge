@@ -47,7 +47,7 @@ use crate::execution::{
     stop_execution,
 };
 use crate::filesystem::{
-    create_directory, create_file, delete_path, get_text_file_meta, list_files,
+    create_directory, create_file, delete_path, get_text_file_meta, git_diff, list_files,
     read_directory_tree, read_file_lines, read_file_text, rename_path, reveal_path,
     search_in_files, watch_directory, write_file_text,
 };
@@ -179,6 +179,7 @@ fn main() {
             watch_directory,
             list_files,
             search_in_files,
+            git_diff,
             // AI 助手
             ai_chat,
             ai_chat_stream,

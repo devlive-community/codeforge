@@ -196,7 +196,7 @@
     </Modal>
 
     <!-- AI 助手 -->
-    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" @close="showAi = false" @insert-code="applyAiCode"/>
+    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" :root-dir="rootDir" @close="showAi = false" @insert-code="applyAiCode"/>
 
     <!-- 文件夹内全局搜索 -->
     <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" @open="openSearchResult" @close="showSearch = false"/>

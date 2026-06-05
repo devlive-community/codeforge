@@ -29,6 +29,7 @@
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('解释下面的代码')">解释代码</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('找出下面代码中的 bug 并给出修复')">找 Bug</button>
       <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('优化下面的代码并说明原因')">优化</button>
+      <button v-if="rootDir" class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="genCommitMessage">生成提交信息</button>
     </div>
 
     <!-- 消息列表 -->
@@ -114,6 +115,7 @@ const props = defineProps<{
   language: string
   executionId: number | null
   errorContext?: { code: string, error: string } | null
+  rootDir?: string | null
 }>()
 
 const emit = defineEmits<{ close: []; 'insert-code': [code: string] }>()
@@ -258,6 +260,25 @@ const quick = (instruction: string) => {
     return
   }
   send(`${instruction}：\n\n\`\`\`${props.language}\n${props.code}\n\`\`\``)
+}
+
+const genCommitMessage = async () => {
+  if (!props.rootDir) {
+    return
+  }
+  let diff = ''
+  try {
+    diff = await invoke<string>('git_diff', {root: props.rootDir})
+  }
+  catch (error) {
+    toast.error('' + error)
+    return
+  }
+  if (!diff.trim()) {
+    toast.info('没有检测到改动')
+    return
+  }
+  send(`根据下面的 git diff 生成一条简洁的中文提交信息，格式为「类型: 描述」（类型如 feat/fix/docs/refactor/chore），只输出一行提交信息，不要解释：\n\n\`\`\`diff\n${diff}\n\`\`\``)
 }
 </script>
 

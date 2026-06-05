@@ -305,6 +305,35 @@ pub fn watch_directory(path: String, app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// git diff 内容的最大长度（避免给 AI 的 prompt 过大）
+const MAX_DIFF_LEN: usize = 20000;
+
+/// 获取目录下的 git 改动 diff（相对 HEAD），用于 AI 生成提交信息。
+#[tauri::command]
+pub async fn git_diff(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let output = std::process::Command::new("git")
+            .args(["-C", &root, "diff", "HEAD"])
+            .output()
+            .map_err(|e| format!("执行 git 失败: {}", e))?;
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            return Err(format!(
+                "git diff 失败（是否为 git 仓库？）：{}",
+                err.trim()
+            ));
+        }
+        let mut diff = String::from_utf8_lossy(&output.stdout).to_string();
+        if diff.len() > MAX_DIFF_LEN {
+            diff.truncate(MAX_DIFF_LEN);
+            diff.push_str("\n…(diff 过长已截断)");
+        }
+        Ok(diff)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 在系统文件管理器中显示该路径
 #[tauri::command]
 pub fn reveal_path(path: String) -> Result<(), String> {
