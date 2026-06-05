@@ -81,7 +81,7 @@
                   <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
                   <template v-if="currentFilePath">
                     <span class="text-gray-400 text-xs flex-shrink-0">·</span>
-                    <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:h-1">
+                    <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                       <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
                     </div>
                   </template>
@@ -157,7 +157,7 @@
             <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
             <template v-if="currentFilePath">
               <span class="text-gray-400 text-xs flex-shrink-0">·</span>
-              <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:h-1">
+              <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
               </div>
             </template>
