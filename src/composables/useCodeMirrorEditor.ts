@@ -79,6 +79,7 @@ import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
 import {aiCompleteExtension} from "../editor/aiComplete";
+import {cursorListener} from "../editor/cursorInfo";
 import {useSnippets} from "./useSnippets";
 
 interface Props
@@ -343,6 +344,9 @@ export function useCodeMirrorEditor(props: Props)
 
         // AI 幽灵补全（Tab 接受 / Esc 取消），由外部 dispatch 设置
         result.push(aiCompleteExtension)
+
+        // 光标位置/选中长度（供状态栏显示）
+        result.push(cursorListener)
 
         // Git 行内差异标记（标记数据由外部 dispatch 填充，无 git 时为空）
         result.push(diffGutterExtension)

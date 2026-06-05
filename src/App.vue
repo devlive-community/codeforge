@@ -90,6 +90,8 @@
                     <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
                   </span>
                   <span v-else-if="ghostActive" class="text-blue-500">Tab 接受 · Esc 取消</span>
+                  <span>行 {{ cursorInfo.line }}, 列 {{ cursorInfo.col }}</span>
+                  <span v-if="cursorInfo.selLen">已选 <strong>{{ cursorInfo.selLen }}</strong></span>
                   <span><strong>{{ (code || '').length }}</strong> 字符</span>
                   <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
                 </div>
@@ -158,6 +160,8 @@
               <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
             </span>
             <span v-else-if="ghostActive" class="text-blue-500">Tab 接受 · Esc 取消</span>
+            <span>行 {{ cursorInfo.line }}, 列 {{ cursorInfo.col }}</span>
+            <span v-if="cursorInfo.selLen">已选 <strong>{{ cursorInfo.selLen }}</strong></span>
             <span><strong>{{ (code || '').length }}</strong> 字符</span>
             <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
           </div>
@@ -318,6 +322,7 @@ import {initSnippets} from './composables/useSnippets'
 import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './composables/useKvStore'
 import {useAiConfig} from './composables/useAiConfig'
 import {setGhost, clearGhostIn, ghostActive} from './editor/aiComplete'
+import {cursorInfo} from './editor/cursorInfo'
 import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
