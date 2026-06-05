@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex items-center py-1 pr-4 cursor-pointer text-sm select-none w-full whitespace-nowrap"
-         :class="isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'"
+         :class="isActive ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
          :style="{ paddingLeft: `${depth * 12 + 8}px` }"
          @click="onClick"
          @contextmenu.prevent.stop="onContext">

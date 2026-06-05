@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen flex flex-col bg-gray-50">
+  <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
     <AppHeader :is-running="isRunning"
                :env-installed="envInfo.installed"
                :supported-languages="supportedLanguages"
@@ -20,7 +20,7 @@
     </AppHeader>
 
     <!-- 运行输入：参数 + stdin（任何布局/运行前都可填）-->
-    <div class="bg-gray-50 border-b border-gray-200 flex-shrink-0">
+    <div class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 cursor-pointer" @click="showRunInput = !showRunInput">
         <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
         运行输入（参数 / stdin / 环境变量）
@@ -70,10 +70,10 @@
             <div class="h-full flex flex-col overflow-hidden">
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
-              <div v-if="!showViewer" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+              <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-                  <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+                  <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
                   <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
                     · {{ currentFileName }}
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
@@ -101,8 +101,8 @@
             <!-- 输出 -->
             <div class="h-full flex flex-col" :class="effectiveDirection === 'vertical' ? 'border-t border-gray-200' : 'border-l border-gray-200'">
               <!-- 仅编辑器模式下提供收起控制台的入口 -->
-              <div v-if="layoutMode === 'editor'" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-                <h2 class="text-sm font-medium text-gray-700">控制台</h2>
+              <div v-if="layoutMode === 'editor'" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+                <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">控制台</h2>
                 <button class="text-gray-400 hover:text-gray-600 transition-colors" title="收起控制台" @click="showConsole = false">
                   <X class="w-4 h-4"/>
                 </button>
@@ -134,10 +134,10 @@
       <div v-else class="h-full flex flex-col overflow-hidden">
         <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
-        <div v-if="!showViewer" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+        <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-            <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+            <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
             <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
               · {{ currentFileName }}
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
@@ -240,6 +240,7 @@ import QuickOpen from './components/QuickOpen.vue'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
+import {useTheme} from './composables/useTheme'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
@@ -878,7 +879,10 @@ const onGlobalKeydown = (e: KeyboardEvent) => {
   }
 }
 
+const {init: initTheme} = useTheme()
+
 onMounted(async () => {
+  await initTheme()
   await initialize()
   await buildLanguageRegistry()
   // 以当前内容初始化首个标签页

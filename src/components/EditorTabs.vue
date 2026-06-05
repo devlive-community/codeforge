@@ -1,11 +1,11 @@
 <template>
-  <div class="flex items-stretch bg-gray-50 border-b border-gray-200 overflow-x-auto flex-shrink-0
+  <div class="flex items-stretch bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-x-auto flex-shrink-0
               [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
     <div v-for="tab in tabs"
          :key="tab.id"
-         class="group flex items-center space-x-2 pl-3 pr-2 py-1.5 border-r border-gray-200 cursor-pointer max-w-[200px] flex-shrink-0 transition-colors"
+         class="group flex items-center space-x-2 pl-3 pr-2 py-1.5 border-r border-gray-200 dark:border-gray-700 cursor-pointer max-w-[200px] flex-shrink-0 transition-colors"
          :class="[
-           tab.id === activeId ? 'bg-white text-gray-800' : 'text-gray-500 hover:bg-gray-100',
+           tab.id === activeId ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
            dragOverId === tab.id ? 'border-l-2 border-l-blue-500' : ''
          ]"
          draggable="true"

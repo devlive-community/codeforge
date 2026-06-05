@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+  <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
     <div class="flex items-center space-x-3">
       <Select v-model="selectedLanguage"
               class="w-64"
@@ -47,7 +47,7 @@
 
     <div class="flex items-center space-x-3">
       <!-- 侧栏开关 + 布局切换 -->
-      <div class="flex items-center bg-gray-100 rounded-md p-0.5">
+      <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
         <Tooltip :text="sidebarVisible ? '隐藏侧栏' : '显示侧栏'">
           <button class="p-1.5 rounded transition-colors cursor-pointer"
                   :class="sidebarVisible ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"

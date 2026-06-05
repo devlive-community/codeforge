@@ -1,6 +1,6 @@
 <template>
-  <div class="flex flex-col h-full bg-gray-50 border-r border-gray-200">
-    <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 flex-shrink-0">
+  <div class="flex flex-col h-full bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+    <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <span class="text-xs font-semibold text-gray-600 truncate uppercase">{{ rootName || '资源管理器' }}</span>
       <div class="flex items-center space-x-1">
         <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 cursor-pointer"

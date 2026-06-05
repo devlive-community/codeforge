@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
+/* 让 dark: 变体按 .dark 类触发（而非系统媒体查询），便于在设置中控制 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
     body {
         @apply bg-gray-50 text-gray-900;
+    }
+
+    .dark body {
+        @apply bg-gray-900 text-gray-100;
     }
 
     ::-webkit-scrollbar {
