@@ -679,6 +679,39 @@ const generateTests = () => {
   openAiWithPrompt(`请为下面这段 ${currentLanguage.value} 代码生成单元测试，覆盖主要分支与边界情况，使用该语言常用的测试框架，只输出测试代码：\n\n\`\`\`${currentLanguage.value}\n${snippet}\n\`\`\``)
 }
 
+// AI 格式化/整理代码：请求 AI 返回整理后的完整代码，再走应用前差异预览确认
+const formatWithAi = async () => {
+  reloadAiCfg()
+  if (!aiActive.value.apiKey) {
+    toast.warning('请先在「设置 → AI」中配置 API Key')
+    return
+  }
+  const src = code.value
+  if (!src.trim()) {
+    return
+  }
+  toast.info('正在请求 AI 整理代码…')
+  try {
+    const res = await invoke<string>('ai_chat', {
+      provider: aiActive.value.provider,
+      baseUrl: aiActive.value.baseUrl,
+      apiKey: aiActive.value.apiKey,
+      model: aiActive.value.model,
+      system: '你是代码格式化与整理工具。只输出整理后的完整代码，保持逻辑与行为不变，规范缩进与风格，不要解释、不要使用代码块标记。',
+      messages: [{role: 'user', content: `语言：${currentLanguage.value}\n请整理/格式化下面的代码：\n${src}`}]
+    })
+    const formatted = cleanCompletion(res)
+    if (!formatted || formatted === src) {
+      toast.info('代码无需调整')
+      return
+    }
+    applyAiCode(formatted)
+  }
+  catch (error) {
+    toast.error('格式化失败: ' + error)
+  }
+}
+
 const openAiForExecution = (item: ExecutionResult) => {
   aiExecutionId.value = item.id ?? null
   aiErrorContext.value = item.success
@@ -1371,6 +1404,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},
   {id: 'explainCode', label: 'AI 解释代码（选中或全文）', icon: Sparkles, run: () => explainCode()},
   {id: 'generateTests', label: 'AI 生成测试（选中或全文）', icon: Sparkles, run: () => generateTests()},
+  {id: 'formatWithAi', label: 'AI 格式化代码', icon: Sparkles, run: () => formatWithAi()},
   {id: 'history', label: '执行历史', icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: '差异对比（当前 vs 已保存）', icon: GitCompare, run: () => openDiff()},
   {id: 'preview', label: '实时预览（Markdown / HTML）', icon: Eye, run: () => togglePreview()},
