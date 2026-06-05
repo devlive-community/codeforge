@@ -219,6 +219,13 @@
               @go="gotoLine"
               @close="showGoToLine = false"/>
 
+    <!-- 符号大纲 -->
+    <Outline v-if="showOutline"
+             :code="code"
+             :language="currentLanguage"
+             @go="gotoLine"
+             @close="showOutline = false"/>
+
     <!-- 差异对比：当前 vs 已保存 -->
     <DiffView v-if="showDiff"
               :original="savedContent || ''"
@@ -248,7 +255,7 @@
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {ChevronRight, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
+import {ChevronRight, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -276,6 +283,7 @@ import DiffView from './components/DiffView.vue'
 import PreviewPanel from './components/PreviewPanel.vue'
 import GitPanel from './components/GitPanel.vue'
 import GoToLine from './components/GoToLine.vue'
+import Outline from './components/Outline.vue'
 import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
@@ -661,6 +669,12 @@ const gotoLine = (line: number) => {
 const showGoToLine = ref(false)
 const openGoToLine = () => {
   showGoToLine.value = true
+}
+
+// 符号大纲（Cmd+Shift+O）
+const showOutline = ref(false)
+const openOutline = () => {
+  showOutline.value = true
 }
 
 const openSearchResult = async (path: string, line: number) => {
@@ -1078,7 +1092,7 @@ const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
     || showHistory.value || showViewer.value || showRunPrompt.value
     || showQuickOpen.value || showGenerate.value || showSearch.value
-    || showCommandPalette.value || showDiff.value || showGoToLine.value
+    || showCommandPalette.value || showDiff.value || showGoToLine.value || showOutline.value
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
@@ -1088,6 +1102,7 @@ const shortcutDispatch: Record<string, () => void> = {
   quickOpen: () => openQuickOpen(),
   commandPalette: () => openCommandPalette(),
   gotoLine: () => openGoToLine(),
+  outline: () => openOutline(),
   searchInFiles: () => openSearch(),
   generate: () => openGenerate(),
   save: () => saveFile(),
@@ -1123,6 +1138,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'closeTab', label: '关闭标签', icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
   {id: 'quickOpen', label: '快速打开文件', icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
   {id: 'gotoLine', label: '跳转到行', icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
+  {id: 'outline', label: '符号大纲', icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},
   {id: 'searchInFiles', label: '在文件夹内搜索', icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
   {id: 'generate', label: 'AI 生成代码', icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
   {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},
