@@ -199,7 +199,7 @@
     <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" :root-dir="rootDir" @close="showAi = false" @insert-code="applyAiCode"/>
 
     <!-- 文件夹内全局搜索 -->
-    <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" @open="openSearchResult" @close="showSearch = false"/>
+    <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" @open="openSearchResult" @replaced="reloadAffectedFiles" @close="showSearch = false"/>
 
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
@@ -629,6 +629,38 @@ const openSearchResult = async (path: string, line: number) => {
   await smartOpen(path)
   await nextTick()
   gotoLine(line)
+}
+
+// 全局替换后：刷新涉及到的已打开标签（保留有未保存修改的标签）
+const reloadAffectedFiles = async (paths: string[]) => {
+  const set = new Set(paths)
+  for (const tab of editorTabs.value) {
+    if (!tab.filePath || !set.has(tab.filePath)) {
+      continue
+    }
+    // 有未保存修改则不覆盖，避免丢失用户编辑
+    const dirty = tab.savedContent !== null && tab.code !== tab.savedContent
+    if (dirty) {
+      continue
+    }
+    try {
+      const content = await invoke<string>('read_file_text', {
+        path: tab.filePath,
+        maxSizeMb: editorConfig.value?.max_open_file_size
+      })
+      if (tab.id === activeTabId.value) {
+        code.value = content
+        savedContent.value = content
+      }
+      else {
+        tab.code = content
+        tab.savedContent = content
+      }
+    }
+    catch {
+      // 跳过无法读取的文件
+    }
+  }
 }
 
 // 快速打开（Cmd+P）

@@ -218,6 +218,141 @@ fn run_search(root: String, query: String) -> Result<Vec<SearchMatch>, String> {
     Ok(matches)
 }
 
+#[derive(Serialize)]
+pub struct ReplaceSummary {
+    files_changed: usize,
+    replacements: usize,
+}
+
+/// 在文件夹内全局替换文本（ASCII 大小写不敏感的字面量替换，与搜索语义一致）。
+/// 重 I/O 放到阻塞线程池。
+#[tauri::command]
+pub async fn replace_in_files(
+    root: String,
+    query: String,
+    replacement: String,
+) -> Result<ReplaceSummary, String> {
+    tokio::task::spawn_blocking(move || run_replace(root, query, replacement))
+        .await
+        .map_err(|e| format!("替换任务失败: {}", e))?
+}
+
+// 根据首字节推断 UTF-8 字符字节数
+fn utf8_char_len(b: u8) -> usize {
+    if b < 0x80 {
+        1
+    } else if b >> 5 == 0b110 {
+        2
+    } else if b >> 4 == 0b1110 {
+        3
+    } else if b >> 3 == 0b11110 {
+        4
+    } else {
+        1
+    }
+}
+
+/// ASCII 大小写不敏感的字面量替换，保持非 ASCII 字节按精确匹配，返回新文本与替换次数。
+fn replace_ascii_ci(text: &str, needle: &str, replacement: &str) -> (String, usize) {
+    let nb = needle.as_bytes();
+    let nlen = nb.len();
+    if nlen == 0 {
+        return (text.to_string(), 0);
+    }
+    let bytes = text.as_bytes();
+    let mut out = String::with_capacity(text.len());
+    let mut count = 0usize;
+    let mut i = 0usize;
+    while i < bytes.len() {
+        if i + nlen <= bytes.len() && bytes[i..i + nlen].eq_ignore_ascii_case(nb) {
+            out.push_str(replacement);
+            count += 1;
+            i += nlen;
+        } else {
+            let end = (i + utf8_char_len(bytes[i])).min(bytes.len());
+            out.push_str(&text[i..end]);
+            i = end;
+        }
+    }
+    (out, count)
+}
+
+fn run_replace(root: String, query: String, replacement: String) -> Result<ReplaceSummary, String> {
+    if query.is_empty() {
+        return Ok(ReplaceSummary {
+            files_changed: 0,
+            replacements: 0,
+        });
+    }
+    let root_path = Path::new(&root);
+    if !root_path.is_dir() {
+        return Err(format!("不是有效目录: {}", root));
+    }
+
+    let ignore = ["node_modules", "target", "dist", "build", ".next", ".cache"];
+    let mut files_changed = 0usize;
+    let mut replacements = 0usize;
+    let mut scanned: usize = 0;
+    let mut stack = vec![root_path.to_path_buf()];
+
+    while let Some(dir) = stack.pop() {
+        let read = match fs::read_dir(&dir) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        for entry in read.flatten() {
+            if scanned >= MAX_SEARCH_FILES_SCANNED {
+                break;
+            }
+            let ft = match entry.file_type() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            if ft.is_symlink() {
+                continue;
+            }
+
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name == ".DS_Store" {
+                continue;
+            }
+            let p = entry.path();
+
+            if ft.is_dir() {
+                if name.starts_with('.') || ignore.contains(&name.as_str()) {
+                    continue;
+                }
+                stack.push(p);
+                continue;
+            }
+            if !ft.is_file() {
+                continue;
+            }
+
+            scanned += 1;
+            if let Ok(meta) = entry.metadata() {
+                if meta.len() > MAX_SEARCH_FILE_SIZE {
+                    continue;
+                }
+            }
+            let content = match fs::read_to_string(&p) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            let (new_content, n) = replace_ascii_ci(&content, &query, &replacement);
+            if n > 0 && fs::write(&p, new_content).is_ok() {
+                files_changed += 1;
+                replacements += n;
+            }
+        }
+    }
+
+    Ok(ReplaceSummary {
+        files_changed,
+        replacements,
+    })
+}
+
 /// 读取文本文件内容（绕开 fs 插件 scope 限制）。
 /// max_size_mb 为打开大小上限(MB)，不传则用默认 5MB。
 #[tauri::command]

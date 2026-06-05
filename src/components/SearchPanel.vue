@@ -15,6 +15,21 @@
         </span>
       </div>
 
+      <!-- 替换行 -->
+      <div class="flex items-center px-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <Replace class="w-4 h-4 text-gray-400 flex-shrink-0"/>
+        <input v-model="replacement"
+               class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
+               placeholder="替换为…（大小写不敏感）"
+               @keydown.esc.prevent="emit('close')"/>
+        <button class="text-xs px-2 py-1 rounded bg-blue-500 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white flex-shrink-0"
+                :disabled="replacing || results.length === 0"
+                :title="results.length ? `替换全部 ${results.length} 处` : '先搜索出结果'"
+                @click="replaceAll">
+          {{ replacing ? '替换中…' : '全部替换' }}
+        </button>
+      </div>
+
       <div class="flex-1 overflow-y-auto">
         <div v-if="!loading && query && results.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">无匹配结果</div>
 
@@ -41,7 +56,8 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {FileText, Search} from 'lucide-vue-next'
+import {FileText, Replace, Search} from 'lucide-vue-next'
+import {useToast} from '../plugins/toast'
 
 interface Match
 {
@@ -51,14 +67,54 @@ interface Match
 }
 
 const props = defineProps<{ rootDir: string }>()
-const emit = defineEmits<{ open: [path: string, line: number]; close: [] }>()
+const emit = defineEmits<{
+  open: [path: string, line: number]
+  close: []
+  replaced: [paths: string[]]
+}>()
+
+const toast = useToast()
 
 const query = ref('')
+const replacement = ref('')
+const replacing = ref(false)
 const results = ref<Match[]>([])
 const loading = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
 
 onMounted(() => inputRef.value?.focus())
+
+// 全部替换：确认后调用后端，完成后刷新搜索并通知刷新已打开文件
+const replaceAll = async () => {
+  const q = query.value.trim()
+  if (q.length < 2 || results.value.length === 0) {
+    return
+  }
+  const affected = Array.from(new Set(results.value.map(m => m.path)))
+  const ok = window.confirm(
+      `将把 ${results.value.length} 处「${q}」替换为「${replacement.value}」，涉及 ${affected.length} 个文件。\n此操作会直接写入磁盘且不可撤销，确定继续？`
+  )
+  if (!ok) {
+    return
+  }
+  replacing.value = true
+  try {
+    const summary = await invoke<{ files_changed: number, replacements: number }>('replace_in_files', {
+      root: props.rootDir,
+      query: q,
+      replacement: replacement.value
+    })
+    toast.success(`已替换 ${summary.replacements} 处，涉及 ${summary.files_changed} 个文件`)
+    emit('replaced', affected)
+    await search()
+  }
+  catch (error) {
+    toast.error('替换失败: ' + error)
+  }
+  finally {
+    replacing.value = false
+  }
+}
 
 const rel = (p: string) => p.startsWith(props.rootDir) ? p.slice(props.rootDir.length + 1) : p
 
