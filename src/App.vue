@@ -79,7 +79,11 @@
                 <div class="flex items-center space-x-3">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
                   <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
-                  <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+                  <template v-if="currentFilePath">
+                    <span class="text-gray-400 text-xs">·</span>
+                    <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+                  </template>
+                  <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center">
                     · {{ currentFileName }}
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
                   </span>
@@ -324,6 +328,7 @@ import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
 import Terminal from './components/Terminal.vue'
+import Breadcrumbs from './components/Breadcrumbs.vue'
 import {initSnippets} from './composables/useSnippets'
 import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './composables/useKvStore'
 import {useAiConfig} from './composables/useAiConfig'
@@ -903,6 +908,11 @@ const openOutline = () => {
 
 // 代码片段管理
 const showSnippets = ref(false)
+
+// 面包屑点击：在系统文件管理器中显示该路径
+const revealInFinder = (path: string) => {
+  invoke('reveal_path', {path}).catch((error) => toast.error('打开失败: ' + error))
+}
 
 // 集成终端：首次打开后保持挂载（保留会话），仅切换显示
 const showTerminal = ref(false)
