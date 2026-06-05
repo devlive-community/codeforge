@@ -27,10 +27,13 @@ export function useCodeExecution(toast: any)
         filePath?: string | null
         args?: string[]
         stdin?: string
+        env?: Record<string, string>
+        // 指定要运行的代码（如运行选中片段）；不传则运行编辑器全部内容
+        codeOverride?: string
     }
 
     const runCode = async (options: RunOptions) => {
-        const {language, envInstalled, envLanguage, filePath, args, stdin} = options
+        const {language, envInstalled, envLanguage, filePath, args, stdin, env, codeOverride} = options
         if (!envInstalled) {
             toast.error(`${ envLanguage } 环境未安装`)
             return
@@ -52,12 +55,13 @@ export function useCodeExecution(toast: any)
         try {
             const result: ExecutionResult = await invoke('execute_code', {
                 request: {
-                    code: code.value,
+                    code: codeOverride ?? code.value,
                     language,
                     task_id: taskId,
                     file_path: filePath || null,
                     args: args && args.length ? args : null,
-                    stdin: stdin ? stdin : null
+                    stdin: stdin ? stdin : null,
+                    env: env && Object.keys(env).length ? env : null
                 }
             })
 

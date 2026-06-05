@@ -83,8 +83,11 @@
               <Button type="secondary" variant="outline" size="sm" :icon="Copy" @click="copyOutput">
                 复制输出
               </Button>
-              <Button size="sm" :icon="RotateCcw" @click="restoreSelected">
+              <Button type="secondary" variant="outline" size="sm" :icon="RotateCcw" @click="restoreSelected">
                 恢复代码
+              </Button>
+              <Button size="sm" :icon="Play" @click="rerunSelected">
+                重新运行
               </Button>
             </div>
           </div>
@@ -133,7 +136,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { Copy, History, RefreshCw, RotateCcw, Sparkles, Trash2 } from 'lucide-vue-next'
+import { Copy, History, Play, RefreshCw, RotateCcw, Sparkles, Trash2 } from 'lucide-vue-next'
 import Modal from '../ui/Modal.vue'
 import Button from '../ui/Button.vue'
 import type { ExecutionResult, Language } from '../types/app'
@@ -153,6 +156,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:show': [value: boolean]
   restore: [item: ExecutionResult]
+  rerun: [item: ExecutionResult]
   'open-ai': [item: ExecutionResult]
 }>()
 
@@ -281,6 +285,14 @@ const restoreSelected = () => {
     return
   }
   emit('restore', selectedItem.value)
+  visible.value = false
+}
+
+const rerunSelected = () => {
+  if (!selectedItem.value) {
+    return
+  }
+  emit('rerun', selectedItem.value)
   visible.value = false
 }
 

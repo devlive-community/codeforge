@@ -322,7 +322,8 @@ const containerClasses = computed(() => [
   props.variant === 'filled' ? 'bg-gray-50 border border-gray-200 rounded-md' : '',
   props.variant === 'borderless' ? 'border-b' : '',
   props.disabled ? 'opacity-50 cursor-not-allowed' : '',
-  props.error ? 'border-red-500' : 'border-gray-300',
+  props.error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600',
+  'dark:text-gray-100',
   colorConfig.value.ring
 ])
 

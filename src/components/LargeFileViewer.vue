@@ -1,30 +1,30 @@
 <template>
-  <div class="absolute inset-0 z-10 flex flex-col bg-white">
+  <div class="absolute inset-0 z-10 flex flex-col bg-white dark:bg-gray-900">
     <!-- 顶部信息栏 -->
-    <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
       <div class="flex items-center space-x-3 min-w-0">
         <FileText class="w-4 h-4 text-gray-500 flex-shrink-0"/>
-        <span class="text-sm font-medium text-gray-700 truncate">{{ fileName }}</span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{{ fileName }}</span>
         <span class="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex-shrink-0">只读</span>
         <span class="text-xs text-gray-400 flex-shrink-0">{{ humanSize }} · 共 {{ lineCount.toLocaleString() }} 行</span>
       </div>
       <div class="flex items-center space-x-3 flex-shrink-0">
         <span class="text-xs text-gray-400">{{ rangeText }}</span>
-        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 cursor-pointer" title="关闭" @click="emit('close')">
+        <button class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer" title="关闭" @click="emit('close')">
           <X class="w-4 h-4"/>
         </button>
       </div>
     </div>
 
     <!-- 虚拟滚动区域 -->
-    <div ref="scroller" class="flex-1 overflow-auto font-mono text-sm leading-5 bg-white" @scroll="onScroll">
+    <div ref="scroller" class="flex-1 overflow-auto font-mono text-sm leading-5 bg-white dark:bg-gray-900" @scroll="onScroll">
       <div :style="{ paddingTop: `${topPad}px`, paddingBottom: `${bottomPad}px` }">
         <div v-for="(line, i) in windowLines"
              :key="windowStart + i"
              class="flex"
              :style="{ height: `${lineHeight}px` }">
-          <span class="w-16 pr-3 text-right text-gray-400 select-none flex-shrink-0 bg-gray-50 border-r border-gray-100">{{ windowStart + i + 1 }}</span>
-          <pre class="pl-3 whitespace-pre text-gray-800">{{ line }}</pre>
+          <span class="w-16 pr-3 text-right text-gray-400 select-none flex-shrink-0 bg-gray-50 dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700">{{ windowStart + i + 1 }}</span>
+          <pre class="pl-3 whitespace-pre text-gray-800 dark:text-gray-200">{{ line }}</pre>
         </div>
       </div>
     </div>

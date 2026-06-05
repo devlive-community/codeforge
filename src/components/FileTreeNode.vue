@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex items-center py-1 pr-4 cursor-pointer text-sm select-none w-full whitespace-nowrap"
-         :class="isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'"
+         :class="isActive ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
          :style="{ paddingLeft: `${depth * 12 + 8}px` }"
          @click="onClick"
          @contextmenu.prevent.stop="onContext">
@@ -14,7 +14,8 @@
                  class="w-4 h-4 mx-1 flex-shrink-0"
                  :class="node.is_dir ? 'text-blue-500' : 'text-gray-400'"/>
 
-      <span>{{ node.name }}</span>
+      <span :class="gitBadge ? gitColor : ''">{{ node.name }}</span>
+      <span v-if="gitBadge" class="ml-auto pl-2 pr-1 text-xs font-bold flex-shrink-0" :class="gitColor">{{ gitBadge }}</span>
     </div>
 
     <template v-if="node.is_dir && expanded">
@@ -49,8 +50,21 @@ const openFile = inject<(path: string) => void>('treeOpenFile')
 const activePath = inject<ComputedRef<string | null>>('treeActivePath')
 const contextMenu = inject<(node: FileNode, e: MouseEvent) => void>('treeContextMenu')
 const refreshSignal = inject<Ref<number>>('treeRefresh')
+const gitStatus = inject<ComputedRef<Record<string, string>>>('treeGitStatus')
 
 const isActive = computed(() => !props.node.is_dir && activePath?.value === props.node.path)
+
+// Git 徽标：文件取自身状态，目录暂不显示
+const gitBadge = computed(() => (props.node.is_dir ? '' : gitStatus?.value?.[props.node.path] || ''))
+const gitColor = computed(() => {
+  switch (gitBadge.value) {
+    case 'U': return 'text-green-500'
+    case 'A': return 'text-green-600 dark:text-green-400'
+    case 'D': return 'text-red-500'
+    case 'M': return 'text-amber-500'
+    default: return 'text-gray-400'
+  }
+})
 
 const loadChildren = async () => {
   try {

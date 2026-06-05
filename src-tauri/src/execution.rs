@@ -353,6 +353,11 @@ pub async fn execute_code(
         command.stdin(Stdio::null());
     }
 
+    // 自定义环境变量
+    if let Some(env) = &request.env {
+        command.envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())));
+    }
+
     // 设置工作目录（就地运行为文件目录，否则为插件 execute_home）
     if let Some(dir) = &cwd {
         command.current_dir(dir);

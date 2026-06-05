@@ -1,11 +1,11 @@
 <template>
-  <div class="flex items-stretch bg-gray-50 border-b border-gray-200 overflow-x-auto flex-shrink-0
+  <div class="flex items-stretch bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-x-auto flex-shrink-0
               [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
     <div v-for="tab in tabs"
          :key="tab.id"
-         class="group flex items-center space-x-2 pl-3 pr-2 py-1.5 border-r border-gray-200 cursor-pointer max-w-[200px] flex-shrink-0 transition-colors"
+         class="group flex items-center space-x-2 pl-3 pr-2 py-1.5 border-r border-gray-200 dark:border-gray-700 cursor-pointer max-w-[200px] flex-shrink-0 transition-colors"
          :class="[
-           tab.id === activeId ? 'bg-white text-gray-800' : 'text-gray-500 hover:bg-gray-100',
+           tab.id === activeId ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
            dragOverId === tab.id ? 'border-l-2 border-l-blue-500' : ''
          ]"
          draggable="true"
@@ -20,7 +20,7 @@
       <img :src="iconUrl(tab.language)" class="w-4 h-4 flex-shrink-0" :alt="tab.language"/>
       <span class="text-xs truncate">{{ title(tab) }}</span>
       <span v-if="isDirty(tab)" class="text-amber-500 text-xs flex-shrink-0" title="未保存">●</span>
-      <button class="ml-1 rounded p-0.5 text-gray-400 hover:text-gray-700 hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+      <button class="ml-1 rounded p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
               :class="{ 'opacity-100': tab.id === activeId }"
               title="关闭"
               @click.stop="emit('close', tab.id)">
@@ -28,7 +28,7 @@
       </button>
     </div>
 
-    <button class="flex items-center justify-center px-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer flex-shrink-0"
+    <button class="flex items-center justify-center px-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0"
             title="新建标签页"
             @click="emit('new')">
       <Plus class="w-4 h-4"/>
@@ -37,15 +37,15 @@
 
   <!-- 标签右键菜单 -->
   <div v-if="menu.visible" class="fixed inset-0 z-50" @click="closeMenu" @contextmenu.prevent="closeMenu">
-    <div class="absolute bg-white rounded-md shadow-lg border border-gray-200 py-1 text-sm min-w-[140px]"
+    <div class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[140px]"
          :style="{ top: `${menu.y}px`, left: `${menu.x}px` }"
          @click.stop>
-      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="act(() => emit('close', menu.tabId!))">关闭</button>
-      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="act(() => emit('close-others', menu.tabId!))">关闭其他</button>
-      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="act(() => emit('close-right', menu.tabId!))">关闭右侧</button>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close', menu.tabId!))">关闭</button>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close-others', menu.tabId!))">关闭其他</button>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close-right', menu.tabId!))">关闭右侧</button>
       <template v-if="menuTabPath">
-        <div class="border-t border-gray-100 my-1"></div>
-        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="act(() => emit('copy-path', menuTabPath!))">复制路径</button>
+        <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('copy-path', menuTabPath!))">复制路径</button>
       </template>
     </div>
   </div>

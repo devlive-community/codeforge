@@ -1,5 +1,6 @@
 import {nextTick, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
+import {useTheme} from './useTheme'
 import {python} from '@codemirror/lang-python'
 import {javascript} from '@codemirror/lang-javascript'
 import {go} from '@codemirror/lang-go'
@@ -75,6 +76,7 @@ import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
+import {diffGutterExtension} from "../editor/diffGutter";
 
 interface Props
 {
@@ -85,6 +87,7 @@ interface Props
 export function useCodeMirrorEditor(props: Props)
 {
     const toast = useToast()
+    const {isDark} = useTheme()
     const {showFunctionHelpHover, functionHelpTheme} = useCodeMirrorFunctionHelp()
 
     // 状态管理
@@ -285,15 +288,18 @@ export function useCodeMirrorEditor(props: Props)
     const updateExtensions = async (showLineNumbers?: boolean, showFunctionHelp?: boolean) => {
         const result = []
 
-        // 添加主题扩展
-        const themeExtension = getThemeExtension(editorConfig.value?.theme)
-        result.push(themeExtension)
+        // 添加主题扩展：暗色模式下使用深色编辑器主题
+        const themeName = isDark.value ? 'githubDark' : (editorConfig.value?.theme || 'githubLight')
+        result.push(getThemeExtension(themeName))
 
         // 添加函数帮助主题
         result.push(functionHelpTheme)
 
         // 字体缩放快捷键（搜索/替换、折叠、括号匹配等由 vue-codemirror 的 basicSetup 提供）
         result.push(fontSizeKeymap)
+
+        // Git 行内差异标记（标记数据由外部 dispatch 填充，无 git 时为空）
+        result.push(diffGutterExtension)
 
         // 设置字体
         const {fontFamilyTheme} = useCodeMirrorFontFamily(
@@ -408,6 +414,12 @@ export function useCodeMirrorEditor(props: Props)
             await reRenderEditor()
         }
     }, {immediate: false})
+
+    // 跟随应用深色模式切换编辑器主题
+    // 仅更新扩展（vue-codemirror 会就地重配置），避免卸载重挂导致的白色闪烁
+    watch(isDark, async () => {
+        await updateExtensions()
+    })
 
     // 监听缩进配置变化
     watch(() => [editorConfig.value?.indent_with_tab, editorConfig.value?.tab_size], async () => {

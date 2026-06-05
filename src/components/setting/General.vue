@@ -1,5 +1,16 @@
 <template>
   <div>
+    <!-- 外观 -->
+    <div class="mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <Palette class="w-5 h-5 mr-2"/>
+        外观
+      </h3>
+      <Label label="主题">
+        <Select v-model="appTheme" class="w-1/3" :options="themeOptions" @change="onThemeChange"/>
+      </Label>
+    </div>
+
     <!-- 运行与文件 -->
     <div class="mb-6">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -65,7 +76,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Github, Info, Play } from 'lucide-vue-next'
+import { Github, Info, Palette, Play } from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
 import Label from '../../ui/Label.vue'
 import Input from '../../ui/Input.vue'
@@ -73,6 +84,7 @@ import Number from '../../ui/Number.vue'
 import Select from '../../ui/Select.vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '../../plugins/toast'
+import { useTheme, type AppTheme } from '../../composables/useTheme'
 
 const emit = defineEmits<{
   'settings-changed': [type: string, value: any]
@@ -80,6 +92,38 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const {setTheme} = useTheme()
+
+// 外观主题
+const appTheme = ref<AppTheme>('system')
+const themeOptions = [
+  {label: '跟随系统', value: 'system'},
+  {label: '浅色', value: 'light'},
+  {label: '深色', value: 'dark'}
+]
+
+const loadAppearance = async () => {
+  try {
+    const config = await invoke<any>('get_app_config')
+    const t = config?.theme
+    appTheme.value = (t === 'light' || t === 'dark') ? t : 'system'
+  }
+  catch {
+    appTheme.value = 'system'
+  }
+}
+
+const onThemeChange = async () => {
+  setTheme(appTheme.value)
+  try {
+    const config = await invoke<any>('get_app_config')
+    config.theme = appTheme.value
+    await invoke('update_app_config', {config})
+  }
+  catch (error) {
+    toast.error('保存主题失败: ' + error)
+  }
+}
 
 const githubToken = ref('')
 const originalGithubToken = ref('')
@@ -183,5 +227,6 @@ defineExpose({
 onMounted(async () => {
   await loadGithubConfig()
   await loadBehaviorConfig()
+  await loadAppearance()
 })
 </script>

@@ -42,7 +42,7 @@
       </div>
 
       <div v-else-if="output" class="p-4">
-        <pre :class="['whitespace-pre-wrap text-sm leading-relaxed font-mono', getOutputClass()]">{{ output }}</pre>
+        <pre :class="['whitespace-pre-wrap text-sm leading-relaxed font-mono', getOutputClass()]" v-html="renderedOutput"></pre>
 
         <!-- 正在运行时显示光标 -->
         <div v-if="isRunning" class="flex items-center mt-2 text-yellow-400">
@@ -63,6 +63,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { Check, Clock, Copy, Loader, Terminal, Trash2 } from 'lucide-vue-next'
+import { ansiToHtml } from '../utils/ansi'
 
 const props = defineProps<{
   output: string
@@ -82,6 +83,9 @@ const outputContainer = ref<HTMLElement>()
 const copyIcon = computed(() => isCopied.value ? Check : Copy)
 
 // 根据执行状态和成功状态确定输出样式
+// 渲染 ANSI 颜色（自带 HTML 转义）
+const renderedOutput = computed(() => ansiToHtml(props.output || ''))
+
 const getOutputClass = () => {
   if (props.isRunning) {
     return 'text-yellow-300' // 运行中显示黄色

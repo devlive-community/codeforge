@@ -162,32 +162,32 @@ const colorConfig = computed(() => {
   const configs = {
     primary: {
       checked: 'bg-blue-600',
-      unchecked: 'bg-gray-200',
+      unchecked: 'bg-gray-200 dark:bg-gray-600',
       focus: 'focus:ring-blue-500'
     },
     success: {
       checked: 'bg-green-600',
-      unchecked: 'bg-gray-200',
+      unchecked: 'bg-gray-200 dark:bg-gray-600',
       focus: 'focus:ring-green-500'
     },
     warning: {
       checked: 'bg-yellow-500',
-      unchecked: 'bg-gray-200',
+      unchecked: 'bg-gray-200 dark:bg-gray-600',
       focus: 'focus:ring-yellow-500'
     },
     danger: {
       checked: 'bg-red-600',
-      unchecked: 'bg-gray-200',
+      unchecked: 'bg-gray-200 dark:bg-gray-600',
       focus: 'focus:ring-red-500'
     },
     info: {
       checked: 'bg-cyan-600',
-      unchecked: 'bg-gray-200',
+      unchecked: 'bg-gray-200 dark:bg-gray-600',
       focus: 'focus:ring-cyan-500'
     },
     secondary: {
       checked: 'bg-gray-600',
-      unchecked: 'bg-gray-200',
+      unchecked: 'bg-gray-200 dark:bg-gray-600',
       focus: 'focus:ring-gray-500'
     }
   }

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen flex flex-col bg-gray-50">
+  <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
     <AppHeader :is-running="isRunning"
                :env-installed="envInfo.installed"
                :supported-languages="supportedLanguages"
@@ -12,7 +12,7 @@
                @language-change="onLanguageChange"
                @layout-change="handleLayoutChange"
                @open-file="handleOpenFileClick"
-               @save-file="saveFile"
+               @save-file="handleSave"
                @show-history="showHistory = true"
                @show-ai="handleShowAi"
                @show-settings="showSettings = true"
@@ -20,21 +20,31 @@
     </AppHeader>
 
     <!-- 运行输入：参数 + stdin（任何布局/运行前都可填）-->
-    <div class="bg-gray-50 border-b border-gray-200 flex-shrink-0">
-      <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 cursor-pointer" @click="showRunInput = !showRunInput">
+    <div class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+      <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="showRunInput = !showRunInput">
         <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
-        运行输入（参数 / stdin）
-        <span v-if="!showRunInput && (runArgs || runStdin)" class="ml-2 text-blue-500">●</span>
+        运行输入（参数 / stdin / 环境变量）
+        <span v-if="!showRunInput && (runArgs || runStdin || runEnv)" class="ml-2 text-blue-500">●</span>
       </button>
-      <div v-if="showRunInput" class="px-4 pb-2 flex items-start space-x-3">
-        <div class="flex flex-col w-56 flex-shrink-0">
-          <label class="text-[11px] text-gray-400 mb-0.5">运行参数</label>
-          <input v-model="runArgs" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="空格分隔，如 --port 8080"/>
+      <div v-if="showRunInput" class="px-4 pb-2 space-y-2">
+        <div class="flex items-start space-x-3">
+          <div class="flex flex-col w-56 flex-shrink-0">
+            <label class="text-[11px] text-gray-400 mb-0.5">运行参数</label>
+            <input v-model="runArgs" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="空格分隔，如 --port 8080"/>
+          </div>
+          <div class="flex flex-col flex-1 min-w-0">
+            <label class="text-[11px] text-gray-400 mb-0.5">标准输入 (stdin)</label>
+            <textarea v-model="runStdin" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="运行时喂给程序的输入"></textarea>
+          </div>
         </div>
-        <div class="flex flex-col flex-1 min-w-0">
-          <label class="text-[11px] text-gray-400 mb-0.5">标准输入 (stdin)</label>
-          <textarea v-model="runStdin" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="运行时喂给程序的输入"></textarea>
+        <div class="flex flex-col">
+          <label class="text-[11px] text-gray-400 mb-0.5">环境变量</label>
+          <input v-model="runEnv" class="text-xs border border-gray-300 rounded px-2 py-1 font-mono focus:outline-none focus:border-blue-400" placeholder="KEY=值，多个用 ; 分隔，如 DEBUG=1;PORT=8080"/>
         </div>
+        <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+          <input v-model="watchMode" type="checkbox" class="cursor-pointer"/>
+          监听模式：保存后自动运行
+        </label>
       </div>
     </div>
 
@@ -44,6 +54,7 @@
         <Sidebar :root-dir="rootDir"
                  :active-path="currentFilePath"
                  :recent-folders="recentFolders"
+                 :git-status="gitStatus"
                  class="flex-shrink-0"
                  :style="{ width: `${sidebarWidth}px` }"
                  @open-folder="openFolder"
@@ -52,7 +63,7 @@
                  @renamed="(from, to) => updateTabPath(from, to)"
                  @deleted="(p) => detachTabPath(p)"/>
         <!-- 拖拽改变侧栏宽度 -->
-        <div class="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
+        <div class="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
              @mousedown="startSidebarResize"></div>
       </template>
 
@@ -64,10 +75,10 @@
             <div class="h-full flex flex-col overflow-hidden">
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
-              <div v-if="!showViewer" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+              <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-                  <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+                  <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
                   <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
                     · {{ currentFileName }}
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
@@ -86,7 +97,7 @@
                                  :line-count="viewerFile.lineCount"
                                  :size-bytes="viewerFile.sizeBytes"
                                  @close="closeViewer"/>
-                <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
+                <InlineGenerate v-if="showGenerate" :language="currentLanguage" :selection="generateSelection" @insert="insertGeneratedCode" @close="showGenerate = false"/>
               </div>
             </div>
           </template>
@@ -95,9 +106,9 @@
             <!-- 输出 -->
             <div class="h-full flex flex-col" :class="effectiveDirection === 'vertical' ? 'border-t border-gray-200' : 'border-l border-gray-200'">
               <!-- 仅编辑器模式下提供收起控制台的入口 -->
-              <div v-if="layoutMode === 'editor'" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-                <h2 class="text-sm font-medium text-gray-700">控制台</h2>
-                <button class="text-gray-400 hover:text-gray-600 transition-colors" title="收起控制台" @click="showConsole = false">
+              <div v-if="layoutMode === 'editor'" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+                <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">控制台</h2>
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" title="收起控制台" @click="showConsole = false">
                   <X class="w-4 h-4"/>
                 </button>
               </div>
@@ -128,10 +139,10 @@
       <div v-else class="h-full flex flex-col overflow-hidden">
         <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
-        <div v-if="!showViewer" class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+        <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-            <h2 class="text-sm font-medium text-gray-700">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+            <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
             <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
               · {{ currentFileName }}
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
@@ -150,7 +161,7 @@
                            :line-count="viewerFile.lineCount"
                            :size-bytes="viewerFile.sizeBytes"
                            @close="closeViewer"/>
-          <InlineGenerate v-if="showGenerate" :language="currentLanguage" @insert="insertGeneratedCode" @close="showGenerate = false"/>
+          <InlineGenerate v-if="showGenerate" :language="currentLanguage" :selection="generateSelection" @insert="insertGeneratedCode" @close="showGenerate = false"/>
         </div>
       </div>
       </div>
@@ -172,6 +183,7 @@
     <ExecutionHistory v-model:show="showHistory"
                       :supported-languages="supportedLanguages"
                       @restore="restoreHistoryItem"
+                      @rerun="rerunHistoryItem"
                       @open-ai="openAiForExecution"/>
 
     <!-- 运行未保存文件询问 -->
@@ -189,7 +201,10 @@
     </Modal>
 
     <!-- AI 助手 -->
-    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" @close="showAi = false" @insert-code="applyAiCode"/>
+    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" :initial-prompt="aiInitialPrompt" :root-dir="rootDir" @close="showAi = false" @insert-code="applyAiCode"/>
+
+    <!-- 文件夹内全局搜索 -->
+    <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" @open="openSearchResult" @replaced="reloadAffectedFiles" @close="showSearch = false"/>
 
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
@@ -197,14 +212,54 @@
                @select="smartOpen"
                @close="showQuickOpen = false"/>
 
+    <!-- 命令面板 -->
+    <CommandPalette v-if="showCommandPalette"
+                    :commands="paletteCommands"
+                    @close="showCommandPalette = false"/>
+
+    <!-- 跳转到行 -->
+    <GoToLine v-if="showGoToLine"
+              :max-line="(code || '').split('\n').length"
+              @go="gotoLine"
+              @close="showGoToLine = false"/>
+
+    <!-- 符号大纲 -->
+    <Outline v-if="showOutline"
+             :code="code"
+             :language="currentLanguage"
+             @go="gotoLine"
+             @close="showOutline = false"/>
+
+    <!-- 差异对比：当前 vs 已保存 -->
+    <DiffView v-if="showDiff"
+              :original="savedContent || ''"
+              :modified="code"
+              :file-name="currentFileName"
+              @close="showDiff = false"/>
+
+    <!-- 实时预览（Markdown / HTML）-->
+    <PreviewPanel v-if="showPreview"
+                  :content="code"
+                  :language="currentLanguage"
+                  :file-name="currentFileName"
+                  @close="showPreview = false"/>
+
+    <!-- Git 源代码管理 -->
+    <GitPanel v-if="showGit && rootDir"
+              :root-dir="rootDir"
+              @open="smartOpen"
+              @refresh="refreshGitStatus"
+              @close="showGit = false"/>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
-import {ChevronRight, X} from 'lucide-vue-next'
+import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {debounce} from 'lodash-es'
+import {ChevronRight, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -227,8 +282,17 @@ import EditorTabs from './components/EditorTabs.vue'
 import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
 import QuickOpen from './components/QuickOpen.vue'
+import CommandPalette, {type PaletteCommand} from './components/CommandPalette.vue'
+import DiffView from './components/DiffView.vue'
+import PreviewPanel from './components/PreviewPanel.vue'
+import GitPanel from './components/GitPanel.vue'
+import GoToLine from './components/GoToLine.vue'
+import Outline from './components/Outline.vue'
+import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
+import SearchPanel from './components/SearchPanel.vue'
+import {useTheme, type AppTheme} from './composables/useTheme'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
@@ -528,6 +592,8 @@ const showAi = ref(false)
 const aiExecutionId = ref<number | null>(null)
 // 失败运行的报错上下文，供"分析报错"快捷动作
 const aiErrorContext = ref<{ code: string, error: string } | null>(null)
+// 打开 AI 时的初始提示（解释/生成测试等一次性动作）
+const aiInitialPrompt = ref<string | null>(null)
 
 const combinedOutput = (item: ExecutionResult) =>
     [item.stdout?.trim(), item.stderr?.trim()].filter(Boolean).join('\n\n')
@@ -538,7 +604,46 @@ const handleShowAi = () => {
   aiErrorContext.value = currentExecutionId.value != null && !isSuccess.value && output.value
       ? {code: code.value, error: output.value}
       : null
+  aiInitialPrompt.value = null
   showAi.value = true
+}
+
+// 取选中文本，无选中则用整篇代码
+const selectedOrAll = (): string => {
+  const view = editorView.value
+  if (view) {
+    const {from, to} = view.state.selection.main
+    if (from !== to) {
+      return view.state.sliceDoc(from, to)
+    }
+  }
+  return code.value
+}
+
+// 以一次性提示打开 AI（临时会话，不关联执行）
+const openAiWithPrompt = (prompt: string) => {
+  aiExecutionId.value = null
+  aiErrorContext.value = null
+  aiInitialPrompt.value = prompt
+  showAi.value = true
+}
+
+const explainCode = () => {
+  const snippet = selectedOrAll()
+  if (!snippet.trim()) {
+    toast.info('没有可解释的代码')
+    return
+  }
+  openAiWithPrompt(`请解释下面这段 ${currentLanguage.value} 代码的作用与关键逻辑，用中文简洁说明：\n\n\`\`\`${currentLanguage.value}\n${snippet}\n\`\`\``)
+}
+
+const generateTests = () => {
+  const snippet = selectedOrAll()
+  if (!snippet.trim()) {
+    toast.info('没有可生成测试的代码')
+    return
+  }
+  openAiWithPrompt(`请为下面这段 ${currentLanguage.value} 代码生成单元测试，覆盖主要分支与边界情况，使用该语言常用的测试框架，只输出测试代码：\n\n\`\`\`${currentLanguage.value}\n${snippet}\n\`\`\``)
 }
 
 const openAiForExecution = (item: ExecutionResult) => {
@@ -557,9 +662,14 @@ const applyAiCode = (codeText: string) => {
 // 当前 CodeMirror view（用于在光标处插入生成的代码）
 const editorView = ref<any>(null)
 
-// AI 自然语言生成
+// AI 自然语言生成 / 选区改写
 const showGenerate = ref(false)
+const generateSelection = ref('')
 const openGenerate = () => {
+  const view = editorView.value
+  generateSelection.value = view
+      ? view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)
+      : ''
   showGenerate.value = true
 }
 
@@ -579,6 +689,78 @@ const insertGeneratedCode = (text: string) => {
   }
 }
 
+// 文件夹内全局搜索（Cmd+Shift+F）
+const showSearch = ref(false)
+const openSearch = () => {
+  if (!rootDir.value) {
+    toast.info('请先打开文件夹')
+    return
+  }
+  showSearch.value = true
+}
+
+const gotoLine = (line: number) => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const target = Math.max(1, Math.min(line, view.state.doc.lines))
+  const l = view.state.doc.line(target)
+  view.dispatch({selection: {anchor: l.from}, scrollIntoView: true})
+  view.focus()
+}
+
+// 跳转到行（Cmd+G）
+const showGoToLine = ref(false)
+const openGoToLine = () => {
+  showGoToLine.value = true
+}
+
+// 符号大纲（Cmd+Shift+O）
+const showOutline = ref(false)
+const openOutline = () => {
+  showOutline.value = true
+}
+
+const openSearchResult = async (path: string, line: number) => {
+  showSearch.value = false
+  await smartOpen(path)
+  await nextTick()
+  gotoLine(line)
+}
+
+// 全局替换后：刷新涉及到的已打开标签（保留有未保存修改的标签）
+const reloadAffectedFiles = async (paths: string[]) => {
+  const set = new Set(paths)
+  for (const tab of editorTabs.value) {
+    if (!tab.filePath || !set.has(tab.filePath)) {
+      continue
+    }
+    // 有未保存修改则不覆盖，避免丢失用户编辑
+    const dirty = tab.savedContent !== null && tab.code !== tab.savedContent
+    if (dirty) {
+      continue
+    }
+    try {
+      const content = await invoke<string>('read_file_text', {
+        path: tab.filePath,
+        maxSizeMb: editorConfig.value?.max_open_file_size
+      })
+      if (tab.id === activeTabId.value) {
+        code.value = content
+        savedContent.value = content
+      }
+      else {
+        tab.code = content
+        tab.savedContent = content
+      }
+    }
+    catch {
+      // 跳过无法读取的文件
+    }
+  }
+}
+
 // 快速打开（Cmd+P）
 const showQuickOpen = ref(false)
 const openQuickOpen = () => {
@@ -588,6 +770,111 @@ const openQuickOpen = () => {
   }
   showQuickOpen.value = true
 }
+
+// 命令面板（Cmd+Shift+P）
+const showCommandPalette = ref(false)
+const openCommandPalette = () => {
+  showCommandPalette.value = true
+}
+
+// 差异对比 / 实时预览
+const showDiff = ref(false)
+const showPreview = ref(false)
+const openDiff = () => {
+  if (!currentFilePath.value) {
+    toast.info('差异对比需要先打开已保存的文件')
+    return
+  }
+  showDiff.value = true
+}
+const togglePreview = () => {
+  showPreview.value = !showPreview.value
+}
+
+// ===== Git 源代码管理 =====
+const showGit = ref(false)
+const openGit = () => {
+  if (!rootDir.value) {
+    toast.info('请先打开文件夹')
+    return
+  }
+  showGit.value = true
+}
+
+// 文件树徽标用：绝对路径 → 状态字母（M/A/D/U）
+const gitStatus = ref<Record<string, string>>({})
+const refreshGitStatus = async () => {
+  if (!rootDir.value) {
+    gitStatus.value = {}
+    return
+  }
+  try {
+    const s = await invoke<{ is_repo: boolean, files: { path: string, index: string, worktree: string }[] }>(
+        'git_status', {root: rootDir.value}
+    )
+    const map: Record<string, string> = {}
+    if (s.is_repo) {
+      for (const f of s.files) {
+        const code = f.index === '?'
+            ? 'U'
+            : (f.worktree.trim() || f.index.trim() || 'M')
+        map[`${rootDir.value}/${f.path}`] = code
+      }
+    }
+    gitStatus.value = map
+  }
+  catch {
+    gitStatus.value = {}
+  }
+  // HEAD 可能因提交/切换分支变化，刷新编辑器行内差异基线
+  fetchBaseline()
+}
+
+// ===== 编辑器行内差异标记（vs HEAD）=====
+// 当前文件在 HEAD 中的内容；null 表示无基线（新文件/非 git/未跟踪），不显示标记
+const gitBaseline = ref<string | null>(null)
+
+const fetchBaseline = async () => {
+  if (!rootDir.value || !currentFilePath.value || !currentFilePath.value.startsWith(rootDir.value)) {
+    gitBaseline.value = null
+    applyDiffMarkers()
+    return
+  }
+  const rel = currentFilePath.value.slice(rootDir.value.length + 1)
+  try {
+    const head = await invoke<{ exists: boolean, content: string }>('git_file_head', {
+      root: rootDir.value,
+      relPath: rel
+    })
+    gitBaseline.value = head.exists ? head.content : null
+  }
+  catch {
+    gitBaseline.value = null
+  }
+  applyDiffMarkers()
+}
+
+// 计算并派发标记到编辑器
+const applyDiffMarkers = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const markers = gitBaseline.value === null
+      ? {changed: new Map(), deleted: new Set<number>()}
+      : computeDiffMarkers(gitBaseline.value, code.value)
+  view.dispatch({effects: setDiffMarkers.of(markers)})
+}
+const applyDiffMarkersDebounced = debounce(applyDiffMarkers, 250)
+
+// 切换文件取新基线；编辑时重算；编辑器重挂时重新派发
+watch(currentFilePath, () => fetchBaseline())
+watch(code, () => applyDiffMarkersDebounced())
+watch(editorView, () => applyDiffMarkers())
+
+// 打开文件夹、保存文件后刷新文件树 Git 徽标与差异基线
+watch(rootDir, () => refreshGitStatus(), {immediate: true})
+watch(savedContent, () => refreshGitStatus())
 
 const closeViewer = () => {
   showViewer.value = false
@@ -648,23 +935,118 @@ const handleLayoutChange = (mode: LayoutMode) => {
   }
 }
 
-// 运行输入：参数 + stdin
+// 运行输入：参数 + stdin + 环境变量
 const showRunInput = ref(false)
 const runArgs = ref('')
 const runStdin = ref('')
+const runEnv = ref('')
 
-const buildRunBase = () => ({
-  language: currentLanguage.value,
-  envInstalled: envInfo.value.installed,
-  envLanguage: envInfo.value.language,
-  args: runArgs.value.trim() ? runArgs.value.trim().split(/\s+/) : undefined,
-  stdin: runStdin.value || undefined
+// 监听模式：保存后自动运行
+const watchMode = ref(localStorage.getItem('watch-mode') === 'true')
+watch(watchMode, (v) => localStorage.setItem('watch-mode', String(v)))
+
+// 保存包装：保存后若开启监听模式则自动运行
+const handleSave = async () => {
+  await saveFile()
+  if (watchMode.value && currentFilePath.value && !isDirty.value) {
+    handleRunCode()
+  }
+}
+
+// ===== 按文件记忆运行配置（args/stdin/env）=====
+const RUN_CONFIGS_KEY = 'run-configs'
+type RunConfig = { args: string, stdin: string, env: string }
+const loadRunConfigs = (): Record<string, RunConfig> => {
+  try {
+    return JSON.parse(localStorage.getItem(RUN_CONFIGS_KEY) || '{}')
+  }
+  catch {
+    return {}
+  }
+}
+// 把当前输入写入指定文件的配置（全空则删除该条）
+const saveRunConfig = (path: string) => {
+  const map = loadRunConfigs()
+  if (!runArgs.value && !runStdin.value && !runEnv.value) {
+    delete map[path]
+  }
+  else {
+    map[path] = {args: runArgs.value, stdin: runStdin.value, env: runEnv.value}
+  }
+  localStorage.setItem(RUN_CONFIGS_KEY, JSON.stringify(map))
+}
+// 载入指定文件的配置（无则清空）
+const loadRunConfig = (path: string | null) => {
+  const cfg = path ? loadRunConfigs()[path] : null
+  runArgs.value = cfg?.args || ''
+  runStdin.value = cfg?.stdin || ''
+  runEnv.value = cfg?.env || ''
+}
+
+// 切换文件时：保存旧文件输入、载入新文件输入
+watch(currentFilePath, (np, op) => {
+  if (op) {
+    saveRunConfig(op)
+  }
+  loadRunConfig(np)
 })
+
+// 编辑输入时防抖保存到当前文件
+const persistRunConfig = debounce(() => {
+  if (currentFilePath.value) {
+    saveRunConfig(currentFilePath.value)
+  }
+}, 400)
+watch([runArgs, runStdin, runEnv], () => persistRunConfig())
+
+// 解析环境变量文本（KEY=值，按换行或分号分隔）
+const parseEnv = (text: string): Record<string, string> => {
+  const env: Record<string, string> = {}
+  for (const part of text.split(/[\n;]/)) {
+    const seg = part.trim()
+    if (!seg) continue
+    const eq = seg.indexOf('=')
+    if (eq > 0) {
+      env[seg.slice(0, eq).trim()] = seg.slice(eq + 1).trim()
+    }
+  }
+  return env
+}
+
+const buildRunBase = () => {
+  const env = parseEnv(runEnv.value)
+  return {
+    language: currentLanguage.value,
+    envInstalled: envInfo.value.installed,
+    envLanguage: envInfo.value.language,
+    args: runArgs.value.trim() ? runArgs.value.trim().split(/\s+/) : undefined,
+    stdin: runStdin.value || undefined,
+    env: Object.keys(env).length ? env : undefined
+  }
+}
 
 // 运行未保存文件的询问弹窗
 const showRunPrompt = ref(false)
 
 // 包装运行：仅编辑器模式下点击运行时自动展开控制台；关联文件则按策略就地运行
+// 运行选中片段：以选中文本作为临时代码运行（不就地、不关联文件）
+const runSelection = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const {from, to} = view.state.selection.main
+  if (from === to) {
+    toast.info('请先选中要运行的代码')
+    return
+  }
+  const selected = view.state.sliceDoc(from, to)
+  if (layoutMode.value === 'editor') {
+    showConsole.value = true
+  }
+  runCode({...buildRunBase(), codeOverride: selected})
+}
+
 const handleRunCode = async () => {
   if (layoutMode.value === 'editor') {
     showConsole.value = true
@@ -737,6 +1119,16 @@ const restoreHistoryItem = (item: ExecutionResult) => {
   toast.success('已恢复历史代码')
 }
 
+// 从执行历史一键重跑：恢复语言与代码后直接运行
+const rerunHistoryItem = async (item: ExecutionResult) => {
+  applyLanguage(item.language)
+  code.value = item.code || ''
+  resetFile()
+  // 确保环境信息已更新为该语言再运行
+  await refreshEnvInfo()
+  handleRunCode()
+}
+
 // 监听编辑器配置变化
 watch(editorConfig, (newConfig) => {
   if (newConfig) {
@@ -774,22 +1166,75 @@ window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
     || showHistory.value || showViewer.value || showRunPrompt.value
-    || showQuickOpen.value || showGenerate.value
+    || showQuickOpen.value || showGenerate.value || showSearch.value
+    || showCommandPalette.value || showDiff.value || showGoToLine.value || showOutline.value
 
 // 全局快捷键（绑定可在设置中自定义）
-const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
+const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
 
 const shortcutDispatch: Record<string, () => void> = {
   run: () => handleRunCode(),
+  runSelection: () => runSelection(),
   quickOpen: () => openQuickOpen(),
+  commandPalette: () => openCommandPalette(),
+  gotoLine: () => openGoToLine(),
+  outline: () => openOutline(),
+  searchInFiles: () => openSearch(),
   generate: () => openGenerate(),
-  save: () => saveFile(),
+  save: () => handleSave(),
   saveAs: () => saveFileAs(),
   open: () => handleOpenFileClick(),
   newTab: () => handleNewTab(),
   closeTab: () => handleCloseTab(activeTabId.value),
   toggleSidebar: () => toggleSidebar()
 }
+
+// 切换并持久化外观主题
+const applyTheme = async (t: AppTheme) => {
+  setAppTheme(t)
+  try {
+    const config = await invoke<any>('get_app_config')
+    config.theme = t
+    await invoke('update_app_config', {config})
+  }
+  catch (error) {
+    console.error('保存主题失败:', error)
+  }
+}
+
+// 命令面板命令列表（含快捷键提示）
+const hintOf = (id: string) => formatCombo(getBinding(id))
+const paletteCommands = computed<PaletteCommand[]>(() => [
+  {id: 'run', label: '运行代码', icon: Play, hint: hintOf('run'), run: () => handleRunCode()},
+  {id: 'runSelection', label: '运行选中片段', icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
+  {id: 'watchMode', label: watchMode.value ? '关闭监听模式（保存自动运行）' : '开启监听模式（保存自动运行）', icon: Eye, run: () => { watchMode.value = !watchMode.value }},
+  {id: 'open', label: '打开文件', icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
+  {id: 'openFolder', label: '打开文件夹', icon: FolderOpen, run: () => openFolder()},
+  {id: 'save', label: '保存文件', icon: Save, hint: hintOf('save'), run: () => saveFile()},
+  {id: 'saveAs', label: '另存为', icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
+  {id: 'newTab', label: '新建标签', icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
+  {id: 'closeTab', label: '关闭标签', icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
+  {id: 'quickOpen', label: '快速打开文件', icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
+  {id: 'gotoLine', label: '跳转到行', icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
+  {id: 'outline', label: '符号大纲', icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},
+  {id: 'searchInFiles', label: '在文件夹内搜索', icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
+  {id: 'generate', label: 'AI 生成代码', icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
+  {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},
+  {id: 'explainCode', label: 'AI 解释代码（选中或全文）', icon: Sparkles, run: () => explainCode()},
+  {id: 'generateTests', label: 'AI 生成测试（选中或全文）', icon: Sparkles, run: () => generateTests()},
+  {id: 'history', label: '执行历史', icon: History, run: () => { showHistory.value = true }},
+  {id: 'diff', label: '差异对比（当前 vs 已保存）', icon: GitCompare, run: () => openDiff()},
+  {id: 'preview', label: '实时预览（Markdown / HTML）', icon: Eye, run: () => togglePreview()},
+  {id: 'git', label: 'Git 源代码管理', icon: GitBranch, run: () => openGit()},
+  {id: 'toggleSidebar', label: '切换侧栏', icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
+  {id: 'layoutHorizontal', label: '布局：左右', group: '布局', icon: PanelRight, run: () => handleLayoutChange('horizontal')},
+  {id: 'layoutVertical', label: '布局：上下', group: '布局', icon: PanelBottom, run: () => handleLayoutChange('vertical')},
+  {id: 'layoutEditor', label: '布局：仅编辑器', group: '布局', icon: Maximize2, run: () => handleLayoutChange('editor')},
+  {id: 'themeSystem', label: '主题：跟随系统', group: '主题', icon: Monitor, run: () => applyTheme('system')},
+  {id: 'themeLight', label: '主题：浅色', group: '主题', icon: Sun, run: () => applyTheme('light')},
+  {id: 'themeDark', label: '主题：深色', group: '主题', icon: Moon, run: () => applyTheme('dark')},
+  {id: 'settings', label: '打开设置', icon: SettingsIcon, run: () => { showSettings.value = true }}
+])
 
 const onGlobalKeydown = (e: KeyboardEvent) => {
   if (isOverlayOpen()) {
@@ -804,7 +1249,10 @@ const onGlobalKeydown = (e: KeyboardEvent) => {
   }
 }
 
+const {init: initTheme, setTheme: setAppTheme} = useTheme()
+
 onMounted(async () => {
+  await initTheme()
   await initialize()
   await buildLanguageRegistry()
   // 以当前内容初始化首个标签页

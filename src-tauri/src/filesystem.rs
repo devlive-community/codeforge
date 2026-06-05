@@ -58,8 +58,15 @@ const DEFAULT_MAX_FILE_SIZE_MB: u64 = 5;
 const MAX_LIST_FILES: usize = 20000;
 
 /// 递归列出目录下所有文件（用于 Cmd+P 快速打开）。跳过隐藏目录与常见重目录。
+/// 重 I/O 放到阻塞线程池，避免阻塞主线程。
 #[tauri::command]
-pub fn list_files(path: String) -> Result<Vec<String>, String> {
+pub async fn list_files(path: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || run_list_files(path))
+        .await
+        .map_err(|e| format!("列文件任务失败: {}", e))?
+}
+
+fn run_list_files(path: String) -> Result<Vec<String>, String> {
     let root = Path::new(&path);
     if !root.is_dir() {
         return Err(format!("不是有效目录: {}", path));
@@ -78,18 +85,26 @@ pub fn list_files(path: String) -> Result<Vec<String>, String> {
             Err(_) => continue,
         };
         for entry in read.flatten() {
+            // 用 file_type 不跟随符号链接，避免软链成环导致无限递归
+            let ft = match entry.file_type() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            if ft.is_symlink() {
+                continue;
+            }
             let name = entry.file_name().to_string_lossy().to_string();
             if name == ".DS_Store" {
                 continue;
             }
             let p = entry.path();
-            if p.is_dir() {
+            if ft.is_dir() {
                 // 跳过隐藏目录与常见重目录
                 if name.starts_with('.') || ignore.contains(&name.as_str()) {
                     continue;
                 }
                 stack.push(p);
-            } else {
+            } else if ft.is_file() {
                 files.push(p.to_string_lossy().to_string());
                 if files.len() >= MAX_LIST_FILES {
                     break;
@@ -99,6 +114,243 @@ pub fn list_files(path: String) -> Result<Vec<String>, String> {
     }
 
     Ok(files)
+}
+
+#[derive(Serialize)]
+pub struct SearchMatch {
+    path: String,
+    line: u32,
+    text: String,
+}
+
+const MAX_SEARCH_MATCHES: usize = 1000;
+const MAX_SEARCH_FILE_SIZE: u64 = 2 * 1024 * 1024;
+// 最多扫描的文件数，避免在超大目录中卡死
+const MAX_SEARCH_FILES_SCANNED: usize = 50000;
+
+/// 在文件夹内全局搜索文本（大小写不敏感的子串）。
+/// 重 I/O 放到阻塞线程池，避免阻塞主线程导致应用无响应。
+#[tauri::command]
+pub async fn search_in_files(root: String, query: String) -> Result<Vec<SearchMatch>, String> {
+    tokio::task::spawn_blocking(move || run_search(root, query))
+        .await
+        .map_err(|e| format!("搜索任务失败: {}", e))?
+}
+
+fn run_search(root: String, query: String) -> Result<Vec<SearchMatch>, String> {
+    let q = query.trim().to_lowercase();
+    if q.is_empty() {
+        return Ok(vec![]);
+    }
+    let root_path = Path::new(&root);
+    if !root_path.is_dir() {
+        return Err(format!("不是有效目录: {}", root));
+    }
+
+    let ignore = ["node_modules", "target", "dist", "build", ".next", ".cache"];
+    let mut matches: Vec<SearchMatch> = Vec::new();
+    let mut scanned: usize = 0;
+    let mut stack = vec![root_path.to_path_buf()];
+
+    'outer: while let Some(dir) = stack.pop() {
+        let read = match fs::read_dir(&dir) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        for entry in read.flatten() {
+            if matches.len() >= MAX_SEARCH_MATCHES || scanned >= MAX_SEARCH_FILES_SCANNED {
+                break 'outer;
+            }
+            // 用 file_type 不跟随符号链接，避免软链成环导致无限递归
+            let ft = match entry.file_type() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            if ft.is_symlink() {
+                continue;
+            }
+
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name == ".DS_Store" {
+                continue;
+            }
+            let p = entry.path();
+
+            if ft.is_dir() {
+                if name.starts_with('.') || ignore.contains(&name.as_str()) {
+                    continue;
+                }
+                stack.push(p);
+                continue;
+            }
+            if !ft.is_file() {
+                continue;
+            }
+
+            scanned += 1;
+            // 跳过过大文件
+            if let Ok(meta) = entry.metadata() {
+                if meta.len() > MAX_SEARCH_FILE_SIZE {
+                    continue;
+                }
+            }
+            // 二进制/非 UTF-8 读取会失败，自动跳过
+            let content = match fs::read_to_string(&p) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            let path_str = p.to_string_lossy().to_string();
+            for (i, line) in content.lines().enumerate() {
+                if line.to_lowercase().contains(&q) {
+                    matches.push(SearchMatch {
+                        path: path_str.clone(),
+                        line: (i + 1) as u32,
+                        text: line.chars().take(200).collect(),
+                    });
+                    if matches.len() >= MAX_SEARCH_MATCHES {
+                        break 'outer;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(matches)
+}
+
+#[derive(Serialize)]
+pub struct ReplaceSummary {
+    files_changed: usize,
+    replacements: usize,
+}
+
+/// 在文件夹内全局替换文本（ASCII 大小写不敏感的字面量替换，与搜索语义一致）。
+/// 重 I/O 放到阻塞线程池。
+#[tauri::command]
+pub async fn replace_in_files(
+    root: String,
+    query: String,
+    replacement: String,
+) -> Result<ReplaceSummary, String> {
+    tokio::task::spawn_blocking(move || run_replace(root, query, replacement))
+        .await
+        .map_err(|e| format!("替换任务失败: {}", e))?
+}
+
+// 根据首字节推断 UTF-8 字符字节数
+fn utf8_char_len(b: u8) -> usize {
+    if b < 0x80 {
+        1
+    } else if b >> 5 == 0b110 {
+        2
+    } else if b >> 4 == 0b1110 {
+        3
+    } else if b >> 3 == 0b11110 {
+        4
+    } else {
+        1
+    }
+}
+
+/// ASCII 大小写不敏感的字面量替换，保持非 ASCII 字节按精确匹配，返回新文本与替换次数。
+fn replace_ascii_ci(text: &str, needle: &str, replacement: &str) -> (String, usize) {
+    let nb = needle.as_bytes();
+    let nlen = nb.len();
+    if nlen == 0 {
+        return (text.to_string(), 0);
+    }
+    let bytes = text.as_bytes();
+    let mut out = String::with_capacity(text.len());
+    let mut count = 0usize;
+    let mut i = 0usize;
+    while i < bytes.len() {
+        if i + nlen <= bytes.len() && bytes[i..i + nlen].eq_ignore_ascii_case(nb) {
+            out.push_str(replacement);
+            count += 1;
+            i += nlen;
+        } else {
+            let end = (i + utf8_char_len(bytes[i])).min(bytes.len());
+            out.push_str(&text[i..end]);
+            i = end;
+        }
+    }
+    (out, count)
+}
+
+fn run_replace(root: String, query: String, replacement: String) -> Result<ReplaceSummary, String> {
+    if query.is_empty() {
+        return Ok(ReplaceSummary {
+            files_changed: 0,
+            replacements: 0,
+        });
+    }
+    let root_path = Path::new(&root);
+    if !root_path.is_dir() {
+        return Err(format!("不是有效目录: {}", root));
+    }
+
+    let ignore = ["node_modules", "target", "dist", "build", ".next", ".cache"];
+    let mut files_changed = 0usize;
+    let mut replacements = 0usize;
+    let mut scanned: usize = 0;
+    let mut stack = vec![root_path.to_path_buf()];
+
+    while let Some(dir) = stack.pop() {
+        let read = match fs::read_dir(&dir) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        for entry in read.flatten() {
+            if scanned >= MAX_SEARCH_FILES_SCANNED {
+                break;
+            }
+            let ft = match entry.file_type() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            if ft.is_symlink() {
+                continue;
+            }
+
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name == ".DS_Store" {
+                continue;
+            }
+            let p = entry.path();
+
+            if ft.is_dir() {
+                if name.starts_with('.') || ignore.contains(&name.as_str()) {
+                    continue;
+                }
+                stack.push(p);
+                continue;
+            }
+            if !ft.is_file() {
+                continue;
+            }
+
+            scanned += 1;
+            if let Ok(meta) = entry.metadata() {
+                if meta.len() > MAX_SEARCH_FILE_SIZE {
+                    continue;
+                }
+            }
+            let content = match fs::read_to_string(&p) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            let (new_content, n) = replace_ascii_ci(&content, &query, &replacement);
+            if n > 0 && fs::write(&p, new_content).is_ok() {
+                files_changed += 1;
+                replacements += n;
+            }
+        }
+    }
+
+    Ok(ReplaceSummary {
+        files_changed,
+        replacements,
+    })
 }
 
 /// 读取文本文件内容（绕开 fs 插件 scope 限制）。
@@ -186,6 +438,245 @@ pub fn watch_directory(path: String, app: AppHandle) -> Result<(), String> {
     let mut guard = WATCHER.lock().map_err(|_| "监听锁错误".to_string())?;
     *guard = Some(watcher);
     Ok(())
+}
+
+/// git diff 内容的最大长度（避免给 AI 的 prompt 过大）
+const MAX_DIFF_LEN: usize = 20000;
+
+/// 获取目录下的 git 改动 diff（相对 HEAD），用于 AI 生成提交信息。
+#[tauri::command]
+pub async fn git_diff(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let output = std::process::Command::new("git")
+            .args(["-C", &root, "diff", "HEAD"])
+            .output()
+            .map_err(|e| format!("执行 git 失败: {}", e))?;
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            return Err(format!(
+                "git diff 失败（是否为 git 仓库？）：{}",
+                err.trim()
+            ));
+        }
+        let mut diff = String::from_utf8_lossy(&output.stdout).to_string();
+        if diff.len() > MAX_DIFF_LEN {
+            diff.truncate(MAX_DIFF_LEN);
+            diff.push_str("\n…(diff 过长已截断)");
+        }
+        Ok(diff)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+// ===== Git 源代码管理 =====
+
+/// 同步执行 git 子命令，返回标准输出；失败时返回 stderr。
+fn run_git(root: &str, args: &[&str]) -> Result<String, String> {
+    let mut full: Vec<&str> = vec!["-C", root];
+    full.extend_from_slice(args);
+    let output = std::process::Command::new("git")
+        .args(&full)
+        .output()
+        .map_err(|e| format!("执行 git 失败: {}", e))?;
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(err.trim().to_string());
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+#[derive(Serialize)]
+pub struct GitFileStatus {
+    /// 相对仓库根的路径
+    path: String,
+    /// 暂存区状态字符（X）
+    index: String,
+    /// 工作区状态字符（Y）
+    worktree: String,
+}
+
+#[derive(Serialize)]
+pub struct GitStatus {
+    is_repo: bool,
+    branch: String,
+    ahead: u32,
+    behind: u32,
+    files: Vec<GitFileStatus>,
+}
+
+/// 获取 git 状态（分支、领先/落后、各文件暂存/工作区状态）。
+#[tauri::command]
+pub async fn git_status(root: String) -> Result<GitStatus, String> {
+    tokio::task::spawn_blocking(move || {
+        // 先确认是否在 git 仓库中
+        if run_git(&root, &["rev-parse", "--is-inside-work-tree"]).is_err() {
+            return Ok(GitStatus {
+                is_repo: false,
+                branch: String::new(),
+                ahead: 0,
+                behind: 0,
+                files: vec![],
+            });
+        }
+
+        let out = run_git(&root, &["status", "--porcelain", "--branch"])?;
+        let mut branch = String::new();
+        let mut ahead = 0u32;
+        let mut behind = 0u32;
+        let mut files = Vec::new();
+
+        for line in out.lines() {
+            if let Some(rest) = line.strip_prefix("## ") {
+                // 形如：main...origin/main [ahead 1, behind 2]
+                let name_part = rest.split("...").next().unwrap_or(rest);
+                branch = name_part.trim().to_string();
+                if let Some(start) = rest.find('[') {
+                    let bracket = &rest[start + 1..rest.find(']').unwrap_or(rest.len())];
+                    for seg in bracket.split(',') {
+                        let seg = seg.trim();
+                        if let Some(n) = seg.strip_prefix("ahead ") {
+                            ahead = n.trim().parse().unwrap_or(0);
+                        } else if let Some(n) = seg.strip_prefix("behind ") {
+                            behind = n.trim().parse().unwrap_or(0);
+                        }
+                    }
+                }
+                continue;
+            }
+            if line.len() < 3 {
+                continue;
+            }
+            let index = &line[0..1];
+            let worktree = &line[1..2];
+            let mut path = line[3..].to_string();
+            // 重命名形如 "old -> new"，取新路径
+            if let Some(pos) = path.find(" -> ") {
+                path = path[pos + 4..].to_string();
+            }
+            // 去除可能的引号包裹
+            let path = path.trim_matches('"').to_string();
+            files.push(GitFileStatus {
+                path,
+                index: index.to_string(),
+                worktree: worktree.to_string(),
+            });
+        }
+
+        Ok(GitStatus {
+            is_repo: true,
+            branch,
+            ahead,
+            behind,
+            files,
+        })
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 暂存指定文件（相对路径或绝对路径均可）。
+#[tauri::command]
+pub async fn git_stage(root: String, paths: Vec<String>) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["add", "--"];
+        let refs: Vec<&str> = paths.iter().map(|s| s.as_str()).collect();
+        args.extend_from_slice(&refs);
+        run_git(&root, &args).map(|_| ())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 取消暂存指定文件。
+#[tauri::command]
+pub async fn git_unstage(root: String, paths: Vec<String>) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["reset", "-q", "HEAD", "--"];
+        let refs: Vec<&str> = paths.iter().map(|s| s.as_str()).collect();
+        args.extend_from_slice(&refs);
+        run_git(&root, &args).map(|_| ())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 提交已暂存的改动。
+#[tauri::command]
+pub async fn git_commit(root: String, message: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["commit", "-m", &message]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 推送当前分支。
+#[tauri::command]
+pub async fn git_push(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["push"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitBranches {
+    current: String,
+    branches: Vec<String>,
+}
+
+/// 列出本地分支与当前分支。
+#[tauri::command]
+pub async fn git_branches(root: String) -> Result<GitBranches, String> {
+    tokio::task::spawn_blocking(move || {
+        let current = run_git(&root, &["rev-parse", "--abbrev-ref", "HEAD"])?
+            .trim()
+            .to_string();
+        let out = run_git(&root, &["branch", "--format=%(refname:short)"])?;
+        let branches = out
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect();
+        Ok(GitBranches { current, branches })
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 切换分支。
+#[tauri::command]
+pub async fn git_checkout(root: String, branch: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["checkout", &branch]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitHeadFile {
+    /// 该文件是否存在于 HEAD（不存在则为新增/未跟踪文件）
+    exists: bool,
+    content: String,
+}
+
+/// 获取某文件在 HEAD 中的内容（用于编辑器行内差异标记）。
+/// rel_path 为相对仓库根的路径。
+#[tauri::command]
+pub async fn git_file_head(root: String, rel_path: String) -> Result<GitHeadFile, String> {
+    tokio::task::spawn_blocking(move || {
+        let spec = format!("HEAD:{}", rel_path);
+        match run_git(&root, &["show", &spec]) {
+            Ok(content) => GitHeadFile {
+                exists: true,
+                content,
+            },
+            // 文件不在 HEAD 中（新增/未跟踪）：返回不存在
+            Err(_) => GitHeadFile {
+                exists: false,
+                content: String::new(),
+            },
+        }
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))
 }
 
 /// 在系统文件管理器中显示该路径
@@ -318,13 +809,18 @@ fn with_index<T>(path: &str, f: impl FnOnce(&FileIndex) -> T) -> Result<T, Strin
 }
 
 /// 获取文本文件元信息：大小、总行数、是否为文本（用于决定可编辑打开还是只读查看）。
+/// 首次会全量扫描建索引，放到阻塞线程池，避免阻塞主线程。
 #[tauri::command]
-pub fn get_text_file_meta(path: String) -> Result<TextFileMeta, String> {
-    with_index(&path, |idx| TextFileMeta {
-        size_bytes: idx.size,
-        line_count: idx.line_count,
-        is_text: idx.is_text,
+pub async fn get_text_file_meta(path: String) -> Result<TextFileMeta, String> {
+    tokio::task::spawn_blocking(move || {
+        with_index(&path, |idx| TextFileMeta {
+            size_bytes: idx.size,
+            line_count: idx.line_count,
+            is_text: idx.is_text,
+        })
     })
+    .await
+    .map_err(|e| format!("读取文件信息任务失败: {}", e))?
 }
 
 /// 按行范围读取文件（只读查看器虚拟滚动用）。借助行偏移索引随机定位，做到 O(窗口)。

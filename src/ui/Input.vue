@@ -322,7 +322,7 @@ const inputClasses = computed(() => {
   const classes = [sizeConfig.value.input]
 
   // 基础样式
-  classes.push('bg-white border')
+  classes.push('bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 dark:placeholder:text-gray-500 border')
 
   // 变体样式
   switch (props.variant) {

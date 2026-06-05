@@ -1,12 +1,12 @@
 <template>
-  <div class="fixed inset-0 z-50 flex justify-center pt-24" @click="emit('close')">
-    <div class="w-[560px] max-w-[90vw] bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh]"
+  <div class="fixed inset-0 z-50 flex items-start justify-center pt-24" @click="emit('close')">
+    <div class="w-[560px] max-w-[90vw] bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[60vh]"
          @click.stop>
-      <div class="flex items-center px-3 border-b border-gray-200">
+      <div class="flex items-center px-3 border-b border-gray-200 dark:border-gray-700">
         <Search class="w-4 h-4 text-gray-400 flex-shrink-0"/>
         <input ref="inputRef"
                v-model="query"
-               class="flex-1 px-2 py-2.5 text-sm focus:outline-none"
+               class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
                placeholder="按文件名快速打开…"
                @keydown.down.prevent="move(1)"
                @keydown.up.prevent="move(-1)"
@@ -22,11 +22,11 @@
                 :key="file.path"
                 :ref="el => setItemRef(el, i)"
                 class="w-full flex items-center px-3 py-1.5 text-left cursor-pointer"
-                :class="i === activeIndex ? 'bg-blue-100' : 'hover:bg-gray-100'"
+                :class="i === activeIndex ? 'bg-blue-100 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'"
                 @click="choose(file)"
                 @mousemove="activeIndex = i">
           <FileText class="w-4 h-4 text-gray-400 flex-shrink-0 mr-2"/>
-          <span class="text-sm text-gray-800 truncate">{{ file.name }}</span>
+          <span class="text-sm text-gray-800 dark:text-gray-100 truncate">{{ file.name }}</span>
           <span class="ml-2 text-xs text-gray-400 truncate">{{ file.dir }}</span>
         </button>
       </div>
