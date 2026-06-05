@@ -212,6 +212,20 @@
                     :commands="paletteCommands"
                     @close="showCommandPalette = false"/>
 
+    <!-- 差异对比：当前 vs 已保存 -->
+    <DiffView v-if="showDiff"
+              :original="savedContent || ''"
+              :modified="code"
+              :file-name="currentFileName"
+              @close="showDiff = false"/>
+
+    <!-- 实时预览（Markdown / HTML）-->
+    <PreviewPanel v-if="showPreview"
+                  :content="code"
+                  :language="currentLanguage"
+                  :file-name="currentFileName"
+                  @close="showPreview = false"/>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
@@ -220,7 +234,7 @@
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {ChevronRight, FolderOpen, History, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
+import {ChevronRight, Eye, FolderOpen, GitCompare, History, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -244,6 +258,8 @@ import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
 import QuickOpen from './components/QuickOpen.vue'
 import CommandPalette, {type PaletteCommand} from './components/CommandPalette.vue'
+import DiffView from './components/DiffView.vue'
+import PreviewPanel from './components/PreviewPanel.vue'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
@@ -679,6 +695,20 @@ const openCommandPalette = () => {
   showCommandPalette.value = true
 }
 
+// 差异对比 / 实时预览
+const showDiff = ref(false)
+const showPreview = ref(false)
+const openDiff = () => {
+  if (!currentFilePath.value) {
+    toast.info('差异对比需要先打开已保存的文件')
+    return
+  }
+  showDiff.value = true
+}
+const togglePreview = () => {
+  showPreview.value = !showPreview.value
+}
+
 const closeViewer = () => {
   showViewer.value = false
   viewerFile.value = null
@@ -940,7 +970,7 @@ const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
     || showHistory.value || showViewer.value || showRunPrompt.value
     || showQuickOpen.value || showGenerate.value || showSearch.value
-    || showCommandPalette.value
+    || showCommandPalette.value || showDiff.value
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
@@ -987,6 +1017,8 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'generate', label: 'AI 生成代码', icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
   {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},
   {id: 'history', label: '执行历史', icon: History, run: () => { showHistory.value = true }},
+  {id: 'diff', label: '差异对比（当前 vs 已保存）', icon: GitCompare, run: () => openDiff()},
+  {id: 'preview', label: '实时预览（Markdown / HTML）', icon: Eye, run: () => togglePreview()},
   {id: 'toggleSidebar', label: '切换侧栏', icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'layoutHorizontal', label: '布局：左右', group: '布局', icon: PanelRight, run: () => handleLayoutChange('horizontal')},
   {id: 'layoutVertical', label: '布局：上下', group: '布局', icon: PanelBottom, run: () => handleLayoutChange('vertical')},
