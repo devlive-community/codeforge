@@ -26,12 +26,9 @@ import {Terminal} from '@xterm/xterm'
 import {FitAddon} from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import {X, Terminal as TerminalIcon} from 'lucide-vue-next'
-import {useTheme} from '../composables/useTheme'
 
 const props = defineProps<{ rootDir?: string | null }>()
 const emit = defineEmits<{ close: [] }>()
-
-const {isDark} = useTheme()
 
 const termEl = ref<HTMLElement | null>(null)
 const height = ref(300)
@@ -44,8 +41,8 @@ let unlistenOut: UnlistenFn | null = null
 let unlistenExit: UnlistenFn | null = null
 let resizeObserver: ResizeObserver | null = null
 
-const lightTheme = {background: '#ffffff', foreground: '#1f2328', cursor: '#1f2328'}
-const darkTheme = {background: '#1e1e1e', foreground: '#d4d4d4', cursor: '#d4d4d4'}
+// 终端始终使用深色配色（不随应用主题切换）
+const termTheme = {background: '#1e1e1e', foreground: '#d4d4d4', cursor: '#d4d4d4'}
 
 const doFit = () => {
   if (!fit || !term) {
@@ -69,7 +66,7 @@ onMounted(async () => {
     fontSize: 13,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
     cursorBlink: true,
-    theme: isDark.value ? darkTheme : lightTheme
+    theme: termTheme
   })
   fit = new FitAddon()
   term.loadAddon(fit)
@@ -112,12 +109,6 @@ onMounted(async () => {
   // 容器尺寸变化时自适应
   resizeObserver = new ResizeObserver(() => doFit())
   resizeObserver.observe(termEl.value)
-})
-
-watch(isDark, (dark) => {
-  if (term) {
-    term.options.theme = dark ? darkTheme : lightTheme
-  }
 })
 
 // 面板高度变化后重新 fit
