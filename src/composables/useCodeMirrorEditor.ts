@@ -76,7 +76,6 @@ import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
-import {diffGutterExtension} from "../editor/diffGutter";
 
 interface Props
 {
@@ -297,9 +296,6 @@ export function useCodeMirrorEditor(props: Props)
 
         // 字体缩放快捷键（搜索/替换、折叠、括号匹配等由 vue-codemirror 的 basicSetup 提供）
         result.push(fontSizeKeymap)
-
-        // Git 行内差异标记（标记数据由外部 dispatch 填充，无 git 时为空）
-        result.push(diffGutterExtension)
 
         // 设置字体
         const {fontFamilyTheme} = useCodeMirrorFontFamily(
