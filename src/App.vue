@@ -12,7 +12,7 @@
                @language-change="onLanguageChange"
                @layout-change="handleLayoutChange"
                @open-file="handleOpenFileClick"
-               @save-file="saveFile"
+               @save-file="handleSave"
                @show-history="showHistory = true"
                @show-ai="handleShowAi"
                @show-settings="showSettings = true"
@@ -41,6 +41,10 @@
           <label class="text-[11px] text-gray-400 mb-0.5">环境变量</label>
           <input v-model="runEnv" class="text-xs border border-gray-300 rounded px-2 py-1 font-mono focus:outline-none focus:border-blue-400" placeholder="KEY=值，多个用 ; 分隔，如 DEBUG=1;PORT=8080"/>
         </div>
+        <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+          <input v-model="watchMode" type="checkbox" class="cursor-pointer"/>
+          监听模式：保存后自动运行
+        </label>
       </div>
     </div>
 
@@ -896,6 +900,18 @@ const runArgs = ref('')
 const runStdin = ref('')
 const runEnv = ref('')
 
+// 监听模式：保存后自动运行
+const watchMode = ref(localStorage.getItem('watch-mode') === 'true')
+watch(watchMode, (v) => localStorage.setItem('watch-mode', String(v)))
+
+// 保存包装：保存后若开启监听模式则自动运行
+const handleSave = async () => {
+  await saveFile()
+  if (watchMode.value && currentFilePath.value && !isDirty.value) {
+    handleRunCode()
+  }
+}
+
 // ===== 按文件记忆运行配置（args/stdin/env）=====
 const RUN_CONFIGS_KEY = 'run-configs'
 type RunConfig = { args: string, stdin: string, env: string }
@@ -972,6 +988,24 @@ const buildRunBase = () => {
 const showRunPrompt = ref(false)
 
 // 包装运行：仅编辑器模式下点击运行时自动展开控制台；关联文件则按策略就地运行
+// 运行选中片段：以选中文本作为临时代码运行（不就地、不关联文件）
+const runSelection = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const {from, to} = view.state.selection.main
+  if (from === to) {
+    toast.info('请先选中要运行的代码')
+    return
+  }
+  const selected = view.state.sliceDoc(from, to)
+  if (layoutMode.value === 'editor') {
+    showConsole.value = true
+  }
+  runCode({...buildRunBase(), codeOverride: selected})
+}
+
 const handleRunCode = async () => {
   if (layoutMode.value === 'editor') {
     showConsole.value = true
@@ -1099,13 +1133,14 @@ const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCo
 
 const shortcutDispatch: Record<string, () => void> = {
   run: () => handleRunCode(),
+  runSelection: () => runSelection(),
   quickOpen: () => openQuickOpen(),
   commandPalette: () => openCommandPalette(),
   gotoLine: () => openGoToLine(),
   outline: () => openOutline(),
   searchInFiles: () => openSearch(),
   generate: () => openGenerate(),
-  save: () => saveFile(),
+  save: () => handleSave(),
   saveAs: () => saveFileAs(),
   open: () => handleOpenFileClick(),
   newTab: () => handleNewTab(),
@@ -1130,6 +1165,8 @@ const applyTheme = async (t: AppTheme) => {
 const hintOf = (id: string) => formatCombo(getBinding(id))
 const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'run', label: '运行代码', icon: Play, hint: hintOf('run'), run: () => handleRunCode()},
+  {id: 'runSelection', label: '运行选中片段', icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
+  {id: 'watchMode', label: watchMode.value ? '关闭监听模式（保存自动运行）' : '开启监听模式（保存自动运行）', icon: Eye, run: () => { watchMode.value = !watchMode.value }},
   {id: 'open', label: '打开文件', icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
   {id: 'openFolder', label: '打开文件夹', icon: FolderOpen, run: () => openFolder()},
   {id: 'save', label: '保存文件', icon: Save, hint: hintOf('save'), run: () => saveFile()},

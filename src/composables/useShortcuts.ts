@@ -10,6 +10,7 @@ export interface ShortcutAction
 // 可自定义的快捷键动作及默认绑定（Mod = mac 上 ⌘，其他平台 Ctrl）
 export const SHORTCUT_ACTIONS: ShortcutAction[] = [
     {id: 'run', label: '运行代码', default: 'Mod+Enter'},
+    {id: 'runSelection', label: '运行选中片段', default: 'Mod+Shift+Enter'},
     {id: 'save', label: '保存文件', default: 'Mod+S'},
     {id: 'saveAs', label: '另存为', default: 'Mod+Shift+S'},
     {id: 'open', label: '打开文件', default: 'Mod+O'},
