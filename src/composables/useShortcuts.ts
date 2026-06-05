@@ -1,4 +1,5 @@
 import {computed, ref} from 'vue'
+import {kvGetJSON, kvSetJSON} from './useKvStore'
 
 export interface ShortcutAction
 {
@@ -65,17 +66,12 @@ export function useShortcuts()
     const overrides = ref<Record<string, string>>({})
 
     const load = () => {
-        try {
-            overrides.value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-        }
-        catch {
-            overrides.value = {}
-        }
+        overrides.value = kvGetJSON<Record<string, string>>(STORAGE_KEY, {})
     }
     load()
 
     const persist = () => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides.value))
+        kvSetJSON(STORAGE_KEY, overrides.value)
     }
 
     // 当前生效的绑定（默认 + 覆盖）

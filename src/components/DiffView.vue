@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 z-50 flex justify-center pt-16 px-6 pb-6" @click="emit('close')">
-    <div class="w-full max-w-[980px] bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col"
+  <div class="fixed inset-0 z-50 flex items-start justify-center pt-16 px-6 pb-6" @click="emit('close')">
+    <div class="w-full max-w-[980px] max-h-full bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col"
          @click.stop>
       <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">

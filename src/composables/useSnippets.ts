@@ -27,43 +27,13 @@ const load = async () => {
     }
 }
 
-// 一次性把旧版 localStorage 中的片段迁移进数据库
-const migrateFromLocalStorage = async () => {
-    try {
-        const raw = localStorage.getItem('snippets')
-        if (!raw) {
-            return
-        }
-        const old = JSON.parse(raw)
-        if (Array.isArray(old) && old.length && snippets.value.length === 0) {
-            for (const s of old) {
-                await invoke('save_snippet', {
-                    snippet: {
-                        id: s.id || genId(),
-                        prefix: s.prefix || '',
-                        body: s.body || '',
-                        description: s.description || '',
-                        language: s.language || '*'
-                    }
-                })
-            }
-            await load()
-        }
-        localStorage.removeItem('snippets')
-    }
-    catch (error) {
-        console.error('迁移代码片段失败:', error)
-    }
-}
-
-// 应用启动时调用一次：从数据库载入并迁移旧数据
+// 应用启动时调用一次：从数据库载入
 export const initSnippets = async () => {
     if (loaded) {
         return
     }
     loaded = true
     await load()
-    await migrateFromLocalStorage()
 }
 
 export function useSnippets()

@@ -293,6 +293,9 @@ import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
 import {initSnippets} from './composables/useSnippets'
+import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './composables/useKvStore'
+import {useAiConfig} from './composables/useAiConfig'
+import {setGhost, clearGhostIn} from './editor/aiComplete'
 import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
@@ -435,28 +438,20 @@ const handleCopyPath = async (path: string) => {
 
 // ===== 侧栏 / 文件夹 =====
 const rootDir = ref<string | null>(null)
-const sidebarVisible = ref(localStorage.getItem('sidebar-visible') === 'true')
-const sidebarWidth = ref(Number(localStorage.getItem('sidebar-width')) || 240)
+const sidebarVisible = ref(kvGet('sidebar-visible') === 'true')
+const sidebarWidth = ref(Number(kvGet('sidebar-width')) || 240)
 
 // 最近打开的文件夹
 const RECENT_FOLDERS_KEY = 'recent-folders'
 const LAST_ROOT_KEY = 'last-root-dir'
-const loadRecentFolders = (): string[] => {
-  try {
-    return JSON.parse(localStorage.getItem(RECENT_FOLDERS_KEY) || '[]')
-  }
-  catch {
-    return []
-  }
-}
-const recentFolders = ref<string[]>(loadRecentFolders())
+const recentFolders = ref<string[]>(kvGetJSON<string[]>(RECENT_FOLDERS_KEY, []))
 
 // 记住打开的文件夹（去重、置顶、最多 8 个），并记录为上次文件夹
 const rememberFolder = (path: string) => {
   const list = [path, ...recentFolders.value.filter(p => p !== path)].slice(0, 8)
   recentFolders.value = list
-  localStorage.setItem(RECENT_FOLDERS_KEY, JSON.stringify(list))
-  localStorage.setItem(LAST_ROOT_KEY, path)
+  kvSetJSON(RECENT_FOLDERS_KEY, list)
+  kvSet(LAST_ROOT_KEY, path)
 }
 
 const openFolderPath = (path: string) => {
@@ -471,7 +466,7 @@ const SESSION_TABS_KEY = 'session-tabs'
 const persistSession = () => {
   const paths = editorTabs.value.map(t => t.filePath).filter((p): p is string => !!p)
   const activePath = editorTabs.value.find(t => t.id === activeTabId.value)?.filePath || null
-  localStorage.setItem(SESSION_TABS_KEY, JSON.stringify({paths, activePath}))
+  kvSetJSON(SESSION_TABS_KEY, {paths, activePath})
 }
 
 // 标签集合/文件/激活项变化时持久化（不含正文编辑，避免频繁写入）
@@ -482,13 +477,7 @@ watch(
 
 // 启动时恢复上次打开的文件标签（仅已保存且可读的文本文件）
 const restoreSession = async () => {
-  let saved: { paths: string[], activePath: string | null } | null = null
-  try {
-    saved = JSON.parse(localStorage.getItem(SESSION_TABS_KEY) || 'null')
-  }
-  catch {
-    saved = null
-  }
+  const saved = kvGetJSON<{ paths: string[], activePath: string | null } | null>(SESSION_TABS_KEY, null)
   if (!saved || !saved.paths?.length) {
     return
   }
@@ -514,7 +503,7 @@ const restoreSession = async () => {
   }
 }
 
-watch(sidebarVisible, (v) => localStorage.setItem('sidebar-visible', String(v)))
+watch(sidebarVisible, (v) => kvSet('sidebar-visible', String(v)))
 
 // 拖拽改变侧栏宽度
 let resizeStartX = 0
@@ -528,7 +517,7 @@ const stopSidebarResize = () => {
   document.removeEventListener('mouseup', stopSidebarResize)
   document.body.style.userSelect = ''
   document.body.style.cursor = ''
-  localStorage.setItem('sidebar-width', String(sidebarWidth.value))
+  kvSet('sidebar-width', String(sidebarWidth.value))
 }
 const startSidebarResize = (e: MouseEvent) => {
   e.preventDefault()
@@ -658,6 +647,86 @@ const openAiForExecution = (item: ExecutionResult) => {
       : {code: item.code, error: combinedOutput(item) || '(无输出)'}
   showAi.value = true
 }
+
+// ===== AI 代码预测（幽灵补全，Tab 接受）=====
+const {active: aiActive, reload: reloadAiCfg} = useAiConfig()
+const aiCompletion = ref(kvGet('ai-completion') === 'true')
+
+const toggleAiCompletion = () => {
+  aiCompletion.value = !aiCompletion.value
+  kvSet('ai-completion', String(aiCompletion.value))
+  if (!aiCompletion.value) {
+    clearGhostIn(editorView.value)
+  }
+  toast.info(aiCompletion.value ? 'AI 代码预测已开启' : 'AI 代码预测已关闭')
+}
+
+// 清洗补全结果：去掉代码块围栏与开头多余换行
+const cleanCompletion = (raw: string): string => {
+  let s = raw.replace(/^```[a-z]*\n?/i, '').replace(/```\s*$/i, '')
+  s = s.replace(/^\n+/, '')
+  return s
+}
+
+let predictNonce = 0
+const requestPrediction = async () => {
+  if (!aiCompletion.value || isRunning.value) {
+    return
+  }
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  reloadAiCfg()
+  if (!aiActive.value.apiKey) {
+    return
+  }
+  const sel = view.state.selection.main
+  if (!sel.empty) {
+    return
+  }
+  const pos = sel.head
+  const prefix = view.state.sliceDoc(0, pos)
+  if (!prefix.trim()) {
+    return
+  }
+  const suffix = view.state.sliceDoc(pos)
+  const nonce = ++predictNonce
+  try {
+    const res = await invoke<string>('ai_chat', {
+      provider: aiActive.value.provider,
+      baseUrl: aiActive.value.baseUrl,
+      apiKey: aiActive.value.apiKey,
+      model: aiActive.value.model,
+      system: '你是代码自动补全引擎。只输出应插入在光标处的后续代码，不要解释、不要重复已有代码、不要使用代码块标记。若无合适补全则输出空。',
+      messages: [{
+        role: 'user',
+        content: `语言：${currentLanguage.value}\n光标前代码：\n${prefix}\n\n光标后代码：\n${suffix}\n\n请仅输出应插入光标处的后续代码：`
+      }]
+    })
+    // 丢弃过期结果或光标已移动的情况
+    if (nonce !== predictNonce) {
+      return
+    }
+    const v = editorView.value
+    if (!v || v.state.selection.main.head !== pos) {
+      return
+    }
+    const text = cleanCompletion(res)
+    if (text) {
+      v.dispatch({effects: setGhost.of({text, pos})})
+    }
+  }
+  catch {
+    // 静默失败，不打扰编辑
+  }
+}
+const requestPredictionDebounced = debounce(requestPrediction, 600)
+watch(code, () => {
+  if (aiCompletion.value) {
+    requestPredictionDebounced()
+  }
+})
 
 // 把 AI 代码块应用到编辑器（替换当前内容，可撤销）
 const applyAiCode = (codeText: string) => {
@@ -950,8 +1019,8 @@ const runStdin = ref('')
 const runEnv = ref('')
 
 // 监听模式：保存后自动运行
-const watchMode = ref(localStorage.getItem('watch-mode') === 'true')
-watch(watchMode, (v) => localStorage.setItem('watch-mode', String(v)))
+const watchMode = ref(kvGet('watch-mode') === 'true')
+watch(watchMode, (v) => kvSet('watch-mode', String(v)))
 
 // 保存包装：保存后若开启监听模式则自动运行
 const handleSave = async () => {
@@ -964,14 +1033,8 @@ const handleSave = async () => {
 // ===== 按文件记忆运行配置（args/stdin/env）=====
 const RUN_CONFIGS_KEY = 'run-configs'
 type RunConfig = { args: string, stdin: string, env: string }
-const loadRunConfigs = (): Record<string, RunConfig> => {
-  try {
-    return JSON.parse(localStorage.getItem(RUN_CONFIGS_KEY) || '{}')
-  }
-  catch {
-    return {}
-  }
-}
+const loadRunConfigs = (): Record<string, RunConfig> =>
+    kvGetJSON<Record<string, RunConfig>>(RUN_CONFIGS_KEY, {})
 // 把当前输入写入指定文件的配置（全空则删除该条）
 const saveRunConfig = (path: string) => {
   const map = loadRunConfigs()
@@ -981,7 +1044,7 @@ const saveRunConfig = (path: string) => {
   else {
     map[path] = {args: runArgs.value, stdin: runStdin.value, env: runEnv.value}
   }
-  localStorage.setItem(RUN_CONFIGS_KEY, JSON.stringify(map))
+  kvSetJSON(RUN_CONFIGS_KEY, map)
 }
 // 载入指定文件的配置（无则清空）
 const loadRunConfig = (path: string | null) => {
@@ -1216,6 +1279,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'run', label: '运行代码', icon: Play, hint: hintOf('run'), run: () => handleRunCode()},
   {id: 'runSelection', label: '运行选中片段', icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
   {id: 'watchMode', label: watchMode.value ? '关闭监听模式（保存自动运行）' : '开启监听模式（保存自动运行）', icon: Eye, run: () => { watchMode.value = !watchMode.value }},
+  {id: 'aiCompletion', label: aiCompletion.value ? '关闭 AI 代码预测' : '开启 AI 代码预测（Tab 补全）', icon: Sparkles, run: () => toggleAiCompletion()},
   {id: 'open', label: '打开文件', icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
   {id: 'openFolder', label: '打开文件夹', icon: FolderOpen, run: () => openFolder()},
   {id: 'save', label: '保存文件', icon: Save, hint: hintOf('save'), run: () => saveFile()},
@@ -1269,11 +1333,11 @@ onMounted(async () => {
   await loadEditorConfig()
   await initializeEventListeners()
   consoleType.value = getCurrentConsoleType()
-  // 从数据库载入代码片段（并迁移旧的 localStorage 数据）
+  // 从数据库载入代码片段
   initSnippets()
 
   // 恢复上次打开的文件夹
-  const lastRoot = localStorage.getItem(LAST_ROOT_KEY)
+  const lastRoot = kvGet(LAST_ROOT_KEY)
   if (lastRoot) {
     rootDir.value = lastRoot
   }

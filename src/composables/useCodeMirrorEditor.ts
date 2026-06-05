@@ -78,6 +78,7 @@ import {EditorView, keymap} from "@codemirror/view";
 import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
+import {aiCompleteExtension} from "../editor/aiComplete";
 import {useSnippets} from "./useSnippets";
 
 interface Props
@@ -182,7 +183,8 @@ export function useCodeMirrorEditor(props: Props)
         return true
     }
     // 高优先级拦截 Tab；未匹配片段则返回 false，回落到默认缩进
-    const snippetKeymap = Prec.highest(keymap.of([{key: 'Tab', run: expandSnippet}]))
+    // 比默认高、但低于 AI 幽灵补全的 Tab（接受补全优先）
+    const snippetKeymap = Prec.high(keymap.of([{key: 'Tab', run: expandSnippet}]))
 
     // 主题映射
     const themeMap: Record<string, any> = {
@@ -338,6 +340,9 @@ export function useCodeMirrorEditor(props: Props)
 
         // 代码片段 Tab 展开
         result.push(snippetKeymap)
+
+        // AI 幽灵补全（Tab 接受 / Esc 取消），由外部 dispatch 设置
+        result.push(aiCompleteExtension)
 
         // Git 行内差异标记（标记数据由外部 dispatch 填充，无 git 时为空）
         result.push(diffGutterExtension)
