@@ -178,6 +178,7 @@
     <ExecutionHistory v-model:show="showHistory"
                       :supported-languages="supportedLanguages"
                       @restore="restoreHistoryItem"
+                      @rerun="rerunHistoryItem"
                       @open-ai="openAiForExecution"/>
 
     <!-- 运行未保存文件询问 -->
@@ -797,6 +798,16 @@ const restoreHistoryItem = (item: ExecutionResult) => {
   resetFile()
   clearOutput()
   toast.success('已恢复历史代码')
+}
+
+// 从执行历史一键重跑：恢复语言与代码后直接运行
+const rerunHistoryItem = async (item: ExecutionResult) => {
+  applyLanguage(item.language)
+  code.value = item.code || ''
+  resetFile()
+  // 确保环境信息已更新为该语言再运行
+  await refreshEnvInfo()
+  handleRunCode()
 }
 
 // 监听编辑器配置变化
