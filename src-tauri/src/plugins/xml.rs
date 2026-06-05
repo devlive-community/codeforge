@@ -37,7 +37,8 @@ impl LanguagePlugin for XmlPlugin {
             before_compile: None,
             extension: String::from("xml"),
             execute_home: None,
-            run_command: Some(String::from("cat $filename")),
+            // 运行=格式化+校验：xmllint（macOS 自带）格式化输出并对非法 XML 报错
+            run_command: Some(String::from("xmllint --format $filename")),
             after_compile: None,
             template: Some(String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")),
             timeout: Some(30),
@@ -49,6 +50,6 @@ impl LanguagePlugin for XmlPlugin {
     fn get_default_command(&self) -> String {
         self.get_config()
             .and_then(|config| config.run_command.clone())
-            .unwrap_or_else(|| "cat".to_string())
+            .unwrap_or_else(|| "xmllint".to_string())
     }
 }

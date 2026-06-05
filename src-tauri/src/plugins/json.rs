@@ -37,7 +37,8 @@ impl LanguagePlugin for JsonPlugin {
             before_compile: None,
             extension: String::from("json"),
             execute_home: None,
-            run_command: Some(String::from("cat $filename")),
+            // 运行=格式化+校验：python3 -m json.tool 会美化输出并对非法 JSON 报错
+            run_command: Some(String::from("python3 -m json.tool $filename")),
             after_compile: None,
             template: Some(String::from("{\n  \n}")),
             timeout: Some(30),
@@ -49,6 +50,6 @@ impl LanguagePlugin for JsonPlugin {
     fn get_default_command(&self) -> String {
         self.get_config()
             .and_then(|config| config.run_command.clone())
-            .unwrap_or_else(|| "cat".to_string())
+            .unwrap_or_else(|| "python3".to_string())
     }
 }
