@@ -31,6 +31,8 @@ pub struct CodeExecutionRequest {
     pub stdin: Option<String>,
     // 追加到运行命令后的参数
     pub args: Option<Vec<String>>,
+    // 运行时的环境变量
+    pub env: Option<std::collections::HashMap<String, String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

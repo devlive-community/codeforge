@@ -23,17 +23,23 @@
     <div class="bg-gray-50 border-b border-gray-200 flex-shrink-0">
       <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 cursor-pointer" @click="showRunInput = !showRunInput">
         <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
-        运行输入（参数 / stdin）
-        <span v-if="!showRunInput && (runArgs || runStdin)" class="ml-2 text-blue-500">●</span>
+        运行输入（参数 / stdin / 环境变量）
+        <span v-if="!showRunInput && (runArgs || runStdin || runEnv)" class="ml-2 text-blue-500">●</span>
       </button>
-      <div v-if="showRunInput" class="px-4 pb-2 flex items-start space-x-3">
-        <div class="flex flex-col w-56 flex-shrink-0">
-          <label class="text-[11px] text-gray-400 mb-0.5">运行参数</label>
-          <input v-model="runArgs" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="空格分隔，如 --port 8080"/>
+      <div v-if="showRunInput" class="px-4 pb-2 space-y-2">
+        <div class="flex items-start space-x-3">
+          <div class="flex flex-col w-56 flex-shrink-0">
+            <label class="text-[11px] text-gray-400 mb-0.5">运行参数</label>
+            <input v-model="runArgs" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="空格分隔，如 --port 8080"/>
+          </div>
+          <div class="flex flex-col flex-1 min-w-0">
+            <label class="text-[11px] text-gray-400 mb-0.5">标准输入 (stdin)</label>
+            <textarea v-model="runStdin" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="运行时喂给程序的输入"></textarea>
+          </div>
         </div>
-        <div class="flex flex-col flex-1 min-w-0">
-          <label class="text-[11px] text-gray-400 mb-0.5">标准输入 (stdin)</label>
-          <textarea v-model="runStdin" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="运行时喂给程序的输入"></textarea>
+        <div class="flex flex-col">
+          <label class="text-[11px] text-gray-400 mb-0.5">环境变量</label>
+          <input v-model="runEnv" class="text-xs border border-gray-300 rounded px-2 py-1 font-mono focus:outline-none focus:border-blue-400" placeholder="KEY=值，多个用 ; 分隔，如 DEBUG=1;PORT=8080"/>
         </div>
       </div>
     </div>
@@ -685,18 +691,37 @@ const handleLayoutChange = (mode: LayoutMode) => {
   }
 }
 
-// 运行输入：参数 + stdin
+// 运行输入：参数 + stdin + 环境变量
 const showRunInput = ref(false)
 const runArgs = ref('')
 const runStdin = ref('')
+const runEnv = ref('')
 
-const buildRunBase = () => ({
-  language: currentLanguage.value,
-  envInstalled: envInfo.value.installed,
-  envLanguage: envInfo.value.language,
-  args: runArgs.value.trim() ? runArgs.value.trim().split(/\s+/) : undefined,
-  stdin: runStdin.value || undefined
-})
+// 解析环境变量文本（KEY=值，按换行或分号分隔）
+const parseEnv = (text: string): Record<string, string> => {
+  const env: Record<string, string> = {}
+  for (const part of text.split(/[\n;]/)) {
+    const seg = part.trim()
+    if (!seg) continue
+    const eq = seg.indexOf('=')
+    if (eq > 0) {
+      env[seg.slice(0, eq).trim()] = seg.slice(eq + 1).trim()
+    }
+  }
+  return env
+}
+
+const buildRunBase = () => {
+  const env = parseEnv(runEnv.value)
+  return {
+    language: currentLanguage.value,
+    envInstalled: envInfo.value.installed,
+    envLanguage: envInfo.value.language,
+    args: runArgs.value.trim() ? runArgs.value.trim().split(/\s+/) : undefined,
+    stdin: runStdin.value || undefined,
+    env: Object.keys(env).length ? env : undefined
+  }
+}
 
 // 运行未保存文件的询问弹窗
 const showRunPrompt = ref(false)

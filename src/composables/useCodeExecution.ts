@@ -27,10 +27,11 @@ export function useCodeExecution(toast: any)
         filePath?: string | null
         args?: string[]
         stdin?: string
+        env?: Record<string, string>
     }
 
     const runCode = async (options: RunOptions) => {
-        const {language, envInstalled, envLanguage, filePath, args, stdin} = options
+        const {language, envInstalled, envLanguage, filePath, args, stdin, env} = options
         if (!envInstalled) {
             toast.error(`${ envLanguage } 环境未安装`)
             return
@@ -57,7 +58,8 @@ export function useCodeExecution(toast: any)
                     task_id: taskId,
                     file_path: filePath || null,
                     args: args && args.length ? args : null,
-                    stdin: stdin ? stdin : null
+                    stdin: stdin ? stdin : null,
+                    env: env && Object.keys(env).length ? env : null
                 }
             })
 
