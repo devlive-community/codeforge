@@ -112,6 +112,7 @@ const props = defineProps<{
   rootDir: string | null
   activePath?: string | null
   recentFolders?: string[]
+  gitStatus?: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -138,6 +139,8 @@ const toast = useToast()
 provide('treeOpenFile', (path: string) => emit('open-file', path))
 // 当前激活文件路径（用于文件树高亮选中项）
 provide('treeActivePath', computed(() => props.activePath ?? null))
+// Git 状态映射（绝对路径 → 状态字母），供文件树徽标
+provide('treeGitStatus', computed(() => props.gitStatus ?? {}))
 
 const loadRoot = async () => {
   if (!props.rootDir) {

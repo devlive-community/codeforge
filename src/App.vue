@@ -50,6 +50,7 @@
         <Sidebar :root-dir="rootDir"
                  :active-path="currentFilePath"
                  :recent-folders="recentFolders"
+                 :git-status="gitStatus"
                  class="flex-shrink-0"
                  :style="{ width: `${sidebarWidth}px` }"
                  @open-folder="openFolder"
@@ -226,6 +227,13 @@
                   :file-name="currentFileName"
                   @close="showPreview = false"/>
 
+    <!-- Git 源代码管理 -->
+    <GitPanel v-if="showGit && rootDir"
+              :root-dir="rootDir"
+              @open="smartOpen"
+              @refresh="refreshGitStatus"
+              @close="showGit = false"/>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
@@ -234,7 +242,7 @@
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {ChevronRight, Eye, FolderOpen, GitCompare, History, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
+import {ChevronRight, Eye, FolderOpen, GitBranch, GitCompare, History, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -260,6 +268,7 @@ import QuickOpen from './components/QuickOpen.vue'
 import CommandPalette, {type PaletteCommand} from './components/CommandPalette.vue'
 import DiffView from './components/DiffView.vue'
 import PreviewPanel from './components/PreviewPanel.vue'
+import GitPanel from './components/GitPanel.vue'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
@@ -709,6 +718,47 @@ const togglePreview = () => {
   showPreview.value = !showPreview.value
 }
 
+// ===== Git 源代码管理 =====
+const showGit = ref(false)
+const openGit = () => {
+  if (!rootDir.value) {
+    toast.info('请先打开文件夹')
+    return
+  }
+  showGit.value = true
+}
+
+// 文件树徽标用：绝对路径 → 状态字母（M/A/D/U）
+const gitStatus = ref<Record<string, string>>({})
+const refreshGitStatus = async () => {
+  if (!rootDir.value) {
+    gitStatus.value = {}
+    return
+  }
+  try {
+    const s = await invoke<{ is_repo: boolean, files: { path: string, index: string, worktree: string }[] }>(
+        'git_status', {root: rootDir.value}
+    )
+    const map: Record<string, string> = {}
+    if (s.is_repo) {
+      for (const f of s.files) {
+        const code = f.index === '?'
+            ? 'U'
+            : (f.worktree.trim() || f.index.trim() || 'M')
+        map[`${rootDir.value}/${f.path}`] = code
+      }
+    }
+    gitStatus.value = map
+  }
+  catch {
+    gitStatus.value = {}
+  }
+}
+
+// 打开文件夹、保存文件后刷新文件树 Git 徽标
+watch(rootDir, () => refreshGitStatus(), {immediate: true})
+watch(savedContent, () => refreshGitStatus())
+
 const closeViewer = () => {
   showViewer.value = false
   viewerFile.value = null
@@ -1019,6 +1069,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'history', label: '执行历史', icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: '差异对比（当前 vs 已保存）', icon: GitCompare, run: () => openDiff()},
   {id: 'preview', label: '实时预览（Markdown / HTML）', icon: Eye, run: () => togglePreview()},
+  {id: 'git', label: 'Git 源代码管理', icon: GitBranch, run: () => openGit()},
   {id: 'toggleSidebar', label: '切换侧栏', icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'layoutHorizontal', label: '布局：左右', group: '布局', icon: PanelRight, run: () => handleLayoutChange('horizontal')},
   {id: 'layoutVertical', label: '布局：上下', group: '布局', icon: PanelBottom, run: () => handleLayoutChange('vertical')},
