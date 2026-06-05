@@ -175,6 +175,9 @@
       </div>
     </div>
 
+    <!-- 集成终端：停靠在底部，占据高度使上方编辑区自动收缩 -->
+    <Terminal v-if="showTerminal" :root-dir="rootDir" @close="showTerminal = false"/>
+
     <!-- 状态栏 -->
     <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo"/>
 
@@ -240,9 +243,6 @@
 
     <!-- 代码片段管理 -->
     <SnippetManager v-if="showSnippets" @close="showSnippets = false"/>
-
-    <!-- 集成终端 -->
-    <Terminal v-if="showTerminal" :root-dir="rootDir" @close="showTerminal = false"/>
 
     <!-- 差异对比：当前 vs 已保存 -->
     <DiffView v-if="showDiff"

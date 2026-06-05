@@ -1,8 +1,8 @@
 <template>
-  <div class="fixed left-0 right-0 bottom-0 z-40 flex flex-col bg-[#1e1e1e] border-t border-gray-300 dark:border-gray-700 shadow-2xl"
+  <div class="flex flex-col flex-shrink-0 bg-[#1e1e1e] border-t border-gray-200 dark:border-gray-700"
        :style="{ height: `${height}px` }">
-    <!-- 顶部拖拽改高度 + 标题栏 -->
-    <div class="h-1 cursor-row-resize bg-transparent hover:bg-blue-500 transition-colors flex-shrink-0"
+    <!-- 顶部拖拽改高度 -->
+    <div class="h-1 cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 transition-colors flex-shrink-0"
          @mousedown="startResize"></div>
     <div class="flex items-center justify-between px-3 py-1 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-300">
