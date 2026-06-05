@@ -651,6 +651,35 @@ pub async fn git_checkout(root: String, branch: String) -> Result<String, String
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+#[derive(Serialize)]
+pub struct GitHeadFile {
+    /// 该文件是否存在于 HEAD（不存在则为新增/未跟踪文件）
+    exists: bool,
+    content: String,
+}
+
+/// 获取某文件在 HEAD 中的内容（用于编辑器行内差异标记）。
+/// rel_path 为相对仓库根的路径。
+#[tauri::command]
+pub async fn git_file_head(root: String, rel_path: String) -> Result<GitHeadFile, String> {
+    tokio::task::spawn_blocking(move || {
+        let spec = format!("HEAD:{}", rel_path);
+        match run_git(&root, &["show", &spec]) {
+            Ok(content) => GitHeadFile {
+                exists: true,
+                content,
+            },
+            // 文件不在 HEAD 中（新增/未跟踪）：返回不存在
+            Err(_) => GitHeadFile {
+                exists: false,
+                content: String::new(),
+            },
+        }
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))
+}
+
 /// 在系统文件管理器中显示该路径
 #[tauri::command]
 pub fn reveal_path(path: String) -> Result<(), String> {

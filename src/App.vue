@@ -269,6 +269,7 @@ import CommandPalette, {type PaletteCommand} from './components/CommandPalette.v
 import DiffView from './components/DiffView.vue'
 import PreviewPanel from './components/PreviewPanel.vue'
 import GitPanel from './components/GitPanel.vue'
+import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
@@ -753,9 +754,53 @@ const refreshGitStatus = async () => {
   catch {
     gitStatus.value = {}
   }
+  // HEAD 可能因提交/切换分支变化，刷新编辑器行内差异基线
+  fetchBaseline()
 }
 
-// 打开文件夹、保存文件后刷新文件树 Git 徽标
+// ===== 编辑器行内差异标记（vs HEAD）=====
+// 当前文件在 HEAD 中的内容；null 表示无基线（新文件/非 git/未跟踪），不显示标记
+const gitBaseline = ref<string | null>(null)
+
+const fetchBaseline = async () => {
+  if (!rootDir.value || !currentFilePath.value || !currentFilePath.value.startsWith(rootDir.value)) {
+    gitBaseline.value = null
+    applyDiffMarkers()
+    return
+  }
+  const rel = currentFilePath.value.slice(rootDir.value.length + 1)
+  try {
+    const head = await invoke<{ exists: boolean, content: string }>('git_file_head', {
+      root: rootDir.value,
+      relPath: rel
+    })
+    gitBaseline.value = head.exists ? head.content : null
+  }
+  catch {
+    gitBaseline.value = null
+  }
+  applyDiffMarkers()
+}
+
+// 计算并派发标记到编辑器
+const applyDiffMarkers = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const markers = gitBaseline.value === null
+      ? {changed: new Map(), deleted: new Set<number>()}
+      : computeDiffMarkers(gitBaseline.value, code.value)
+  view.dispatch({effects: setDiffMarkers.of(markers)})
+}
+const applyDiffMarkersDebounced = debounce(applyDiffMarkers, 250)
+
+// 切换文件取新基线；编辑时重算；编辑器重挂时重新派发
+watch(currentFilePath, () => fetchBaseline())
+watch(code, () => applyDiffMarkersDebounced())
+watch(editorView, () => applyDiffMarkers())
+
+// 打开文件夹、保存文件后刷新文件树 Git 徽标与差异基线
 watch(rootDir, () => refreshGitStatus(), {immediate: true})
 watch(savedContent, () => refreshGitStatus())
 
