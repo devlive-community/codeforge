@@ -52,12 +52,20 @@
 
       <!-- 提交区 -->
       <div class="border-t border-gray-200 dark:border-gray-700 p-3 flex-shrink-0 space-y-2">
-        <textarea v-model="message"
-                  rows="3"
-                  class="w-full text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 resize-none"
-                  placeholder="提交信息…（Cmd/Ctrl+Enter 提交）"
-                  @keydown.meta.enter.prevent="commit"
-                  @keydown.ctrl.enter.prevent="commit"/>
+        <div class="relative">
+          <textarea v-model="message"
+                    rows="3"
+                    class="w-full text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 pr-9 focus:outline-none focus:border-blue-500 resize-none"
+                    placeholder="提交信息…（Cmd/Ctrl+Enter 提交）"
+                    @keydown.meta.enter.prevent="commit"
+                    @keydown.ctrl.enter.prevent="commit"/>
+          <button class="absolute top-1.5 right-1.5 p-1 rounded text-gray-400 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  :disabled="generating"
+                  title="用 AI 根据改动生成提交信息"
+                  @click="genMessage">
+            <Sparkles class="w-4 h-4" :class="{ 'animate-pulse': generating }"/>
+          </button>
+        </div>
         <div class="flex items-center gap-2">
           <Button size="sm" :disabled="!canCommit" @click="commit">
             提交{{ staged.length ? ` (${staged.length})` : '' }}
@@ -75,9 +83,10 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {GitBranch, RefreshCw, X} from 'lucide-vue-next'
+import {GitBranch, RefreshCw, Sparkles, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import {useToast} from '../plugins/toast'
+import {useAiConfig} from '../composables/useAiConfig'
 
 interface GitFile { path: string; index: string; worktree: string }
 interface GitStatusData { is_repo: boolean; branch: string; ahead: number; behind: number; files: GitFile[] }
@@ -86,12 +95,14 @@ const props = defineProps<{ rootDir: string }>()
 const emit = defineEmits<{ close: []; refresh: []; open: [path: string] }>()
 
 const toast = useToast()
+const {active, reload: reloadAi} = useAiConfig()
 
 const status = ref<GitStatusData>({is_repo: false, branch: '', ahead: 0, behind: 0, files: []})
 const branches = ref<string[]>([])
 const message = ref('')
 const loading = ref(false)
 const busy = ref(false)
+const generating = ref(false)
 
 // 文件视为已暂存：index 列非空且非未跟踪
 const isStaged = (f: GitFile) => f.index !== ' ' && f.index !== '?'
@@ -204,6 +215,50 @@ const onBranchChange = async (e: Event) => {
 }
 
 const openFile = (rel: string) => emit('open', abs(rel))
+
+// 清洗 AI 返回：去掉代码块/引号，取首个非空行
+const cleanupMessage = (raw: string): string => {
+  let s = raw.trim()
+  s = s.replace(/^```[a-z]*\s*/i, '').replace(/```$/, '').trim()
+  const first = s.split('\n').map(l => l.trim()).find(l => l.length > 0) || s
+  return first.replace(/^["'「『]/, '').replace(/["'」』]$/, '').trim()
+}
+
+// 用 AI 根据当前改动生成提交信息
+const genMessage = async () => {
+  if (!status.value.is_repo) {
+    return
+  }
+  reloadAi()
+  if (!active.value.apiKey) {
+    toast.info('请先在设置中配置 AI 的 API Key')
+    return
+  }
+  generating.value = true
+  try {
+    const diff = await invoke<string>('git_diff', {root: props.rootDir})
+    if (!diff.trim()) {
+      toast.info('没有可用于生成的改动')
+      return
+    }
+    const prompt = `根据下面的 git diff 生成一条简洁的中文提交信息，格式为「类型: 描述」（类型如 feat/fix/docs/refactor/chore），只输出一行提交信息，不要解释、不要代码块：\n\n${diff}`
+    const res = await invoke<string>('ai_chat', {
+      provider: active.value.provider,
+      baseUrl: active.value.baseUrl,
+      apiKey: active.value.apiKey,
+      model: active.value.model,
+      system: null,
+      messages: [{role: 'user', content: prompt}]
+    })
+    message.value = cleanupMessage(res)
+  }
+  catch (error) {
+    toast.error('生成失败: ' + error)
+  }
+  finally {
+    generating.value = false
+  }
+}
 
 onMounted(refresh)
 
