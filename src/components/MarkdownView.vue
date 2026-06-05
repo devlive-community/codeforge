@@ -23,6 +23,7 @@
 import {computed} from 'vue'
 import {FileText} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
+import DOMPurify from 'dompurify'
 
 const props = defineProps<{
   output: string
@@ -31,8 +32,9 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ clear: [] }>()
 
-const md = new MarkdownIt({html: false, linkify: true, breaks: true})
-const rendered = computed(() => md.render(props.output || ''))
+// 允许 Markdown 中的 HTML，渲染后用 DOMPurify 净化（去除 script 等危险内容）防 XSS
+const md = new MarkdownIt({html: true, linkify: true, breaks: true})
+const rendered = computed(() => DOMPurify.sanitize(md.render(props.output || '')))
 </script>
 
 <style scoped>
