@@ -5,12 +5,17 @@
       <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
           <GitCompare class="w-4 h-4 text-gray-400"/>
-          <span>差异对比</span>
+          <span>{{ title || '差异对比' }}</span>
           <span v-if="fileName" class="text-xs text-gray-400">· {{ fileName }}</span>
         </div>
         <div class="flex items-center gap-3 text-xs">
           <span class="text-green-600 dark:text-green-400">+{{ added }}</span>
           <span class="text-red-600 dark:text-red-400">−{{ removed }}</span>
+          <button v-if="confirmLabel"
+                  class="px-2 py-1 rounded bg-blue-500 hover:bg-blue-600 text-white cursor-pointer"
+                  @click="emit('confirm')">
+            {{ confirmLabel }}
+          </button>
           <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" title="关闭" @click="emit('close')">
             <X class="w-4 h-4"/>
           </button>
@@ -18,7 +23,7 @@
       </div>
 
       <div class="flex items-center px-4 py-1.5 text-xs text-gray-400 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-        已保存（红） → 当前（绿）
+        {{ subtitle || '已保存（红） → 当前（绿）' }}
       </div>
 
       <div class="flex-1 overflow-auto font-mono text-xs leading-5 max-h-[70vh]">
@@ -44,8 +49,11 @@ const props = defineProps<{
   original: string
   modified: string
   fileName?: string | null
+  title?: string
+  subtitle?: string
+  confirmLabel?: string
 }>()
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; confirm: [] }>()
 
 interface DiffRow { type: 'same' | 'add' | 'del'; text: string; oldNo?: number; newNo?: number }
 

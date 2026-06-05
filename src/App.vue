@@ -248,6 +248,16 @@
               :file-name="currentFileName"
               @close="showDiff = false"/>
 
+    <!-- 应用 AI 代码前的差异预览 -->
+    <DiffView v-if="applyPreview"
+              :original="code"
+              :modified="applyPreview.modified"
+              title="应用 AI 代码预览"
+              subtitle="当前（红） → AI 建议（绿），确认后替换编辑器内容"
+              confirm-label="应用"
+              @confirm="confirmApplyAi"
+              @close="applyPreview = null"/>
+
     <!-- 实时预览（Markdown / HTML）-->
     <PreviewPanel v-if="showPreview"
                   :content="code"
@@ -756,9 +766,17 @@ watch(code, () => {
   }
 })
 
-// 把 AI 代码块应用到编辑器（替换当前内容，可撤销）
+// 应用 AI 代码块：先弹出差异预览，确认后再替换（避免直接覆盖）
+const applyPreview = ref<{ modified: string } | null>(null)
 const applyAiCode = (codeText: string) => {
-  code.value = codeText
+  applyPreview.value = {modified: codeText}
+}
+const confirmApplyAi = () => {
+  if (applyPreview.value) {
+    code.value = applyPreview.value.modified
+    applyPreview.value = null
+    toast.success('已应用 AI 代码')
+  }
 }
 
 // 当前 CodeMirror view（用于在光标处插入生成的代码）
@@ -1267,6 +1285,7 @@ const isOverlayOpen = () =>
     || showHistory.value || showViewer.value || showRunPrompt.value
     || showQuickOpen.value || showGenerate.value || showSearch.value
     || showCommandPalette.value || showDiff.value || showGoToLine.value || showOutline.value || showSnippets.value
+    || applyPreview.value != null
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
