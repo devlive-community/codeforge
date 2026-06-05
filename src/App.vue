@@ -191,6 +191,9 @@
     <!-- AI 助手 -->
     <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" @close="showAi = false" @insert-code="applyAiCode"/>
 
+    <!-- 文件夹内全局搜索 -->
+    <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" @open="openSearchResult" @close="showSearch = false"/>
+
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
                :root-dir="rootDir"
@@ -203,7 +206,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {ChevronRight, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
@@ -229,6 +232,7 @@ import LargeFileViewer from './components/LargeFileViewer.vue'
 import QuickOpen from './components/QuickOpen.vue'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
+import SearchPanel from './components/SearchPanel.vue'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
@@ -584,6 +588,34 @@ const insertGeneratedCode = (text: string) => {
   }
 }
 
+// 文件夹内全局搜索（Cmd+Shift+F）
+const showSearch = ref(false)
+const openSearch = () => {
+  if (!rootDir.value) {
+    toast.info('请先打开文件夹')
+    return
+  }
+  showSearch.value = true
+}
+
+const gotoLine = (line: number) => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const target = Math.max(1, Math.min(line, view.state.doc.lines))
+  const l = view.state.doc.line(target)
+  view.dispatch({selection: {anchor: l.from}, scrollIntoView: true})
+  view.focus()
+}
+
+const openSearchResult = async (path: string, line: number) => {
+  showSearch.value = false
+  await smartOpen(path)
+  await nextTick()
+  gotoLine(line)
+}
+
 // 快速打开（Cmd+P）
 const showQuickOpen = ref(false)
 const openQuickOpen = () => {
@@ -779,7 +811,7 @@ window.addEventListener('contextmenu', (e) => e.preventDefault(), false)
 const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
     || showHistory.value || showViewer.value || showRunPrompt.value
-    || showQuickOpen.value || showGenerate.value
+    || showQuickOpen.value || showGenerate.value || showSearch.value
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
@@ -787,6 +819,7 @@ const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
 const shortcutDispatch: Record<string, () => void> = {
   run: () => handleRunCode(),
   quickOpen: () => openQuickOpen(),
+  searchInFiles: () => openSearch(),
   generate: () => openGenerate(),
   save: () => saveFile(),
   saveAs: () => saveFileAs(),

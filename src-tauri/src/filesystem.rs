@@ -101,6 +101,83 @@ pub fn list_files(path: String) -> Result<Vec<String>, String> {
     Ok(files)
 }
 
+#[derive(Serialize)]
+pub struct SearchMatch {
+    path: String,
+    line: u32,
+    text: String,
+}
+
+const MAX_SEARCH_MATCHES: usize = 1000;
+const MAX_SEARCH_FILE_SIZE: u64 = 2 * 1024 * 1024;
+
+/// 在文件夹内全局搜索文本（大小写不敏感的子串），返回匹配的文件/行号/行内容。
+#[tauri::command]
+pub fn search_in_files(root: String, query: String) -> Result<Vec<SearchMatch>, String> {
+    let q = query.trim().to_lowercase();
+    if q.is_empty() {
+        return Ok(vec![]);
+    }
+    let root_path = Path::new(&root);
+    if !root_path.is_dir() {
+        return Err(format!("不是有效目录: {}", root));
+    }
+
+    let ignore = ["node_modules", "target", "dist", "build", ".next", ".cache"];
+    let mut matches: Vec<SearchMatch> = Vec::new();
+    let mut stack = vec![root_path.to_path_buf()];
+
+    'outer: while let Some(dir) = stack.pop() {
+        let read = match fs::read_dir(&dir) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        for entry in read.flatten() {
+            if matches.len() >= MAX_SEARCH_MATCHES {
+                break 'outer;
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name == ".DS_Store" {
+                continue;
+            }
+            let p = entry.path();
+            if p.is_dir() {
+                if name.starts_with('.') || ignore.contains(&name.as_str()) {
+                    continue;
+                }
+                stack.push(p);
+                continue;
+            }
+            // 跳过过大文件
+            if let Ok(meta) = fs::metadata(&p) {
+                if meta.len() > MAX_SEARCH_FILE_SIZE {
+                    continue;
+                }
+            }
+            // 二进制/非 UTF-8 读取会失败，自动跳过
+            let content = match fs::read_to_string(&p) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            let path_str = p.to_string_lossy().to_string();
+            for (i, line) in content.lines().enumerate() {
+                if line.to_lowercase().contains(&q) {
+                    matches.push(SearchMatch {
+                        path: path_str.clone(),
+                        line: (i + 1) as u32,
+                        text: line.chars().take(200).collect(),
+                    });
+                    if matches.len() >= MAX_SEARCH_MATCHES {
+                        break 'outer;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(matches)
+}
+
 /// 读取文本文件内容（绕开 fs 插件 scope 限制）。
 /// max_size_mb 为打开大小上限(MB)，不传则用默认 5MB。
 #[tauri::command]
