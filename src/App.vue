@@ -201,7 +201,7 @@
     </Modal>
 
     <!-- AI 助手 -->
-    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" :root-dir="rootDir" @close="showAi = false" @insert-code="applyAiCode"/>
+    <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" :initial-prompt="aiInitialPrompt" :root-dir="rootDir" @close="showAi = false" @insert-code="applyAiCode"/>
 
     <!-- 文件夹内全局搜索 -->
     <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" @open="openSearchResult" @replaced="reloadAffectedFiles" @close="showSearch = false"/>
@@ -592,6 +592,8 @@ const showAi = ref(false)
 const aiExecutionId = ref<number | null>(null)
 // 失败运行的报错上下文，供"分析报错"快捷动作
 const aiErrorContext = ref<{ code: string, error: string } | null>(null)
+// 打开 AI 时的初始提示（解释/生成测试等一次性动作）
+const aiInitialPrompt = ref<string | null>(null)
 
 const combinedOutput = (item: ExecutionResult) =>
     [item.stdout?.trim(), item.stderr?.trim()].filter(Boolean).join('\n\n')
@@ -602,7 +604,46 @@ const handleShowAi = () => {
   aiErrorContext.value = currentExecutionId.value != null && !isSuccess.value && output.value
       ? {code: code.value, error: output.value}
       : null
+  aiInitialPrompt.value = null
   showAi.value = true
+}
+
+// 取选中文本，无选中则用整篇代码
+const selectedOrAll = (): string => {
+  const view = editorView.value
+  if (view) {
+    const {from, to} = view.state.selection.main
+    if (from !== to) {
+      return view.state.sliceDoc(from, to)
+    }
+  }
+  return code.value
+}
+
+// 以一次性提示打开 AI（临时会话，不关联执行）
+const openAiWithPrompt = (prompt: string) => {
+  aiExecutionId.value = null
+  aiErrorContext.value = null
+  aiInitialPrompt.value = prompt
+  showAi.value = true
+}
+
+const explainCode = () => {
+  const snippet = selectedOrAll()
+  if (!snippet.trim()) {
+    toast.info('没有可解释的代码')
+    return
+  }
+  openAiWithPrompt(`请解释下面这段 ${currentLanguage.value} 代码的作用与关键逻辑，用中文简洁说明：\n\n\`\`\`${currentLanguage.value}\n${snippet}\n\`\`\``)
+}
+
+const generateTests = () => {
+  const snippet = selectedOrAll()
+  if (!snippet.trim()) {
+    toast.info('没有可生成测试的代码')
+    return
+  }
+  openAiWithPrompt(`请为下面这段 ${currentLanguage.value} 代码生成单元测试，覆盖主要分支与边界情况，使用该语言常用的测试框架，只输出测试代码：\n\n\`\`\`${currentLanguage.value}\n${snippet}\n\`\`\``)
 }
 
 const openAiForExecution = (item: ExecutionResult) => {
@@ -1179,6 +1220,8 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'searchInFiles', label: '在文件夹内搜索', icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
   {id: 'generate', label: 'AI 生成代码', icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
   {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},
+  {id: 'explainCode', label: 'AI 解释代码（选中或全文）', icon: Sparkles, run: () => explainCode()},
+  {id: 'generateTests', label: 'AI 生成测试（选中或全文）', icon: Sparkles, run: () => generateTests()},
   {id: 'history', label: '执行历史', icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: '差异对比（当前 vs 已保存）', icon: GitCompare, run: () => openDiff()},
   {id: 'preview', label: '实时预览（Markdown / HTML）', icon: Eye, run: () => togglePreview()},

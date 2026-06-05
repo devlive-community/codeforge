@@ -116,6 +116,7 @@ const props = defineProps<{
   executionId: number | null
   errorContext?: { code: string, error: string } | null
   rootDir?: string | null
+  initialPrompt?: string | null
 }>()
 
 const emit = defineEmits<{ close: []; 'insert-code': [code: string] }>()
@@ -182,6 +183,17 @@ onMounted(async () => {
       scrollToBottom()
     }
   })
+  // 打开时若带有初始提示（如解释/生成测试），自动发送
+  if (props.initialPrompt) {
+    send(props.initialPrompt)
+  }
+})
+
+// 面板已打开时再次触发不同的初始提示也能发送
+watch(() => props.initialPrompt, (p, old) => {
+  if (p && p !== old) {
+    send(p)
+  }
 })
 
 onUnmounted(() => {
