@@ -50,17 +50,17 @@
       <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
         <Tooltip :text="sidebarVisible ? '隐藏侧栏' : '显示侧栏'">
           <button class="p-1.5 rounded transition-colors cursor-pointer"
-                  :class="sidebarVisible ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                  :class="sidebarVisible ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'"
                   @click="emit('toggle-sidebar')">
             <PanelLeft class="w-4 h-4"/>
           </button>
         </Tooltip>
 
-        <div class="w-px h-4 bg-gray-300 mx-0.5"></div>
+        <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-0.5"></div>
 
         <Tooltip v-for="item in layoutOptions" :key="item.value" :text="item.label">
           <button class="p-1.5 rounded transition-colors cursor-pointer"
-                  :class="currentLayout === item.value ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                  :class="currentLayout === item.value ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'"
                   @click="handleLayoutChange(item.value)">
             <component :is="item.icon" class="w-4 h-4"/>
           </button>

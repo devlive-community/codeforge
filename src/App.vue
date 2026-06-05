@@ -21,7 +21,7 @@
 
     <!-- 运行输入：参数 + stdin（任何布局/运行前都可填）-->
     <div class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-      <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 cursor-pointer" @click="showRunInput = !showRunInput">
+      <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="showRunInput = !showRunInput">
         <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
         运行输入（参数 / stdin / 环境变量）
         <span v-if="!showRunInput && (runArgs || runStdin || runEnv)" class="ml-2 text-blue-500">●</span>
@@ -58,7 +58,7 @@
                  @renamed="(from, to) => updateTabPath(from, to)"
                  @deleted="(p) => detachTabPath(p)"/>
         <!-- 拖拽改变侧栏宽度 -->
-        <div class="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
+        <div class="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
              @mousedown="startSidebarResize"></div>
       </template>
 
@@ -103,7 +103,7 @@
               <!-- 仅编辑器模式下提供收起控制台的入口 -->
               <div v-if="layoutMode === 'editor'" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">控制台</h2>
-                <button class="text-gray-400 hover:text-gray-600 transition-colors" title="收起控制台" @click="showConsole = false">
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" title="收起控制台" @click="showConsole = false">
                   <X class="w-4 h-4"/>
                 </button>
               </div>

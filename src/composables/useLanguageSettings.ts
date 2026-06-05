@@ -2,9 +2,11 @@ import {computed, nextTick, ref, watch} from 'vue'
 import {ContainerIcon, FileIcon, PickaxeIcon, Settings2} from 'lucide-vue-next'
 import {usePluginConfig} from './usePluginConfig'
 import {useCodeMirrorEditor} from './useCodeMirrorEditor'
+import {useTheme} from './useTheme'
 
 export function useLanguageSettings(emit: any)
 {
+    const {isDark} = useTheme()
     const activeTab = ref('general')
     const pluginEnabledStates = ref<Record<string, boolean>>({})
 
@@ -80,8 +82,8 @@ export function useLanguageSettings(emit: any)
     const updateExtensions = async () => {
         const newExtensions = []
 
-        // 添加主题扩展
-        const themeExtension = getThemeExtension()
+        // 添加主题扩展：深色模式下使用深色编辑器主题
+        const themeExtension = getThemeExtension(isDark.value ? 'githubDark' : 'githubLight')
         newExtensions.push(themeExtension)
 
         // 添加语言扩展
@@ -112,6 +114,13 @@ export function useLanguageSettings(emit: any)
     watch(() => pluginConfig.value?.template, (newTemplate) => {
         console.log('Template changed:', newTemplate)
     }, {immediate: false})
+
+    // 跟随应用深色模式切换模板编辑器主题
+    watch(isDark, async () => {
+        isEditorReady.value = false
+        await nextTick()
+        await updateExtensions()
+    })
 
     const handlePluginToggle = async (language: string, enabled: boolean, _event: Event) => {
         if (!globalConfig.value) return

@@ -10,7 +10,7 @@
       </div>
       <div class="flex items-center space-x-3 flex-shrink-0">
         <span class="text-xs text-gray-400">{{ rangeText }}</span>
-        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 cursor-pointer" title="关闭" @click="emit('close')">
+        <button class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer" title="关闭" @click="emit('close')">
           <X class="w-4 h-4"/>
         </button>
       </div>

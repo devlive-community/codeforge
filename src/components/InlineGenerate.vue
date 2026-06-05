@@ -30,7 +30,7 @@
                 spellcheck="false"
                 @keydown.esc.prevent="emit('close')"></textarea>
       <div class="flex items-center justify-end gap-2 px-3 py-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <button class="text-xs px-3 py-1 rounded text-gray-600 hover:bg-gray-100 cursor-pointer" @click="emit('close')">取消</button>
+        <button class="text-xs px-3 py-1 rounded text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="emit('close')">取消</button>
         <button class="text-xs px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" @click="confirm">插入到编辑器</button>
       </div>
     </template>

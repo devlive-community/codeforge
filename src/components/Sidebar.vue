@@ -1,15 +1,15 @@
 <template>
   <div class="flex flex-col h-full bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
     <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-      <span class="text-xs font-semibold text-gray-600 truncate uppercase">{{ rootName || '资源管理器' }}</span>
+      <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 truncate uppercase">{{ rootName || '资源管理器' }}</span>
       <div class="flex items-center space-x-1">
-        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 cursor-pointer"
+        <button class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
                 title="打开文件夹"
                 @click="emit('open-folder')">
           <FolderOpen class="w-4 h-4"/>
         </button>
         <button v-if="rootDir"
-                class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 cursor-pointer"
+                class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
                 title="刷新"
                 @click="loadRoot">
           <RefreshCw class="w-4 h-4"/>
@@ -28,7 +28,7 @@
           <p class="text-xs font-semibold text-gray-400 mb-1 px-1">最近打开</p>
           <button v-for="folder in recentFolders"
                   :key="folder"
-                  class="w-full flex items-center space-x-2 px-2 py-1 rounded text-left text-sm text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  class="w-full flex items-center space-x-2 px-2 py-1 rounded text-left text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                   :title="folder"
                   @click="emit('open-recent', folder)">
             <Folder class="w-4 h-4 text-blue-500 flex-shrink-0"/>
@@ -47,19 +47,19 @@
     <!-- 右键菜单 -->
     <div v-if="ctx.visible" class="fixed inset-0 z-40" @click="closeCtx" @contextmenu.prevent="closeCtx">
       <div ref="menuRef"
-           class="absolute bg-white rounded-md shadow-lg border border-gray-200 py-1 text-sm min-w-[150px]"
+           class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[150px]"
            :style="{ top: `${ctx.y}px`, left: `${ctx.x}px` }"
            @click.stop>
         <template v-if="!ctx.node || ctx.node.is_dir">
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="promptCreate('file')">新建文件</button>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="promptCreate('folder')">新建文件夹</button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptCreate('file')">新建文件</button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptCreate('folder')">新建文件夹</button>
         </template>
         <template v-if="ctx.node">
-          <div v-if="!ctx.node || ctx.node.is_dir" class="border-t border-gray-100 my-1"></div>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="promptRename">重命名</button>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer text-red-600" @click="confirmDelete">删除</button>
-          <div class="border-t border-gray-100 my-1"></div>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer" @click="reveal">在{{ revealLabel }}中显示</button>
+          <div v-if="!ctx.node || ctx.node.is_dir" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptRename">重命名</button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-600" @click="confirmDelete">删除</button>
+          <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="reveal">在{{ revealLabel }}中显示</button>
         </template>
       </div>
     </div>

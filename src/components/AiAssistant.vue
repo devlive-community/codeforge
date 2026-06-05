@@ -8,10 +8,10 @@
         <span class="text-xs text-gray-400 truncate">{{ active.model }}</span>
       </div>
       <div class="flex items-center space-x-1 flex-shrink-0">
-        <button v-if="messages.length" class="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100" title="清空对话" @click="clearChat">
+        <button v-if="messages.length" class="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700" title="清空对话" @click="clearChat">
           <Trash2 class="w-4 h-4"/>
         </button>
-        <button class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="关闭" @click="emit('close')">
+        <button class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" title="关闭" @click="emit('close')">
           <X class="w-4 h-4"/>
         </button>
       </div>
@@ -51,7 +51,7 @@
     <!-- 输入 -->
     <div class="border-t border-gray-200 dark:border-gray-700 p-2 flex-shrink-0">
       <div v-if="sending" class="mb-1.5 flex justify-center">
-        <button class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer" @click="stop">
+        <button class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="stop">
           停止生成
         </button>
       </div>

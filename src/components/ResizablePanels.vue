@@ -7,7 +7,7 @@
 
     <!-- 拖拽分隔条 -->
     <div
-      class="relative bg-gray-200 hover:bg-blue-500 transition-colors flex-shrink-0 group"
+      class="relative bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 transition-colors flex-shrink-0 group"
       :class="isVertical ? 'h-1 cursor-row-resize' : 'w-1 cursor-col-resize'"
       @mousedown="startResize"
       @touchstart="startResize">
