@@ -241,6 +241,9 @@
     <!-- 代码片段管理 -->
     <SnippetManager v-if="showSnippets" @close="showSnippets = false"/>
 
+    <!-- 集成终端 -->
+    <Terminal v-if="showTerminal" :root-dir="rootDir" @close="showTerminal = false"/>
+
     <!-- 差异对比：当前 vs 已保存 -->
     <DiffView v-if="showDiff"
               :original="savedContent || ''"
@@ -280,7 +283,7 @@
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
+import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -310,6 +313,7 @@ import GitPanel from './components/GitPanel.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
+import Terminal from './components/Terminal.vue'
 import {initSnippets} from './composables/useSnippets'
 import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './composables/useKvStore'
 import {useAiConfig} from './composables/useAiConfig'
@@ -845,6 +849,12 @@ const openOutline = () => {
 // 代码片段管理
 const showSnippets = ref(false)
 
+// 集成终端
+const showTerminal = ref(false)
+const toggleTerminal = () => {
+  showTerminal.value = !showTerminal.value
+}
+
 const openSearchResult = async (path: string, line: number) => {
   showSearch.value = false
   await smartOpen(path)
@@ -1304,7 +1314,8 @@ const shortcutDispatch: Record<string, () => void> = {
   open: () => handleOpenFileClick(),
   newTab: () => handleNewTab(),
   closeTab: () => handleCloseTab(activeTabId.value),
-  toggleSidebar: () => toggleSidebar()
+  toggleSidebar: () => toggleSidebar(),
+  toggleTerminal: () => toggleTerminal()
 }
 
 // 切换并持久化外观主题
@@ -1337,6 +1348,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'gotoLine', label: '跳转到行', icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
   {id: 'outline', label: '符号大纲', icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},
   {id: 'snippets', label: '管理代码片段', icon: Code2, run: () => { showSnippets.value = true }},
+  {id: 'terminal', label: '切换终端', icon: TerminalIcon, hint: hintOf('toggleTerminal'), run: () => toggleTerminal()},
   {id: 'searchInFiles', label: '在文件夹内搜索', icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
   {id: 'generate', label: 'AI 生成代码', icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
   {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},

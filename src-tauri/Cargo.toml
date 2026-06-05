@@ -35,6 +35,7 @@ futures-util = "0.3"
 rfd = "0.15"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 async-trait = "0.1"
+portable-pty = "0.8"
 zip = "2.2.2"
 flate2 = "1.0"
 tar = "0.4"

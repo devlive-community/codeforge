@@ -23,7 +23,8 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
     {id: 'generate', label: 'AI 生成代码', default: 'Mod+K'},
     {id: 'newTab', label: '新建标签', default: 'Mod+N'},
     {id: 'closeTab', label: '关闭标签', default: 'Mod+W'},
-    {id: 'toggleSidebar', label: '切换侧栏', default: 'Mod+B'}
+    {id: 'toggleSidebar', label: '切换侧栏', default: 'Mod+B'},
+    {id: 'toggleTerminal', label: '切换终端', default: 'Mod+`'}
 ]
 
 const STORAGE_KEY = 'shortcuts'
