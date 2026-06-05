@@ -537,8 +537,7 @@ pub async fn git_status(root: String) -> Result<GitStatus, String> {
                         let seg = seg.trim();
                         if let Some(n) = seg.strip_prefix("ahead ") {
                             ahead = n.trim().parse().unwrap_or(0);
-                        }
-                        else if let Some(n) = seg.strip_prefix("behind ") {
+                        } else if let Some(n) = seg.strip_prefix("behind ") {
                             behind = n.trim().parse().unwrap_or(0);
                         }
                     }
