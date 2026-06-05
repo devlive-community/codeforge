@@ -86,6 +86,9 @@
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500">
+                  <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
+                    <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
+                  </span>
                   <span><strong>{{ (code || '').length }}</strong> 字符</span>
                   <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
                 </div>
@@ -150,6 +153,9 @@
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500">
+            <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
+              <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
+            </span>
             <span><strong>{{ (code || '').length }}</strong> 字符</span>
             <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
           </div>
@@ -657,8 +663,17 @@ const toggleAiCompletion = () => {
   kvSet('ai-completion', String(aiCompletion.value))
   if (!aiCompletion.value) {
     clearGhostIn(editorView.value)
+    toast.info('AI 代码预测已关闭')
+    return
   }
-  toast.info(aiCompletion.value ? 'AI 代码预测已开启' : 'AI 代码预测已关闭')
+  // 开启时若未配置 API Key，明确提示（否则预测会静默不工作）
+  reloadAiCfg()
+  if (!aiActive.value.apiKey) {
+    toast.warning('AI 代码预测已开启，但尚未配置 API Key，请在「设置 → AI」中填写')
+  }
+  else {
+    toast.info('AI 代码预测已开启，停顿打字即可看到灰色补全，Tab 接受')
+  }
 }
 
 // 清洗补全结果：去掉代码块围栏与开头多余换行
@@ -669,6 +684,9 @@ const cleanCompletion = (raw: string): string => {
 }
 
 let predictNonce = 0
+let predictInflight = 0
+// 是否正在请求 AI 预测（用于状态提示）
+const predicting = ref(false)
 const requestPrediction = async () => {
   if (!aiCompletion.value || isRunning.value) {
     return
@@ -692,6 +710,8 @@ const requestPrediction = async () => {
   }
   const suffix = view.state.sliceDoc(pos)
   const nonce = ++predictNonce
+  predictInflight++
+  predicting.value = true
   try {
     const res = await invoke<string>('ai_chat', {
       provider: aiActive.value.provider,
@@ -719,6 +739,12 @@ const requestPrediction = async () => {
   }
   catch {
     // 静默失败，不打扰编辑
+  }
+  finally {
+    predictInflight--
+    if (predictInflight === 0) {
+      predicting.value = false
+    }
   }
 }
 const requestPredictionDebounced = debounce(requestPrediction, 600)
