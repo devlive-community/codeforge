@@ -207,6 +207,11 @@
                @select="smartOpen"
                @close="showQuickOpen = false"/>
 
+    <!-- 命令面板 -->
+    <CommandPalette v-if="showCommandPalette"
+                    :commands="paletteCommands"
+                    @close="showCommandPalette = false"/>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
@@ -214,7 +219,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
-import {ChevronRight, X} from 'lucide-vue-next'
+import {ChevronRight, FolderOpen, History, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -237,10 +242,11 @@ import EditorTabs from './components/EditorTabs.vue'
 import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
 import QuickOpen from './components/QuickOpen.vue'
+import CommandPalette, {type PaletteCommand} from './components/CommandPalette.vue'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
-import {useTheme} from './composables/useTheme'
+import {useTheme, type AppTheme} from './composables/useTheme'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
@@ -634,6 +640,12 @@ const openQuickOpen = () => {
   showQuickOpen.value = true
 }
 
+// 命令面板（Cmd+Shift+P）
+const showCommandPalette = ref(false)
+const openCommandPalette = () => {
+  showCommandPalette.value = true
+}
+
 const closeViewer = () => {
   showViewer.value = false
   viewerFile.value = null
@@ -849,13 +861,15 @@ const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
     || showHistory.value || showViewer.value || showRunPrompt.value
     || showQuickOpen.value || showGenerate.value || showSearch.value
+    || showCommandPalette.value
 
 // 全局快捷键（绑定可在设置中自定义）
-const {matchAction: matchShortcut, reload: reloadShortcuts} = useShortcuts()
+const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
 
 const shortcutDispatch: Record<string, () => void> = {
   run: () => handleRunCode(),
   quickOpen: () => openQuickOpen(),
+  commandPalette: () => openCommandPalette(),
   searchInFiles: () => openSearch(),
   generate: () => openGenerate(),
   save: () => saveFile(),
@@ -865,6 +879,44 @@ const shortcutDispatch: Record<string, () => void> = {
   closeTab: () => handleCloseTab(activeTabId.value),
   toggleSidebar: () => toggleSidebar()
 }
+
+// 切换并持久化外观主题
+const applyTheme = async (t: AppTheme) => {
+  setAppTheme(t)
+  try {
+    const config = await invoke<any>('get_app_config')
+    config.theme = t
+    await invoke('update_app_config', {config})
+  }
+  catch (error) {
+    console.error('保存主题失败:', error)
+  }
+}
+
+// 命令面板命令列表（含快捷键提示）
+const hintOf = (id: string) => formatCombo(getBinding(id))
+const paletteCommands = computed<PaletteCommand[]>(() => [
+  {id: 'run', label: '运行代码', icon: Play, hint: hintOf('run'), run: () => handleRunCode()},
+  {id: 'open', label: '打开文件', icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
+  {id: 'openFolder', label: '打开文件夹', icon: FolderOpen, run: () => openFolder()},
+  {id: 'save', label: '保存文件', icon: Save, hint: hintOf('save'), run: () => saveFile()},
+  {id: 'saveAs', label: '另存为', icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
+  {id: 'newTab', label: '新建标签', icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
+  {id: 'closeTab', label: '关闭标签', icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
+  {id: 'quickOpen', label: '快速打开文件', icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
+  {id: 'searchInFiles', label: '在文件夹内搜索', icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
+  {id: 'generate', label: 'AI 生成代码', icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
+  {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},
+  {id: 'history', label: '执行历史', icon: History, run: () => { showHistory.value = true }},
+  {id: 'toggleSidebar', label: '切换侧栏', icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
+  {id: 'layoutHorizontal', label: '布局：左右', group: '布局', icon: PanelRight, run: () => handleLayoutChange('horizontal')},
+  {id: 'layoutVertical', label: '布局：上下', group: '布局', icon: PanelBottom, run: () => handleLayoutChange('vertical')},
+  {id: 'layoutEditor', label: '布局：仅编辑器', group: '布局', icon: Maximize2, run: () => handleLayoutChange('editor')},
+  {id: 'themeSystem', label: '主题：跟随系统', group: '主题', icon: Monitor, run: () => applyTheme('system')},
+  {id: 'themeLight', label: '主题：浅色', group: '主题', icon: Sun, run: () => applyTheme('light')},
+  {id: 'themeDark', label: '主题：深色', group: '主题', icon: Moon, run: () => applyTheme('dark')},
+  {id: 'settings', label: '打开设置', icon: SettingsIcon, run: () => { showSettings.value = true }}
+])
 
 const onGlobalKeydown = (e: KeyboardEvent) => {
   if (isOverlayOpen()) {
@@ -879,7 +931,7 @@ const onGlobalKeydown = (e: KeyboardEvent) => {
   }
 }
 
-const {init: initTheme} = useTheme()
+const {init: initTheme, setTheme: setAppTheme} = useTheme()
 
 onMounted(async () => {
   await initTheme()
