@@ -76,20 +76,22 @@
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-                <div class="flex items-center space-x-3">
-                  <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-                  <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+                <div class="flex items-center space-x-3 min-w-0 flex-1">
+                  <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage"/>
+                  <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
                   <template v-if="currentFilePath">
-                    <span class="text-gray-400 text-xs">·</span>
-                    <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+                    <span class="text-gray-400 text-xs flex-shrink-0">·</span>
+                    <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:h-1">
+                      <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+                    </div>
                   </template>
-                  <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+                  <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center whitespace-nowrap flex-shrink-0">
                     · {{ currentFileName }}
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
                   </span>
                 </div>
 
-                <div class="flex items-center space-x-2 text-xs text-gray-500">
+                <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
                   <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
                     <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
                   </span>
@@ -150,20 +152,22 @@
         <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
         <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-          <div class="flex items-center space-x-3">
-            <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-            <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+          <div class="flex items-center space-x-3 min-w-0 flex-1">
+            <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage"/>
+            <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
             <template v-if="currentFilePath">
-              <span class="text-gray-400 text-xs">·</span>
-              <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+              <span class="text-gray-400 text-xs flex-shrink-0">·</span>
+              <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:h-1">
+                <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+              </div>
             </template>
-            <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+            <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center whitespace-nowrap flex-shrink-0">
               · {{ currentFileName }}
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
             </span>
           </div>
 
-          <div class="flex items-center space-x-2 text-xs text-gray-500">
+          <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
             <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
               <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
             </span>

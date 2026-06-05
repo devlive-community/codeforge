@@ -1,8 +1,8 @@
 <template>
-  <span class="flex items-center text-xs text-gray-500 min-w-0">
+  <span class="flex items-center text-xs text-gray-500 w-max whitespace-nowrap">
     <template v-for="(seg, i) in segments" :key="i">
       <ChevronRight v-if="i > 0" class="w-3 h-3 mx-0.5 text-gray-300 dark:text-gray-600 flex-shrink-0"/>
-      <button class="hover:text-blue-500 truncate max-w-[160px] cursor-pointer"
+      <button class="hover:text-blue-500 cursor-pointer flex-shrink-0"
               :title="`在访达中显示：${seg.full}`"
               @click="emit('reveal', seg.full)">
         {{ seg.name }}
