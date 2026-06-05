@@ -14,7 +14,8 @@ export interface DiffMarkers
 // 设置差异标记的 effect（由外部计算后派发）
 export const setDiffMarkers = StateEffect.define<DiffMarkers>()
 
-// 行装饰：在行左缘绘制彩色竖条 / 删除三角（不新增 gutter 列，避免与行号列冲突）
+// 行装饰：在行左缘绘制彩色竖条（不新增 gutter 列，避免与行号列冲突）
+// 新增=绿、修改=琥珀；删除在相邻行底缘用琥珀虚线提示，避免绝对定位三角影响行高
 const addLine = Decoration.line({class: 'cm-diff-add'})
 const modLine = Decoration.line({class: 'cm-diff-mod'})
 const delLine = Decoration.line({class: 'cm-diff-del'})
@@ -51,21 +52,11 @@ const diffField = StateField.define<DecorationSet>({
 })
 
 const diffTheme = EditorView.baseTheme({
+    // 左缘竖条：新增=绿、修改=琥珀
     '.cm-diff-add': {boxShadow: 'inset 2px 0 0 0 #2ea043'},
     '.cm-diff-mod': {boxShadow: 'inset 2px 0 0 0 #d29922'},
-    // 删除：行首红色小三角
-    '.cm-diff-del': {position: 'relative'},
-    '.cm-diff-del::before': {
-        content: '""',
-        position: 'absolute',
-        left: '0',
-        top: '0',
-        width: '0',
-        height: '0',
-        borderLeft: '5px solid #f85149',
-        borderTop: '4px solid transparent',
-        borderBottom: '4px solid transparent',
-    },
+    // 删除：该行底缘一条红线（提示其下方有内容被删除），不影响行高
+    '.cm-diff-del': {boxShadow: 'inset 0 -2px 0 0 #f85149'},
 })
 
 // 编辑器差异标记扩展（默认无标记，由外部 dispatch setDiffMarkers 填充）
