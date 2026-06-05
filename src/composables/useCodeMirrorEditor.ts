@@ -412,8 +412,9 @@ export function useCodeMirrorEditor(props: Props)
     }, {immediate: false})
 
     // 跟随应用深色模式切换编辑器主题
+    // 仅更新扩展（vue-codemirror 会就地重配置），避免卸载重挂导致的白色闪烁
     watch(isDark, async () => {
-        await reRenderEditor()
+        await updateExtensions()
     })
 
     // 监听缩进配置变化

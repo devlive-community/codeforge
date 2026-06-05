@@ -116,9 +116,8 @@ export function useLanguageSettings(emit: any)
     }, {immediate: false})
 
     // 跟随应用深色模式切换模板编辑器主题
+    // 仅更新扩展（vue-codemirror 就地重配置），避免卸载重挂的白色闪烁
     watch(isDark, async () => {
-        isEditorReady.value = false
-        await nextTick()
         await updateExtensions()
     })
 
