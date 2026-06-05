@@ -17,7 +17,8 @@
          @dragleave="dragOverId === tab.id && (dragOverId = null)"
          @drop.prevent="onDrop(tab.id)"
          @dragend="onDragEnd">
-      <img :src="iconUrl(tab.language)" class="w-4 h-4 flex-shrink-0" :alt="tab.language"/>
+      <img :src="iconUrl(tab.language)" class="w-4 h-4 flex-shrink-0" :alt="tab.language"
+           @error="(e) => { const t = e.target as HTMLImageElement; if (!t.src.endsWith('/icons/text.svg')) t.src = '/icons/text.svg' }"/>
       <span class="text-xs truncate">{{ title(tab) }}</span>
       <span v-if="isDirty(tab)" class="text-amber-500 text-xs flex-shrink-0" title="未保存">●</span>
       <button class="ml-1 rounded p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"

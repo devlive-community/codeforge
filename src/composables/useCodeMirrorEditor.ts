@@ -80,6 +80,9 @@ import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
 import {aiCompleteExtension} from "../editor/aiComplete";
 import {cursorListener} from "../editor/cursorInfo";
+import {json} from "@codemirror/lang-json";
+import {markdown} from "@codemirror/lang-markdown";
+import {yaml} from "@codemirror/lang-yaml";
 import {useSnippets} from "./useSnippets";
 
 interface Props
@@ -310,6 +313,16 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(objectiveC)
             case 'objective-cpp':
                 return StreamLanguage.define(objectiveCpp)
+            case 'json':
+                return json()
+            case 'yaml':
+                return yaml()
+            case 'markdown':
+                return markdown()
+            case 'xml':
+                return xml()
+            case 'text':
+                return null
             default:
                 return null
         }

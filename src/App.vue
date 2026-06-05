@@ -77,7 +77,7 @@
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3 min-w-0 flex-1">
-                  <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage"/>
+                  <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
                   <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
                   <template v-if="currentFilePath">
                     <span class="text-gray-400 text-xs flex-shrink-0">·</span>
@@ -153,7 +153,7 @@
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
         <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3 min-w-0 flex-1">
-            <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage"/>
+            <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
             <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
             <template v-if="currentFilePath">
               <span class="text-gray-400 text-xs flex-shrink-0">·</span>
@@ -916,6 +916,14 @@ const openOutline = () => {
 
 // 代码片段管理
 const showSnippets = ref(false)
+
+// 语言图标缺失时回落到通用文本图标
+const onIconError = (e: Event) => {
+  const t = e.target as HTMLImageElement
+  if (!t.src.endsWith('/icons/text.svg')) {
+    t.src = '/icons/text.svg'
+  }
+}
 
 // 面包屑点击：在系统文件管理器中显示该路径
 const revealInFinder = (path: string) => {
