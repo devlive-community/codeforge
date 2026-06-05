@@ -274,12 +274,12 @@ export function useCodeMirrorEditor(props: Props)
         }
     }
 
-    // 隐藏行号的主题扩展：仅隐藏行号与折叠列，保留 Git 差异标记列
+    // 隐藏行号的主题扩展
     const hideLineNumbersTheme = EditorView.theme({
         '.cm-lineNumbers': {
             display: 'none !important'
         },
-        '.cm-foldGutter': {
+        '.cm-gutters': {
             display: 'none !important'
         }
     })

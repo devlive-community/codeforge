@@ -1,5 +1,5 @@
-import {gutter, GutterMarker, EditorView} from '@codemirror/view'
-import {StateEffect, StateField, RangeSet, RangeSetBuilder} from '@codemirror/state'
+import {Decoration, DecorationSet, EditorView} from '@codemirror/view'
+import {StateEffect, StateField, RangeSetBuilder} from '@codemirror/state'
 
 export type LineKind = 'add' | 'mod'
 
@@ -7,66 +7,38 @@ export interface DiffMarkers
 {
     // 当前文档行号(1-based) → 标记类型
     changed: Map<number, LineKind>
-    // 在这些行之前发生了删除（显示三角形提示）
+    // 在这些行之前发生了删除（在行首显示红色小三角）
     deleted: Set<number>
 }
 
 // 设置差异标记的 effect（由外部计算后派发）
 export const setDiffMarkers = StateEffect.define<DiffMarkers>()
 
-class DiffGutterMarker extends GutterMarker
-{
-    constructor(readonly cls: string)
-    {
-        super()
-    }
+// 行装饰：在行左缘绘制彩色竖条 / 删除三角（不新增 gutter 列，避免与行号列冲突）
+const addLine = Decoration.line({class: 'cm-diff-add'})
+const modLine = Decoration.line({class: 'cm-diff-mod'})
+const delLine = Decoration.line({class: 'cm-diff-del'})
 
-    eq(other: DiffGutterMarker)
-    {
-        return other.cls === this.cls
-    }
-
-    toDOM()
-    {
-        const el = document.createElement('div')
-        el.className = this.cls
-        return el
-    }
-}
-
-const addMarker = new DiffGutterMarker('cm-diff-add')
-const modMarker = new DiffGutterMarker('cm-diff-mod')
-const delMarker = new DiffGutterMarker('cm-diff-del')
-
-// 由 DiffMarkers 构建定位到各行起点的 RangeSet
-const buildSet = (state: any, data: DiffMarkers): RangeSet<GutterMarker> => {
+const buildSet = (state: any, data: DiffMarkers): DecorationSet => {
     const lineCount = state.doc.lines
-    // 按行号排序后写入，RangeSetBuilder 要求位置递增
-    const entries: { line: number, marker: GutterMarker }[] = []
-    for (const [line, kind] of data.changed) {
-        if (line >= 1 && line <= lineCount) {
-            entries.push({line, marker: kind === 'add' ? addMarker : modMarker})
+    const builder = new RangeSetBuilder<Decoration>()
+    // 按行号升序写入，满足 RangeSetBuilder 的递增要求
+    for (let n = 1; n <= lineCount; n++) {
+        const from = state.doc.line(n).from
+        if (data.changed.has(n)) {
+            builder.add(from, from, data.changed.get(n) === 'add' ? addLine : modLine)
         }
-    }
-    for (const line of data.deleted) {
-        if (line >= 1 && line <= lineCount && !data.changed.has(line)) {
-            entries.push({line, marker: delMarker})
+        else if (data.deleted.has(n)) {
+            builder.add(from, from, delLine)
         }
-    }
-    entries.sort((a, b) => a.line - b.line)
-
-    const builder = new RangeSetBuilder<GutterMarker>()
-    for (const e of entries) {
-        const from = state.doc.line(e.line).from
-        builder.add(from, from, e.marker)
     }
     return builder.finish()
 }
 
-const diffField = StateField.define<RangeSet<GutterMarker>>({
-    create: () => RangeSet.empty,
+const diffField = StateField.define<DecorationSet>({
+    create: () => Decoration.none,
     update(set, tr) {
-        // 文档变化时先随之平移，保证下次重算前位置不至于错乱
+        // 文档变化时随之平移，下一次重算前位置不至错乱
         set = set.map(tr.changes)
         for (const e of tr.effects) {
             if (e.is(setDiffMarkers)) {
@@ -74,39 +46,30 @@ const diffField = StateField.define<RangeSet<GutterMarker>>({
             }
         }
         return set
-    }
+    },
+    provide: f => EditorView.decorations.from(f)
 })
 
-const diffGutterTheme = EditorView.baseTheme({
-    '.cm-diff-gutter .cm-gutterElement': {
-        padding: '0',
-    },
-    '.cm-diff-add, .cm-diff-mod, .cm-diff-del': {
-        width: '3px',
-        height: '100%',
-        marginLeft: '2px',
-    },
-    '.cm-diff-add': {background: '#2ea043'},
-    '.cm-diff-mod': {background: '#d29922'},
-    // 删除：用红色小三角提示
-    '.cm-diff-del': {
-        background: 'transparent',
+const diffTheme = EditorView.baseTheme({
+    '.cm-diff-add': {boxShadow: 'inset 2px 0 0 0 #2ea043'},
+    '.cm-diff-mod': {boxShadow: 'inset 2px 0 0 0 #d29922'},
+    // 删除：行首红色小三角
+    '.cm-diff-del': {position: 'relative'},
+    '.cm-diff-del::before': {
+        content: '""',
+        position: 'absolute',
+        left: '0',
+        top: '0',
         width: '0',
         height: '0',
-        marginLeft: '1px',
-        borderLeft: '4px solid #f85149',
+        borderLeft: '5px solid #f85149',
         borderTop: '4px solid transparent',
         borderBottom: '4px solid transparent',
     },
 })
 
-const diffGutterView = gutter({
-    class: 'cm-diff-gutter',
-    markers: v => v.state.field(diffField),
-})
-
 // 编辑器差异标记扩展（默认无标记，由外部 dispatch setDiffMarkers 填充）
-export const diffGutterExtension = [diffField, diffGutterView, diffGutterTheme]
+export const diffGutterExtension = [diffField, diffTheme]
 
 // 基于 LCS 的逐行差异，输出当前文档各行的标记
 export const computeDiffMarkers = (baseline: string, current: string): DiffMarkers => {
