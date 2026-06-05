@@ -75,8 +75,10 @@ import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
+import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
+import {useSnippets} from "./useSnippets";
 
 interface Props
 {
@@ -145,6 +147,42 @@ export function useCodeMirrorEditor(props: Props)
         {key: 'Mod--', preventDefault: true, run: () => (decreaseFontSize(), true)},
         {key: 'Mod-0', preventDefault: true, run: () => (resetFontSize(), true)}
     ])
+
+    // 代码片段：在光标前的单词等于某片段前缀时，按 Tab 展开（$0 / ${0} 为光标落点）
+    const {findByPrefix} = useSnippets()
+    const expandSnippet = (view: EditorView): boolean => {
+        const {state} = view
+        const sel = state.selection.main
+        if (!sel.empty) {
+            return false
+        }
+        const lineFrom = state.doc.lineAt(sel.head).from
+        const before = state.sliceDoc(lineFrom, sel.head)
+        const m = /([A-Za-z_]\w*)$/.exec(before)
+        if (!m) {
+            return false
+        }
+        const snip = findByPrefix(m[1], props.language || '')
+        if (!snip) {
+            return false
+        }
+        const from = sel.head - m[1].length
+        let body = snip.body
+        let cursorOffset = -1
+        const ph = /\$\{0\}|\$0/.exec(body)
+        if (ph) {
+            cursorOffset = ph.index
+            body = body.slice(0, ph.index) + body.slice(ph.index + ph[0].length)
+        }
+        view.dispatch({
+            changes: {from, to: sel.head, insert: body},
+            selection: {anchor: cursorOffset >= 0 ? from + cursorOffset : from + body.length},
+            scrollIntoView: true
+        })
+        return true
+    }
+    // 高优先级拦截 Tab；未匹配片段则返回 false，回落到默认缩进
+    const snippetKeymap = Prec.highest(keymap.of([{key: 'Tab', run: expandSnippet}]))
 
     // 主题映射
     const themeMap: Record<string, any> = {
@@ -297,6 +335,9 @@ export function useCodeMirrorEditor(props: Props)
 
         // 字体缩放快捷键（搜索/替换、折叠、括号匹配等由 vue-codemirror 的 basicSetup 提供）
         result.push(fontSizeKeymap)
+
+        // 代码片段 Tab 展开
+        result.push(snippetKeymap)
 
         // Git 行内差异标记（标记数据由外部 dispatch 填充，无 git 时为空）
         result.push(diffGutterExtension)
