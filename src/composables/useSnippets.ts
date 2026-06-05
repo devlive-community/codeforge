@@ -1,4 +1,5 @@
 import {ref} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
 
 export interface Snippet
 {
@@ -10,51 +11,89 @@ export interface Snippet
     language?: string
 }
 
-const STORAGE_KEY = 'snippets'
+// 模块级共享，保证编辑器扩展与管理面板看到同一份数据
+const snippets = ref<Snippet[]>([])
+let loaded = false
 
-const load = (): Snippet[] => {
+const genId = () => `sn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+
+const load = async () => {
     try {
-        const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-        return Array.isArray(arr) ? arr : []
+        snippets.value = await invoke<Snippet[]>('get_snippets')
     }
-    catch {
-        return []
+    catch (error) {
+        console.error('加载代码片段失败:', error)
+        snippets.value = []
     }
 }
 
-// 模块级共享，保证编辑器扩展与管理面板看到同一份数据
-const snippets = ref<Snippet[]>(load())
+// 一次性把旧版 localStorage 中的片段迁移进数据库
+const migrateFromLocalStorage = async () => {
+    try {
+        const raw = localStorage.getItem('snippets')
+        if (!raw) {
+            return
+        }
+        const old = JSON.parse(raw)
+        if (Array.isArray(old) && old.length && snippets.value.length === 0) {
+            for (const s of old) {
+                await invoke('save_snippet', {
+                    snippet: {
+                        id: s.id || genId(),
+                        prefix: s.prefix || '',
+                        body: s.body || '',
+                        description: s.description || '',
+                        language: s.language || '*'
+                    }
+                })
+            }
+            await load()
+        }
+        localStorage.removeItem('snippets')
+    }
+    catch (error) {
+        console.error('迁移代码片段失败:', error)
+    }
+}
+
+// 应用启动时调用一次：从数据库载入并迁移旧数据
+export const initSnippets = async () => {
+    if (loaded) {
+        return
+    }
+    loaded = true
+    await load()
+    await migrateFromLocalStorage()
+}
 
 export function useSnippets()
 {
-    const persist = () => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(snippets.value))
-    }
-    const reload = () => {
-        snippets.value = load()
+    const add = async (s: Omit<Snippet, 'id'>) => {
+        const snip: Snippet = {id: genId(), ...s}
+        await invoke('save_snippet', {snippet: {description: '', language: '*', ...snip}})
+        snippets.value.push(snip)
     }
 
-    const add = (s: Omit<Snippet, 'id'>) => {
-        snippets.value.push({...s, id: `sn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`})
-        persist()
-    }
-    const update = (id: string, patch: Partial<Snippet>) => {
+    const update = async (id: string, patch: Partial<Snippet>) => {
         const i = snippets.value.findIndex(x => x.id === id)
-        if (i >= 0) {
-            snippets.value[i] = {...snippets.value[i], ...patch}
-            persist()
+        if (i < 0) {
+            return
         }
-    }
-    const remove = (id: string) => {
-        snippets.value = snippets.value.filter(x => x.id !== id)
-        persist()
+        const merged = {...snippets.value[i], ...patch}
+        await invoke('save_snippet', {snippet: {description: '', language: '*', ...merged}})
+        snippets.value[i] = merged
     }
 
-    // 查找某语言下前缀完全匹配的片段（精确前缀 + 语言匹配）
+    const remove = async (id: string) => {
+        await invoke('delete_snippet', {id})
+        snippets.value = snippets.value.filter(x => x.id !== id)
+    }
+
+    // 查找某语言下前缀完全匹配的片段（同步，供编辑器 Tab 展开）
     const findByPrefix = (prefix: string, lang: string): Snippet | undefined =>
         snippets.value.find(s =>
             s.prefix === prefix && (!s.language || s.language === '*' || s.language === lang)
         )
 
-    return {snippets, reload, persist, add, update, remove, findByPrefix}
+    return {snippets, reload: load, add, update, remove, findByPrefix}
 }

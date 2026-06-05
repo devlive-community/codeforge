@@ -292,6 +292,7 @@ import GitPanel from './components/GitPanel.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
+import {initSnippets} from './composables/useSnippets'
 import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
@@ -1268,6 +1269,8 @@ onMounted(async () => {
   await loadEditorConfig()
   await initializeEventListeners()
   consoleType.value = getCurrentConsoleType()
+  // 从数据库载入代码片段（并迁移旧的 localStorage 数据）
+  initSnippets()
 
   // 恢复上次打开的文件夹
   const lastRoot = localStorage.getItem(LAST_ROOT_KEY)

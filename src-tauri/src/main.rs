@@ -19,6 +19,7 @@ mod logger;
 mod plugin;
 mod plugins;
 mod setup;
+mod snippets;
 mod update;
 mod utils;
 
@@ -54,6 +55,7 @@ use crate::filesystem::{
 };
 use crate::plugin::{get_info, get_supported_languages};
 use crate::setup::app::get_app_info;
+use crate::snippets::{Snippets, delete_snippet, get_snippets, save_snippet};
 use crate::utils::logger::{
     clear_logs, get_log_directory, get_log_files, reset_log_directory, set_log_directory,
 };
@@ -84,6 +86,7 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .manage(ExecutionHistory::new().expect("failed to initialize execution history database"))
         .manage(AiHistory::new().expect("failed to initialize ai history database"))
+        .manage(Snippets::new().expect("failed to initialize snippets database"))
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
         .manage(EnvironmentManagerState::new(env_manager))
         .setup(|app| {
@@ -198,7 +201,11 @@ fn main() {
             save_ai_conversation,
             list_ai_conversation_ids,
             get_ai_conversation,
-            delete_ai_conversation
+            delete_ai_conversation,
+            // 代码片段
+            get_snippets,
+            save_snippet,
+            delete_snippet
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
