@@ -224,6 +224,7 @@
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
                :root-dir="rootDir"
+               :recent-paths="recentFiles"
                @select="smartOpen"
                @close="showQuickOpen = false"/>
 
@@ -473,6 +474,15 @@ const RECENT_FOLDERS_KEY = 'recent-folders'
 const LAST_ROOT_KEY = 'last-root-dir'
 const recentFolders = ref<string[]>(kvGetJSON<string[]>(RECENT_FOLDERS_KEY, []))
 
+// 最近打开的文件（用于 Cmd+P 优先展示）
+const RECENT_FILES_KEY = 'recent-files'
+const recentFiles = ref<string[]>(kvGetJSON<string[]>(RECENT_FILES_KEY, []))
+const addRecentFile = (path: string) => {
+  const list = [path, ...recentFiles.value.filter(p => p !== path)].slice(0, 30)
+  recentFiles.value = list
+  kvSetJSON(RECENT_FILES_KEY, list)
+}
+
 // 记住打开的文件夹（去重、置顶、最多 8 个），并记录为上次文件夹
 const rememberFolder = (path: string) => {
   const list = [path, ...recentFolders.value.filter(p => p !== path)].slice(0, 8)
@@ -587,6 +597,8 @@ const smartOpen = async (filePath: string) => {
       showViewer.value = true
       return
     }
+
+    addRecentFile(filePath)
 
     // 已打开则切换到对应标签，否则在新标签打开
     const existing = editorTabs.value.find(t => t.filePath === filePath)
