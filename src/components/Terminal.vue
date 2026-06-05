@@ -5,16 +5,16 @@
     <div class="h-1 cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 transition-colors flex-shrink-0"
          @mousedown="startResize"></div>
 
-    <!-- 标签栏 -->
-    <div class="flex items-stretch bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-x-auto
+    <!-- 标签栏（终端始终深色，chrome 统一深色更协调）-->
+    <div class="flex items-stretch bg-[#252526] flex-shrink-0 overflow-x-auto
                 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-      <div class="flex items-center gap-2 px-2 text-xs font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">
+      <div class="flex items-center gap-2 px-2 text-xs font-medium text-gray-500 flex-shrink-0">
         <TerminalIcon class="w-3.5 h-3.5"/>
       </div>
       <div v-for="s in sessions"
            :key="s.id"
-           class="group flex items-center gap-1.5 pl-3 pr-2 py-1 border-r border-gray-200 dark:border-gray-700 cursor-pointer text-xs flex-shrink-0"
-           :class="s.id === activeId ? 'bg-[#1e1e1e] text-gray-200' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'"
+           class="group flex items-center gap-1.5 pl-3 pr-2 py-1 border-r border-black/30 cursor-pointer text-xs flex-shrink-0"
+           :class="s.id === activeId ? 'bg-[#1e1e1e] text-gray-200' : 'text-gray-400 hover:bg-[#333333]'"
            @click="switchTo(s.id)">
         <span>{{ s.title }}</span>
         <span v-if="s.exited" class="text-gray-500">·已结束</span>
@@ -25,15 +25,15 @@
           <X class="w-3 h-3"/>
         </button>
       </div>
-      <button class="flex items-center justify-center px-2 text-gray-400 hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0"
+      <button class="flex items-center justify-center px-2 text-gray-400 hover:text-gray-200 hover:bg-[#333333] cursor-pointer flex-shrink-0"
               title="新建终端"
               @click="createSession">
         <Plus class="w-3.5 h-3.5"/>
       </button>
       <div class="flex-1"></div>
       <button class="flex items-center justify-center px-2 text-gray-400 hover:text-gray-200 cursor-pointer flex-shrink-0"
-              title="关闭终端面板"
-              @click="emit('close')">
+              title="收起终端面板（保留会话）"
+              @click="emit('collapse')">
         <ChevronDown class="w-4 h-4"/>
       </button>
     </div>
@@ -59,7 +59,8 @@ import '@xterm/xterm/css/xterm.css'
 import {ChevronDown, Plus, X, Terminal as TerminalIcon} from 'lucide-vue-next'
 
 const props = defineProps<{ rootDir?: string | null }>()
-const emit = defineEmits<{ close: [] }>()
+// close：所有会话已关闭，应彻底关掉面板；collapse：仅收起，保留会话
+const emit = defineEmits<{ close: []; collapse: [] }>()
 
 interface Sess { id: string; title: string; exited: boolean }
 

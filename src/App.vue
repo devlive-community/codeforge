@@ -179,8 +179,13 @@
       </div>
     </div>
 
-    <!-- 集成终端：停靠在底部，占据高度使上方编辑区自动收缩 -->
-    <Terminal v-if="showTerminal" :root-dir="rootDir" @close="showTerminal = false"/>
+    <!-- 集成终端：停靠在底部，占据高度使上方编辑区自动收缩。
+         首次打开后保持挂载，用 v-show 收起以保留会话；关闭所有标签才彻底卸载 -->
+    <Terminal v-if="terminalMounted"
+              v-show="showTerminal"
+              :root-dir="rootDir"
+              @collapse="showTerminal = false"
+              @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
     <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo"/>
@@ -899,10 +904,17 @@ const openOutline = () => {
 // 代码片段管理
 const showSnippets = ref(false)
 
-// 集成终端
+// 集成终端：首次打开后保持挂载（保留会话），仅切换显示
 const showTerminal = ref(false)
+const terminalMounted = ref(false)
 const toggleTerminal = () => {
-  showTerminal.value = !showTerminal.value
+  if (showTerminal.value) {
+    showTerminal.value = false
+  }
+  else {
+    terminalMounted.value = true
+    showTerminal.value = true
+  }
 }
 
 const openSearchResult = async (path: string, line: number) => {
