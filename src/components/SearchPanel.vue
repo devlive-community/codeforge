@@ -79,7 +79,8 @@ const groups = computed(() => {
 let timer: any = null
 const search = async () => {
   const q = query.value.trim()
-  if (!q) {
+  // 至少 2 个字符，避免在大目录上做无意义的重搜索
+  if (q.length < 2) {
     results.value = []
     return
   }

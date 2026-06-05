@@ -78,18 +78,26 @@ pub fn list_files(path: String) -> Result<Vec<String>, String> {
             Err(_) => continue,
         };
         for entry in read.flatten() {
+            // 用 file_type 不跟随符号链接，避免软链成环导致无限递归
+            let ft = match entry.file_type() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            if ft.is_symlink() {
+                continue;
+            }
             let name = entry.file_name().to_string_lossy().to_string();
             if name == ".DS_Store" {
                 continue;
             }
             let p = entry.path();
-            if p.is_dir() {
+            if ft.is_dir() {
                 // 跳过隐藏目录与常见重目录
                 if name.starts_with('.') || ignore.contains(&name.as_str()) {
                     continue;
                 }
                 stack.push(p);
-            } else {
+            } else if ft.is_file() {
                 files.push(p.to_string_lossy().to_string());
                 if files.len() >= MAX_LIST_FILES {
                     break;
@@ -110,6 +118,8 @@ pub struct SearchMatch {
 
 const MAX_SEARCH_MATCHES: usize = 1000;
 const MAX_SEARCH_FILE_SIZE: u64 = 2 * 1024 * 1024;
+// 最多扫描的文件数，避免在超大目录中卡死
+const MAX_SEARCH_FILES_SCANNED: usize = 50000;
 
 /// 在文件夹内全局搜索文本（大小写不敏感的子串），返回匹配的文件/行号/行内容。
 #[tauri::command]
@@ -125,6 +135,7 @@ pub fn search_in_files(root: String, query: String) -> Result<Vec<SearchMatch>, 
 
     let ignore = ["node_modules", "target", "dist", "build", ".next", ".cache"];
     let mut matches: Vec<SearchMatch> = Vec::new();
+    let mut scanned: usize = 0;
     let mut stack = vec![root_path.to_path_buf()];
 
     'outer: while let Some(dir) = stack.pop() {
@@ -133,23 +144,38 @@ pub fn search_in_files(root: String, query: String) -> Result<Vec<SearchMatch>, 
             Err(_) => continue,
         };
         for entry in read.flatten() {
-            if matches.len() >= MAX_SEARCH_MATCHES {
+            if matches.len() >= MAX_SEARCH_MATCHES || scanned >= MAX_SEARCH_FILES_SCANNED {
                 break 'outer;
             }
+            // 用 file_type 不跟随符号链接，避免软链成环导致无限递归
+            let ft = match entry.file_type() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            if ft.is_symlink() {
+                continue;
+            }
+
             let name = entry.file_name().to_string_lossy().to_string();
             if name == ".DS_Store" {
                 continue;
             }
             let p = entry.path();
-            if p.is_dir() {
+
+            if ft.is_dir() {
                 if name.starts_with('.') || ignore.contains(&name.as_str()) {
                     continue;
                 }
                 stack.push(p);
                 continue;
             }
+            if !ft.is_file() {
+                continue;
+            }
+
+            scanned += 1;
             // 跳过过大文件
-            if let Ok(meta) = fs::metadata(&p) {
+            if let Ok(meta) = entry.metadata() {
                 if meta.len() > MAX_SEARCH_FILE_SIZE {
                     continue;
                 }
