@@ -58,8 +58,15 @@ const DEFAULT_MAX_FILE_SIZE_MB: u64 = 5;
 const MAX_LIST_FILES: usize = 20000;
 
 /// 递归列出目录下所有文件（用于 Cmd+P 快速打开）。跳过隐藏目录与常见重目录。
+/// 重 I/O 放到阻塞线程池，避免阻塞主线程。
 #[tauri::command]
-pub fn list_files(path: String) -> Result<Vec<String>, String> {
+pub async fn list_files(path: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || run_list_files(path))
+        .await
+        .map_err(|e| format!("列文件任务失败: {}", e))?
+}
+
+fn run_list_files(path: String) -> Result<Vec<String>, String> {
     let root = Path::new(&path);
     if !root.is_dir() {
         return Err(format!("不是有效目录: {}", path));
@@ -121,9 +128,16 @@ const MAX_SEARCH_FILE_SIZE: u64 = 2 * 1024 * 1024;
 // 最多扫描的文件数，避免在超大目录中卡死
 const MAX_SEARCH_FILES_SCANNED: usize = 50000;
 
-/// 在文件夹内全局搜索文本（大小写不敏感的子串），返回匹配的文件/行号/行内容。
+/// 在文件夹内全局搜索文本（大小写不敏感的子串）。
+/// 重 I/O 放到阻塞线程池，避免阻塞主线程导致应用无响应。
 #[tauri::command]
-pub fn search_in_files(root: String, query: String) -> Result<Vec<SearchMatch>, String> {
+pub async fn search_in_files(root: String, query: String) -> Result<Vec<SearchMatch>, String> {
+    tokio::task::spawn_blocking(move || run_search(root, query))
+        .await
+        .map_err(|e| format!("搜索任务失败: {}", e))?
+}
+
+fn run_search(root: String, query: String) -> Result<Vec<SearchMatch>, String> {
     let q = query.trim().to_lowercase();
     if q.is_empty() {
         return Ok(vec![]);
@@ -421,13 +435,18 @@ fn with_index<T>(path: &str, f: impl FnOnce(&FileIndex) -> T) -> Result<T, Strin
 }
 
 /// 获取文本文件元信息：大小、总行数、是否为文本（用于决定可编辑打开还是只读查看）。
+/// 首次会全量扫描建索引，放到阻塞线程池，避免阻塞主线程。
 #[tauri::command]
-pub fn get_text_file_meta(path: String) -> Result<TextFileMeta, String> {
-    with_index(&path, |idx| TextFileMeta {
-        size_bytes: idx.size,
-        line_count: idx.line_count,
-        is_text: idx.is_text,
+pub async fn get_text_file_meta(path: String) -> Result<TextFileMeta, String> {
+    tokio::task::spawn_blocking(move || {
+        with_index(&path, |idx| TextFileMeta {
+            size_bytes: idx.size,
+            line_count: idx.line_count,
+            is_text: idx.is_text,
+        })
     })
+    .await
+    .map_err(|e| format!("读取文件信息任务失败: {}", e))?
 }
 
 /// 按行范围读取文件（只读查看器虚拟滚动用）。借助行偏移索引随机定位，做到 O(窗口)。
