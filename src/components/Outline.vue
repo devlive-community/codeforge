@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 z-50 flex justify-center pt-24" @click="emit('close')">
+  <div class="fixed inset-0 z-50 flex items-start justify-center pt-24" @click="emit('close')">
     <div class="w-[520px] max-w-[90vw] bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[60vh]"
          @click.stop>
       <div class="flex items-center px-3 border-b border-gray-200 dark:border-gray-700">
