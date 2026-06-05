@@ -1,4 +1,5 @@
 import {computed, reactive} from 'vue'
+import {kvGetJSON, kvSetJSON} from './useKvStore'
 
 export interface AiProviderConfig
 {
@@ -39,19 +40,14 @@ const buildDefault = (): AiConfig => {
 
 const loadRaw = (): AiConfig => {
     const base = buildDefault()
-    try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
-        if (saved && saved.providers) {
-            base.provider = saved.provider || base.provider
-            for (const key of Object.keys(base.providers)) {
-                if (saved.providers[key]) {
-                    base.providers[key] = {...base.providers[key], ...saved.providers[key]}
-                }
+    const saved = kvGetJSON<any>(STORAGE_KEY, null)
+    if (saved && saved.providers) {
+        base.provider = saved.provider || base.provider
+        for (const key of Object.keys(base.providers)) {
+            if (saved.providers[key]) {
+                base.providers[key] = {...base.providers[key], ...saved.providers[key]}
             }
         }
-    }
-    catch {
-        // 忽略损坏的配置
     }
     return base
 }
@@ -61,7 +57,7 @@ export function useAiConfig()
     const state = reactive<AiConfig>(loadRaw())
 
     const save = () => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+        kvSetJSON(STORAGE_KEY, state)
     }
 
     const reload = () => {

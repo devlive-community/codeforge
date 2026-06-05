@@ -14,8 +14,10 @@ use crate::plugins::java::JavaPlugin;
 use crate::plugins::javascript_browser::JavaScriptBrowserPlugin;
 use crate::plugins::javascript_jquery::JavaScriptJQueryPlugin;
 use crate::plugins::javascript_nodejs::JavaScriptNodeJsPlugin;
+use crate::plugins::json::JsonPlugin;
 use crate::plugins::kotlin::KotlinPlugin;
 use crate::plugins::lua::LuaPlugin;
+use crate::plugins::markdown::MarkdownPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
 use crate::plugins::objective_c::ObjectiveCPlugin;
 use crate::plugins::objective_cpp::ObjectiveCppPlugin;
@@ -29,9 +31,12 @@ use crate::plugins::scala::ScalaPlugin;
 use crate::plugins::shell::ShellPlugin;
 use crate::plugins::svg::SvgPlugin;
 use crate::plugins::swift::SwiftPlugin;
+use crate::plugins::text::TextPlugin;
 use crate::plugins::typescript::TypeScriptPlugin;
 use crate::plugins::typescript_browser::TypeScriptBrowserPlugin;
 use crate::plugins::typescript_nodejs::TypeScriptNodeJsPlugin;
+use crate::plugins::xml::XmlPlugin;
+use crate::plugins::yaml::YamlPlugin;
 use std::collections::HashMap;
 
 pub struct PluginManager {
@@ -65,6 +70,11 @@ impl PluginManager {
             ("html".to_string(), Box::new(HtmlPlugin)),
             ("css".to_string(), Box::new(CssPlugin)),
             ("svg".to_string(), Box::new(SvgPlugin)),
+            ("json".to_string(), Box::new(JsonPlugin)),
+            ("xml".to_string(), Box::new(XmlPlugin)),
+            ("yaml".to_string(), Box::new(YamlPlugin)),
+            ("markdown".to_string(), Box::new(MarkdownPlugin)),
+            ("text".to_string(), Box::new(TextPlugin)),
             ("php".to_string(), Box::new(PHPPlugin)),
             ("r".to_string(), Box::new(RPlugin)),
             ("cangjie".to_string(), Box::new(CangjiePlugin)),

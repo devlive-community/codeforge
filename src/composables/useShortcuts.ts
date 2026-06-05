@@ -1,4 +1,5 @@
 import {computed, ref} from 'vue'
+import {kvGetJSON, kvSetJSON} from './useKvStore'
 
 export interface ShortcutAction
 {
@@ -22,7 +23,8 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
     {id: 'generate', label: 'AI 生成代码', default: 'Mod+K'},
     {id: 'newTab', label: '新建标签', default: 'Mod+N'},
     {id: 'closeTab', label: '关闭标签', default: 'Mod+W'},
-    {id: 'toggleSidebar', label: '切换侧栏', default: 'Mod+B'}
+    {id: 'toggleSidebar', label: '切换侧栏', default: 'Mod+B'},
+    {id: 'toggleTerminal', label: '切换终端', default: 'Mod+`'}
 ]
 
 const STORAGE_KEY = 'shortcuts'
@@ -65,17 +67,12 @@ export function useShortcuts()
     const overrides = ref<Record<string, string>>({})
 
     const load = () => {
-        try {
-            overrides.value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-        }
-        catch {
-            overrides.value = {}
-        }
+        overrides.value = kvGetJSON<Record<string, string>>(STORAGE_KEY, {})
     }
     load()
 
     const persist = () => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides.value))
+        kvSetJSON(STORAGE_KEY, overrides.value)
     }
 
     // 当前生效的绑定（默认 + 覆盖）

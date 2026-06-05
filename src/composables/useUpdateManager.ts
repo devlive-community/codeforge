@@ -2,6 +2,7 @@ import {ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {listen} from '@tauri-apps/api/event'
 import {CheckCircle, Download, RefreshCw, Wifi} from 'lucide-vue-next'
+import {kvSet} from './useKvStore'
 
 interface UpdateInfo
 {
@@ -210,7 +211,7 @@ export function useUpdateManager()
         }
 
         // 存储跳过的版本信息
-        localStorage.setItem('skipped_version', updateInfo.value.version)
+        kvSet('skipped_version', updateInfo.value.version)
     }
 
     // 事件监听

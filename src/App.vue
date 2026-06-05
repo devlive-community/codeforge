@@ -76,16 +76,28 @@
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-                <div class="flex items-center space-x-3">
-                  <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-                  <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
-                  <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+                <div class="flex items-center space-x-3 min-w-0 flex-1">
+                  <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
+                  <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+                  <template v-if="currentFilePath">
+                    <span class="text-gray-400 text-xs flex-shrink-0">·</span>
+                    <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                      <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+                    </div>
+                  </template>
+                  <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center whitespace-nowrap flex-shrink-0">
                     · {{ currentFileName }}
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
                   </span>
                 </div>
 
-                <div class="flex items-center space-x-2 text-xs text-gray-500">
+                <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
+                  <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
+                    <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
+                  </span>
+                  <span v-else-if="ghostActive" class="text-blue-500">Tab 接受 · Esc 取消</span>
+                  <span>行 {{ cursorInfo.line }}, 列 {{ cursorInfo.col }}</span>
+                  <span v-if="cursorInfo.selLen">已选 <strong>{{ cursorInfo.selLen }}</strong></span>
                   <span><strong>{{ (code || '').length }}</strong> 字符</span>
                   <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
                 </div>
@@ -140,16 +152,28 @@
         <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
         <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-          <div class="flex items-center space-x-3">
-            <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5" :alt="currentLanguage"/>
-            <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
-            <span v-if="currentFileName" class="text-xs text-gray-500 flex items-center">
+          <div class="flex items-center space-x-3 min-w-0 flex-1">
+            <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
+            <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+            <template v-if="currentFilePath">
+              <span class="text-gray-400 text-xs flex-shrink-0">·</span>
+              <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+              </div>
+            </template>
+            <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center whitespace-nowrap flex-shrink-0">
               · {{ currentFileName }}
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
             </span>
           </div>
 
-          <div class="flex items-center space-x-2 text-xs text-gray-500">
+          <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
+            <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
+              <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
+            </span>
+            <span v-else-if="ghostActive" class="text-blue-500">Tab 接受 · Esc 取消</span>
+            <span>行 {{ cursorInfo.line }}, 列 {{ cursorInfo.col }}</span>
+            <span v-if="cursorInfo.selLen">已选 <strong>{{ cursorInfo.selLen }}</strong></span>
             <span><strong>{{ (code || '').length }}</strong> 字符</span>
             <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
           </div>
@@ -166,6 +190,14 @@
       </div>
       </div>
     </div>
+
+    <!-- 集成终端：停靠在底部，占据高度使上方编辑区自动收缩。
+         首次打开后保持挂载，用 v-show 收起以保留会话；关闭所有标签才彻底卸载 -->
+    <Terminal v-if="terminalMounted"
+              v-show="showTerminal"
+              :root-dir="rootDir"
+              @collapse="showTerminal = false"
+              @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
     <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo"/>
@@ -209,6 +241,7 @@
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
                :root-dir="rootDir"
+               :recent-paths="recentFiles"
                @select="smartOpen"
                @close="showQuickOpen = false"/>
 
@@ -230,12 +263,25 @@
              @go="gotoLine"
              @close="showOutline = false"/>
 
+    <!-- 代码片段管理 -->
+    <SnippetManager v-if="showSnippets" @close="showSnippets = false"/>
+
     <!-- 差异对比：当前 vs 已保存 -->
     <DiffView v-if="showDiff"
               :original="savedContent || ''"
               :modified="code"
               :file-name="currentFileName"
               @close="showDiff = false"/>
+
+    <!-- 应用 AI 代码前的差异预览 -->
+    <DiffView v-if="applyPreview"
+              :original="code"
+              :modified="applyPreview.modified"
+              title="应用 AI 代码预览"
+              subtitle="当前（红） → AI 建议（绿），确认后替换编辑器内容"
+              confirm-label="应用"
+              @confirm="confirmApplyAi"
+              @close="applyPreview = null"/>
 
     <!-- 实时预览（Markdown / HTML）-->
     <PreviewPanel v-if="showPreview"
@@ -259,7 +305,7 @@
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {ChevronRight, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, X} from 'lucide-vue-next'
+import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -288,6 +334,14 @@ import PreviewPanel from './components/PreviewPanel.vue'
 import GitPanel from './components/GitPanel.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
+import SnippetManager from './components/SnippetManager.vue'
+import Terminal from './components/Terminal.vue'
+import Breadcrumbs from './components/Breadcrumbs.vue'
+import {initSnippets} from './composables/useSnippets'
+import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './composables/useKvStore'
+import {useAiConfig} from './composables/useAiConfig'
+import {setGhost, clearGhostIn, ghostActive} from './editor/aiComplete'
+import {cursorInfo} from './editor/cursorInfo'
 import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
@@ -430,28 +484,29 @@ const handleCopyPath = async (path: string) => {
 
 // ===== 侧栏 / 文件夹 =====
 const rootDir = ref<string | null>(null)
-const sidebarVisible = ref(localStorage.getItem('sidebar-visible') === 'true')
-const sidebarWidth = ref(Number(localStorage.getItem('sidebar-width')) || 240)
+const sidebarVisible = ref(kvGet('sidebar-visible') === 'true')
+const sidebarWidth = ref(Number(kvGet('sidebar-width')) || 240)
 
 // 最近打开的文件夹
 const RECENT_FOLDERS_KEY = 'recent-folders'
 const LAST_ROOT_KEY = 'last-root-dir'
-const loadRecentFolders = (): string[] => {
-  try {
-    return JSON.parse(localStorage.getItem(RECENT_FOLDERS_KEY) || '[]')
-  }
-  catch {
-    return []
-  }
+const recentFolders = ref<string[]>(kvGetJSON<string[]>(RECENT_FOLDERS_KEY, []))
+
+// 最近打开的文件（用于 Cmd+P 优先展示）
+const RECENT_FILES_KEY = 'recent-files'
+const recentFiles = ref<string[]>(kvGetJSON<string[]>(RECENT_FILES_KEY, []))
+const addRecentFile = (path: string) => {
+  const list = [path, ...recentFiles.value.filter(p => p !== path)].slice(0, 30)
+  recentFiles.value = list
+  kvSetJSON(RECENT_FILES_KEY, list)
 }
-const recentFolders = ref<string[]>(loadRecentFolders())
 
 // 记住打开的文件夹（去重、置顶、最多 8 个），并记录为上次文件夹
 const rememberFolder = (path: string) => {
   const list = [path, ...recentFolders.value.filter(p => p !== path)].slice(0, 8)
   recentFolders.value = list
-  localStorage.setItem(RECENT_FOLDERS_KEY, JSON.stringify(list))
-  localStorage.setItem(LAST_ROOT_KEY, path)
+  kvSetJSON(RECENT_FOLDERS_KEY, list)
+  kvSet(LAST_ROOT_KEY, path)
 }
 
 const openFolderPath = (path: string) => {
@@ -466,7 +521,7 @@ const SESSION_TABS_KEY = 'session-tabs'
 const persistSession = () => {
   const paths = editorTabs.value.map(t => t.filePath).filter((p): p is string => !!p)
   const activePath = editorTabs.value.find(t => t.id === activeTabId.value)?.filePath || null
-  localStorage.setItem(SESSION_TABS_KEY, JSON.stringify({paths, activePath}))
+  kvSetJSON(SESSION_TABS_KEY, {paths, activePath})
 }
 
 // 标签集合/文件/激活项变化时持久化（不含正文编辑，避免频繁写入）
@@ -477,13 +532,7 @@ watch(
 
 // 启动时恢复上次打开的文件标签（仅已保存且可读的文本文件）
 const restoreSession = async () => {
-  let saved: { paths: string[], activePath: string | null } | null = null
-  try {
-    saved = JSON.parse(localStorage.getItem(SESSION_TABS_KEY) || 'null')
-  }
-  catch {
-    saved = null
-  }
+  const saved = kvGetJSON<{ paths: string[], activePath: string | null } | null>(SESSION_TABS_KEY, null)
   if (!saved || !saved.paths?.length) {
     return
   }
@@ -509,7 +558,7 @@ const restoreSession = async () => {
   }
 }
 
-watch(sidebarVisible, (v) => localStorage.setItem('sidebar-visible', String(v)))
+watch(sidebarVisible, (v) => kvSet('sidebar-visible', String(v)))
 
 // 拖拽改变侧栏宽度
 let resizeStartX = 0
@@ -523,7 +572,7 @@ const stopSidebarResize = () => {
   document.removeEventListener('mouseup', stopSidebarResize)
   document.body.style.userSelect = ''
   document.body.style.cursor = ''
-  localStorage.setItem('sidebar-width', String(sidebarWidth.value))
+  kvSet('sidebar-width', String(sidebarWidth.value))
 }
 const startSidebarResize = (e: MouseEvent) => {
   e.preventDefault()
@@ -566,6 +615,8 @@ const smartOpen = async (filePath: string) => {
       showViewer.value = true
       return
     }
+
+    addRecentFile(filePath)
 
     // 已打开则切换到对应标签，否则在新标签打开
     const existing = editorTabs.value.find(t => t.filePath === filePath)
@@ -646,6 +697,39 @@ const generateTests = () => {
   openAiWithPrompt(`请为下面这段 ${currentLanguage.value} 代码生成单元测试，覆盖主要分支与边界情况，使用该语言常用的测试框架，只输出测试代码：\n\n\`\`\`${currentLanguage.value}\n${snippet}\n\`\`\``)
 }
 
+// AI 格式化/整理代码：请求 AI 返回整理后的完整代码，再走应用前差异预览确认
+const formatWithAi = async () => {
+  reloadAiCfg()
+  if (!aiActive.value.apiKey) {
+    toast.warning('请先在「设置 → AI」中配置 API Key')
+    return
+  }
+  const src = code.value
+  if (!src.trim()) {
+    return
+  }
+  toast.info('正在请求 AI 整理代码…')
+  try {
+    const res = await invoke<string>('ai_chat', {
+      provider: aiActive.value.provider,
+      baseUrl: aiActive.value.baseUrl,
+      apiKey: aiActive.value.apiKey,
+      model: aiActive.value.model,
+      system: '你是代码格式化与整理工具。只输出整理后的完整代码，保持逻辑与行为不变，规范缩进与风格，不要解释、不要使用代码块标记。',
+      messages: [{role: 'user', content: `语言：${currentLanguage.value}\n请整理/格式化下面的代码：\n${src}`}]
+    })
+    const formatted = cleanCompletion(res)
+    if (!formatted || formatted === src) {
+      toast.info('代码无需调整')
+      return
+    }
+    applyAiCode(formatted)
+  }
+  catch (error) {
+    toast.error('格式化失败: ' + error)
+  }
+}
+
 const openAiForExecution = (item: ExecutionResult) => {
   aiExecutionId.value = item.id ?? null
   aiErrorContext.value = item.success
@@ -654,9 +738,117 @@ const openAiForExecution = (item: ExecutionResult) => {
   showAi.value = true
 }
 
-// 把 AI 代码块应用到编辑器（替换当前内容，可撤销）
+// ===== AI 代码预测（幽灵补全，Tab 接受）=====
+const {active: aiActive, reload: reloadAiCfg} = useAiConfig()
+const aiCompletion = ref(kvGet('ai-completion') === 'true')
+
+const toggleAiCompletion = () => {
+  aiCompletion.value = !aiCompletion.value
+  kvSet('ai-completion', String(aiCompletion.value))
+  if (!aiCompletion.value) {
+    clearGhostIn(editorView.value)
+    toast.info('AI 代码预测已关闭')
+    return
+  }
+  // 开启时若未配置 API Key，明确提示（否则预测会静默不工作）
+  reloadAiCfg()
+  if (!aiActive.value.apiKey) {
+    toast.warning('AI 代码预测已开启，但尚未配置 API Key，请在「设置 → AI」中填写')
+  }
+  else {
+    toast.info('AI 代码预测已开启，停顿打字即可看到灰色补全，Tab 接受')
+  }
+}
+
+// 清洗补全结果：去掉代码块围栏与开头多余换行
+const cleanCompletion = (raw: string): string => {
+  let s = raw.replace(/^```[a-z]*\n?/i, '').replace(/```\s*$/i, '')
+  s = s.replace(/^\n+/, '')
+  return s
+}
+
+let predictNonce = 0
+let predictInflight = 0
+// 是否正在请求 AI 预测（用于状态提示）
+const predicting = ref(false)
+const requestPrediction = async () => {
+  if (!aiCompletion.value || isRunning.value) {
+    return
+  }
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  reloadAiCfg()
+  if (!aiActive.value.apiKey) {
+    return
+  }
+  const sel = view.state.selection.main
+  if (!sel.empty) {
+    return
+  }
+  const pos = sel.head
+  const prefix = view.state.sliceDoc(0, pos)
+  if (!prefix.trim()) {
+    return
+  }
+  const suffix = view.state.sliceDoc(pos)
+  const nonce = ++predictNonce
+  predictInflight++
+  predicting.value = true
+  try {
+    const res = await invoke<string>('ai_chat', {
+      provider: aiActive.value.provider,
+      baseUrl: aiActive.value.baseUrl,
+      apiKey: aiActive.value.apiKey,
+      model: aiActive.value.model,
+      system: '你是代码自动补全引擎。只输出应插入在光标处的后续代码，不要解释、不要重复已有代码、不要使用代码块标记。若无合适补全则输出空。',
+      messages: [{
+        role: 'user',
+        content: `语言：${currentLanguage.value}\n光标前代码：\n${prefix}\n\n光标后代码：\n${suffix}\n\n请仅输出应插入光标处的后续代码：`
+      }]
+    })
+    // 丢弃过期结果或光标已移动的情况
+    if (nonce !== predictNonce) {
+      return
+    }
+    const v = editorView.value
+    if (!v || v.state.selection.main.head !== pos) {
+      return
+    }
+    const text = cleanCompletion(res)
+    if (text) {
+      v.dispatch({effects: setGhost.of({text, pos})})
+    }
+  }
+  catch {
+    // 静默失败，不打扰编辑
+  }
+  finally {
+    predictInflight--
+    if (predictInflight === 0) {
+      predicting.value = false
+    }
+  }
+}
+const requestPredictionDebounced = debounce(requestPrediction, 600)
+watch(code, () => {
+  if (aiCompletion.value) {
+    requestPredictionDebounced()
+  }
+})
+
+// 应用 AI 代码块：先弹出差异预览，确认后再替换（避免直接覆盖）
+const applyPreview = ref<{ modified: string } | null>(null)
 const applyAiCode = (codeText: string) => {
-  code.value = codeText
+  applyPreview.value = {modified: codeText}
+}
+const confirmApplyAi = () => {
+  if (applyPreview.value) {
+    code.value = applyPreview.value.modified
+    applyPreview.value = null
+    toast.success('已应用 AI 代码')
+  }
 }
 
 // 当前 CodeMirror view（用于在光标处插入生成的代码）
@@ -720,6 +912,35 @@ const openGoToLine = () => {
 const showOutline = ref(false)
 const openOutline = () => {
   showOutline.value = true
+}
+
+// 代码片段管理
+const showSnippets = ref(false)
+
+// 语言图标缺失时回落到通用文本图标
+const onIconError = (e: Event) => {
+  const t = e.target as HTMLImageElement
+  if (!t.src.endsWith('/icons/text.svg')) {
+    t.src = '/icons/text.svg'
+  }
+}
+
+// 面包屑点击：在系统文件管理器中显示该路径
+const revealInFinder = (path: string) => {
+  invoke('reveal_path', {path}).catch((error) => toast.error('打开失败: ' + error))
+}
+
+// 集成终端：首次打开后保持挂载（保留会话），仅切换显示
+const showTerminal = ref(false)
+const terminalMounted = ref(false)
+const toggleTerminal = () => {
+  if (showTerminal.value) {
+    showTerminal.value = false
+  }
+  else {
+    terminalMounted.value = true
+    showTerminal.value = true
+  }
 }
 
 const openSearchResult = async (path: string, line: number) => {
@@ -942,8 +1163,8 @@ const runStdin = ref('')
 const runEnv = ref('')
 
 // 监听模式：保存后自动运行
-const watchMode = ref(localStorage.getItem('watch-mode') === 'true')
-watch(watchMode, (v) => localStorage.setItem('watch-mode', String(v)))
+const watchMode = ref(kvGet('watch-mode') === 'true')
+watch(watchMode, (v) => kvSet('watch-mode', String(v)))
 
 // 保存包装：保存后若开启监听模式则自动运行
 const handleSave = async () => {
@@ -956,14 +1177,8 @@ const handleSave = async () => {
 // ===== 按文件记忆运行配置（args/stdin/env）=====
 const RUN_CONFIGS_KEY = 'run-configs'
 type RunConfig = { args: string, stdin: string, env: string }
-const loadRunConfigs = (): Record<string, RunConfig> => {
-  try {
-    return JSON.parse(localStorage.getItem(RUN_CONFIGS_KEY) || '{}')
-  }
-  catch {
-    return {}
-  }
-}
+const loadRunConfigs = (): Record<string, RunConfig> =>
+    kvGetJSON<Record<string, RunConfig>>(RUN_CONFIGS_KEY, {})
 // 把当前输入写入指定文件的配置（全空则删除该条）
 const saveRunConfig = (path: string) => {
   const map = loadRunConfigs()
@@ -973,7 +1188,7 @@ const saveRunConfig = (path: string) => {
   else {
     map[path] = {args: runArgs.value, stdin: runStdin.value, env: runEnv.value}
   }
-  localStorage.setItem(RUN_CONFIGS_KEY, JSON.stringify(map))
+  kvSetJSON(RUN_CONFIGS_KEY, map)
 }
 // 载入指定文件的配置（无则清空）
 const loadRunConfig = (path: string | null) => {
@@ -1167,7 +1382,8 @@ const isOverlayOpen = () =>
     showSettings.value || showAbout.value || showUpdate.value
     || showHistory.value || showViewer.value || showRunPrompt.value
     || showQuickOpen.value || showGenerate.value || showSearch.value
-    || showCommandPalette.value || showDiff.value || showGoToLine.value || showOutline.value
+    || showCommandPalette.value || showDiff.value || showGoToLine.value || showOutline.value || showSnippets.value
+    || applyPreview.value != null
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
@@ -1186,7 +1402,8 @@ const shortcutDispatch: Record<string, () => void> = {
   open: () => handleOpenFileClick(),
   newTab: () => handleNewTab(),
   closeTab: () => handleCloseTab(activeTabId.value),
-  toggleSidebar: () => toggleSidebar()
+  toggleSidebar: () => toggleSidebar(),
+  toggleTerminal: () => toggleTerminal()
 }
 
 // 切换并持久化外观主题
@@ -1208,6 +1425,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'run', label: '运行代码', icon: Play, hint: hintOf('run'), run: () => handleRunCode()},
   {id: 'runSelection', label: '运行选中片段', icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
   {id: 'watchMode', label: watchMode.value ? '关闭监听模式（保存自动运行）' : '开启监听模式（保存自动运行）', icon: Eye, run: () => { watchMode.value = !watchMode.value }},
+  {id: 'aiCompletion', label: aiCompletion.value ? '关闭 AI 代码预测' : '开启 AI 代码预测（Tab 补全）', icon: Sparkles, run: () => toggleAiCompletion()},
   {id: 'open', label: '打开文件', icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
   {id: 'openFolder', label: '打开文件夹', icon: FolderOpen, run: () => openFolder()},
   {id: 'save', label: '保存文件', icon: Save, hint: hintOf('save'), run: () => saveFile()},
@@ -1217,11 +1435,14 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'quickOpen', label: '快速打开文件', icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
   {id: 'gotoLine', label: '跳转到行', icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
   {id: 'outline', label: '符号大纲', icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},
+  {id: 'snippets', label: '管理代码片段', icon: Code2, run: () => { showSnippets.value = true }},
+  {id: 'terminal', label: '切换终端', icon: TerminalIcon, hint: hintOf('toggleTerminal'), run: () => toggleTerminal()},
   {id: 'searchInFiles', label: '在文件夹内搜索', icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
   {id: 'generate', label: 'AI 生成代码', icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
   {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},
   {id: 'explainCode', label: 'AI 解释代码（选中或全文）', icon: Sparkles, run: () => explainCode()},
   {id: 'generateTests', label: 'AI 生成测试（选中或全文）', icon: Sparkles, run: () => generateTests()},
+  {id: 'formatWithAi', label: 'AI 格式化代码', icon: Sparkles, run: () => formatWithAi()},
   {id: 'history', label: '执行历史', icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: '差异对比（当前 vs 已保存）', icon: GitCompare, run: () => openDiff()},
   {id: 'preview', label: '实时预览（Markdown / HTML）', icon: Eye, run: () => togglePreview()},
@@ -1260,9 +1481,11 @@ onMounted(async () => {
   await loadEditorConfig()
   await initializeEventListeners()
   consoleType.value = getCurrentConsoleType()
+  // 从数据库载入代码片段
+  initSnippets()
 
   // 恢复上次打开的文件夹
-  const lastRoot = localStorage.getItem(LAST_ROOT_KEY)
+  const lastRoot = kvGet(LAST_ROOT_KEY)
   if (lastRoot) {
     rootDir.value = lastRoot
   }

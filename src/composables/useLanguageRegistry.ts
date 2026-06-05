@@ -33,19 +33,26 @@ export function useLanguageRegistry()
                 if (plugin.enabled === false) {
                     continue
                 }
-                const ext = normalizeExt(String(plugin.extension))
-                if (!ext) {
+                // 支持一个插件声明多个扩展名（逗号/空格分隔，如 yaml 的 "yaml,yml"）
+                const exts = String(plugin.extension)
+                    .split(/[,\s]+/)
+                    .map(normalizeExt)
+                    .filter(Boolean)
+                if (exts.length === 0) {
                     continue
                 }
 
+                // 语言 -> 扩展名取第一个作为主扩展名
                 if (!l2e[plugin.language]) {
-                    l2e[plugin.language] = ext
+                    l2e[plugin.language] = exts[0]
                 }
-                if (!e2l[ext]) {
-                    e2l[ext] = []
-                }
-                if (!e2l[ext].includes(plugin.language)) {
-                    e2l[ext].push(plugin.language)
+                for (const ext of exts) {
+                    if (!e2l[ext]) {
+                        e2l[ext] = []
+                    }
+                    if (!e2l[ext].includes(plugin.language)) {
+                        e2l[ext].push(plugin.language)
+                    }
                 }
             }
 

@@ -28,6 +28,7 @@
           <FileText class="w-4 h-4 text-gray-400 flex-shrink-0 mr-2"/>
           <span class="text-sm text-gray-800 dark:text-gray-100 truncate">{{ file.name }}</span>
           <span class="ml-2 text-xs text-gray-400 truncate">{{ file.dir }}</span>
+          <span v-if="!query && recentSet.has(file.path)" class="ml-auto pl-2 text-[10px] text-blue-500 flex-shrink-0">最近</span>
         </button>
       </div>
     </div>
@@ -47,7 +48,7 @@ interface FileItem
   lower: string
 }
 
-const props = defineProps<{ rootDir: string }>()
+const props = defineProps<{ rootDir: string; recentPaths?: string[] }>()
 const emit = defineEmits<{ select: [path: string]; close: [] }>()
 
 const query = ref('')
@@ -60,6 +61,8 @@ const itemRefs: HTMLElement[] = []
 const setItemRef = (el: any, i: number) => {
   if (el) itemRefs[i] = el
 }
+
+const recentSet = computed(() => new Set(props.recentPaths || []))
 
 const rel = (p: string) => p.startsWith(props.rootDir) ? p.slice(props.rootDir.length + 1) : p
 
@@ -82,10 +85,28 @@ onMounted(async () => {
   }
 })
 
+// 空查询时：最近打开的文件优先（按最近顺序），其余随后
+const emptyOrdered = computed<FileItem[]>(() => {
+  const recent = props.recentPaths || []
+  if (!recent.length) {
+    return allFiles.value.slice(0, 50)
+  }
+  const byPath = new Map(allFiles.value.map(f => [f.path, f]))
+  const recentItems: FileItem[] = []
+  for (const p of recent) {
+    const f = byPath.get(p)
+    if (f) {
+      recentItems.push(f)
+      byPath.delete(p)
+    }
+  }
+  return [...recentItems, ...byPath.values()].slice(0, 50)
+})
+
 const filtered = computed<FileItem[]>(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) {
-    return allFiles.value.slice(0, 50)
+    return emptyOrdered.value
   }
   const scored = allFiles.value
       .map(f => {

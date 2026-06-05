@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import {SplitDirection} from '../types/app.ts'
+import {kvGet, kvSet} from '../composables/useKvStore'
 
 interface Props
 {
@@ -76,7 +77,7 @@ const initSize = () => {
   // 默认主面板占 60%
   let size = Math.floor(total * 0.6)
 
-  const saved = localStorage.getItem(storageKey.value)
+  const saved = kvGet(storageKey.value)
   if (saved) {
     const parsed = parseInt(saved, 10)
     if (!Number.isNaN(parsed)) {
@@ -154,6 +155,6 @@ const stopResize = () => {
   document.body.style.userSelect = ''
   document.body.style.cursor = ''
 
-  localStorage.setItem(storageKey.value, primarySize.value.toString())
+  kvSet(storageKey.value, primarySize.value.toString())
 }
 </script>
