@@ -15,6 +15,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
     {id: 'open', label: '打开文件', default: 'Mod+O'},
     {id: 'quickOpen', label: '快速打开文件', default: 'Mod+P'},
     {id: 'commandPalette', label: '命令面板', default: 'Mod+Shift+P'},
+    {id: 'gotoLine', label: '跳转到行', default: 'Mod+G'},
     {id: 'searchInFiles', label: '文件夹内搜索', default: 'Mod+Shift+F'},
     {id: 'generate', label: 'AI 生成代码', default: 'Mod+K'},
     {id: 'newTab', label: '新建标签', default: 'Mod+N'},
