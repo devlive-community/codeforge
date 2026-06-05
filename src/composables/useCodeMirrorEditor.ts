@@ -1,5 +1,6 @@
 import {nextTick, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
+import {useTheme} from './useTheme'
 import {python} from '@codemirror/lang-python'
 import {javascript} from '@codemirror/lang-javascript'
 import {go} from '@codemirror/lang-go'
@@ -85,6 +86,7 @@ interface Props
 export function useCodeMirrorEditor(props: Props)
 {
     const toast = useToast()
+    const {isDark} = useTheme()
     const {showFunctionHelpHover, functionHelpTheme} = useCodeMirrorFunctionHelp()
 
     // 状态管理
@@ -285,9 +287,9 @@ export function useCodeMirrorEditor(props: Props)
     const updateExtensions = async (showLineNumbers?: boolean, showFunctionHelp?: boolean) => {
         const result = []
 
-        // 添加主题扩展
-        const themeExtension = getThemeExtension(editorConfig.value?.theme)
-        result.push(themeExtension)
+        // 添加主题扩展：暗色模式下使用深色编辑器主题
+        const themeName = isDark.value ? 'githubDark' : (editorConfig.value?.theme || 'githubLight')
+        result.push(getThemeExtension(themeName))
 
         // 添加函数帮助主题
         result.push(functionHelpTheme)
@@ -408,6 +410,11 @@ export function useCodeMirrorEditor(props: Props)
             await reRenderEditor()
         }
     }, {immediate: false})
+
+    // 跟随应用深色模式切换编辑器主题
+    watch(isDark, async () => {
+        await reRenderEditor()
+    })
 
     // 监听缩进配置变化
     watch(() => [editorConfig.value?.indent_with_tab, editorConfig.value?.tab_size], async () => {

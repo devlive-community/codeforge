@@ -4,6 +4,8 @@ import {invoke} from '@tauri-apps/api/core'
 export type AppTheme = 'system' | 'light' | 'dark'
 
 const theme = ref<AppTheme>('system')
+// 实际应用的暗色状态（供编辑器等跟随）
+const isDark = ref(false)
 let media: MediaQueryList | null = null
 let mediaHandler: (() => void) | null = null
 
@@ -18,6 +20,7 @@ const apply = () => {
   else {
     dark = window.matchMedia('(prefers-color-scheme: dark)').matches
   }
+  isDark.value = dark
   document.documentElement.classList.toggle('dark', dark)
 }
 
@@ -55,5 +58,5 @@ export function useTheme()
     }
   }
 
-  return {theme, setTheme, init, apply}
+  return {theme, isDark, setTheme, init, apply}
 }

@@ -1,10 +1,10 @@
 <template>
-  <div class="fixed top-0 right-0 bottom-0 w-[400px] max-w-[90vw] bg-white border-l border-gray-200 shadow-xl z-40 flex flex-col">
+  <div class="fixed top-0 right-0 bottom-0 w-[400px] max-w-[90vw] bg-white dark:bg-gray-800 dark:text-gray-100 border-l border-gray-200 dark:border-gray-700 shadow-xl z-40 flex flex-col">
     <!-- 头部 -->
-    <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 flex-shrink-0">
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center space-x-2 min-w-0">
         <Sparkles class="w-4 h-4 text-blue-500 flex-shrink-0"/>
-        <span class="text-sm font-medium text-gray-700">AI 助手</span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-200">AI 助手</span>
         <span class="text-xs text-gray-400 truncate">{{ active.model }}</span>
       </div>
       <div class="flex items-center space-x-1 flex-shrink-0">
@@ -19,17 +19,17 @@
 
     <!-- 关联状态 -->
     <div class="px-4 py-1 text-xs border-b flex-shrink-0"
-         :class="executionId != null ? 'text-gray-500 bg-gray-50 border-gray-200' : 'text-amber-600 bg-amber-50 border-amber-100'">
+         :class="executionId != null ? 'text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700' : 'text-amber-600 bg-amber-50 border-amber-100'">
       {{ executionId != null ? `已关联运行 #${executionId}，对话随该次运行保存` : '临时会话：运行代码后对话才会保存' }}
     </div>
 
     <!-- 快捷动作 -->
-    <div class="flex items-center flex-wrap gap-2 px-3 py-2 border-b border-gray-100 flex-shrink-0">
+    <div class="flex items-center flex-wrap gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
       <button v-if="errorContext" class="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 cursor-pointer" @click="analyzeError">分析报错</button>
-      <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('解释下面的代码')">解释代码</button>
-      <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('找出下面代码中的 bug 并给出修复')">找 Bug</button>
-      <button class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="quick('优化下面的代码并说明原因')">优化</button>
-      <button v-if="rootDir" class="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer" @click="genCommitMessage">生成提交信息</button>
+      <button class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer" @click="quick('解释下面的代码')">解释代码</button>
+      <button class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer" @click="quick('找出下面代码中的 bug 并给出修复')">找 Bug</button>
+      <button class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer" @click="quick('优化下面的代码并说明原因')">优化</button>
+      <button v-if="rootDir" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer" @click="genCommitMessage">生成提交信息</button>
     </div>
 
     <!-- 消息列表 -->
@@ -40,16 +40,16 @@
       <div v-for="(m, i) in messages" :key="i" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
         <div v-if="m.role === 'user'" class="ai-markdown ai-user max-w-[90%] rounded-lg px-3 py-2 text-sm break-words bg-blue-500 text-white"
              v-html="renderMd(m.content)"></div>
-        <div v-else-if="m.content" class="ai-markdown max-w-[90%] rounded-lg px-3 py-2 text-sm break-words bg-gray-100 text-gray-800"
+        <div v-else-if="m.content" class="ai-markdown max-w-[90%] rounded-lg px-3 py-2 text-sm break-words bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
              v-html="renderMd(m.content)"></div>
       </div>
       <div v-if="waiting()" class="flex justify-start">
-        <div class="bg-gray-100 text-gray-500 rounded-lg px-3 py-2 text-sm">思考中…</div>
+        <div class="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 rounded-lg px-3 py-2 text-sm">思考中…</div>
       </div>
     </div>
 
     <!-- 输入 -->
-    <div class="border-t border-gray-200 p-2 flex-shrink-0">
+    <div class="border-t border-gray-200 dark:border-gray-700 p-2 flex-shrink-0">
       <div v-if="sending" class="mb-1.5 flex justify-center">
         <button class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer" @click="stop">
           停止生成
@@ -57,7 +57,7 @@
       </div>
       <textarea v-model="input"
                 rows="2"
-                class="w-full text-sm border border-gray-300 rounded px-2 py-1.5 resize-none focus:outline-none focus:border-blue-400"
+                class="w-full text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 rounded px-2 py-1.5 resize-none focus:outline-none focus:border-blue-400"
                 placeholder="输入问题，Enter 发送（Shift+Enter 换行）"
                 @keydown.enter.exact.prevent="send()"/>
     </div>

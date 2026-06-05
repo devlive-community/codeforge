@@ -1,12 +1,12 @@
 <template>
   <div class="fixed inset-0 z-50 flex justify-center pt-20" @click="emit('close')">
-    <div class="w-[680px] max-w-[92vw] bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[70vh]"
+    <div class="w-[680px] max-w-[92vw] bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[70vh]"
          @click.stop>
-      <div class="flex items-center px-3 border-b border-gray-200 flex-shrink-0">
+      <div class="flex items-center px-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <Search class="w-4 h-4 text-gray-400 flex-shrink-0"/>
         <input ref="inputRef"
                v-model="query"
-               class="flex-1 px-2 py-2.5 text-sm focus:outline-none"
+               class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
                placeholder="在文件夹内搜索…"
                @input="onInput"
                @keydown.esc.prevent="emit('close')"/>
@@ -19,18 +19,18 @@
         <div v-if="!loading && query && results.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">无匹配结果</div>
 
         <div v-for="g in groups" :key="g.path">
-          <div class="sticky top-0 bg-gray-50 px-3 py-1.5 text-xs text-gray-500 border-b border-gray-100 flex items-center gap-1">
+          <div class="sticky top-0 bg-gray-50 dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 flex items-center gap-1">
             <FileText class="w-3.5 h-3.5 text-gray-400"/>
-            <span class="font-medium text-gray-700">{{ g.name }}</span>
+            <span class="font-medium text-gray-700 dark:text-gray-200">{{ g.name }}</span>
             <span class="truncate">{{ g.dir }}</span>
             <span class="ml-auto text-gray-400">{{ g.items.length }}</span>
           </div>
           <button v-for="m in g.items"
                   :key="m.path + ':' + m.line"
-                  class="w-full flex items-baseline gap-2 px-3 py-1 text-left text-xs hover:bg-blue-50 cursor-pointer"
+                  class="w-full flex items-baseline gap-2 px-3 py-1 text-left text-xs hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer"
                   @click="emit('open', m.path, m.line)">
             <span class="text-gray-400 w-10 text-right flex-shrink-0">{{ m.line }}</span>
-            <span class="font-mono text-gray-700 truncate">{{ m.text.trim() }}</span>
+            <span class="font-mono text-gray-700 dark:text-gray-200 truncate">{{ m.text.trim() }}</span>
           </button>
         </div>
       </div>
