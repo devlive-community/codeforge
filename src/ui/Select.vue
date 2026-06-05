@@ -10,13 +10,13 @@
             @keydown.arrow-down.prevent="openDropdown"
             @keydown.arrow-up.prevent="openDropdown"
             :class="[
-              'relative w-full cursor-pointer rounded-lg border bg-white px-4 py-2 pr-10 text-left transition-all duration-200',
+              'relative w-full cursor-pointer rounded-lg border bg-white dark:bg-gray-800 dark:text-gray-100 px-4 py-2 pr-10 text-left transition-all duration-200',
               // 根据状态动态应用边框样式
               isOpen && !disabled
                 ? 'border-blue-400 ring-blue-200' // 打开时显示蓝色
                 : disabled
-                  ? 'border-gray-300 ring-0 cursor-not-allowed bg-gray-50 text-gray-400' // 禁用状态
-                  : 'border-gray-300 ring-0 hover:border-blue-400 hover:ring-blue-200', // 默认和悬停状态
+                  ? 'border-gray-300 dark:border-gray-600 ring-0 cursor-not-allowed bg-gray-50 dark:bg-gray-700 text-gray-400' // 禁用状态
+                  : 'border-gray-300 dark:border-gray-600 ring-0 hover:border-blue-400 hover:ring-blue-200', // 默认和悬停状态
               ...buttonClasses
             ]"
             :disabled="disabled"
@@ -54,17 +54,17 @@
                   @after-leave="$emit('after-close')">
         <div v-show="isOpen"
              ref="dropdown"
-             class="fixed z-[99999] bg-white text-base shadow-lg ring-1 ring-blue-200 focus:outline-none rounded-md overflow-hidden"
+             class="fixed z-[99999] bg-white dark:bg-gray-800 dark:text-gray-100 text-base shadow-lg ring-1 ring-blue-200 dark:ring-gray-700 focus:outline-none rounded-md overflow-hidden"
              :class="dropdownClasses"
              :style="dropdownStyle"
              role="listbox"
              :aria-labelledby="buttonId">
 
           <!-- 搜索框 (可选) -->
-          <div v-if="searchable" class="p-2 border-b border-gray-100 bg-white">
+          <div v-if="searchable" class="p-2 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
             <input v-model="searchQuery"
                    type="text"
-                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                    :placeholder="searchPlaceholder"
                    @click.stop
                    @keydown.stop
@@ -84,8 +84,8 @@
                       'relative flex my-1 space-x-3 items-center cursor-pointer select-none py-2 px-3 transition-colors duration-150',
                       isSelected(option)
                         ? 'bg-blue-400 text-white'
-                        : 'text-gray-900 hover:bg-blue-50',
-                      highlightedIndex === index ? 'bg-blue-100' : ''
+                        : 'text-gray-900 dark:text-gray-100 hover:bg-blue-50 dark:hover:bg-gray-700',
+                      highlightedIndex === index ? 'bg-blue-100 dark:bg-gray-700' : ''
                     ]"
                    :aria-selected="isSelected(option)"
                    role="option"
