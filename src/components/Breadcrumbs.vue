@@ -28,19 +28,28 @@ interface Seg { name: string; full: string }
 const segments = computed<Seg[]>(() => {
   const p = props.path
   const root = props.rootDir
-  // 在已打开文件夹内：以文件夹为根显示相对层级；否则只显示文件名
+  // 在已打开文件夹内：以文件夹名为首段，再展开相对层级
   if (root && p.startsWith(root)) {
+    const base = root.replace(/[\\/]$/, '')
+    const rootName = base.split(/[\\/]/).pop() || base
     const rel = p.slice(root.length).replace(/^[\\/]/, '')
     const parts = rel.split(/[\\/]/).filter(Boolean)
-    const segs: Seg[] = []
-    let acc = root.replace(/[\\/]$/, '')
+    const segs: Seg[] = [{name: rootName, full: base}]
+    let acc = base
     for (const part of parts) {
       acc = `${acc}/${part}`
       segs.push({name: part, full: acc})
     }
     return segs
   }
-  const name = p.split(/[\\/]/).pop() || p
-  return [{name, full: p}]
+  // 未打开文件夹：显示绝对路径（过长则保留末 4 段，full 仍为完整路径）
+  const parts = p.split(/[\\/]/).filter(Boolean)
+  const segs: Seg[] = []
+  let acc = ''
+  for (const part of parts) {
+    acc = `${acc}/${part}`
+    segs.push({name: part, full: acc})
+  }
+  return segs.length > 5 ? segs.slice(-4) : segs
 })
 </script>
