@@ -142,6 +142,14 @@
                          :execution-time="lastExecutionTime"
                          @clear="clearOutput">
               </WebOutput>
+
+              <!-- JSON 视图 -->
+              <JsonView v-else-if="consoleType === 'json'"
+                        class="flex-1"
+                        :output="output"
+                        :is-running="isRunning"
+                        :execution-time="lastExecutionTime"
+                        @clear="clearOutput"/>
             </div>
           </template>
         </ResizablePanels>
@@ -311,6 +319,7 @@ import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import ConsoleOutput from './components/ConsoleOutput.vue'
 import WebOutput from "./components/WebOutput.vue";
+import JsonView from "./components/JsonView.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
