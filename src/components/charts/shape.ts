@@ -144,6 +144,47 @@ export function pivot(
   return {categories, series}
 }
 
+export interface ScatterSeries {
+  name: string
+  points: [number, number][]
+}
+
+/**
+ * 散点数据：不聚合，逐行取 (x, y)。
+ * - xField / yField：数值列
+ * - groupField：可选分组列，按其值拆成多条 series
+ */
+export function scatterData(
+  data: TableData,
+  xField: string,
+  yField: string,
+  groupField?: string
+): ScatterSeries[] {
+  const xi = data.columns.indexOf(xField)
+  const yi = data.columns.indexOf(yField)
+  if (xi < 0 || yi < 0) {
+    return []
+  }
+  const gi = groupField ? data.columns.indexOf(groupField) : -1
+
+  const map = new Map<string, [number, number][]>()
+  const order: string[] = []
+  for (const row of data.rows) {
+    const x = Number(row[xi])
+    const y = Number(row[yi])
+    if (isNaN(x) || isNaN(y)) {
+      continue
+    }
+    const key = gi >= 0 ? norm(row[gi]) : yField
+    if (!map.has(key)) {
+      map.set(key, [])
+      order.push(key)
+    }
+    map.get(key)!.push([x, y])
+  }
+  return order.map(name => ({name, points: map.get(name)!}))
+}
+
 /** 按各分类的指标合计排序并截取前 N 项（topN<=0 表示不限制） */
 export function sortAndLimit(shaped: ShapedData, order: 'none' | 'asc' | 'desc', topN: number): ShapedData {
   let idx = shaped.categories.map((_, i) => i)

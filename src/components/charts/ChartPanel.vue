@@ -24,7 +24,7 @@
       </div>
 
       <!-- 维度 -->
-      <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
+      <div v-if="!isScatter" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
            @dragover.prevent="dragOver = 'dim'" @dragleave="dragOver = ''" @drop.prevent="onDrop('dim')">
         <div class="text-[11px] text-gray-400 mb-1.5">维度（首个为分类轴，其余分组）</div>
         <div class="min-h-[28px] rounded border border-dashed p-1 flex flex-wrap gap-1 transition-colors"
@@ -40,7 +40,7 @@
       </div>
 
       <!-- 指标 -->
-      <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
+      <div v-if="!isScatter" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
            @dragover.prevent="dragOver = 'metric'" @dragleave="dragOver = ''" @drop.prevent="onDrop('metric')">
         <div class="text-[11px] text-gray-400 mb-1.5 flex items-center justify-between">
           <span>指标（数值轴）</span>
@@ -56,8 +56,25 @@
         </div>
       </div>
 
+      <!-- 散点图配置：X / Y / 分组 -->
+      <template v-if="isScatter">
+        <div v-for="z in scatterZones" :key="z.key" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
+             @dragover.prevent="dragOver = z.key" @dragleave="dragOver = ''" @drop.prevent="onDropScatter(z.key)">
+          <div class="text-[11px] text-gray-400 mb-1.5">{{ z.label }}</div>
+          <div class="min-h-[28px] rounded border border-dashed p-1 flex flex-wrap gap-1 transition-colors"
+               :class="dragOver === z.key ? 'border-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600'">
+            <span v-if="z.model.value" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs"
+                  :class="z.key === 'group' ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'">
+              {{ z.model.value }}
+              <X class="w-3 h-3 cursor-pointer hover:text-red-500" @click="z.model.value = ''"/>
+            </span>
+            <span v-else class="text-[11px] text-gray-400 px-1 py-0.5">{{ z.hint }}</span>
+          </div>
+        </div>
+      </template>
+
       <!-- 显示选项 -->
-      <div class="px-3 py-2 space-y-2">
+      <div v-if="!isScatter" class="px-3 py-2 space-y-2">
         <div class="flex items-center justify-between">
           <span class="text-[11px] text-gray-400">排序</span>
           <Select v-model="sortOrder" :options="sortOptions" :button-classes="['!py-0.5', '!px-1.5', 'text-[11px]', '!rounded']" class="w-24"/>
@@ -82,13 +99,14 @@
     <div class="flex-1 min-w-0 min-h-0 p-3">
       <div v-if="!ready" class="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
         <BarChart3 class="w-8 h-8"/>
-        <p class="text-xs">拖入「维度」和「指标」生成图表</p>
+        <p class="text-xs">{{ isScatter ? '拖入「X 指标」和「Y 指标」生成图表' : '拖入「维度」和「指标」生成图表' }}</p>
       </div>
       <BarChart v-else-if="chartType === 'bar'" :categories="shaped.categories" :series="shaped.series"
                 :horizontal="horizontal" :stacked="stacked" :show-label="showLabel"/>
       <LineChart v-else-if="isLineLike" :categories="shaped.categories" :series="shaped.series"
                  :area="chartType === 'area'" :smooth="smooth" :stacked="stacked" :show-label="showLabel"/>
       <PieChart v-else-if="chartType === 'pie'" :data="pieData" :ring="ring" :show-label="showLabel"/>
+      <ScatterChart v-else-if="isScatter" :series="scatterSeries" :x-name="xField" :y-name="yField"/>
     </div>
   </div>
 </template>
@@ -100,7 +118,8 @@ import Select from '../../ui/Select.vue'
 import BarChart from './BarChart.vue'
 import LineChart from './LineChart.vue'
 import PieChart from './PieChart.vue'
-import {AGG_LABELS, type AggKind, isNumericColumn, pivot, sortAndLimit} from './shape'
+import ScatterChart from './ScatterChart.vue'
+import {AGG_LABELS, type AggKind, isNumericColumn, pivot, scatterData, sortAndLimit} from './shape'
 
 const props = defineProps<{
   columns: string[]
@@ -111,10 +130,12 @@ const chartTypes = [
   {value: 'bar', label: '柱状图'},
   {value: 'line', label: '折线图'},
   {value: 'area', label: '面积图'},
-  {value: 'pie', label: '饼图'}
+  {value: 'pie', label: '饼图'},
+  {value: 'scatter', label: '散点图'}
 ]
 const chartType = ref('bar')
 const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
+const isScatter = computed(() => chartType.value === 'scatter')
 
 const aggOptions = (Object.keys(AGG_LABELS) as AggKind[]).map(k => ({value: k, label: AGG_LABELS[k]}))
 const agg = ref<AggKind>('sum')
@@ -129,6 +150,15 @@ const topN = ref<number>(0)
 
 const dimensions = ref<string[]>([])
 const metrics = ref<string[]>([])
+// 散点图字段
+const xField = ref('')
+const yField = ref('')
+const groupField = ref('')
+const scatterZones = [
+  {key: 'x' as const, label: 'X 指标（数值）', hint: '拖入数值列', model: xField},
+  {key: 'y' as const, label: 'Y 指标（数值）', hint: '拖入数值列', model: yField},
+  {key: 'group' as const, label: '分组（可选）', hint: '拖入分类列', model: groupField}
+]
 const horizontal = ref(false)
 const stacked = ref(false)
 const smooth = ref(false)
@@ -142,6 +172,11 @@ const fields = computed(() => props.columns.map((name, i) => ({name, numeric: is
 watch(() => props.columns, (cols) => {
   dimensions.value = dimensions.value.filter(d => cols.includes(d))
   metrics.value = metrics.value.filter(m => cols.includes(m))
+  for (const z of scatterZones) {
+    if (z.model.value && !cols.includes(z.model.value)) {
+      z.model.value = ''
+    }
+  }
 })
 
 let dragField = ''
@@ -167,8 +202,33 @@ const onDrop = (zone: 'dim' | 'metric') => {
   dragField = ''
 }
 
-// 双击快速添加：数值列进指标，否则进维度
+const onDropScatter = (zone: 'x' | 'y' | 'group') => {
+  dragOver.value = ''
+  const name = dragField
+  if (!name || !props.columns.includes(name)) {
+    return
+  }
+  const z = scatterZones.find(s => s.key === zone)!
+  z.model.value = name
+  dragField = ''
+}
+
+// 双击快速添加
 const quickAdd = (f: { name: string; numeric: boolean }) => {
+  if (isScatter.value) {
+    if (f.numeric) {
+      if (!xField.value) {
+        xField.value = f.name
+      }
+      else if (!yField.value) {
+        yField.value = f.name
+      }
+    }
+    else if (!groupField.value) {
+      groupField.value = f.name
+    }
+    return
+  }
   if (f.numeric) {
     if (!metrics.value.includes(f.name)) {
       metrics.value = [...metrics.value, f.name]
@@ -186,7 +246,14 @@ const removeMetric = (m: string) => {
   metrics.value = metrics.value.filter(x => x !== m)
 }
 
-const ready = computed(() => dimensions.value.length > 0 && metrics.value.length > 0)
+const ready = computed(() => isScatter.value
+  ? !!xField.value && !!yField.value
+  : dimensions.value.length > 0 && metrics.value.length > 0)
+
+const scatterSeries = computed(() => (isScatter.value && ready.value)
+  ? scatterData({columns: props.columns, rows: props.rows}, xField.value, yField.value, groupField.value || undefined)
+  : [])
+
 const shaped = computed(() => {
   if (!ready.value) {
     return {categories: [] as string[], series: [] as { name: string; data: (number | null)[] }[]}
