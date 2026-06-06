@@ -166,6 +166,14 @@
                        :is-running="isRunning"
                        :execution-time="lastExecutionTime"
                        @clear="clearOutput"/>
+
+              <!-- YAML 视图 -->
+              <YamlView v-else-if="consoleType === 'yaml'"
+                        class="flex-1"
+                        :output="output"
+                        :is-running="isRunning"
+                        :execution-time="lastExecutionTime"
+                        @clear="clearOutput"/>
             </div>
           </template>
         </ResizablePanels>
@@ -338,6 +346,7 @@ import WebOutput from "./components/WebOutput.vue";
 import JsonView from "./components/JsonView.vue";
 import MarkdownView from "./components/MarkdownView.vue";
 import XmlView from "./components/XmlView.vue";
+import YamlView from "./components/YamlView.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
