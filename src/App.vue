@@ -89,6 +89,7 @@
                     · {{ currentFileName }}
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
                   </span>
+                  <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -205,6 +206,7 @@
               · {{ currentFileName }}
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
             </span>
+            <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -356,6 +358,7 @@ import MarkdownView from "./components/MarkdownView.vue";
 import XmlView from "./components/XmlView.vue";
 import YamlView from "./components/YamlView.vue";
 import SqlTableView from "./components/SqlTableView.vue";
+import SqlSourceSelect from "./components/SqlSourceSelect.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
