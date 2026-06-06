@@ -24,11 +24,20 @@ const REF_KEY = 'sql-source-ref'
 const genId = () => `db-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
 // 模块级共享：连接列表 + 当前数据源引用（token：memory / conn:<id> / file:<path>）
-const connections = ref<DbConnection[]>(kvGetJSON<DbConnection[]>(CONN_KEY, []))
-const activeRef = ref<string>(kvGet(REF_KEY) || 'memory')
+// 注意：不能在模块顶层读 KV——模块在 loadKvStore() 之前就被 import，缓存还是空的。
+// 改为首次调用 useDbConnections() 时（组件 setup 阶段，已在 loadKvStore 之后）再载入。
+const connections = ref<DbConnection[]>([])
+const activeRef = ref<string>('memory')
+let loaded = false
 
 export function useDbConnections()
 {
+    if (!loaded) {
+        loaded = true
+        connections.value = kvGetJSON<DbConnection[]>(CONN_KEY, [])
+        activeRef.value = kvGet(REF_KEY) || 'memory'
+    }
+
     const persist = () => kvSetJSON(CONN_KEY, connections.value)
 
     const add = (c: Omit<DbConnection, 'id'>) => {
