@@ -37,11 +37,12 @@ impl LanguagePlugin for MarkdownPlugin {
             before_compile: None,
             extension: String::from("md"),
             execute_home: None,
+            // 输出原始 Markdown，由前端渲染为预览
             run_command: Some(String::from("cat $filename")),
             after_compile: None,
             template: Some(String::from("# 标题\n\n在这里输入 Markdown 内容\n")),
             timeout: Some(30),
-            console_type: Some(String::from("console")),
+            console_type: Some(String::from("markdown")),
             icon_path: None,
         }
     }

@@ -142,6 +142,38 @@
                          :execution-time="lastExecutionTime"
                          @clear="clearOutput">
               </WebOutput>
+
+              <!-- JSON 视图 -->
+              <JsonView v-else-if="consoleType === 'json'"
+                        class="flex-1"
+                        :output="output"
+                        :is-running="isRunning"
+                        :execution-time="lastExecutionTime"
+                        @clear="clearOutput"/>
+
+              <!-- Markdown 预览 -->
+              <MarkdownView v-else-if="consoleType === 'markdown'"
+                            class="flex-1"
+                            :output="output"
+                            :is-running="isRunning"
+                            :execution-time="lastExecutionTime"
+                            @clear="clearOutput"/>
+
+              <!-- XML 视图 -->
+              <XmlView v-else-if="consoleType === 'xml'"
+                       class="flex-1"
+                       :output="output"
+                       :is-running="isRunning"
+                       :execution-time="lastExecutionTime"
+                       @clear="clearOutput"/>
+
+              <!-- YAML 视图 -->
+              <YamlView v-else-if="consoleType === 'yaml'"
+                        class="flex-1"
+                        :output="output"
+                        :is-running="isRunning"
+                        :execution-time="lastExecutionTime"
+                        @clear="clearOutput"/>
             </div>
           </template>
         </ResizablePanels>
@@ -200,7 +232,7 @@
               @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
-    <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo"/>
+    <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
@@ -311,6 +343,10 @@ import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import ConsoleOutput from './components/ConsoleOutput.vue'
 import WebOutput from "./components/WebOutput.vue";
+import JsonView from "./components/JsonView.vue";
+import MarkdownView from "./components/MarkdownView.vue";
+import XmlView from "./components/XmlView.vue";
+import YamlView from "./components/YamlView.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
@@ -1120,6 +1156,11 @@ const {
 // 强制刷新 CodeEditor 组件的 key
 const editorConfigKey = ref(0)
 const consoleType = ref('console')
+
+// 语言变化（打开文件/切换标签/下拉切换）时同步输出类型，否则 JSON/Markdown 等视图不会激活
+watch(currentLanguage, () => {
+  consoleType.value = getCurrentConsoleType()
+})
 
 // ===== 布局管理 =====
 // 当前布局模式：horizontal(左右) / vertical(上下) / editor(仅编辑器)

@@ -1,48 +1,50 @@
 use super::{LanguagePlugin, PluginConfig};
 use std::vec;
 
-pub struct JsonPlugin;
+pub struct SqlPlugin;
 
-impl LanguagePlugin for JsonPlugin {
+impl LanguagePlugin for SqlPlugin {
     fn get_order(&self) -> i32 {
-        23
+        28
     }
 
     fn get_language_name(&self) -> &'static str {
-        "JSON"
+        "SQL"
     }
 
     fn get_language_key(&self) -> &'static str {
-        "json"
+        "sql"
     }
 
     fn get_file_extension(&self) -> String {
         self.get_config()
             .map(|config| config.extension.clone())
-            .unwrap_or_else(|| "json".to_string())
+            .unwrap_or_else(|| "sql".to_string())
     }
 
     fn get_version_args(&self) -> Vec<&'static str> {
-        vec!["--"]
+        vec!["--version"]
     }
 
     fn get_path_command(&self) -> String {
-        "--".to_string()
+        "sqlite3".to_string()
     }
 
     fn get_default_config(&self) -> PluginConfig {
         PluginConfig {
             enabled: true,
-            language: String::from("json"),
+            language: String::from("sql"),
             before_compile: None,
-            extension: String::from("json"),
+            extension: String::from("sql"),
             execute_home: None,
-            // 输出原始 JSON 内容，由前端 JSON 视图（可折叠树）渲染
-            run_command: Some(String::from("cat $filename")),
+            // 在内存 SQLite 中执行脚本（需要本机有 sqlite3）
+            run_command: Some(String::from("sqlite3 :memory: .read $filename")),
             after_compile: None,
-            template: Some(String::from("{\n  \n}")),
+            template: Some(String::from(
+                "-- 在这里输入 SQL（默认在内存 SQLite 中执行）\nSELECT 'Hello, CodeForge' AS message;\n",
+            )),
             timeout: Some(30),
-            console_type: Some(String::from("json")),
+            console_type: Some(String::from("console")),
             icon_path: None,
         }
     }
@@ -50,6 +52,6 @@ impl LanguagePlugin for JsonPlugin {
     fn get_default_command(&self) -> String {
         self.get_config()
             .and_then(|config| config.run_command.clone())
-            .unwrap_or_else(|| "cat".to_string())
+            .unwrap_or_else(|| "sqlite3".to_string())
     }
 }

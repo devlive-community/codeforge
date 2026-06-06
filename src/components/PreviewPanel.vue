@@ -33,6 +33,7 @@
 import {computed} from 'vue'
 import {Eye, X} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
+import DOMPurify from 'dompurify'
 
 const props = defineProps<{
   content: string
@@ -41,7 +42,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ close: [] }>()
 
-const md = new MarkdownIt({html: false, linkify: true, breaks: true})
+// 允许 Markdown 内的 HTML，渲染后用 DOMPurify 净化防 XSS
+const md = new MarkdownIt({html: true, linkify: true, breaks: true})
 
 // 根据语言或扩展名判断预览类型
 const kind = computed<'markdown' | 'html' | 'none'>(() => {
@@ -58,7 +60,7 @@ const kind = computed<'markdown' | 'html' | 'none'>(() => {
 
 const kindLabel = computed(() => ({markdown: 'Markdown', html: 'HTML', none: '不支持'}[kind.value]))
 
-const rendered = computed(() => (kind.value === 'markdown' ? md.render(props.content || '') : ''))
+const rendered = computed(() => (kind.value === 'markdown' ? DOMPurify.sanitize(md.render(props.content || '')) : ''))
 </script>
 
 <style scoped>

@@ -37,11 +37,12 @@ impl LanguagePlugin for XmlPlugin {
             before_compile: None,
             extension: String::from("xml"),
             execute_home: None,
+            // 输出原始 XML，由前端 XML 视图（可折叠树）渲染
             run_command: Some(String::from("cat $filename")),
             after_compile: None,
             template: Some(String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")),
             timeout: Some(30),
-            console_type: Some(String::from("console")),
+            console_type: Some(String::from("xml")),
             icon_path: None,
         }
     }

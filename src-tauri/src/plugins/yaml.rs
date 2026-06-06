@@ -46,11 +46,12 @@ impl LanguagePlugin for YamlPlugin {
             before_compile: None,
             extension: String::from("yaml,yml"),
             execute_home: None,
+            // 输出原始 YAML，由前端 YAML 视图（可折叠树）渲染
             run_command: Some(String::from("cat $filename")),
             after_compile: None,
             template: Some(String::from("# 在这里输入 YAML 内容\n")),
             timeout: Some(30),
-            console_type: Some(String::from("console")),
+            console_type: Some(String::from("yaml")),
             icon_path: None,
         }
     }
