@@ -429,6 +429,7 @@ pub mod ruby;
 pub mod rust;
 pub mod scala;
 pub mod shell;
+pub mod sql;
 pub mod svg;
 pub mod swift;
 pub mod text;

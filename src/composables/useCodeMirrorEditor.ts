@@ -83,6 +83,7 @@ import {cursorListener} from "../editor/cursorInfo";
 import {json} from "@codemirror/lang-json";
 import {markdown} from "@codemirror/lang-markdown";
 import {yaml} from "@codemirror/lang-yaml";
+import {sql} from "@codemirror/lang-sql";
 import {useSnippets} from "./useSnippets";
 
 interface Props
@@ -321,6 +322,8 @@ export function useCodeMirrorEditor(props: Props)
                 return markdown()
             case 'xml':
                 return xml()
+            case 'sql':
+                return sql()
             case 'text':
                 return null
             default:

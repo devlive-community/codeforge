@@ -29,6 +29,7 @@ use crate::plugins::ruby::RubyPlugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
 use crate::plugins::shell::ShellPlugin;
+use crate::plugins::sql::SqlPlugin;
 use crate::plugins::svg::SvgPlugin;
 use crate::plugins::swift::SwiftPlugin;
 use crate::plugins::text::TextPlugin;
@@ -75,6 +76,7 @@ impl PluginManager {
             ("yaml".to_string(), Box::new(YamlPlugin)),
             ("markdown".to_string(), Box::new(MarkdownPlugin)),
             ("text".to_string(), Box::new(TextPlugin)),
+            ("sql".to_string(), Box::new(SqlPlugin)),
             ("php".to_string(), Box::new(PHPPlugin)),
             ("r".to_string(), Box::new(RPlugin)),
             ("cangjie".to_string(), Box::new(CangjiePlugin)),
