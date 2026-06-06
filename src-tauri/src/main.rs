@@ -8,6 +8,7 @@ mod ai_history;
 mod cache;
 mod config;
 mod custom_plugin_commands;
+mod db;
 mod env_commands;
 mod env_manager;
 mod env_providers;
@@ -21,7 +22,6 @@ mod plugin;
 mod plugins;
 mod setup;
 mod snippets;
-mod sql_exec;
 mod terminal;
 mod update;
 mod utils;
@@ -36,6 +36,7 @@ use crate::custom_plugin_commands::{
     add_custom_plugin, get_custom_plugins, remove_custom_plugin, save_custom_icon,
     update_custom_plugin,
 };
+use crate::db::run_sql;
 use crate::env_commands::{
     EnvironmentManagerState, download_and_install_version, get_environment_info,
     get_supported_environment_languages, switch_environment_version, uninstall_environment_version,
@@ -60,7 +61,6 @@ use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
 use crate::plugin::{get_info, get_supported_languages};
 use crate::setup::app::get_app_info;
 use crate::snippets::{Snippets, delete_snippet, get_snippets, save_snippet};
-use crate::sql_exec::run_sql;
 use crate::terminal::{
     TerminalState, terminal_create, terminal_kill, terminal_resize, terminal_write,
 };
