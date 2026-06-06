@@ -62,58 +62,100 @@ function aggregate(values: number[], kind: AggKind): number {
   }
 }
 
+const norm = (v: any): string => (v === null || v === undefined || v === '' ? '(空)' : String(v))
+
 /**
- * 按维度分组聚合指标。
- * - dimension：分类列；同一维度值的多行会被聚合
- * - metrics：一个或多个数值列，每个生成一条 series
- * - agg：聚合方式；count 时统计非空行数（与具体数值无关）
+ * 多维度透视聚合：
+ * - dimensions[0]：分类轴（X）
+ * - dimensions[1..]：分组维度，每个不同组合拆成一条 series
+ * - metrics：一个或多个数值列；多指标时与分组组合，series 名为「组合 · 指标」
+ * - agg：聚合方式；count 统计非空行数
  */
-export function aggregateByDimension(
+export function pivot(
   data: TableData,
-  dimension: string,
+  dimensions: string[],
   metrics: string[],
   agg: AggKind
 ): ShapedData {
-  const dimIdx = data.columns.indexOf(dimension)
-  const metricIdx = metrics.map(m => data.columns.indexOf(m))
-  if (dimIdx < 0 || metricIdx.some(i => i < 0)) {
+  const dims = dimensions.filter(d => data.columns.includes(d))
+  const mets = metrics.filter(m => data.columns.includes(m))
+  if (dims.length === 0 || mets.length === 0) {
     return {categories: [], series: []}
   }
 
-  const order: string[] = []
-  // 维度值 -> 每个指标的数值数组
-  const buckets = new Map<string, number[][]>()
+  const catIdx = data.columns.indexOf(dims[0])
+  const groupIdx = dims.slice(1).map(d => data.columns.indexOf(d))
+  const metricIdx = mets.map(m => data.columns.indexOf(m))
+  const multiMetric = mets.length > 1
+
+  const categories: string[] = []
+  const catSeen = new Set<string>()
+  // series 名 -> (分类值 -> 待聚合数值数组)
+  const seriesMap = new Map<string, Map<string, number[]>>()
+  const seriesOrder: string[] = []
 
   for (const row of data.rows) {
-    const raw = row[dimIdx]
-    const key = raw === null || raw === undefined ? '(空)' : String(raw)
-    if (!buckets.has(key)) {
-      buckets.set(key, metricIdx.map(() => []))
-      order.push(key)
+    const catVal = norm(row[catIdx])
+    if (!catSeen.has(catVal)) {
+      catSeen.add(catVal)
+      categories.push(catVal)
     }
-    const slot = buckets.get(key)!
-    metricIdx.forEach((mi, j) => {
-      const v = row[mi]
+    const groupVal = groupIdx.map(i => norm(row[i])).join(' / ')
+
+    mets.forEach((m, j) => {
+      let name: string
+      if (groupVal) {
+        name = multiMetric ? `${groupVal} · ${m}` : groupVal
+      }
+      else {
+        name = m
+      }
+      if (!seriesMap.has(name)) {
+        seriesMap.set(name, new Map())
+        seriesOrder.push(name)
+      }
+      const cm = seriesMap.get(name)!
+      if (!cm.has(catVal)) {
+        cm.set(catVal, [])
+      }
+      const v = row[metricIdx[j]]
       if (agg === 'count') {
         if (v !== null && v !== undefined && v !== '') {
-          slot[j].push(1)
+          cm.get(catVal)!.push(1)
         }
-        return
       }
-      const num = typeof v === 'number' ? v : Number(v)
-      if (!isNaN(num)) {
-        slot[j].push(num)
+      else {
+        const num = typeof v === 'number' ? v : Number(v)
+        if (!isNaN(num)) {
+          cm.get(catVal)!.push(num)
+        }
       }
     })
   }
 
-  const series: ShapedSeries[] = metrics.map((name, j) => ({
-    name: agg === 'count' ? `${name}(计数)` : name,
-    data: order.map(key => {
-      const vals = buckets.get(key)![j]
-      return vals.length === 0 ? null : aggregate(vals, agg)
+  const series: ShapedSeries[] = seriesOrder.map(name => ({
+    name,
+    data: categories.map(c => {
+      const vals = seriesMap.get(name)!.get(c)
+      return vals && vals.length > 0 ? aggregate(vals, agg) : null
     })
   }))
 
-  return {categories: order, series}
+  return {categories, series}
+}
+
+/** 按各分类的指标合计排序并截取前 N 项（topN<=0 表示不限制） */
+export function sortAndLimit(shaped: ShapedData, order: 'none' | 'asc' | 'desc', topN: number): ShapedData {
+  let idx = shaped.categories.map((_, i) => i)
+  if (order !== 'none') {
+    const totals = idx.map(i => shaped.series.reduce((s, ser) => s + (ser.data[i] || 0), 0))
+    idx = [...idx].sort((a, b) => (order === 'asc' ? totals[a] - totals[b] : totals[b] - totals[a]))
+  }
+  if (topN > 0) {
+    idx = idx.slice(0, topN)
+  }
+  return {
+    categories: idx.map(i => shaped.categories[i]),
+    series: shaped.series.map(s => ({name: s.name, data: idx.map(i => s.data[i])}))
+  }
 }

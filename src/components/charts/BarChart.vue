@@ -17,6 +17,7 @@ const props = defineProps<{
   series: { name: string; data: (number | null)[] }[]
   horizontal?: boolean
   stacked?: boolean
+  showLabel?: boolean
 }>()
 
 const {isDark} = useTheme()
@@ -40,6 +41,7 @@ const buildOption = (): echarts.EChartsCoreOption => {
       stack: props.stacked ? 'total' : undefined,
       data: s.data,
       barMaxWidth: 48,
+      label: {show: props.showLabel, position: props.horizontal ? 'right' : 'top', color: text, fontSize: 10},
       emphasis: {focus: 'series'}
     }))
   }
@@ -63,7 +65,7 @@ onMounted(() => {
   ro.observe(el.value)
 })
 
-watch(() => [props.categories, props.series, props.horizontal, props.stacked, isDark.value], render, {deep: true})
+watch(() => [props.categories, props.series, props.horizontal, props.stacked, props.showLabel, isDark.value], render, {deep: true})
 
 onBeforeUnmount(() => {
   ro?.disconnect()
