@@ -23,11 +23,11 @@ impl LanguagePlugin for SqlPlugin {
     }
 
     fn get_version_args(&self) -> Vec<&'static str> {
-        vec!["--version"]
+        vec!["--"]
     }
 
     fn get_path_command(&self) -> String {
-        "sqlite3".to_string()
+        "--".to_string()
     }
 
     fn get_default_config(&self) -> PluginConfig {

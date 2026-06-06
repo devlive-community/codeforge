@@ -1295,6 +1295,38 @@ const showRunPrompt = ref(false)
 
 // 包装运行：仅编辑器模式下点击运行时自动展开控制台；关联文件则按策略就地运行
 // 运行选中片段：以选中文本作为临时代码运行（不就地、不关联文件）
+// SQL 走专用执行（rusqlite，结构化结果 + 错误 + 可选数据库文件）
+const runSql = async (sqlOverride?: string) => {
+  const sql = sqlOverride ?? code.value
+  if (!sql.trim()) {
+    toast.info('没有可执行的 SQL')
+    return
+  }
+  if (layoutMode.value === 'editor') {
+    showConsole.value = true
+  }
+  isRunning.value = true
+  output.value = ''
+  isSuccess.value = false
+  try {
+    const dbPath = kvGet('sql-db-path') || null
+    const res = await invoke<any>('run_sql', {sql, dbPath})
+    output.value = JSON.stringify(res)
+    isSuccess.value = !res.error
+    lastExecutionTime.value = res.elapsed_ms || 0
+    if (res.error) {
+      toast.error('SQL 执行失败')
+    }
+  }
+  catch (error) {
+    output.value = JSON.stringify({result_sets: [], messages: [], error: String(error)})
+    toast.error('SQL 执行失败: ' + error)
+  }
+  finally {
+    isRunning.value = false
+  }
+}
+
 const runSelection = () => {
   const view = editorView.value
   if (!view) {
@@ -1306,6 +1338,10 @@ const runSelection = () => {
     return
   }
   const selected = view.state.sliceDoc(from, to)
+  if (currentLanguage.value === 'sql') {
+    runSql(selected)
+    return
+  }
   if (layoutMode.value === 'editor') {
     showConsole.value = true
   }
@@ -1313,6 +1349,10 @@ const runSelection = () => {
 }
 
 const handleRunCode = async () => {
+  if (currentLanguage.value === 'sql') {
+    runSql()
+    return
+  }
   if (layoutMode.value === 'editor') {
     showConsole.value = true
   }

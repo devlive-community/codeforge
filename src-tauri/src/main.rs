@@ -21,6 +21,7 @@ mod plugin;
 mod plugins;
 mod setup;
 mod snippets;
+mod sql_exec;
 mod terminal;
 mod update;
 mod utils;
@@ -59,6 +60,7 @@ use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
 use crate::plugin::{get_info, get_supported_languages};
 use crate::setup::app::get_app_info;
 use crate::snippets::{Snippets, delete_snippet, get_snippets, save_snippet};
+use crate::sql_exec::run_sql;
 use crate::terminal::{
     TerminalState, terminal_create, terminal_kill, terminal_resize, terminal_write,
 };
@@ -222,7 +224,9 @@ fn main() {
             terminal_create,
             terminal_write,
             terminal_resize,
-            terminal_kill
+            terminal_kill,
+            // SQL 执行
+            run_sql
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,55 +1,64 @@
 <template>
   <div class="flex flex-col h-full bg-white dark:bg-gray-900">
     <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-      <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <Database class="w-3.5 h-3.5"/>
+      <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+        <Database class="w-3.5 h-3.5 flex-shrink-0"/>
         <span>SQL 结果</span>
         <span v-if="isRunning" class="text-blue-500">运行中…</span>
-        <span v-else-if="executionTime" class="text-gray-400">{{ executionTime }} ms</span>
-        <span v-if="resultSets.length" class="text-gray-400">· {{ resultSets.length }} 个结果集</span>
-      </div>
-      <div class="flex items-center gap-1">
-        <button class="p-1 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                :class="mode === 'raw' ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
-                :title="mode === 'raw' ? '切换为表格' : '查看原始输出'"
-                @click="mode = mode === 'raw' ? 'table' : 'raw'">
-          <FileText class="w-3.5 h-3.5"/>
+        <span v-else-if="result && result.elapsed_ms != null" class="text-gray-400">{{ result.elapsed_ms }} ms</span>
+        <!-- 数据库连接 -->
+        <button class="flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 hover:border-blue-400 cursor-pointer truncate max-w-[220px]"
+                :title="dbPath || '内存数据库'"
+                @click="pickDb">
+          <HardDrive class="w-3 h-3 flex-shrink-0"/>
+          <span class="truncate">{{ dbLabel }}</span>
         </button>
-        <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
-          <Trash2 class="w-3.5 h-3.5"/>
+        <button v-if="dbPath" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" title="重置为内存数据库" @click="resetDb">
+          <X class="w-3 h-3"/>
         </button>
       </div>
+      <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
+        <Trash2 class="w-3.5 h-3.5"/>
+      </button>
     </div>
 
     <div class="flex-1 overflow-auto p-2 text-xs">
-      <div v-if="!stable.trim()" class="text-gray-400 px-2 py-4 text-center">运行后在此查看 SQL 结果</div>
+      <div v-if="!stable.trim()" class="text-gray-400 px-2 py-4 text-center">运行后在此查看 SQL 结果（数据库：{{ dbLabel }}）</div>
 
-      <!-- 原始输出 -->
-      <pre v-else-if="mode === 'raw'" class="whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300">{{ stable }}</pre>
+      <template v-else-if="result">
+        <!-- 错误 -->
+        <div v-if="result.error" class="mb-3 px-3 py-2 rounded border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-mono whitespace-pre-wrap">
+          执行失败：{{ result.error }}
+        </div>
 
-      <!-- 表格 -->
-      <template v-else-if="resultSets.length">
-        <div v-for="(rs, ri) in resultSets" :key="ri" class="mb-4">
-          <div v-if="resultSets.length > 1" class="text-[11px] text-gray-400 mb-1">结果集 {{ ri + 1 }} · {{ rs.rows.length }} 行</div>
+        <!-- 非查询语句的消息 -->
+        <div v-for="(m, mi) in result.messages" :key="'m' + mi" class="mb-1 text-green-600 dark:text-green-400">✓ {{ m }}</div>
+
+        <!-- 结果集表格 -->
+        <div v-for="(rs, ri) in result.result_sets" :key="ri" class="mb-4">
+          <div v-if="result.result_sets.length > 1" class="text-[11px] text-gray-400 mb-1">结果集 {{ ri + 1 }} · {{ rs.rows.length }} 行</div>
           <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded">
             <table class="w-full border-collapse">
               <thead>
                 <tr class="bg-gray-50 dark:bg-gray-800">
-                  <th v-for="c in rs.columns" :key="c" class="text-left font-semibold px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ c }}</th>
+                  <th v-for="(c, ci) in rs.columns" :key="ci" class="text-left font-semibold px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ c }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(row, i) in rs.rows" :key="i" class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td v-for="c in rs.columns" :key="c" class="px-3 py-1 border-b border-gray-100 dark:border-gray-800 font-mono text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ fmt(row[c]) }}</td>
+                  <td v-for="(_c, ci) in rs.columns" :key="ci" class="px-3 py-1 border-b border-gray-100 dark:border-gray-800 font-mono whitespace-nowrap"
+                      :class="row[ci] === null ? 'text-gray-400 italic' : 'text-gray-700 dark:text-gray-300'">{{ fmt(row[ci]) }}</td>
+                </tr>
+                <tr v-if="rs.rows.length === 0">
+                  <td :colspan="rs.columns.length" class="px-3 py-2 text-center text-gray-400">（0 行）</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
-      </template>
 
-      <!-- 无结果集（如 CREATE/INSERT 无输出，或非 JSON 文本） -->
-      <div v-else class="text-gray-400 px-2 py-4">执行完成，无结果集</div>
+        <div v-if="!result.error && result.result_sets.length === 0 && result.messages.length === 0" class="text-gray-400 px-2 py-4">执行完成，无输出</div>
+      </template>
     </div>
   </div>
 </template>
@@ -57,7 +66,9 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {Database, FileText, Trash2} from 'lucide-vue-next'
+import {open} from '@tauri-apps/plugin-dialog'
+import {Database, HardDrive, Trash2, X} from 'lucide-vue-next'
+import {kvGet, kvSet, kvRemove} from '../composables/useKvStore'
 
 const props = defineProps<{
   output: string
@@ -66,57 +77,46 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ clear: [] }>()
 
-const mode = ref<'table' | 'raw'>('table')
+interface ResultSet { columns: string[]; rows: any[][] }
+interface SqlResult { result_sets: ResultSet[]; messages: string[]; error: string | null; elapsed_ms: number }
 
-// 流式输出防抖
+// 流式（这里是一次性）输出防抖
 const stable = ref(props.output)
-const applyOutput = debounce((v: string) => { stable.value = v }, 200)
+const applyOutput = debounce((v: string) => { stable.value = v }, 100)
 watch(() => props.output, (v) => applyOutput(v))
 
-interface ResultSet { columns: string[]; rows: Record<string, any>[] }
-
-// 从 sqlite3 -json 的输出里提取多个顶层 JSON 数组（多条 SELECT 会输出多个数组）
-const resultSets = computed<ResultSet[]>(() => {
-  const text = stable.value
-  const sets: ResultSet[] = []
-  let depth = 0
-  let start = -1
-  let inStr = false
-  let esc = false
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]
-    if (inStr) {
-      if (esc) esc = false
-      else if (ch === '\\') esc = true
-      else if (ch === '"') inStr = false
-      continue
-    }
-    if (ch === '"') {
-      inStr = true
-    }
-    else if (ch === '[') {
-      if (depth === 0) start = i
-      depth++
-    }
-    else if (ch === ']') {
-      depth--
-      if (depth === 0 && start >= 0) {
-        try {
-          const arr = JSON.parse(text.slice(start, i + 1))
-          if (Array.isArray(arr) && arr.length && typeof arr[0] === 'object') {
-            const columns = Array.from(new Set(arr.flatMap((r: any) => Object.keys(r))))
-            sets.push({columns, rows: arr})
-          }
-        }
-        catch {
-          // 忽略无法解析的片段
-        }
-        start = -1
-      }
-    }
+const result = computed<SqlResult | null>(() => {
+  if (!stable.value.trim()) {
+    return null
   }
-  return sets
+  try {
+    return JSON.parse(stable.value)
+  }
+  catch {
+    return null
+  }
 })
+
+// ===== 数据库连接（内存 / 选择文件）=====
+const dbPath = ref<string | null>(kvGet('sql-db-path'))
+const dbLabel = computed(() => {
+  if (!dbPath.value) return '内存数据库'
+  return dbPath.value.split(/[\\/]/).pop() || dbPath.value
+})
+const pickDb = async () => {
+  const selected = await open({
+    multiple: false,
+    filters: [{name: 'SQLite', extensions: ['db', 'sqlite', 'sqlite3', 'db3']}]
+  })
+  if (typeof selected === 'string') {
+    dbPath.value = selected
+    kvSet('sql-db-path', selected)
+  }
+}
+const resetDb = () => {
+  dbPath.value = null
+  kvRemove('sql-db-path')
+}
 
 const fmt = (v: any) => {
   if (v === null || v === undefined) return 'NULL'
