@@ -232,7 +232,7 @@
               @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
-    <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo"/>
+    <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
