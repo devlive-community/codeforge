@@ -70,7 +70,8 @@
         <div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400 pt-0.5">
           <label class="flex items-center gap-1.5 cursor-pointer"><input v-model="showLabel" type="checkbox" class="accent-blue-500"/>数值标签</label>
           <label v-if="chartType === 'bar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="horizontal" type="checkbox" class="accent-blue-500"/>横向</label>
-          <label v-if="chartType === 'bar' && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="stacked" type="checkbox" class="accent-blue-500"/>堆叠</label>
+          <label v-if="isLineLike" class="flex items-center gap-1.5 cursor-pointer"><input v-model="smooth" type="checkbox" class="accent-blue-500"/>平滑</label>
+          <label v-if="(chartType === 'bar' || isLineLike) && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="stacked" type="checkbox" class="accent-blue-500"/>堆叠</label>
         </div>
       </div>
     </div>
@@ -83,6 +84,8 @@
       </div>
       <BarChart v-else-if="chartType === 'bar'" :categories="shaped.categories" :series="shaped.series"
                 :horizontal="horizontal" :stacked="stacked" :show-label="showLabel"/>
+      <LineChart v-else-if="isLineLike" :categories="shaped.categories" :series="shaped.series"
+                 :area="chartType === 'area'" :smooth="smooth" :stacked="stacked" :show-label="showLabel"/>
     </div>
   </div>
 </template>
@@ -92,6 +95,7 @@ import {computed, ref, watch} from 'vue'
 import {BarChart3, Hash, Type, X} from 'lucide-vue-next'
 import Select from '../../ui/Select.vue'
 import BarChart from './BarChart.vue'
+import LineChart from './LineChart.vue'
 import {AGG_LABELS, type AggKind, isNumericColumn, pivot, sortAndLimit} from './shape'
 
 const props = defineProps<{
@@ -99,8 +103,13 @@ const props = defineProps<{
   rows: any[][]
 }>()
 
-const chartTypes = [{value: 'bar', label: '柱状图'}]
+const chartTypes = [
+  {value: 'bar', label: '柱状图'},
+  {value: 'line', label: '折线图'},
+  {value: 'area', label: '面积图'}
+]
 const chartType = ref('bar')
+const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
 
 const aggOptions = (Object.keys(AGG_LABELS) as AggKind[]).map(k => ({value: k, label: AGG_LABELS[k]}))
 const agg = ref<AggKind>('sum')
@@ -117,6 +126,7 @@ const dimensions = ref<string[]>([])
 const metrics = ref<string[]>([])
 const horizontal = ref(false)
 const stacked = ref(false)
+const smooth = ref(false)
 const showLabel = ref(false)
 const dragOver = ref('')
 
