@@ -104,7 +104,11 @@
               <div class="px-4 py-2 bg-gray-50 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-300">
                 输出
               </div>
-              <pre class="flex-1 overflow-auto p-4 text-sm leading-relaxed font-mono whitespace-pre-wrap"
+              <!-- SQL：用表格视图渲染，与运行时一致 -->
+              <div v-if="selectedItem.language === 'sql'" class="flex-1 overflow-auto p-3 bg-white dark:bg-gray-900">
+                <SqlResultTable :output="selectedItem.stdout"/>
+              </div>
+              <pre v-else class="flex-1 overflow-auto p-4 text-sm leading-relaxed font-mono whitespace-pre-wrap"
                    :class="selectedItem.success ? 'bg-gray-950 text-green-300' : 'bg-gray-950 text-red-300'">{{ selectedOutput }}</pre>
             </div>
           </div>
@@ -139,6 +143,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { Copy, History, Play, RefreshCw, RotateCcw, Sparkles, Trash2 } from 'lucide-vue-next'
 import Modal from '../ui/Modal.vue'
 import Button from '../ui/Button.vue'
+import SqlResultTable from './SqlResultTable.vue'
 import type { ExecutionResult, Language } from '../types/app'
 import { useToast } from '../plugins/toast'
 

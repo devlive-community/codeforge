@@ -159,27 +159,6 @@ pub(crate) fn split_sql(sql: &str) -> Vec<String> {
     out
 }
 
-/// 为执行历史构造简要输出文本
-fn summarize(r: &SqlRunResult) -> String {
-    let mut s = String::new();
-    for (i, rs) in r.result_sets.iter().enumerate() {
-        s.push_str(&format!(
-            "结果集 {}: {} 列 × {} 行\n",
-            i + 1,
-            rs.columns.len(),
-            rs.rows.len()
-        ));
-    }
-    for m in &r.messages {
-        s.push_str(m);
-        s.push('\n');
-    }
-    if s.is_empty() && r.error.is_none() {
-        s.push_str("执行完成");
-    }
-    s.trim_end().to_string()
-}
-
 /// 执行 SQL 脚本，按 source.kind 派发到对应执行器，并写入执行历史。
 #[tauri::command]
 pub async fn run_sql(
@@ -210,11 +189,12 @@ pub async fn run_sql(
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
+    // stdout 存完整结果 JSON，历史详情用 SqlTableView 渲染，与实时运行一致
     let record = crate::plugins::ExecutionResult {
         id: None,
         success: result.error.is_none(),
         code: sql_for_record,
-        stdout: summarize(&result),
+        stdout: serde_json::to_string(&result).unwrap_or_default(),
         stderr: result.error.clone().unwrap_or_default(),
         execution_time: result.elapsed_ms,
         timestamp,
