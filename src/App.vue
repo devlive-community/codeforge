@@ -384,6 +384,7 @@ import Terminal from './components/Terminal.vue'
 import Breadcrumbs from './components/Breadcrumbs.vue'
 import {initSnippets} from './composables/useSnippets'
 import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './composables/useKvStore'
+import {useDbConnections} from './composables/useDbConnections'
 import {useAiConfig} from './composables/useAiConfig'
 import {setGhost, clearGhostIn, ghostActive} from './editor/aiComplete'
 import {cursorInfo} from './editor/cursorInfo'
@@ -1295,7 +1296,8 @@ const showRunPrompt = ref(false)
 
 // 包装运行：仅编辑器模式下点击运行时自动展开控制台；关联文件则按策略就地运行
 // 运行选中片段：以选中文本作为临时代码运行（不就地、不关联文件）
-// SQL 走专用执行（rusqlite，结构化结果 + 错误 + 可选数据库文件）
+// SQL 走专用执行（结构化结果 + 错误 + 数据源：内存/SQLite/MySQL）
+const {resolveActiveSource} = useDbConnections()
 const runSql = async (sqlOverride?: string) => {
   const sql = sqlOverride ?? code.value
   if (!sql.trim()) {
@@ -1309,8 +1311,8 @@ const runSql = async (sqlOverride?: string) => {
   output.value = ''
   isSuccess.value = false
   try {
-    const dbPath = kvGet('sql-db-path') || null
-    const res = await invoke<any>('run_sql', {sql, dbPath})
+    const source = resolveActiveSource()
+    const res = await invoke<any>('run_sql', {sql, source})
     output.value = JSON.stringify(res)
     isSuccess.value = !res.error
     lastExecutionTime.value = res.elapsed_ms || 0

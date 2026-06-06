@@ -6,16 +6,18 @@
         <span>SQL 结果</span>
         <span v-if="isRunning" class="text-blue-500">运行中…</span>
         <span v-else-if="result && result.elapsed_ms != null" class="text-gray-400">{{ result.elapsed_ms }} ms</span>
-        <!-- 数据库连接 -->
-        <button class="flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 hover:border-blue-400 cursor-pointer truncate max-w-[220px]"
-                :title="dbPath || '内存数据库'"
-                @click="pickDb">
-          <HardDrive class="w-3 h-3 flex-shrink-0"/>
-          <span class="truncate">{{ dbLabel }}</span>
-        </button>
-        <button v-if="dbPath" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" title="重置为内存数据库" @click="resetDb">
-          <X class="w-3 h-3"/>
-        </button>
+        <!-- 数据源选择 -->
+        <div class="flex items-center gap-1">
+          <HardDrive class="w-3 h-3 flex-shrink-0 text-gray-400"/>
+          <select :value="activeRef"
+                  class="text-xs bg-transparent border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 max-w-[220px] cursor-pointer focus:outline-none dark:bg-gray-900"
+                  @change="onSourceChange">
+            <option value="memory" class="dark:bg-gray-800">内存数据库</option>
+            <option v-for="c in connections" :key="c.id" :value="`conn:${c.id}`" class="dark:bg-gray-800">{{ c.name }}（{{ c.kind }}）</option>
+            <option v-if="activeRef.startsWith('file:')" :value="activeRef" class="dark:bg-gray-800">{{ activeLabel() }}（文件）</option>
+            <option value="__pickfile__" class="dark:bg-gray-800">选择 SQLite 文件…</option>
+          </select>
+        </div>
       </div>
       <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
         <Trash2 class="w-3.5 h-3.5"/>
@@ -23,7 +25,7 @@
     </div>
 
     <div class="flex-1 overflow-auto p-2 text-xs">
-      <div v-if="!stable.trim()" class="text-gray-400 px-2 py-4 text-center">运行后在此查看 SQL 结果（数据库：{{ dbLabel }}）</div>
+      <div v-if="!stable.trim()" class="text-gray-400 px-2 py-4 text-center">运行后在此查看 SQL 结果（数据源：{{ activeLabel() }}）</div>
 
       <template v-else-if="result">
         <!-- 错误 -->
@@ -67,8 +69,8 @@
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {open} from '@tauri-apps/plugin-dialog'
-import {Database, HardDrive, Trash2, X} from 'lucide-vue-next'
-import {kvGet, kvSet, kvRemove} from '../composables/useKvStore'
+import {Database, HardDrive, Trash2} from 'lucide-vue-next'
+import {useDbConnections} from '../composables/useDbConnections'
 
 const props = defineProps<{
   output: string
@@ -97,25 +99,23 @@ const result = computed<SqlResult | null>(() => {
   }
 })
 
-// ===== 数据库连接（内存 / 选择文件）=====
-const dbPath = ref<string | null>(kvGet('sql-db-path'))
-const dbLabel = computed(() => {
-  if (!dbPath.value) return '内存数据库'
-  return dbPath.value.split(/[\\/]/).pop() || dbPath.value
-})
-const pickDb = async () => {
-  const selected = await open({
-    multiple: false,
-    filters: [{name: 'SQLite', extensions: ['db', 'sqlite', 'sqlite3', 'db3']}]
-  })
-  if (typeof selected === 'string') {
-    dbPath.value = selected
-    kvSet('sql-db-path', selected)
+// ===== 数据源选择（内存 / 已配置连接 / 临时 SQLite 文件）=====
+const {connections, activeRef, setActiveRef, activeLabel} = useDbConnections()
+
+const onSourceChange = async (e: Event) => {
+  const v = (e.target as HTMLSelectElement).value
+  if (v === '__pickfile__') {
+    const selected = await open({multiple: false, filters: [{name: 'SQLite', extensions: ['db', 'sqlite', 'sqlite3', 'db3']}]})
+    if (typeof selected === 'string') {
+      setActiveRef(`file:${selected}`)
+    }
+    else {
+      // 取消时恢复选中项
+      ;(e.target as HTMLSelectElement).value = activeRef.value
+    }
+    return
   }
-}
-const resetDb = () => {
-  dbPath.value = null
-  kvRemove('sql-db-path')
+  setActiveRef(v)
 }
 
 const fmt = (v: any) => {
