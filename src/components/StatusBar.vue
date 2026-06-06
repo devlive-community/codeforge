@@ -29,10 +29,9 @@
 
       <!-- 终端 -->
       <button @click="emit('toggleTerminal')"
-              class="flex items-center gap-1.5 p-1 rounded cursor-pointer hover:bg-white/20 transition-colors"
+              class="p-1 rounded cursor-pointer hover:bg-white/20 transition-colors"
               :title="`终端（${terminalShortcut}）`">
         <TerminalIcon class="w-3.5 h-3.5"/>
-        <span class="text-xs opacity-80">{{ terminalShortcut }}</span>
       </button>
     </div>
   </div>
