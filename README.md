@@ -47,6 +47,7 @@
 
 ### 📊 结构化数据可视化
 - **JSON / XML / YAML** —— 可折叠**层级树**，以及卡片 + 连线的**关系图**两种可视化
+- **SQL** —— 基于 rusqlite 执行（无需外部 sqlite3），结果渲染为**表格**；可连接内存库或指定 `.sqlite` 文件，失败显示具体错误
 - **Markdown** —— 实时渲染预览（支持内嵌 HTML，DOMPurify 净化防 XSS）
 - **GitHub Actions 工作流** —— 自动识别并渲染为 **Jobs 依赖 DAG 图**（触发事件 → 各 Job → Steps）
 
@@ -102,6 +103,7 @@
   <img src="public/icons/html.svg" width="48" title="HTML" />
   <img src="public/icons/css.svg" width="48" title="CSS" />
   <img src="public/icons/svg.svg" width="48" title="SVG" />
+  <img src="public/icons/sql.svg" width="48" title="SQL" />
   <img src="public/icons/json.svg" width="48" title="JSON" />
   <img src="public/icons/xml.svg" width="48" title="XML" />
   <img src="public/icons/yaml.svg" width="48" title="YAML" />
@@ -111,7 +113,7 @@
 
 <div align="center">
 
-`Python` · `Node.js` · `TypeScript` · `JavaScript` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Ruby` · `PHP` · `R` · `Lua` · `Haskell` · `Cangjie` · `Shell` · `AppleScript` · `HTML` · `CSS` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `Text`
+`Python` · `Node.js` · `TypeScript` · `JavaScript` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Ruby` · `PHP` · `R` · `Lua` · `Haskell` · `Cangjie` · `Shell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `Text`
 
 </div>
 
