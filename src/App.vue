@@ -1139,6 +1139,11 @@ const {
 const editorConfigKey = ref(0)
 const consoleType = ref('console')
 
+// 语言变化（打开文件/切换标签/下拉切换）时同步输出类型，否则 JSON/Markdown 等视图不会激活
+watch(currentLanguage, () => {
+  consoleType.value = getCurrentConsoleType()
+})
+
 // ===== 布局管理 =====
 // 当前布局模式：horizontal(左右) / vertical(上下) / editor(仅编辑器)
 const layoutMode = computed<LayoutMode>(() => editorConfig.value?.layout || 'horizontal')
