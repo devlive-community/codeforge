@@ -9,9 +9,19 @@
         <span v-else-if="executionTime" class="text-gray-400">{{ executionTime }} ms</span>
         <span v-if="parseError" class="text-red-500">解析失败</span>
       </div>
-      <div class="flex items-center gap-2">
-        <button v-if="parsed !== undefined" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="copyJson">复制</button>
-        <button class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="emit('clear')">清空</button>
+      <div class="flex items-center gap-1">
+        <button class="p-1 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                :class="mode === 'tree' ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
+                :title="mode === 'tree' ? '切换为文本' : '切换为可视化（树）'"
+                @click="mode = mode === 'tree' ? 'text' : 'tree'">
+          <Network class="w-3.5 h-3.5"/>
+        </button>
+        <button v-if="parsed !== undefined" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="复制" @click="copyJson">
+          <Copy class="w-3.5 h-3.5"/>
+        </button>
+        <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
+          <Trash2 class="w-3.5 h-3.5"/>
+        </button>
       </div>
     </div>
 
@@ -23,8 +33,10 @@
         <div class="text-red-500">{{ parseError }}</div>
         <pre class="whitespace-pre-wrap text-gray-600 dark:text-gray-400">{{ stable }}</pre>
       </div>
-      <!-- JSON 树 -->
-      <JsonNode v-else-if="parsed !== undefined" :value="parsed" :depth="0"/>
+      <!-- 可视化：JSON 树 -->
+      <JsonNode v-else-if="mode === 'tree' && parsed !== undefined" :value="parsed" :depth="0"/>
+      <!-- 文本：格式化后的 JSON -->
+      <pre v-else class="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{{ formatted }}</pre>
     </div>
   </div>
 </template>
@@ -32,7 +44,7 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {Braces} from 'lucide-vue-next'
+import {Braces, Copy, Network, Trash2} from 'lucide-vue-next'
 import JsonNode from './JsonNode.vue'
 import {useToast} from '../plugins/toast'
 
@@ -69,6 +81,22 @@ const parsed = computed(() => {
   }
   catch {
     return undefined
+  }
+})
+
+// 显示模式：text=格式化文本（默认），tree=可视化树
+const mode = ref<'text' | 'tree'>('text')
+
+// 格式化后的 JSON 文本
+const formatted = computed(() => {
+  if (parsed.value === undefined) {
+    return stable.value
+  }
+  try {
+    return JSON.stringify(parsed.value, null, 2)
+  }
+  catch {
+    return stable.value
   }
 })
 
