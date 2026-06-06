@@ -2,6 +2,7 @@
   <Select :model-value="activeRef"
           :options="sourceOptions"
           class="w-48"
+          :button-classes="['!py-1', '!px-2.5', 'text-sm', '!rounded-md']"
           placeholder="选择数据源"
           @change="onSourceChange"/>
 </template>

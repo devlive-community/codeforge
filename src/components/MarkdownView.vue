@@ -8,7 +8,9 @@
         <span v-if="isRunning" class="text-blue-500">运行中…</span>
         <span v-else-if="executionTime" class="text-gray-400">{{ executionTime }} ms</span>
       </div>
-      <button class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="emit('clear')">清空</button>
+      <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
+        <Trash2 class="w-3.5 h-3.5"/>
+      </button>
     </div>
 
     <!-- 渲染内容 -->
@@ -22,7 +24,7 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {FileText} from 'lucide-vue-next'
+import {FileText, Trash2} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
 

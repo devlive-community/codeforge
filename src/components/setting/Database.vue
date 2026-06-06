@@ -28,10 +28,7 @@
     <!-- 表单 -->
     <div class="border border-gray-200 dark:border-gray-700 rounded p-3 space-y-3">
       <div class="flex gap-2">
-        <select v-model="form.kind" class="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none">
-          <option value="mysql">MySQL</option>
-          <option value="sqlite">SQLite</option>
-        </select>
+        <Select v-model="form.kind" :options="kindOptions" class="w-32" :button-classes="['!py-1.5', 'text-sm']"/>
         <input v-model="form.name" placeholder="连接名称" class="flex-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
       </div>
 
@@ -64,9 +61,12 @@ import {computed, reactive, ref} from 'vue'
 import {open} from '@tauri-apps/plugin-dialog'
 import {Pencil, Trash2} from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
+import Select from '../../ui/Select.vue'
 import {useDbConnections, type DbConnection} from '../../composables/useDbConnections'
 
 const {connections, add, update, remove} = useDbConnections()
+
+const kindOptions = [{value: 'mysql', label: 'MySQL'}, {value: 'sqlite', label: 'SQLite'}]
 
 const editingId = ref<string | null>(null)
 const form = reactive<{ kind: 'mysql' | 'sqlite'; name: string; host: string; port: number | null; user: string; password: string; database: string; file: string }>({
