@@ -15,6 +15,8 @@ impl KvStore {
         let db_path = get_codeforge_db_path()?;
         let conn = Connection::open(&db_path).map_err(|e| format!("打开数据库失败: {}", e))?;
         let _ = conn.pragma_update(None, "journal_mode", "WAL");
+        let _ = conn.pragma_update(None, "synchronous", "NORMAL");
+        let _ = conn.busy_timeout(std::time::Duration::from_secs(5));
         conn.execute(
             "CREATE TABLE IF NOT EXISTS kv_store (
                 key TEXT PRIMARY KEY,

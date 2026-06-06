@@ -41,6 +41,12 @@ impl ExecutionHistory {
         let conn =
             Connection::open(&db_path).map_err(|e| format!("打开执行历史数据库失败: {}", e))?;
 
+        // 与其它连接（ai/kv/snippets）共用同一个库文件：统一 WAL + NORMAL + busy_timeout，
+        // 避免并发写入（如运行时同时有 kv 写入）相互阻塞导致 insert 卡顿
+        let _ = conn.pragma_update(None, "journal_mode", "WAL");
+        let _ = conn.pragma_update(None, "synchronous", "NORMAL");
+        let _ = conn.busy_timeout(std::time::Duration::from_secs(5));
+
         conn.execute(
             "CREATE TABLE IF NOT EXISTS execution_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -627,7 +633,7 @@ pub async fn execute_code(
                 return Ok(result);
             }
             Ok(None) => {
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
             }
             Err(e) => {
                 let _ = child.kill();
