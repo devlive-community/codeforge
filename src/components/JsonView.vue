@@ -11,9 +11,9 @@
       </div>
       <div class="flex items-center gap-1">
         <button class="p-1 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                :class="mode === 'tree' ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
-                :title="mode === 'tree' ? '切换为文本' : '切换为可视化（树）'"
-                @click="mode = mode === 'tree' ? 'text' : 'tree'">
+                :class="mode === 'graph' ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
+                :title="mode === 'graph' ? '切换为层级树' : '切换为可视化关系图'"
+                @click="mode = mode === 'graph' ? 'tree' : 'graph'">
           <Network class="w-3.5 h-3.5"/>
         </button>
         <button v-if="parsed !== undefined" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="复制" @click="copyJson">
@@ -25,18 +25,18 @@
       </div>
     </div>
 
-    <!-- 内容 -->
-    <div class="flex-1 overflow-auto p-2 font-mono text-xs">
+    <!-- 可视化关系图：独立占满（自带滚动）-->
+    <DataGraph v-if="mode === 'graph' && stable.trim() && !parseError && parsed !== undefined"
+               :value="parsed" class="flex-1"/>
+
+    <!-- 层级树 / 占位 / 错误 -->
+    <div v-else class="flex-1 overflow-auto p-2 font-mono text-xs">
       <div v-if="!stable.trim()" class="text-gray-400 px-2 py-4 text-center">运行后在此查看 JSON</div>
-      <!-- 解析失败：显示错误 + 原文 -->
       <div v-else-if="parseError" class="space-y-2">
         <div class="text-red-500">{{ parseError }}</div>
         <pre class="whitespace-pre-wrap text-gray-600 dark:text-gray-400">{{ stable }}</pre>
       </div>
-      <!-- 可视化：JSON 树 -->
-      <JsonNode v-else-if="mode === 'tree' && parsed !== undefined" :value="parsed" :depth="0"/>
-      <!-- 文本：格式化后的 JSON -->
-      <pre v-else class="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{{ formatted }}</pre>
+      <JsonNode v-else-if="parsed !== undefined" :value="parsed" :depth="0"/>
     </div>
   </div>
 </template>
@@ -46,6 +46,7 @@ import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {Braces, Copy, Network, Trash2} from 'lucide-vue-next'
 import JsonNode from './JsonNode.vue'
+import DataGraph from './DataGraph.vue'
 import {useToast} from '../plugins/toast'
 
 const props = defineProps<{
@@ -84,21 +85,8 @@ const parsed = computed(() => {
   }
 })
 
-// 显示模式：text=格式化文本（默认），tree=可视化树
-const mode = ref<'text' | 'tree'>('text')
-
-// 格式化后的 JSON 文本
-const formatted = computed(() => {
-  if (parsed.value === undefined) {
-    return stable.value
-  }
-  try {
-    return JSON.stringify(parsed.value, null, 2)
-  }
-  catch {
-    return stable.value
-  }
-})
+// 显示模式：tree=层级树（默认），graph=可视化关系图
+const mode = ref<'tree' | 'graph'>('tree')
 
 const copyJson = async () => {
   try {
