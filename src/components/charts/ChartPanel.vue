@@ -72,7 +72,9 @@
           <label v-if="chartType === 'bar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="horizontal" type="checkbox" class="accent-blue-500"/>横向</label>
           <label v-if="isLineLike" class="flex items-center gap-1.5 cursor-pointer"><input v-model="smooth" type="checkbox" class="accent-blue-500"/>平滑</label>
           <label v-if="(chartType === 'bar' || isLineLike) && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="stacked" type="checkbox" class="accent-blue-500"/>堆叠</label>
+          <label v-if="chartType === 'pie'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="ring" type="checkbox" class="accent-blue-500"/>环形</label>
         </div>
+        <p v-if="chartType === 'pie'" class="text-[10px] text-gray-400 leading-snug">饼图取首个维度作扇区、首个指标作数值</p>
       </div>
     </div>
 
@@ -86,6 +88,7 @@
                 :horizontal="horizontal" :stacked="stacked" :show-label="showLabel"/>
       <LineChart v-else-if="isLineLike" :categories="shaped.categories" :series="shaped.series"
                  :area="chartType === 'area'" :smooth="smooth" :stacked="stacked" :show-label="showLabel"/>
+      <PieChart v-else-if="chartType === 'pie'" :data="pieData" :ring="ring" :show-label="showLabel"/>
     </div>
   </div>
 </template>
@@ -96,6 +99,7 @@ import {BarChart3, Hash, Type, X} from 'lucide-vue-next'
 import Select from '../../ui/Select.vue'
 import BarChart from './BarChart.vue'
 import LineChart from './LineChart.vue'
+import PieChart from './PieChart.vue'
 import {AGG_LABELS, type AggKind, isNumericColumn, pivot, sortAndLimit} from './shape'
 
 const props = defineProps<{
@@ -106,7 +110,8 @@ const props = defineProps<{
 const chartTypes = [
   {value: 'bar', label: '柱状图'},
   {value: 'line', label: '折线图'},
-  {value: 'area', label: '面积图'}
+  {value: 'area', label: '面积图'},
+  {value: 'pie', label: '饼图'}
 ]
 const chartType = ref('bar')
 const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
@@ -127,6 +132,7 @@ const metrics = ref<string[]>([])
 const horizontal = ref(false)
 const stacked = ref(false)
 const smooth = ref(false)
+const ring = ref(false)
 const showLabel = ref(false)
 const dragOver = ref('')
 
@@ -187,5 +193,14 @@ const shaped = computed(() => {
   }
   const base = pivot({columns: props.columns, rows: props.rows}, dimensions.value, metrics.value, agg.value)
   return sortAndLimit(base, sortOrder.value, topN.value || 0)
+})
+
+// 饼图：取首个维度作扇区、首个指标(系列)作数值
+const pieData = computed(() => {
+  const s = shaped.value.series[0]
+  if (!s) {
+    return [] as { name: string; value: number }[]
+  }
+  return shaped.value.categories.map((name, i) => ({name, value: Number(s.data[i] ?? 0)}))
 })
 </script>
