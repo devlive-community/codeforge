@@ -33,7 +33,7 @@
 import {computed, reactive, watch} from 'vue'
 import {ChevronDown} from 'lucide-vue-next'
 
-const props = defineProps<{ value: any }>()
+const props = defineProps<{ value: any; rootTitle?: string }>()
 
 const CARD_W = 260
 const HEADER_H = 40
@@ -109,7 +109,7 @@ const graph = computed(() => {
     return node
   }
 
-  const root = build(props.value, '', 'ROOT')
+  const root = build(props.value, '', props.rootTitle || 'ROOT')
 
   // 布局：x 按深度，y 用游标堆叠叶子、父节点居中于子节点
   let cursor = PAD
