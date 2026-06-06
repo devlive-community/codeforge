@@ -67,7 +67,7 @@ impl ExecutionHistory {
         })
     }
 
-    fn insert(&self, result: &ExecutionResult) -> Result<i64, String> {
+    pub(crate) fn insert(&self, result: &ExecutionResult) -> Result<i64, String> {
         let conn = self
             .conn
             .lock()
