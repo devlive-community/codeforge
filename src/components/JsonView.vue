@@ -17,20 +17,21 @@
 
     <!-- 内容 -->
     <div class="flex-1 overflow-auto p-2 font-mono text-xs">
-      <div v-if="!output.trim()" class="text-gray-400 px-2 py-4 text-center">运行后在此查看 JSON</div>
+      <div v-if="!stable.trim()" class="text-gray-400 px-2 py-4 text-center">运行后在此查看 JSON</div>
       <!-- 解析失败：显示错误 + 原文 -->
       <div v-else-if="parseError" class="space-y-2">
         <div class="text-red-500">{{ parseError }}</div>
-        <pre class="whitespace-pre-wrap text-gray-600 dark:text-gray-400">{{ output }}</pre>
+        <pre class="whitespace-pre-wrap text-gray-600 dark:text-gray-400">{{ stable }}</pre>
       </div>
       <!-- JSON 树 -->
-      <JsonNode v-else :value="parsed" :depth="0"/>
+      <JsonNode v-else-if="parsed !== undefined" :value="parsed" :depth="0"/>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue'
+import {computed, ref, watch} from 'vue'
+import {debounce} from 'lodash-es'
 import {Braces} from 'lucide-vue-next'
 import JsonNode from './JsonNode.vue'
 import {useToast} from '../plugins/toast'
@@ -44,12 +45,17 @@ const emit = defineEmits<{ clear: [] }>()
 
 const toast = useToast()
 
+// 流式输出逐行刷新 output，解析/渲染防抖，避免每行都重建整棵树导致卡死
+const stable = ref(props.output)
+const applyOutput = debounce((v: string) => { stable.value = v }, 200)
+watch(() => props.output, (v) => applyOutput(v))
+
 const parseError = computed(() => {
-  if (!props.output.trim()) {
+  if (!stable.value.trim()) {
     return ''
   }
   try {
-    JSON.parse(props.output)
+    JSON.parse(stable.value)
     return ''
   }
   catch (e: any) {
@@ -59,7 +65,7 @@ const parseError = computed(() => {
 
 const parsed = computed(() => {
   try {
-    return JSON.parse(props.output)
+    return JSON.parse(stable.value)
   }
   catch {
     return undefined

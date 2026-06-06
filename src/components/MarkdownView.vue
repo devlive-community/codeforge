@@ -13,14 +13,15 @@
 
     <!-- 渲染内容 -->
     <div class="flex-1 overflow-auto">
-      <div v-if="!output.trim()" class="text-gray-400 px-4 py-6 text-center text-sm">运行后在此查看 Markdown 预览</div>
+      <div v-if="!stable.trim()" class="text-gray-400 px-4 py-6 text-center text-sm">运行后在此查看 Markdown 预览</div>
       <div v-else class="markdown-body px-6 py-5 text-sm text-gray-800 dark:text-gray-200" v-html="rendered"/>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue'
+import {computed, ref, watch} from 'vue'
+import {debounce} from 'lodash-es'
 import {FileText} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
@@ -34,7 +35,13 @@ const emit = defineEmits<{ clear: [] }>()
 
 // 允许 Markdown 中的 HTML，渲染后用 DOMPurify 净化（去除 script 等危险内容）防 XSS
 const md = new MarkdownIt({html: true, linkify: true, breaks: true})
-const rendered = computed(() => DOMPurify.sanitize(md.render(props.output || '')))
+
+// 流式输出会逐行刷新 output，渲染防抖避免每行都全量重渲染导致卡死
+const stable = ref(props.output)
+const applyOutput = debounce((v: string) => { stable.value = v }, 200)
+watch(() => props.output, (v) => applyOutput(v))
+
+const rendered = computed(() => DOMPurify.sanitize(md.render(stable.value || '')))
 </script>
 
 <style scoped>
