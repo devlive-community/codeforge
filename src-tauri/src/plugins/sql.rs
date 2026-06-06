@@ -37,14 +37,14 @@ impl LanguagePlugin for SqlPlugin {
             before_compile: None,
             extension: String::from("sql"),
             execute_home: None,
-            // 在内存 SQLite 中执行脚本（需要本机有 sqlite3）
-            run_command: Some(String::from("sqlite3 :memory: .read $filename")),
+            // 在内存 SQLite 中执行脚本并以 JSON 输出（前端渲染为表格；需要本机有 sqlite3）
+            run_command: Some(String::from("sqlite3 -json :memory: .read $filename")),
             after_compile: None,
             template: Some(String::from(
                 "-- 在这里输入 SQL（默认在内存 SQLite 中执行）\nSELECT 'Hello, CodeForge' AS message;\n",
             )),
             timeout: Some(30),
-            console_type: Some(String::from("console")),
+            console_type: Some(String::from("sqltable")),
             icon_path: None,
         }
     }

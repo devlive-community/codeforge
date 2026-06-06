@@ -174,6 +174,14 @@
                         :is-running="isRunning"
                         :execution-time="lastExecutionTime"
                         @clear="clearOutput"/>
+
+              <!-- SQL 表格 -->
+              <SqlTableView v-else-if="consoleType === 'sqltable'"
+                            class="flex-1"
+                            :output="output"
+                            :is-running="isRunning"
+                            :execution-time="lastExecutionTime"
+                            @clear="clearOutput"/>
             </div>
           </template>
         </ResizablePanels>
@@ -347,6 +355,7 @@ import JsonView from "./components/JsonView.vue";
 import MarkdownView from "./components/MarkdownView.vue";
 import XmlView from "./components/XmlView.vue";
 import YamlView from "./components/YamlView.vue";
+import SqlTableView from "./components/SqlTableView.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
