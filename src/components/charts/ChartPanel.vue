@@ -100,16 +100,19 @@
 
     <!-- 图表区 -->
     <div ref="chartHost" class="relative flex-1 min-w-0 min-h-0 p-3">
-      <div v-if="ready" class="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur p-0.5">
-        <button class="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="导出 PNG" @click="exportPng">
+      <div v-if="ready" class="absolute top-2 right-2 z-20">
+        <button class="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white/70 dark:bg-gray-800/70 hover:bg-gray-100 dark:hover:bg-gray-700 backdrop-blur cursor-pointer"
+                title="导出 / 复制" @click="menuOpen = !menuOpen">
           <Download class="w-3.5 h-3.5"/>
         </button>
-        <button class="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="复制图片到剪贴板" @click="copyImage">
-          <Copy class="w-3.5 h-3.5"/>
-        </button>
-        <button class="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="导出数据为 CSV" @click="exportCsv">
-          <FileDown class="w-3.5 h-3.5"/>
-        </button>
+        <template v-if="menuOpen">
+          <div class="fixed inset-0 z-10" @click="menuOpen = false"/>
+          <div class="absolute right-0 top-full mt-1 z-20 w-32 py-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg text-xs">
+            <button v-for="item in exportItems" :key="item.label" class="w-full flex items-center gap-2 px-3 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runExport(item.fn)">
+              <component :is="item.icon" class="w-3.5 h-3.5"/>{{ item.label }}
+            </button>
+          </div>
+        </template>
       </div>
       <div v-if="!ready" class="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
         <BarChart3 class="w-8 h-8"/>
@@ -151,12 +154,16 @@
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import * as echarts from 'echarts/core'
-import {BarChart3, Copy, Download, FileDown, Hash, Type, X} from 'lucide-vue-next'
+import {SVGRenderer} from 'echarts/renderers'
+import {BarChart3, Copy, Download, FileDown, Image as ImageIcon, Hash, Type, X} from 'lucide-vue-next'
 import {useTheme} from '../../composables/useTheme'
 import {kvGetJSON, kvSetJSON} from '../../composables/useKvStore'
 import {useToast} from '../../plugins/toast'
 import {downloadCsv} from '../../utils/csv'
 import Select from '../../ui/Select.vue'
+
+// 仅用于导出矢量图：临时以 SVG 渲染器复刻当前图表
+echarts.use([SVGRenderer])
 import BarChart from './BarChart.vue'
 import LineChart from './LineChart.vue'
 import PieChart from './PieChart.vue'
@@ -371,8 +378,44 @@ const copyImage = async () => {
   }
 }
 
+// 导出当前图表为 SVG（临时用 SVG 渲染器复刻 option）
+const exportSvg = () => {
+  const inst = activeChart()
+  if (!inst) {
+    return
+  }
+  const tmp = document.createElement('div')
+  tmp.style.cssText = `position:absolute;left:-99999px;top:0;width:${inst.getWidth()}px;height:${inst.getHeight()}px`
+  document.body.appendChild(tmp)
+  const svgInst = echarts.init(tmp, undefined, {renderer: 'svg'})
+  svgInst.setOption(inst.getOption())
+  svgInst.setOption({backgroundColor: isDark.value ? '#111827' : '#ffffff'})
+  const svg = svgInst.renderToSVGString()
+  svgInst.dispose()
+  tmp.remove()
+  const blob = new Blob([svg], {type: 'image/svg+xml;charset=utf-8'})
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `chart-${chartType.value}-${Date.now()}.svg`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // 导出图表底层数据为 CSV
 const exportCsv = () => downloadCsv(props.columns, props.rows, `data-${Date.now()}.csv`)
+
+const menuOpen = ref(false)
+const exportItems = [
+  {label: '导出 PNG', icon: Download, fn: exportPng},
+  {label: '导出 SVG', icon: ImageIcon, fn: exportSvg},
+  {label: '复制图片', icon: Copy, fn: copyImage},
+  {label: '导出数据 CSV', icon: FileDown, fn: exportCsv}
+]
+const runExport = (fn: () => void) => {
+  fn()
+  menuOpen.value = false
+}
 
 const fields = computed(() => props.columns.map((name, i) => ({name, numeric: isNumericColumn(props.rows, i)})))
 
