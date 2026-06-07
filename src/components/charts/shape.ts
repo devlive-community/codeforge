@@ -402,6 +402,66 @@ export function heatmapData(
   return {xCats, yCats, cells, min, max}
 }
 
+export interface BoxplotData {
+  categories: string[]
+  boxes: number[][] // [min, Q1, median, Q3, max]
+  outliers: [number, number][] // [catIndex, value]
+}
+
+function quantileSorted(sorted: number[], q: number): number {
+  if (sorted.length === 0) {
+    return 0
+  }
+  const pos = (sorted.length - 1) * q
+  const base = Math.floor(pos)
+  const rest = pos - base
+  return sorted[base + 1] !== undefined ? sorted[base] + rest * (sorted[base + 1] - sorted[base]) : sorted[base]
+}
+
+/** 箱线图数据：按维度分组，对指标原始值计算五数概括与离群点。 */
+export function boxplotData(data: TableData, categoryDim: string, metric: string): BoxplotData {
+  const ci = data.columns.indexOf(categoryDim)
+  const mi = data.columns.indexOf(metric)
+  if (ci < 0 || mi < 0) {
+    return {categories: [], boxes: [], outliers: []}
+  }
+  const groups = new Map<string, number[]>()
+  const order: string[] = []
+  for (const row of data.rows) {
+    const num = Number(row[mi])
+    if (isNaN(num)) {
+      continue
+    }
+    const k = norm(row[ci])
+    if (!groups.has(k)) {
+      groups.set(k, [])
+      order.push(k)
+    }
+    groups.get(k)!.push(num)
+  }
+  const boxes: number[][] = []
+  const outliers: [number, number][] = []
+  order.forEach((k, idx) => {
+    const arr = groups.get(k)!.slice().sort((a, b) => a - b)
+    const q1 = quantileSorted(arr, 0.25)
+    const med = quantileSorted(arr, 0.5)
+    const q3 = quantileSorted(arr, 0.75)
+    const iqr = q3 - q1
+    const lo = q1 - 1.5 * iqr
+    const hi = q3 + 1.5 * iqr
+    const inRange = arr.filter(v => v >= lo && v <= hi)
+    const min = inRange.length > 0 ? inRange[0] : arr[0]
+    const max = inRange.length > 0 ? inRange[inRange.length - 1] : arr[arr.length - 1]
+    boxes.push([min, q1, med, q3, max])
+    arr.forEach(v => {
+      if (v < lo || v > hi) {
+        outliers.push([idx, v])
+      }
+    })
+  })
+  return {categories: order, boxes, outliers}
+}
+
 /** 按各分类的指标合计排序并截取前 N 项（topN<=0 表示不限制） */
 export function sortAndLimit(shaped: ShapedData, order: 'none' | 'asc' | 'desc', topN: number): ShapedData {
   let idx = shaped.categories.map((_, i) => i)

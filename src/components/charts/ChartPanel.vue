@@ -118,6 +118,7 @@
       <SunburstChart v-else-if="chartType === 'sunburst'" :data="treeData" :show-label="showLabel"/>
       <TreemapChart v-else-if="chartType === 'treemap'" :data="treeData" :show-label="showLabel"/>
       <TreeChart v-else-if="chartType === 'tree'" :data="treeData" :show-label="showLabel"/>
+      <BoxplotChart v-else-if="chartType === 'boxplot'" :categories="boxplot.categories" :boxes="boxplot.boxes" :outliers="boxplot.outliers"/>
     </div>
   </div>
 </template>
@@ -138,7 +139,8 @@ import SankeyChart from './SankeyChart.vue'
 import SunburstChart from './SunburstChart.vue'
 import TreemapChart from './TreemapChart.vue'
 import TreeChart from './TreeChart.vue'
-import {AGG_LABELS, type AggKind, aggregateColumn, heatmapData, hierarchy, isNumericColumn, pivot, sankeyData, scatterData, sortAndLimit} from './shape'
+import BoxplotChart from './BoxplotChart.vue'
+import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, heatmapData, hierarchy, isNumericColumn, pivot, sankeyData, scatterData, sortAndLimit} from './shape'
 
 const props = defineProps<{
   columns: string[]
@@ -171,7 +173,8 @@ const CHART_META: Record<string, ChartMeta> = {
   sankey: {label: '桑基图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '相邻维度按数据流连接、指标作流量', empty: '拖入≥2 个维度和一个指标生成桑基图'},
   sunburst: {label: '旭日图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作数值', empty: '拖入维度(层级)和一个指标生成旭日图'},
   treemap: {label: '矩形树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作面积', empty: '拖入维度(层级)和一个指标生成矩形树图'},
-  tree: {label: '树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级展开、首个指标作叶子值', empty: '拖入维度(层级)和一个指标生成树图'}
+  tree: {label: '树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级展开、首个指标作叶子值', empty: '拖入维度(层级)和一个指标生成树图'},
+  boxplot: {label: '箱线图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: false, note: '首个维度分组、首个指标取原始分布', empty: '拖入一个维度和一个指标生成箱线图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -319,6 +322,10 @@ const sankey = computed(() => (chartType.value === 'sankey' && ready.value)
 const treeData = computed(() => (['sunburst', 'treemap', 'tree'].includes(chartType.value) && ready.value)
   ? hierarchy(table.value, dimensions.value, metrics.value[0], agg.value)
   : [])
+
+const boxplot = computed(() => (chartType.value === 'boxplot' && ready.value)
+  ? boxplotData(table.value, dimensions.value[0], metrics.value[0])
+  : {categories: [] as string[], boxes: [] as number[][], outliers: [] as [number, number][]})
 
 // 仪表盘：首个指标聚合为单值，量程取略大于该值的“整”数
 const niceMax = (v: number): number => {
