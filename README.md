@@ -49,7 +49,8 @@
 - **JSON / XML / YAML** —— 可折叠**层级树**，以及卡片 + 连线的**关系图**两种可视化
 - **SQL** —— 插件式执行器（内存库 / `.sqlite` 文件 / **MySQL**，可在设置中配置连接、运行时选择数据源），结果渲染为**表格**，失败显示具体错误；执行历史与实时运行一致
 - **图表可视化** —— SQL 结果一键切换为图表：**拖拽**字段到「维度 / 指标」即可成图，自动识别数值列，支持聚合（求和/计数/平均/最大/最小）、排序、Top N。基于 ECharts，内置 **27 种**图表：柱状图 · 折线图 · 面积图 · 饼图/环形图 · 玫瑰图 · 散点图 · 涟漪散点图 · 雷达图 · 漏斗图 · 热力图 · 仪表盘 · 桑基图 · 关系图 · 旭日图 · 矩形树图 · 树图 · 箱线图 · K 线图 · 平行坐标 · 主题河流 · 日历热力图 · 极坐标柱状图 · 象形柱图 · 词云 · 水球图 · 中国地图 · 世界地图（配色跟随主题，支持导出 PNG）。配置面板表驱动，组件与数据源解耦，后续 CSV 等本地数据可复用
-- **CSV / TSV** —— 解析为**数据表**（支持引号转义、字段内换行、自动识别分隔符），并可一键切换为上述 27 种图表（与 SQL 共用图表面板）
+- **CSV / TSV** —— 解析为**数据表**（支持引号转义、字段内换行、自动识别分隔符、Web Worker 后台解析 + 进度），并可一键切换为上述 27 种图表（与 SQL 共用图表面板）
+- **Excel（.xlsx / .xls）** —— 用 SheetJS 解析，**多工作表**切换，同样可切表格 / 27 种图表 / 导出 CSV
 - **Markdown** —— 实时渲染预览（支持内嵌 HTML，DOMPurify 净化防 XSS）
 - **GitHub Actions 工作流** —— 自动识别并渲染为 **Jobs 依赖 DAG 图**（触发事件 → 各 Job → Steps）
 
@@ -73,7 +74,7 @@
 
 ## 🧩 支持的语言
 
-可运行语言均采用**插件化架构**，每种语言独立实现；JSON / XML / YAML / Markdown / CSV / TSV / 纯文本为编辑与可视化类型。
+可运行语言均采用**插件化架构**，每种语言独立实现；JSON / XML / YAML / Markdown / CSV / TSV / Excel / 纯文本为编辑与可视化类型。
 
 <div align="center">
   <img src="public/icons/python.svg" width="48" title="Python 2 / 3" />
@@ -112,12 +113,13 @@
   <img src="public/icons/markdown.svg" width="48" title="Markdown" />
   <img src="public/icons/csv.svg" width="48" title="CSV" />
   <img src="public/icons/tsv.svg" width="48" title="TSV" />
+  <img src="public/icons/xlsx.svg" width="48" title="Excel" />
   <img src="public/icons/text.svg" width="48" title="纯文本" />
 </div>
 
 <div align="center">
 
-`Python` · `Node.js` · `TypeScript` · `JavaScript` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Ruby` · `PHP` · `R` · `Lua` · `Haskell` · `Cangjie` · `Shell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Text`
+`Python` · `Node.js` · `TypeScript` · `JavaScript` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Ruby` · `PHP` · `R` · `Lua` · `Haskell` · `Cangjie` · `Shell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Excel` · `Text`
 
 </div>
 
