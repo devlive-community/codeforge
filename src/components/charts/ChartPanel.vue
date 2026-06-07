@@ -116,6 +116,7 @@
       <GaugeChart v-else-if="chartType === 'gauge'" :value="gauge.value" :max="gauge.max" :name="gauge.name"/>
       <SankeyChart v-else-if="chartType === 'sankey'" :nodes="sankey.nodes" :links="sankey.links"/>
       <SunburstChart v-else-if="chartType === 'sunburst'" :data="treeData" :show-label="showLabel"/>
+      <TreemapChart v-else-if="chartType === 'treemap'" :data="treeData" :show-label="showLabel"/>
     </div>
   </div>
 </template>
@@ -134,6 +135,7 @@ import HeatmapChart from './HeatmapChart.vue'
 import GaugeChart from './GaugeChart.vue'
 import SankeyChart from './SankeyChart.vue'
 import SunburstChart from './SunburstChart.vue'
+import TreemapChart from './TreemapChart.vue'
 import {AGG_LABELS, type AggKind, aggregateColumn, heatmapData, hierarchy, isNumericColumn, pivot, sankeyData, scatterData, sortAndLimit} from './shape'
 
 const props = defineProps<{
@@ -165,7 +167,8 @@ const CHART_META: Record<string, ChartMeta> = {
   heatmap: {label: '热力图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '前两个维度作 X/Y 轴、首个指标作热力值', empty: '拖入两个维度和一个指标生成图表'},
   gauge: {label: '仪表盘', layout: 'dims', needDims: 0, needMetrics: 1, dimsZone: false, usesAgg: true, note: '仪表盘取首个指标聚合为单值', empty: '拖入一个指标生成仪表盘'},
   sankey: {label: '桑基图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '相邻维度按数据流连接、指标作流量', empty: '拖入≥2 个维度和一个指标生成桑基图'},
-  sunburst: {label: '旭日图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作数值', empty: '拖入维度(层级)和一个指标生成旭日图'}
+  sunburst: {label: '旭日图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作数值', empty: '拖入维度(层级)和一个指标生成旭日图'},
+  treemap: {label: '矩形树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作面积', empty: '拖入维度(层级)和一个指标生成矩形树图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
