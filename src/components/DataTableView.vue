@@ -31,27 +31,11 @@
     <div v-if="viewMode === 'chart' && parsed.columns.length" class="flex-1 min-h-0">
       <ChartPanel :columns="parsed.columns" :rows="parsed.rows"/>
     </div>
-    <!-- 表格视图 -->
-    <div v-else class="flex-1 overflow-auto p-2 text-xs">
-      <div v-if="!parsed.columns.length" class="text-gray-400 px-2 py-4 text-center">运行后在此查看数据表（支持 CSV / TSV）</div>
-      <div v-else class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded">
-        <table class="w-full border-collapse">
-          <thead>
-            <tr class="bg-gray-50 dark:bg-gray-800">
-              <th class="text-left font-semibold px-2 py-1.5 border-b border-gray-200 dark:border-gray-700 text-gray-400 w-10">#</th>
-              <th v-for="(c, ci) in parsed.columns" :key="ci" class="text-left font-semibold px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ c }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, i) in displayRows" :key="i" class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-              <td class="px-2 py-1 border-b border-gray-100 dark:border-gray-800 text-gray-400">{{ i + 1 }}</td>
-              <td v-for="(_c, ci) in parsed.columns" :key="ci" class="px-3 py-1 border-b border-gray-100 dark:border-gray-800 font-mono whitespace-nowrap text-gray-700 dark:text-gray-300">{{ row[ci] }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div v-if="parsed.rows.length > displayLimit" class="px-2 py-2 text-center text-gray-400">共 {{ parsed.rows.length }} 行，表格仅显示前 {{ displayLimit }} 行（图表使用全部数据）</div>
-      </div>
+    <!-- 表格视图（虚拟滚动，支持大文件） -->
+    <div v-if="!parsed.columns.length" class="flex-1 overflow-auto p-2 text-xs">
+      <div class="text-gray-400 px-2 py-4 text-center">运行后在此查看数据表（支持 CSV / TSV）</div>
     </div>
+    <VirtualTable v-else class="flex-1" :columns="parsed.columns" :rows="parsed.rows"/>
   </div>
 </template>
 
@@ -60,6 +44,7 @@ import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {BarChart3, FileDown, Table2, Trash2} from 'lucide-vue-next'
 import ChartPanel from './charts/ChartPanel.vue'
+import VirtualTable from './VirtualTable.vue'
 import {downloadCsv} from '../utils/csv'
 
 const props = defineProps<{
@@ -70,7 +55,6 @@ const props = defineProps<{
 const emit = defineEmits<{ clear: [] }>()
 
 const viewMode = ref<'table' | 'chart'>('table')
-const displayLimit = 500
 
 const stable = ref(props.output)
 const applyOutput = debounce((v: string) => { stable.value = v }, 150)
@@ -157,8 +141,6 @@ const parsed = computed<{ columns: string[]; rows: string[][] }>(() => {
   })
   return {columns, rows}
 })
-
-const displayRows = computed(() => parsed.value.rows.slice(0, displayLimit))
 
 const exportCsv = () => downloadCsv(parsed.value.columns, parsed.value.rows, `data-${Date.now()}.csv`)
 
