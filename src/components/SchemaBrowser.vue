@@ -45,6 +45,9 @@
                     <Table2 class="w-3 h-3 text-blue-500 flex-shrink-0"/>
                     <span class="flex-1 truncate text-gray-700 dark:text-gray-200" :title="t.name" @click.stop="emit('insert', t.name)">{{ t.name }}</span>
                     <span class="text-[10px] text-gray-400">{{ t.columns.length }}</span>
+                    <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-violet-500 cursor-pointer" title="复制建表语句" @click.stop="copyDdl(t.name, db.name)">
+                      <Copy class="w-3 h-3"/>
+                    </button>
                     <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-blue-500 cursor-pointer" title="预览前 100 行" @click.stop="preview(t.name, db.name)">
                       <Play class="w-3 h-3"/>
                     </button>
@@ -69,6 +72,9 @@
                 <Table2 class="w-3 h-3 text-blue-500 flex-shrink-0"/>
                 <span class="flex-1 truncate text-gray-700 dark:text-gray-200" :title="t.name" @click.stop="emit('insert', t.name)">{{ t.name }}</span>
                 <span class="text-[10px] text-gray-400">{{ t.columns.length }}</span>
+                <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-violet-500 cursor-pointer" title="复制建表语句" @click.stop="copyDdl(t.name)">
+                  <Copy class="w-3 h-3"/>
+                </button>
                 <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-blue-500 cursor-pointer" title="预览前 100 行" @click.stop="preview(t.name)">
                   <Play class="w-3 h-3"/>
                 </button>
@@ -90,10 +96,12 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {ChevronRight, Database, Play, RefreshCw, Table2} from 'lucide-vue-next'
+import {ChevronRight, Copy, Database, Play, RefreshCw, Table2} from 'lucide-vue-next'
 import {useDbConnections} from '../composables/useDbConnections'
+import {useToast} from '../plugins/toast'
 
 const emit = defineEmits<{ insert: [text: string]; preview: [sql: string] }>()
+const toast = useToast()
 
 const {resolveActiveSource, activeRef, activeLabel} = useDbConnections()
 
@@ -226,6 +234,28 @@ const preview = (name: string, db?: string) => {
   const qualified = db ? `${quote(kind, db)}.${quote(kind, name)}` : quote(kind, name)
   emit('preview', `SELECT * FROM ${qualified} LIMIT 100`)
   open.value = false
+}
+
+const copyDdl = async (name: string, db?: string) => {
+  try {
+    const source = resolveActiveSource()
+    const qualified = db ? `${quote(source.kind, db)}.${quote(source.kind, name)}` : quote(source.kind, name)
+    const sql = source.kind === 'mysql'
+      ? `SHOW CREATE TABLE ${qualified}`
+      : `SELECT sql FROM sqlite_master WHERE name = '${esc(name)}'`
+    const rows = await runRows(sql)
+    // MySQL: 第 2 列为建表语句；SQLite: 第 1 列
+    const ddl = String((source.kind === 'mysql' ? rows[0]?.[1] : rows[0]?.[0]) ?? '')
+    if (!ddl) {
+      toast.error('未获取到建表语句')
+      return
+    }
+    await navigator.clipboard.writeText(ddl.endsWith(';') ? ddl : ddl + ';')
+    toast.success(`已复制 ${name} 的建表语句`)
+  }
+  catch (e: any) {
+    toast.error('复制失败：' + String(e?.message || e))
+  }
 }
 
 const toggle = () => {
