@@ -1,5 +1,5 @@
 <template>
-  <div ref="scroller" class="overflow-auto h-full" @scroll="onScroll">
+  <div ref="scroller" class="overflow-auto" :class="maxHeight ? '' : 'h-full'" :style="maxHeight ? {maxHeight: maxHeight + 'px'} : undefined" @scroll="onScroll">
     <table class="w-full border-collapse text-xs">
       <thead class="sticky top-0 z-10">
         <tr class="bg-gray-50 dark:bg-gray-800">
@@ -32,6 +32,7 @@ const props = withDefaults(defineProps<{
   rowHeight?: number
   showIndex?: boolean
   buffer?: number
+  maxHeight?: number
 }>(), {rowHeight: 28, showIndex: true, buffer: 8})
 
 const scroller = ref<HTMLElement>()
