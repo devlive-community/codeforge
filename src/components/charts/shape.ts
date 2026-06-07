@@ -320,6 +320,64 @@ export function sankeyData(data: TableData, dims: string[], metric: string, agg:
   return {nodes: [...nodeSet].map(name => ({name})), links}
 }
 
+export interface GraphData {
+  nodes: { name: string; value: number }[]
+  links: { source: string; target: string; value: number }[]
+}
+
+/**
+ * 关系图（网络）：两个维度作为源/目标节点（同名即同节点），指标作连线权重。
+ * 节点 value 为相连权重之和，用于决定节点大小。
+ */
+export function graphData(data: TableData, sourceDim: string, targetDim: string, metric: string, agg: AggKind): GraphData {
+  const si = data.columns.indexOf(sourceDim)
+  const ti = data.columns.indexOf(targetDim)
+  const mi = data.columns.indexOf(metric)
+  if (si < 0 || ti < 0 || mi < 0) {
+    return {nodes: [], links: []}
+  }
+  const linkMap = new Map<string, number[]>()
+  const nodeOrder: string[] = []
+  const nodeSeen = new Set<string>()
+  const touch = (n: string) => {
+    if (!nodeSeen.has(n)) {
+      nodeSeen.add(n)
+      nodeOrder.push(n)
+    }
+  }
+  for (const row of data.rows) {
+    const s = norm(row[si])
+    const t = norm(row[ti])
+    touch(s)
+    touch(t)
+    const key = `${s}=>${t}`
+    if (!linkMap.has(key)) {
+      linkMap.set(key, [])
+    }
+    const v = row[mi]
+    if (agg === 'count') {
+      if (v !== null && v !== undefined && v !== '') {
+        linkMap.get(key)!.push(1)
+      }
+    }
+    else {
+      const num = typeof v === 'number' ? v : Number(v)
+      if (!isNaN(num)) {
+        linkMap.get(key)!.push(num)
+      }
+    }
+  }
+  const nodeVal = new Map<string, number>()
+  const links = [...linkMap.entries()].map(([k, vals]) => {
+    const [source, target] = k.split('=>')
+    const value = vals.length > 0 ? aggregate(vals, agg) : 0
+    nodeVal.set(source, (nodeVal.get(source) || 0) + value)
+    nodeVal.set(target, (nodeVal.get(target) || 0) + value)
+    return {source, target, value}
+  }).filter(l => l.value > 0)
+  return {nodes: nodeOrder.map(name => ({name, value: nodeVal.get(name) || 0})), links}
+}
+
 export interface HeatmapData {
   xCats: string[]
   yCats: string[]

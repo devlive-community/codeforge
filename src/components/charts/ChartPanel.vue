@@ -129,6 +129,7 @@
       <ParallelChart v-else-if="chartType === 'parallel'" :axes="parallel.axes" :series="parallel.series"/>
       <ThemeRiverChart v-else-if="chartType === 'themeriver'" :data="river.data" :categories="river.categories"/>
       <CalendarChart v-else-if="chartType === 'calendar'" :data="calendar.data" :range="calendar.range" :max="calendar.max"/>
+      <GraphChart v-else-if="chartType === 'graph'" :nodes="graph.nodes" :links="graph.links" :show-label="showLabel"/>
     </div>
   </div>
 </template>
@@ -156,7 +157,8 @@ import CandlestickChart from './CandlestickChart.vue'
 import ParallelChart from './ParallelChart.vue'
 import ThemeRiverChart from './ThemeRiverChart.vue'
 import CalendarChart from './CalendarChart.vue'
-import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, calendarData, candlestickData, heatmapData, hierarchy, isNumericColumn, parallelData, pivot, sankeyData, scatterData, sortAndLimit, themeRiverData} from './shape'
+import GraphChart from './GraphChart.vue'
+import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, calendarData, candlestickData, graphData, heatmapData, hierarchy, isNumericColumn, parallelData, pivot, sankeyData, scatterData, sortAndLimit, themeRiverData} from './shape'
 
 const props = defineProps<{
   columns: string[]
@@ -196,7 +198,8 @@ const CHART_META: Record<string, ChartMeta> = {
   themeriver: {label: '主题河流', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为时间、维度2为类别、指标作值', empty: '拖入两个维度(时间,类别)和一个指标生成主题河流'},
   calendar: {label: '日历图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作日期、首个指标作值', empty: '拖入一个日期维度和一个指标生成日历图'},
   rose: {label: '玫瑰图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作扇区、首个指标作半径', empty: '拖入「维度」和「指标」生成玫瑰图'},
-  effectScatter: {label: '涟漪散点图', layout: 'scatter', needDims: 0, needMetrics: 0, empty: '拖入「X 指标」和「Y 指标」生成涟漪散点图'}
+  effectScatter: {label: '涟漪散点图', layout: 'scatter', needDims: 0, needMetrics: 0, empty: '拖入「X 指标」和「Y 指标」生成涟漪散点图'},
+  graph: {label: '关系图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为源、维度2为目标、指标作连线权重', empty: '拖入两个维度(源,目标)和一个指标生成关系图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -381,6 +384,10 @@ const river = computed(() => (chartType.value === 'themeriver' && ready.value)
 const calendar = computed(() => (chartType.value === 'calendar' && ready.value)
   ? calendarData(table.value, dimensions.value[0], metrics.value[0], agg.value)
   : {data: [] as [string, number][], range: new Date().getFullYear().toString() as [string, string] | string, max: 0})
+
+const graph = computed(() => (chartType.value === 'graph' && ready.value)
+  ? graphData(table.value, dimensions.value[0], dimensions.value[1], metrics.value[0], agg.value)
+  : {nodes: [] as { name: string; value: number }[], links: [] as { source: string; target: string; value: number }[]})
 
 // 仪表盘：首个指标聚合为单值，量程取略大于该值的“整”数
 const niceMax = (v: number): number => {
