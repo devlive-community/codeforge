@@ -4,8 +4,28 @@
     <div class="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 h-full bg-gray-50 dark:bg-gray-800/40 overflow-y-auto">
       <!-- 图表类型 -->
       <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div class="text-[11px] text-gray-400 mb-1">图表类型</div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[11px] text-gray-400">图表类型</span>
+          <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 cursor-pointer" title="用自然语言配图" @click="toggleAi">
+            <Sparkles class="w-3 h-3"/>AI 配图
+          </button>
+        </div>
         <Select v-model="chartType" :options="chartTypes" searchable :button-classes="['!py-1', '!px-2.5', 'text-xs', '!rounded-md']"/>
+        <div v-if="aiOpen" class="mt-2 p-2 rounded border border-violet-200 dark:border-violet-800 bg-violet-50/40 dark:bg-violet-900/10">
+          <textarea v-model="aiPrompt" rows="2" :disabled="aiLoading"
+                    placeholder="例如：按状态统计数量，用饼图"
+                    class="w-full px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 resize-none focus:outline-none focus:border-violet-400"
+                    @keydown.meta.enter="aiGenerate" @keydown.ctrl.enter="aiGenerate"/>
+          <div v-if="aiError" class="mt-1 text-[10px] text-red-500 whitespace-pre-wrap">{{ aiError }}</div>
+          <div class="mt-1.5 flex justify-end">
+            <button class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-violet-500 text-white text-[11px] hover:bg-violet-600 disabled:opacity-50 cursor-pointer"
+                    :disabled="aiLoading || !aiPrompt.trim()" @click="aiGenerate">
+              <RefreshCw v-if="aiLoading" class="w-3 h-3 animate-spin"/>
+              <Sparkles v-else class="w-3 h-3"/>
+              {{ aiLoading ? '生成中…' : '生成' }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 可用字段 -->
@@ -177,9 +197,11 @@ import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import * as echarts from 'echarts/core'
 import {SVGRenderer} from 'echarts/renderers'
-import {BarChart3, Copy, Download, FileDown, Image as ImageIcon, Hash, Type, X} from 'lucide-vue-next'
+import {invoke} from '@tauri-apps/api/core'
+import {BarChart3, Copy, Download, FileDown, Image as ImageIcon, Hash, RefreshCw, Sparkles, Type, X} from 'lucide-vue-next'
 import {useTheme} from '../../composables/useTheme'
 import {kvGetJSON, kvSetJSON} from '../../composables/useKvStore'
+import {useAiConfig} from '../../composables/useAiConfig'
 import {useToast} from '../../plugins/toast'
 import {downloadCsv} from '../../utils/csv'
 import Select from '../../ui/Select.vue'
@@ -440,6 +462,72 @@ const runExport = (fn: () => void) => {
 }
 
 const fields = computed(() => props.columns.map((name, i) => ({name, numeric: isNumericColumn(props.rows, i)})))
+
+// ---- AI 配图：自然语言 → 图表配置 ----
+const {active: aiActive} = useAiConfig()
+const aiOpen = ref(false)
+const aiPrompt = ref('')
+const aiLoading = ref(false)
+const aiError = ref('')
+const toggleAi = () => {
+  aiOpen.value = !aiOpen.value
+  aiError.value = ''
+}
+const aiGenerate = async () => {
+  if (aiLoading.value || !aiPrompt.value.trim()) {
+    return
+  }
+  if (!aiActive.value.apiKey?.trim()) {
+    aiError.value = '未配置 AI API Key（设置 → AI）'
+    return
+  }
+  aiLoading.value = true
+  aiError.value = ''
+  try {
+    const cols = fields.value.map(f => `${f.name}:${f.numeric ? 'number' : 'text'}`).join(', ')
+    const types = Object.keys(CHART_META).join(', ')
+    const system = '你是数据可视化助手。根据可用列与用户需求，输出图表配置 JSON。\n'
+      + `可用列(name:type): ${cols}\n`
+      + `支持的图表类型(value): ${types}\n`
+      + '严格输出 JSON：{"chartType":"...","dimensions":["列名"],"metrics":["列名"],"agg":"sum|count|avg|max|min"}。'
+      + '只输出 JSON，不要解释或 Markdown。维度/指标必须使用上面的列名。'
+    const text = await invoke<string>('ai_chat', {
+      provider: aiActive.value.provider,
+      baseUrl: aiActive.value.baseUrl,
+      apiKey: aiActive.value.apiKey,
+      model: aiActive.value.model,
+      system,
+      messages: [{role: 'user', content: aiPrompt.value.trim()}]
+    })
+    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim()
+    const cfg = JSON.parse(cleaned)
+    if (cfg.chartType && CHART_META[cfg.chartType]) {
+      chartType.value = cfg.chartType
+    }
+    const dims = Array.isArray(cfg.dimensions) ? cfg.dimensions.filter((d: string) => props.columns.includes(d)) : []
+    const mets = Array.isArray(cfg.metrics) ? cfg.metrics.filter((m: string) => props.columns.includes(m)) : []
+    if (cfg.agg && (cfg.agg in AGG_LABELS)) {
+      agg.value = cfg.agg
+    }
+    if (meta.value.layout === 'scatter') {
+      xField.value = mets[0] || dims[0] || ''
+      yField.value = mets[1] || ''
+      groupField.value = dims[0] || ''
+    }
+    else {
+      dimensions.value = dims
+      metrics.value = mets
+    }
+    aiOpen.value = false
+    aiPrompt.value = ''
+  }
+  catch (e: any) {
+    aiError.value = 'AI 返回无法解析或出错：' + String(e?.message || e)
+  }
+  finally {
+    aiLoading.value = false
+  }
+}
 
 // 列变化（新查询）时，剔除已不存在的字段
 watch(() => props.columns, (cols) => {
