@@ -92,7 +92,7 @@
           <label v-if="chartType === 'pie'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="ring" type="checkbox" class="accent-blue-500"/>环形</label>
           <label v-if="chartType === 'radar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="radarFill" type="checkbox" class="accent-blue-500"/>填充</label>
         </div>
-        <p v-if="chartType === 'pie'" class="text-[10px] text-gray-400 leading-snug">饼图取首个维度作扇区、首个指标作数值</p>
+        <p v-if="chartType === 'pie' || chartType === 'funnel'" class="text-[10px] text-gray-400 leading-snug">取首个维度作分类、首个指标作数值</p>
       </div>
     </div>
 
@@ -109,6 +109,7 @@
       <PieChart v-else-if="chartType === 'pie'" :data="pieData" :ring="ring" :show-label="showLabel"/>
       <ScatterChart v-else-if="isScatter" :series="scatterSeries" :x-name="xField" :y-name="yField"/>
       <RadarChart v-else-if="chartType === 'radar'" :categories="shaped.categories" :series="shaped.series" :area="radarFill" :show-label="showLabel"/>
+      <FunnelChart v-else-if="chartType === 'funnel'" :data="pieData" :show-label="showLabel"/>
     </div>
   </div>
 </template>
@@ -122,6 +123,7 @@ import LineChart from './LineChart.vue'
 import PieChart from './PieChart.vue'
 import ScatterChart from './ScatterChart.vue'
 import RadarChart from './RadarChart.vue'
+import FunnelChart from './FunnelChart.vue'
 import {AGG_LABELS, type AggKind, isNumericColumn, pivot, scatterData, sortAndLimit} from './shape'
 
 const props = defineProps<{
@@ -135,7 +137,8 @@ const chartTypes = [
   {value: 'area', label: '面积图'},
   {value: 'pie', label: '饼图'},
   {value: 'scatter', label: '散点图'},
-  {value: 'radar', label: '雷达图'}
+  {value: 'radar', label: '雷达图'},
+  {value: 'funnel', label: '漏斗图'}
 ]
 const chartType = ref('bar')
 const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
