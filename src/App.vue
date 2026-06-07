@@ -91,6 +91,7 @@
                   </span>
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
+                  <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -217,6 +218,7 @@
             </span>
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
             <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
+                  <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -372,6 +374,7 @@ import SqlTableView from "./components/SqlTableView.vue";
 import DataTableView from "./components/DataTableView.vue";
 import SqlSourceSelect from "./components/SqlSourceSelect.vue";
 import SchemaBrowser from "./components/SchemaBrowser.vue";
+import AiSql from "./components/AiSql.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
