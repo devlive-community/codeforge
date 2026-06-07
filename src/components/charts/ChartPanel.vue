@@ -155,6 +155,7 @@ import {BarChart3, Copy, Download, FileDown, Hash, Type, X} from 'lucide-vue-nex
 import {useTheme} from '../../composables/useTheme'
 import {kvGetJSON, kvSetJSON} from '../../composables/useKvStore'
 import {useToast} from '../../plugins/toast'
+import {downloadCsv} from '../../utils/csv'
 import Select from '../../ui/Select.vue'
 import BarChart from './BarChart.vue'
 import LineChart from './LineChart.vue'
@@ -342,15 +343,6 @@ const chartPng = (): string | null => {
   const inst = activeChart()
   return inst ? inst.getDataURL({type: 'png', pixelRatio: 2, backgroundColor: isDark.value ? '#111827' : '#ffffff'}) : null
 }
-const downloadBlob = (blob: Blob, filename: string) => {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
 // 导出当前图表为 PNG
 const exportPng = () => {
   const url = chartPng()
@@ -379,18 +371,8 @@ const copyImage = async () => {
   }
 }
 
-// 导出图表底层数据为 CSV（带 BOM 便于 Excel 识别中文）
-const exportCsv = () => {
-  const esc = (v: any) => {
-    const s = v === null || v === undefined ? '' : String(v)
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-  }
-  const lines = [props.columns.map(esc).join(',')]
-  for (const row of props.rows) {
-    lines.push(props.columns.map((_c, i) => esc(row[i])).join(','))
-  }
-  downloadBlob(new Blob(['﻿' + lines.join('\n')], {type: 'text/csv;charset=utf-8'}), `data-${Date.now()}.csv`)
-}
+// 导出图表底层数据为 CSV
+const exportCsv = () => downloadCsv(props.columns, props.rows, `data-${Date.now()}.csv`)
 
 const fields = computed(() => props.columns.map((name, i) => ({name, numeric: isNumericColumn(props.rows, i)})))
 

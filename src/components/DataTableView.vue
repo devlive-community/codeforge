@@ -18,6 +18,9 @@
             <BarChart3 class="w-3.5 h-3.5" :class="!parsed.columns.length ? 'opacity-40' : ''"/>
           </button>
         </div>
+        <button v-if="parsed.columns.length" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="导出 CSV" @click="exportCsv">
+          <FileDown class="w-3.5 h-3.5"/>
+        </button>
         <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
           <Trash2 class="w-3.5 h-3.5"/>
         </button>
@@ -55,8 +58,9 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {BarChart3, Table2, Trash2} from 'lucide-vue-next'
+import {BarChart3, FileDown, Table2, Trash2} from 'lucide-vue-next'
 import ChartPanel from './charts/ChartPanel.vue'
+import {downloadCsv} from '../utils/csv'
 
 const props = defineProps<{
   output: string
@@ -155,6 +159,8 @@ const parsed = computed<{ columns: string[]; rows: string[][] }>(() => {
 })
 
 const displayRows = computed(() => parsed.value.rows.slice(0, displayLimit))
+
+const exportCsv = () => downloadCsv(parsed.value.columns, parsed.value.rows, `data-${Date.now()}.csv`)
 
 // 数据为空时回退表格视图
 watch(() => parsed.value.columns.length, (n) => {

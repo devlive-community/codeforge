@@ -20,6 +20,9 @@
             <BarChart3 class="w-3.5 h-3.5" :class="!firstResultSet ? 'opacity-40' : ''"/>
           </button>
         </div>
+        <button v-if="firstResultSet" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="导出 CSV" @click="exportCsv">
+          <FileDown class="w-3.5 h-3.5"/>
+        </button>
         <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
           <Trash2 class="w-3.5 h-3.5"/>
         </button>
@@ -40,11 +43,12 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {BarChart3, Database, Table2, Trash2} from 'lucide-vue-next'
+import {BarChart3, Database, FileDown, Table2, Trash2} from 'lucide-vue-next'
 import {useDbConnections} from '../composables/useDbConnections'
 import SqlSourceSelect from './SqlSourceSelect.vue'
 import SqlResultTable from './SqlResultTable.vue'
 import ChartPanel from './charts/ChartPanel.vue'
+import {downloadCsv} from '../utils/csv'
 
 const props = defineProps<{
   output: string
@@ -81,6 +85,13 @@ watch(firstResultSet, (rs) => {
     viewMode.value = 'table'
   }
 })
+
+const exportCsv = () => {
+  const rs = firstResultSet.value
+  if (rs) {
+    downloadCsv(rs.columns, rs.rows, `sql-result-${Date.now()}.csv`)
+  }
+}
 
 // 当前数据源名（占位文案用）；选择逻辑由 SqlSourceSelect 组件负责
 const {activeLabel} = useDbConnections()
