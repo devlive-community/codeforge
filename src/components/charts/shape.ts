@@ -402,6 +402,35 @@ export function heatmapData(
   return {xCats, yCats, cells, min, max}
 }
 
+export interface ParallelData {
+  axes: string[]
+  series: { name: string; data: number[][] }[]
+}
+
+/** 平行坐标：每行是一条跨多指标轴的折线，可选按维度分组。 */
+export function parallelData(data: TableData, metrics: string[], groupDim?: string): ParallelData {
+  const mIdx = metrics.map(m => data.columns.indexOf(m))
+  if (metrics.length < 2 || mIdx.some(i => i < 0)) {
+    return {axes: [], series: []}
+  }
+  const gi = groupDim ? data.columns.indexOf(groupDim) : -1
+  const map = new Map<string, number[][]>()
+  const order: string[] = []
+  for (const row of data.rows) {
+    const vals = mIdx.map(i => Number(row[i]))
+    if (vals.some(isNaN)) {
+      continue
+    }
+    const key = gi >= 0 ? norm(row[gi]) : '数据'
+    if (!map.has(key)) {
+      map.set(key, [])
+      order.push(key)
+    }
+    map.get(key)!.push(vals)
+  }
+  return {axes: metrics, series: order.map(name => ({name, data: map.get(name)!}))}
+}
+
 export interface CandleData {
   categories: string[]
   values: number[][] // [open, close, low, high]

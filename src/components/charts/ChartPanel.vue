@@ -120,6 +120,7 @@
       <TreeChart v-else-if="chartType === 'tree'" :data="treeData" :show-label="showLabel"/>
       <BoxplotChart v-else-if="chartType === 'boxplot'" :categories="boxplot.categories" :boxes="boxplot.boxes" :outliers="boxplot.outliers"/>
       <CandlestickChart v-else-if="chartType === 'candlestick'" :categories="candle.categories" :values="candle.values"/>
+      <ParallelChart v-else-if="chartType === 'parallel'" :axes="parallel.axes" :series="parallel.series"/>
     </div>
   </div>
 </template>
@@ -142,7 +143,8 @@ import TreemapChart from './TreemapChart.vue'
 import TreeChart from './TreeChart.vue'
 import BoxplotChart from './BoxplotChart.vue'
 import CandlestickChart from './CandlestickChart.vue'
-import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, candlestickData, heatmapData, hierarchy, isNumericColumn, pivot, sankeyData, scatterData, sortAndLimit} from './shape'
+import ParallelChart from './ParallelChart.vue'
+import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, candlestickData, heatmapData, hierarchy, isNumericColumn, parallelData, pivot, sankeyData, scatterData, sortAndLimit} from './shape'
 
 const props = defineProps<{
   columns: string[]
@@ -177,7 +179,8 @@ const CHART_META: Record<string, ChartMeta> = {
   treemap: {label: '矩形树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作面积', empty: '拖入维度(层级)和一个指标生成矩形树图'},
   tree: {label: '树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级展开、首个指标作叶子值', empty: '拖入维度(层级)和一个指标生成树图'},
   boxplot: {label: '箱线图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: false, note: '首个维度分组、首个指标取原始分布', empty: '拖入一个维度和一个指标生成箱线图'},
-  candlestick: {label: 'K 线图', layout: 'dims', needDims: 1, needMetrics: 4, dimsZone: true, usesAgg: false, note: '维度作类目轴、指标依次为 开/收/低/高', empty: '拖入一个维度和「开/收/低/高」四个指标'}
+  candlestick: {label: 'K 线图', layout: 'dims', needDims: 1, needMetrics: 4, dimsZone: true, usesAgg: false, note: '维度作类目轴、指标依次为 开/收/低/高', empty: '拖入一个维度和「开/收/低/高」四个指标'},
+  parallel: {label: '平行坐标', layout: 'dims', needDims: 0, needMetrics: 2, dimsZone: true, usesAgg: false, note: '多个指标作平行轴、首个维度可选分组', empty: '拖入≥2 个指标生成平行坐标'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -333,6 +336,10 @@ const boxplot = computed(() => (chartType.value === 'boxplot' && ready.value)
 const candle = computed(() => (chartType.value === 'candlestick' && ready.value)
   ? candlestickData(table.value, dimensions.value[0], metrics.value[0], metrics.value[1], metrics.value[2], metrics.value[3])
   : {categories: [] as string[], values: [] as number[][]})
+
+const parallel = computed(() => (chartType.value === 'parallel' && ready.value)
+  ? parallelData(table.value, metrics.value, dimensions.value[0])
+  : {axes: [] as string[], series: [] as { name: string; data: number[][] }[]})
 
 // 仪表盘：首个指标聚合为单值，量程取略大于该值的“整”数
 const niceMax = (v: number): number => {
