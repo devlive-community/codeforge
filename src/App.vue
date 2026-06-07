@@ -90,7 +90,7 @@
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
                   </span>
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
-                  <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="runSql" @insert="insertAtCursor"/>
+                  <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -216,7 +216,7 @@
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
             </span>
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
-            <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="runSql" @insert="insertAtCursor"/>
+            <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -1342,6 +1342,15 @@ const runSql = async (sqlOverride?: string) => {
   finally {
     isRunning.value = false
   }
+}
+
+// 表结构浏览器：把预览 SQL 写入编辑器并运行（编辑器与运行保持一致）
+const previewTable = (sql: string) => {
+  const view = editorView.value
+  if (view) {
+    view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: sql}})
+  }
+  runSql(sql)
 }
 
 // 表结构浏览器：在光标处插入表名/列名

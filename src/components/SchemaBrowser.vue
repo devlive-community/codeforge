@@ -1,14 +1,16 @@
 <template>
-  <div class="relative">
-    <button class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+  <div class="inline-block">
+    <button ref="btnRef" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
             title="表结构" @click="toggle">
       <Table2 class="w-3.5 h-3.5"/>
       <span>表</span>
     </button>
 
+    <Teleport to="body">
     <template v-if="open">
-      <div class="fixed inset-0 z-30" @click="open = false"/>
-      <div class="absolute left-0 top-full mt-1 z-40 w-72 max-h-96 overflow-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg text-xs">
+      <div class="fixed inset-0 z-[60]" @click="open = false"/>
+      <div class="fixed z-[61] w-72 overflow-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg text-xs"
+           :style="{left: pos.left + 'px', top: pos.top + 'px', maxHeight: pos.maxH + 'px'}">
         <div class="sticky top-0 flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <span class="font-medium text-gray-600 dark:text-gray-300">表结构 · {{ activeLabel() }}</span>
           <button class="p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="刷新" @click="load">
@@ -43,6 +45,7 @@
         </div>
       </div>
     </template>
+    </Teleport>
   </div>
 </template>
 
@@ -60,6 +63,8 @@ interface Col { name: string; type: string }
 interface Tbl { name: string; columns: Col[] }
 
 const open = ref(false)
+const btnRef = ref<HTMLElement>()
+const pos = ref({left: 0, top: 0, maxH: 384})
 const loading = ref(false)
 const error = ref('')
 const tables = ref<Tbl[]>([])
@@ -114,6 +119,12 @@ const load = async () => {
 const toggle = () => {
   open.value = !open.value
   if (open.value) {
+    const r = btnRef.value?.getBoundingClientRect()
+    if (r) {
+      const top = r.bottom + 4
+      const left = Math.min(r.left, window.innerWidth - 288 - 8)
+      pos.value = {left: Math.max(8, left), top, maxH: Math.max(160, window.innerHeight - top - 12)}
+    }
     load()
   }
 }
