@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <div class="flex-1 overflow-hidden flex">
+    <div class="flex-1 min-h-0 overflow-hidden flex">
       <!-- 左侧文件树侧栏 -->
       <template v-if="sidebarVisible">
         <Sidebar :root-dir="rootDir"
@@ -67,7 +67,7 @@
              @mousedown="startSidebarResize"></div>
       </template>
 
-      <div class="flex-1 overflow-hidden">
+      <div class="flex-1 min-h-0 overflow-hidden">
       <!-- 编辑器代码片段 -->
       <template v-if="showConsole">
         <ResizablePanels :direction="effectiveDirection" :min-primary="minPrimary" :min-secondary="minSecondary">
@@ -247,12 +247,13 @@
          首次打开后保持挂载，用 v-show 收起以保留会话；关闭所有标签才彻底卸载 -->
     <Terminal v-if="terminalMounted"
               v-show="showTerminal"
+              class="flex-shrink-0"
               :root-dir="rootDir"
               @collapse="showTerminal = false"
               @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
-    <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal"/>
+    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
