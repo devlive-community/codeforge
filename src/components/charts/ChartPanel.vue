@@ -132,6 +132,8 @@
       <GraphChart v-else-if="chartType === 'graph'" :nodes="graph.nodes" :links="graph.links" :show-label="showLabel"/>
       <PolarBarChart v-else-if="chartType === 'polarBar'" :categories="shaped.categories" :series="shaped.series" :stacked="stacked"/>
       <PictorialBarChart v-else-if="chartType === 'pictorialBar'" :categories="shaped.categories" :series="shaped.series"/>
+      <WordCloudChart v-else-if="chartType === 'wordcloud'" :data="pieData"/>
+      <LiquidFillChart v-else-if="chartType === 'liquidFill'" :value="liquid.value" :name="liquid.name"/>
     </div>
   </div>
 </template>
@@ -162,6 +164,8 @@ import CalendarChart from './CalendarChart.vue'
 import GraphChart from './GraphChart.vue'
 import PolarBarChart from './PolarBarChart.vue'
 import PictorialBarChart from './PictorialBarChart.vue'
+import WordCloudChart from './WordCloudChart.vue'
+import LiquidFillChart from './LiquidFillChart.vue'
 import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, calendarData, candlestickData, graphData, heatmapData, hierarchy, isNumericColumn, parallelData, pivot, sankeyData, scatterData, sortAndLimit, themeRiverData} from './shape'
 
 const props = defineProps<{
@@ -205,7 +209,9 @@ const CHART_META: Record<string, ChartMeta> = {
   effectScatter: {label: '涟漪散点图', layout: 'scatter', needDims: 0, needMetrics: 0, empty: '拖入「X 指标」和「Y 指标」生成涟漪散点图'},
   graph: {label: '关系图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为源、维度2为目标、指标作连线权重', empty: '拖入两个维度(源,目标)和一个指标生成关系图'},
   polarBar: {label: '极坐标柱状图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '维度作角度轴、指标作半径', empty: '拖入「维度」和「指标」生成极坐标柱状图'},
-  pictorialBar: {label: '象形柱图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '维度作类目轴、指标作高度(图形重复填充)', empty: '拖入「维度」和「指标」生成象形柱图'}
+  pictorialBar: {label: '象形柱图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '维度作类目轴、指标作高度(图形重复填充)', empty: '拖入「维度」和「指标」生成象形柱图'},
+  wordcloud: {label: '词云', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '首个维度作词、首个指标作权重', empty: '拖入「维度」和「指标」生成词云'},
+  liquidFill: {label: '水球图', layout: 'dims', needDims: 0, needMetrics: 1, dimsZone: false, usesAgg: true, note: '首个指标聚合值 ÷ 该列最大值作填充比例', empty: '拖入一个指标生成水球图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -394,6 +400,17 @@ const calendar = computed(() => (chartType.value === 'calendar' && ready.value)
 const graph = computed(() => (chartType.value === 'graph' && ready.value)
   ? graphData(table.value, dimensions.value[0], dimensions.value[1], metrics.value[0], agg.value)
   : {nodes: [] as { name: string; value: number }[], links: [] as { source: string; target: string; value: number }[]})
+
+// 水球图：聚合值 ÷ 该列最大值 → 0~1 比例
+const liquid = computed(() => {
+  if (!(chartType.value === 'liquidFill' && ready.value)) {
+    return {value: 0, name: ''}
+  }
+  const m = metrics.value[0]
+  const value = aggregateColumn(table.value, m, agg.value)
+  const colMax = aggregateColumn(table.value, m, 'max')
+  return {value: colMax > 0 ? value / colMax : 0, name: `${AGG_LABELS[agg.value]}(${m})`}
+})
 
 // 仪表盘：首个指标聚合为单值，量程取略大于该值的“整”数
 const niceMax = (v: number): number => {
