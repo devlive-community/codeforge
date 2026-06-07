@@ -434,6 +434,7 @@ pub mod sql;
 pub mod svg;
 pub mod swift;
 pub mod text;
+pub mod tsv;
 pub mod typescript;
 pub mod typescript_browser;
 pub mod typescript_nodejs;
