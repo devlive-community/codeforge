@@ -118,7 +118,7 @@
 
           <template #secondary>
             <!-- 输出 -->
-            <div class="h-full flex flex-col" :class="effectiveDirection === 'vertical' ? 'border-t border-gray-200' : 'border-l border-gray-200'">
+            <div class="h-full min-h-0 flex flex-col overflow-hidden" :class="effectiveDirection === 'vertical' ? 'border-t border-gray-200' : 'border-l border-gray-200'">
               <!-- 仅编辑器模式下提供收起控制台的入口 -->
               <div v-if="layoutMode === 'editor'" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">控制台</h2>
@@ -128,7 +128,7 @@
               </div>
 
               <ConsoleOutput v-if="consoleType === 'console'"
-                             class="flex-1"
+                             class="flex-1 min-h-0"
                              :output="output"
                              :is-running="isRunning"
                              :is-success="isSuccess"
@@ -138,7 +138,7 @@
 
               <!-- Web输出组件 -->
               <WebOutput v-else-if="consoleType === 'web'"
-                         class="flex-1"
+                         class="flex-1 min-h-0"
                          :web-content="output"
                          :is-running="isRunning"
                          :execution-time="lastExecutionTime"
@@ -147,7 +147,7 @@
 
               <!-- JSON 视图 -->
               <JsonView v-else-if="consoleType === 'json'"
-                        class="flex-1"
+                        class="flex-1 min-h-0"
                         :output="output"
                         :is-running="isRunning"
                         :execution-time="lastExecutionTime"
@@ -155,7 +155,7 @@
 
               <!-- Markdown 预览 -->
               <MarkdownView v-else-if="consoleType === 'markdown'"
-                            class="flex-1"
+                            class="flex-1 min-h-0"
                             :output="output"
                             :is-running="isRunning"
                             :execution-time="lastExecutionTime"
@@ -163,7 +163,7 @@
 
               <!-- XML 视图 -->
               <XmlView v-else-if="consoleType === 'xml'"
-                       class="flex-1"
+                       class="flex-1 min-h-0"
                        :output="output"
                        :is-running="isRunning"
                        :execution-time="lastExecutionTime"
@@ -171,7 +171,7 @@
 
               <!-- YAML 视图 -->
               <YamlView v-else-if="consoleType === 'yaml'"
-                        class="flex-1"
+                        class="flex-1 min-h-0"
                         :output="output"
                         :is-running="isRunning"
                         :execution-time="lastExecutionTime"
@@ -179,7 +179,7 @@
 
               <!-- SQL 表格 -->
               <SqlTableView v-else-if="consoleType === 'sqltable'"
-                            class="flex-1"
+                            class="flex-1 min-h-0"
                             :output="output"
                             :is-running="isRunning"
                             :execution-time="lastExecutionTime"
@@ -187,7 +187,7 @@
 
               <!-- 数据表 / 图表（CSV / TSV） -->
               <DataTableView v-else-if="consoleType === 'table'"
-                             class="flex-1"
+                             class="flex-1 min-h-0"
                              :output="output"
                              :is-running="isRunning"
                              :execution-time="lastExecutionTime"

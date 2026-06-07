@@ -1,7 +1,7 @@
 <template>
   <div ref="containerRef" class="overflow-hidden h-full w-full flex" :class="isVertical ? 'flex-col' : 'flex-row'">
     <!-- 主面板（编辑器） -->
-    <div :style="primaryStyle" class="overflow-hidden">
+    <div :style="primaryStyle" class="overflow-hidden min-h-0 min-w-0 flex-shrink-0">
       <slot name="primary"></slot>
     </div>
 
@@ -18,7 +18,7 @@
     </div>
 
     <!-- 副面板（控制台） -->
-    <div class="flex-1 overflow-hidden">
+    <div class="flex-1 min-h-0 min-w-0 overflow-hidden">
       <slot name="secondary"></slot>
     </div>
   </div>
