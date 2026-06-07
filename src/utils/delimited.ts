@@ -20,13 +20,18 @@ export function detectDelimiter(text: string): string {
   return ','
 }
 
-/** 支持引号、转义引号("")、字段内换行的分隔解析，返回二维数组 */
-export function parseDelimited(text: string, delim: string): string[][] {
+/** 支持引号、转义引号("")、字段内换行的分隔解析，返回二维数组；onProgress 报告 0~1 进度 */
+export function parseDelimited(text: string, delim: string, onProgress?: (p: number) => void): string[][] {
   const rows: string[][] = []
   let field = ''
   let row: string[] = []
   let inQuotes = false
-  for (let i = 0; i < text.length; i++) {
+  const len = text.length
+  const step = onProgress ? Math.max(1, Math.floor(len / 100)) : 0
+  for (let i = 0; i < len; i++) {
+    if (step && i % step === 0) {
+      onProgress!(i / len)
+    }
     const c = text[i]
     if (inQuotes) {
       if (c === '"') {
@@ -66,14 +71,14 @@ export function parseDelimited(text: string, delim: string): string[][] {
   return rows
 }
 
-/** 解析为表格：首行作列名，其余对齐为等长行 */
-export function parseTable(text: string): DelimitedTable {
+/** 解析为表格：首行作列名，其余对齐为等长行；onProgress 报告 0~1 进度 */
+export function parseTable(text: string, onProgress?: (p: number) => void): DelimitedTable {
   const trimmed = text.trim()
   if (!trimmed) {
     return {columns: [], rows: []}
   }
   const delim = detectDelimiter(trimmed)
-  const all = parseDelimited(trimmed, delim).filter(r => r.length > 1 || (r.length === 1 && r[0] !== ''))
+  const all = parseDelimited(trimmed, delim, onProgress).filter(r => r.length > 1 || (r.length === 1 && r[0] !== ''))
   if (all.length === 0) {
     return {columns: [], rows: []}
   }

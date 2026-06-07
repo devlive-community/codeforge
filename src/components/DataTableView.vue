@@ -5,7 +5,7 @@
       <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
         <Table2 class="w-3.5 h-3.5 flex-shrink-0"/>
         <span>数据表</span>
-        <span v-if="isRunning || parsing" class="text-blue-500">解析中…</span>
+        <span v-if="isRunning || parsing" class="text-blue-500">解析中{{ parsing && percent > 0 ? ` ${percent}%` : '' }}…</span>
         <span v-else-if="parsed.rows.length" class="text-gray-400">{{ parsed.columns.length }} 列 · {{ parsed.rows.length }} 行</span>
       </div>
       <div class="flex items-center gap-1">
@@ -59,17 +59,24 @@ const viewMode = ref<'table' | 'chart'>('table')
 // shallowRef：大数组不做深度响应，避免开销
 const parsed = shallowRef<DelimitedTable>({columns: [], rows: []})
 const parsing = ref(false)
+const percent = ref(0)
 
 // 解析放到 Web Worker，超大文件不阻塞 UI；创建失败则主线程兜底
 let worker: Worker | null = null
 let reqId = 0
+type WorkerMsg = { id: number; type: 'progress'; percent: number } | { id: number; type: 'done' } & DelimitedTable
 try {
   worker = new Worker(new URL('../workers/delimited.worker.ts', import.meta.url), {type: 'module'})
-  worker.onmessage = (e: MessageEvent<{ id: number } & DelimitedTable>) => {
-    if (e.data.id !== reqId) {
+  worker.onmessage = (e: MessageEvent<WorkerMsg>) => {
+    const msg = e.data
+    if (msg.id !== reqId) {
       return // 丢弃过期结果
     }
-    parsed.value = {columns: e.data.columns, rows: e.data.rows}
+    if (msg.type === 'progress') {
+      percent.value = msg.percent
+      return
+    }
+    parsed.value = {columns: msg.columns, rows: msg.rows}
     parsing.value = false
     if (!parsed.value.columns.length && viewMode.value === 'chart') {
       viewMode.value = 'table'
@@ -82,6 +89,7 @@ catch {
 
 const doParse = (text: string) => {
   reqId++
+  percent.value = 0
   if (!text.trim()) {
     parsed.value = {columns: [], rows: []}
     parsing.value = false
