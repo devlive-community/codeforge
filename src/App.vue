@@ -183,6 +183,14 @@
                             :is-running="isRunning"
                             :execution-time="lastExecutionTime"
                             @clear="clearOutput"/>
+
+              <!-- 数据表 / 图表（CSV / TSV） -->
+              <DataTableView v-else-if="consoleType === 'table'"
+                             class="flex-1"
+                             :output="output"
+                             :is-running="isRunning"
+                             :execution-time="lastExecutionTime"
+                             @clear="clearOutput"/>
             </div>
           </template>
         </ResizablePanels>
@@ -358,6 +366,7 @@ import MarkdownView from "./components/MarkdownView.vue";
 import XmlView from "./components/XmlView.vue";
 import YamlView from "./components/YamlView.vue";
 import SqlTableView from "./components/SqlTableView.vue";
+import DataTableView from "./components/DataTableView.vue";
 import SqlSourceSelect from "./components/SqlSourceSelect.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'

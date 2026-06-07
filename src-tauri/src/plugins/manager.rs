@@ -5,6 +5,7 @@ use crate::plugins::cangjie::CangjiePlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::cpp::CppPlugin;
 use crate::plugins::css::CssPlugin;
+use crate::plugins::csv::CsvPlugin;
 use crate::plugins::custom::CustomPlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::groovy::GroovyPlugin;
@@ -76,6 +77,7 @@ impl PluginManager {
             ("yaml".to_string(), Box::new(YamlPlugin)),
             ("markdown".to_string(), Box::new(MarkdownPlugin)),
             ("text".to_string(), Box::new(TextPlugin)),
+            ("csv".to_string(), Box::new(CsvPlugin)),
             ("sql".to_string(), Box::new(SqlPlugin)),
             ("php".to_string(), Box::new(PHPPlugin)),
             ("r".to_string(), Box::new(RPlugin)),

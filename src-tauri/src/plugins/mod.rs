@@ -404,6 +404,7 @@ pub mod cangjie;
 pub mod clojure;
 pub mod cpp;
 pub mod css;
+pub mod csv;
 pub mod custom;
 pub mod go;
 pub mod groovy;
