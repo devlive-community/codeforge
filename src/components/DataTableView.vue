@@ -5,7 +5,7 @@
       <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
         <Table2 class="w-3.5 h-3.5 flex-shrink-0"/>
         <span>数据表</span>
-        <span v-if="isRunning" class="text-blue-500">解析中…</span>
+        <span v-if="isRunning || parsing" class="text-blue-500">解析中…</span>
         <span v-else-if="parsed.rows.length" class="text-gray-400">{{ parsed.columns.length }} 列 · {{ parsed.rows.length }} 行</span>
       </div>
       <div class="flex items-center gap-1">
@@ -40,12 +40,13 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue'
+import {onBeforeUnmount, ref, shallowRef, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {BarChart3, FileDown, Table2, Trash2} from 'lucide-vue-next'
 import ChartPanel from './charts/ChartPanel.vue'
 import VirtualTable from './VirtualTable.vue'
 import {downloadCsv} from '../utils/csv'
+import {type DelimitedTable, parseTable} from '../utils/delimited'
 
 const props = defineProps<{
   output: string
@@ -55,99 +56,54 @@ const props = defineProps<{
 const emit = defineEmits<{ clear: [] }>()
 
 const viewMode = ref<'table' | 'chart'>('table')
+// shallowRef：大数组不做深度响应，避免开销
+const parsed = shallowRef<DelimitedTable>({columns: [], rows: []})
+const parsing = ref(false)
 
-const stable = ref(props.output)
-const applyOutput = debounce((v: string) => { stable.value = v }, 150)
+// 解析放到 Web Worker，超大文件不阻塞 UI；创建失败则主线程兜底
+let worker: Worker | null = null
+let reqId = 0
+try {
+  worker = new Worker(new URL('../workers/delimited.worker.ts', import.meta.url), {type: 'module'})
+  worker.onmessage = (e: MessageEvent<{ id: number } & DelimitedTable>) => {
+    if (e.data.id !== reqId) {
+      return // 丢弃过期结果
+    }
+    parsed.value = {columns: e.data.columns, rows: e.data.rows}
+    parsing.value = false
+    if (!parsed.value.columns.length && viewMode.value === 'chart') {
+      viewMode.value = 'table'
+    }
+  }
+}
+catch {
+  worker = null
+}
+
+const doParse = (text: string) => {
+  reqId++
+  if (!text.trim()) {
+    parsed.value = {columns: [], rows: []}
+    parsing.value = false
+    return
+  }
+  if (worker) {
+    parsing.value = true
+    worker.postMessage({id: reqId, text})
+  }
+  else {
+    parsed.value = parseTable(text)
+    if (!parsed.value.columns.length && viewMode.value === 'chart') {
+      viewMode.value = 'table'
+    }
+  }
+}
+
+const applyOutput = debounce((v: string) => doParse(v), 150)
 watch(() => props.output, (v) => applyOutput(v))
-
-// 根据首行推断分隔符（制表符优先支持 TSV，否则逗号）
-const detectDelimiter = (text: string): string => {
-  const firstLine = text.split('\n', 1)[0] || ''
-  const tabs = (firstLine.match(/\t/g) || []).length
-  const commas = (firstLine.match(/,/g) || []).length
-  const semis = (firstLine.match(/;/g) || []).length
-  if (tabs > 0 && tabs >= commas) {
-    return '\t'
-  }
-  if (semis > commas) {
-    return ';'
-  }
-  return ','
-}
-
-// 支持引号、转义引号("")、字段内换行的分隔解析
-const parseDelimited = (text: string, delim: string): string[][] => {
-  const rows: string[][] = []
-  let field = ''
-  let row: string[] = []
-  let inQuotes = false
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"'
-          i++
-        }
-        else {
-          inQuotes = false
-        }
-      }
-      else {
-        field += c
-      }
-    }
-    else if (c === '"') {
-      inQuotes = true
-    }
-    else if (c === delim) {
-      row.push(field)
-      field = ''
-    }
-    else if (c === '\n') {
-      row.push(field)
-      rows.push(row)
-      row = []
-      field = ''
-    }
-    else if (c !== '\r') {
-      field += c
-    }
-  }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field)
-    rows.push(row)
-  }
-  return rows
-}
-
-const parsed = computed<{ columns: string[]; rows: string[][] }>(() => {
-  const text = stable.value.trim()
-  if (!text) {
-    return {columns: [], rows: []}
-  }
-  const delim = detectDelimiter(text)
-  const all = parseDelimited(text, delim).filter(r => r.length > 1 || (r.length === 1 && r[0] !== ''))
-  if (all.length === 0) {
-    return {columns: [], rows: []}
-  }
-  const columns = all[0].map((c, i) => c.trim() || `列${i + 1}`)
-  const rows = all.slice(1).map(r => {
-    const out = new Array(columns.length).fill('')
-    for (let i = 0; i < columns.length; i++) {
-      out[i] = r[i] ?? ''
-    }
-    return out
-  })
-  return {columns, rows}
-})
+doParse(props.output)
 
 const exportCsv = () => downloadCsv(parsed.value.columns, parsed.value.rows, `data-${Date.now()}.csv`)
 
-// 数据为空时回退表格视图
-watch(() => parsed.value.columns.length, (n) => {
-  if (!n && viewMode.value === 'chart') {
-    viewMode.value = 'table'
-  }
-})
+onBeforeUnmount(() => worker?.terminate())
 </script>
