@@ -91,7 +91,7 @@
           <label v-if="supportsLabel" class="flex items-center gap-1.5 cursor-pointer"><input v-model="showLabel" type="checkbox" class="accent-blue-500"/>数值标签</label>
           <label v-if="chartType === 'bar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="horizontal" type="checkbox" class="accent-blue-500"/>横向</label>
           <label v-if="isLineLike" class="flex items-center gap-1.5 cursor-pointer"><input v-model="smooth" type="checkbox" class="accent-blue-500"/>平滑</label>
-          <label v-if="(chartType === 'bar' || isLineLike) && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="stacked" type="checkbox" class="accent-blue-500"/>堆叠</label>
+          <label v-if="(chartType === 'bar' || isLineLike || chartType === 'polarBar') && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="stacked" type="checkbox" class="accent-blue-500"/>堆叠</label>
           <label v-if="chartType === 'pie'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="ring" type="checkbox" class="accent-blue-500"/>环形</label>
           <label v-if="chartType === 'radar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="radarFill" type="checkbox" class="accent-blue-500"/>填充</label>
         </div>
@@ -130,6 +130,7 @@
       <ThemeRiverChart v-else-if="chartType === 'themeriver'" :data="river.data" :categories="river.categories"/>
       <CalendarChart v-else-if="chartType === 'calendar'" :data="calendar.data" :range="calendar.range" :max="calendar.max"/>
       <GraphChart v-else-if="chartType === 'graph'" :nodes="graph.nodes" :links="graph.links" :show-label="showLabel"/>
+      <PolarBarChart v-else-if="chartType === 'polarBar'" :categories="shaped.categories" :series="shaped.series" :stacked="stacked"/>
     </div>
   </div>
 </template>
@@ -158,6 +159,7 @@ import ParallelChart from './ParallelChart.vue'
 import ThemeRiverChart from './ThemeRiverChart.vue'
 import CalendarChart from './CalendarChart.vue'
 import GraphChart from './GraphChart.vue'
+import PolarBarChart from './PolarBarChart.vue'
 import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, calendarData, candlestickData, graphData, heatmapData, hierarchy, isNumericColumn, parallelData, pivot, sankeyData, scatterData, sortAndLimit, themeRiverData} from './shape'
 
 const props = defineProps<{
@@ -199,7 +201,8 @@ const CHART_META: Record<string, ChartMeta> = {
   calendar: {label: '日历图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作日期、首个指标作值', empty: '拖入一个日期维度和一个指标生成日历图'},
   rose: {label: '玫瑰图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作扇区、首个指标作半径', empty: '拖入「维度」和「指标」生成玫瑰图'},
   effectScatter: {label: '涟漪散点图', layout: 'scatter', needDims: 0, needMetrics: 0, empty: '拖入「X 指标」和「Y 指标」生成涟漪散点图'},
-  graph: {label: '关系图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为源、维度2为目标、指标作连线权重', empty: '拖入两个维度(源,目标)和一个指标生成关系图'}
+  graph: {label: '关系图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为源、维度2为目标、指标作连线权重', empty: '拖入两个维度(源,目标)和一个指标生成关系图'},
+  polarBar: {label: '极坐标柱状图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '维度作角度轴、指标作半径', empty: '拖入「维度」和「指标」生成极坐标柱状图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
