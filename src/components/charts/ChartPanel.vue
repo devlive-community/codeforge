@@ -10,12 +10,13 @@
 
       <!-- 可用字段 -->
       <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div class="text-[11px] text-gray-400 mb-1.5">字段（拖拽 / 双击）</div>
+        <div class="text-[11px] text-gray-400 mb-1.5">字段（单击添加 / 可拖拽）</div>
         <div class="flex flex-wrap gap-1.5">
           <div v-for="f in fields" :key="f.name" draggable="true"
-               class="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs cursor-grab active:cursor-grabbing select-none bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+               class="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs cursor-pointer active:cursor-grabbing select-none bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+               :title="f.numeric ? '单击加为指标，或拖拽' : '单击加为维度，或拖拽'"
                @dragstart="onDragStart($event, f.name)"
-               @dblclick="quickAdd(f)">
+               @click="quickAdd(f)">
             <component :is="f.numeric ? Hash : Type" class="w-3 h-3" :class="f.numeric ? 'text-emerald-500' : 'text-amber-500'"/>
             {{ f.name }}
           </div>
@@ -99,7 +100,7 @@
     </div>
 
     <!-- 图表区 -->
-    <div ref="chartHost" class="relative flex-1 min-w-0 min-h-0 p-3">
+    <div ref="chartHost" class="relative flex-1 min-w-0 min-h-0 overflow-hidden p-3">
       <div v-if="ready" class="absolute top-2 right-2 z-20">
         <button class="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white/70 dark:bg-gray-800/70 hover:bg-gray-100 dark:hover:bg-gray-700 backdrop-blur cursor-pointer"
                 title="导出 / 复制" @click="menuOpen = !menuOpen">
