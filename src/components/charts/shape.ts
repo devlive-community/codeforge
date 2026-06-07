@@ -402,6 +402,53 @@ export function heatmapData(
   return {xCats, yCats, cells, min, max}
 }
 
+export interface ThemeRiverData {
+  data: [string, number, string][] // [time, value, category]
+  categories: string[]
+}
+
+/** 主题河流：时间维度 × 类别维度，值为指标聚合。 */
+export function themeRiverData(data: TableData, timeDim: string, catDim: string, metric: string, agg: AggKind): ThemeRiverData {
+  const ti = data.columns.indexOf(timeDim)
+  const ci = data.columns.indexOf(catDim)
+  const mi = data.columns.indexOf(metric)
+  if (ti < 0 || ci < 0 || mi < 0) {
+    return {data: [], categories: []}
+  }
+  const buckets = new Map<string, { t: string; c: string; vals: number[] }>()
+  const cats: string[] = []
+  const catSeen = new Set<string>()
+  for (const row of data.rows) {
+    const t = norm(row[ti])
+    const c = norm(row[ci])
+    if (!catSeen.has(c)) {
+      catSeen.add(c)
+      cats.push(c)
+    }
+    const key = `${t}|${c}`
+    if (!buckets.has(key)) {
+      buckets.set(key, {t, c, vals: []})
+    }
+    const v = row[mi]
+    if (agg === 'count') {
+      if (v !== null && v !== undefined && v !== '') {
+        buckets.get(key)!.vals.push(1)
+      }
+    }
+    else {
+      const num = typeof v === 'number' ? v : Number(v)
+      if (!isNaN(num)) {
+        buckets.get(key)!.vals.push(num)
+      }
+    }
+  }
+  const out: [string, number, string][] = []
+  for (const {t, c, vals} of buckets.values()) {
+    out.push([t, vals.length > 0 ? aggregate(vals, agg) : 0, c])
+  }
+  return {data: out, categories: cats}
+}
+
 export interface ParallelData {
   axes: string[]
   series: { name: string; data: number[][] }[]
