@@ -11,26 +11,11 @@
       <!-- 非查询语句的消息 -->
       <div v-for="(m, mi) in result.messages" :key="'m' + mi" class="mb-1 text-green-600 dark:text-green-400">✓ {{ m }}</div>
 
-      <!-- 结果集表格 -->
+      <!-- 结果集表格（虚拟滚动，限高以适配多结果集堆叠） -->
       <div v-for="(rs, ri) in result.result_sets" :key="ri" class="mb-4">
         <div v-if="result.result_sets.length > 1" class="text-[11px] text-gray-400 mb-1">结果集 {{ ri + 1 }} · {{ rs.rows.length }} 行</div>
-        <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded">
-          <table class="w-full border-collapse">
-            <thead>
-              <tr class="bg-gray-50 dark:bg-gray-800">
-                <th v-for="(c, ci) in rs.columns" :key="ci" class="text-left font-semibold px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ c }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(row, i) in rs.rows" :key="i" class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                <td v-for="(_c, ci) in rs.columns" :key="ci" class="px-3 py-1 border-b border-gray-100 dark:border-gray-800 font-mono whitespace-nowrap"
-                    :class="row[ci] === null ? 'text-gray-400 italic' : 'text-gray-700 dark:text-gray-300'">{{ fmt(row[ci]) }}</td>
-              </tr>
-              <tr v-if="rs.rows.length === 0">
-                <td :colspan="rs.columns.length" class="px-3 py-2 text-center text-gray-400">（0 行）</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
+          <VirtualTable :columns="rs.columns" :rows="rs.rows" :show-index="false" :max-height="420"/>
         </div>
       </div>
 
@@ -44,6 +29,7 @@
 
 <script setup lang="ts">
 import {computed} from 'vue'
+import VirtualTable from './VirtualTable.vue'
 
 interface ResultSet { columns: string[]; rows: any[][] }
 interface SqlResult { result_sets: ResultSet[]; messages: string[]; error: string | null; elapsed_ms: number }
@@ -61,10 +47,4 @@ const result = computed<SqlResult | null>(() => {
     return null
   }
 })
-
-const fmt = (v: any) => {
-  if (v === null || v === undefined) return 'NULL'
-  if (typeof v === 'object') return JSON.stringify(v)
-  return String(v)
-}
 </script>

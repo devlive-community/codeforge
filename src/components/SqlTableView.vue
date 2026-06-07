@@ -30,7 +30,7 @@
     </div>
 
     <!-- 图表视图 -->
-    <div v-if="viewMode === 'chart' && firstResultSet" class="flex-1 min-h-0">
+    <div v-if="viewMode === 'chart' && firstResultSet" class="flex-1 min-h-0 overflow-hidden">
       <ChartPanel :columns="firstResultSet.columns" :rows="firstResultSet.rows"/>
     </div>
     <!-- 表格视图 -->

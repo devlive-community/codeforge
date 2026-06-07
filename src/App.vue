@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <div class="flex-1 overflow-hidden flex">
+    <div class="flex-1 min-h-0 overflow-hidden flex">
       <!-- 左侧文件树侧栏 -->
       <template v-if="sidebarVisible">
         <Sidebar :root-dir="rootDir"
@@ -67,7 +67,7 @@
              @mousedown="startSidebarResize"></div>
       </template>
 
-      <div class="flex-1 overflow-hidden">
+      <div class="flex-1 min-h-0 overflow-hidden">
       <!-- 编辑器代码片段 -->
       <template v-if="showConsole">
         <ResizablePanels :direction="effectiveDirection" :min-primary="minPrimary" :min-secondary="minSecondary">
@@ -90,6 +90,7 @@
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
                   </span>
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+                  <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -117,7 +118,7 @@
 
           <template #secondary>
             <!-- 输出 -->
-            <div class="h-full flex flex-col" :class="effectiveDirection === 'vertical' ? 'border-t border-gray-200' : 'border-l border-gray-200'">
+            <div class="h-full min-h-0 flex flex-col overflow-hidden" :class="effectiveDirection === 'vertical' ? 'border-t border-gray-200' : 'border-l border-gray-200'">
               <!-- 仅编辑器模式下提供收起控制台的入口 -->
               <div v-if="layoutMode === 'editor'" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">控制台</h2>
@@ -127,7 +128,7 @@
               </div>
 
               <ConsoleOutput v-if="consoleType === 'console'"
-                             class="flex-1"
+                             class="flex-1 min-h-0"
                              :output="output"
                              :is-running="isRunning"
                              :is-success="isSuccess"
@@ -137,7 +138,7 @@
 
               <!-- Web输出组件 -->
               <WebOutput v-else-if="consoleType === 'web'"
-                         class="flex-1"
+                         class="flex-1 min-h-0"
                          :web-content="output"
                          :is-running="isRunning"
                          :execution-time="lastExecutionTime"
@@ -146,7 +147,7 @@
 
               <!-- JSON 视图 -->
               <JsonView v-else-if="consoleType === 'json'"
-                        class="flex-1"
+                        class="flex-1 min-h-0"
                         :output="output"
                         :is-running="isRunning"
                         :execution-time="lastExecutionTime"
@@ -154,7 +155,7 @@
 
               <!-- Markdown 预览 -->
               <MarkdownView v-else-if="consoleType === 'markdown'"
-                            class="flex-1"
+                            class="flex-1 min-h-0"
                             :output="output"
                             :is-running="isRunning"
                             :execution-time="lastExecutionTime"
@@ -162,7 +163,7 @@
 
               <!-- XML 视图 -->
               <XmlView v-else-if="consoleType === 'xml'"
-                       class="flex-1"
+                       class="flex-1 min-h-0"
                        :output="output"
                        :is-running="isRunning"
                        :execution-time="lastExecutionTime"
@@ -170,7 +171,7 @@
 
               <!-- YAML 视图 -->
               <YamlView v-else-if="consoleType === 'yaml'"
-                        class="flex-1"
+                        class="flex-1 min-h-0"
                         :output="output"
                         :is-running="isRunning"
                         :execution-time="lastExecutionTime"
@@ -178,7 +179,7 @@
 
               <!-- SQL 表格 -->
               <SqlTableView v-else-if="consoleType === 'sqltable'"
-                            class="flex-1"
+                            class="flex-1 min-h-0"
                             :output="output"
                             :is-running="isRunning"
                             :execution-time="lastExecutionTime"
@@ -186,7 +187,7 @@
 
               <!-- 数据表 / 图表（CSV / TSV） -->
               <DataTableView v-else-if="consoleType === 'table'"
-                             class="flex-1"
+                             class="flex-1 min-h-0"
                              :output="output"
                              :is-running="isRunning"
                              :execution-time="lastExecutionTime"
@@ -215,6 +216,7 @@
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
             </span>
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+            <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -245,12 +247,13 @@
          首次打开后保持挂载，用 v-show 收起以保留会话；关闭所有标签才彻底卸载 -->
     <Terminal v-if="terminalMounted"
               v-show="showTerminal"
+              class="flex-shrink-0"
               :root-dir="rootDir"
               @collapse="showTerminal = false"
               @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
-    <StatusBar :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal"/>
+    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
@@ -368,6 +371,7 @@ import YamlView from "./components/YamlView.vue";
 import SqlTableView from "./components/SqlTableView.vue";
 import DataTableView from "./components/DataTableView.vue";
 import SqlSourceSelect from "./components/SqlSourceSelect.vue";
+import SchemaBrowser from "./components/SchemaBrowser.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
@@ -1339,6 +1343,29 @@ const runSql = async (sqlOverride?: string) => {
   finally {
     isRunning.value = false
   }
+}
+
+// 表结构浏览器：把预览 SQL 写入编辑器并运行（编辑器与运行保持一致）
+const previewTable = (sql: string) => {
+  const view = editorView.value
+  if (view) {
+    view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: sql}})
+  }
+  runSql(sql)
+}
+
+// 表结构浏览器：在光标处插入表名/列名
+const insertAtCursor = (text: string) => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const {from, to} = view.state.selection.main
+  view.dispatch({
+    changes: {from, to, insert: text},
+    selection: {anchor: from + text.length}
+  })
+  view.focus()
 }
 
 const runSelection = () => {

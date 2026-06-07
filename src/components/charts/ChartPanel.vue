@@ -1,7 +1,7 @@
 <template>
-  <div class="flex h-full min-h-0">
+  <div class="flex h-full min-h-0 overflow-hidden">
     <!-- 配置侧栏 -->
-    <div class="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 bg-gray-50 dark:bg-gray-800/40 overflow-auto">
+    <div class="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 h-full bg-gray-50 dark:bg-gray-800/40 overflow-y-auto">
       <!-- 图表类型 -->
       <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div class="text-[11px] text-gray-400 mb-1">图表类型</div>
@@ -10,12 +10,14 @@
 
       <!-- 可用字段 -->
       <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div class="text-[11px] text-gray-400 mb-1.5">字段（拖拽 / 双击）</div>
+        <div class="text-[11px] text-gray-400 mb-1.5">字段（单击选择 / 双击快速添加 / 可拖拽）</div>
         <div class="flex flex-wrap gap-1.5">
           <div v-for="f in fields" :key="f.name" draggable="true"
-               class="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs cursor-grab active:cursor-grabbing select-none bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+               class="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs cursor-pointer active:cursor-grabbing select-none bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+               title="单击选择位置 / 双击快速添加 / 拖拽到下方"
                @dragstart="onDragStart($event, f.name)"
-               @dblclick="quickAdd(f)">
+               @click="openFieldMenu(f, $event)"
+               @dblclick="dblAdd(f)">
             <component :is="f.numeric ? Hash : Type" class="w-3 h-3" :class="f.numeric ? 'text-emerald-500' : 'text-amber-500'"/>
             {{ f.name }}
           </div>
@@ -99,7 +101,7 @@
     </div>
 
     <!-- 图表区 -->
-    <div ref="chartHost" class="relative flex-1 min-w-0 min-h-0 p-3">
+    <div ref="chartHost" class="relative flex-1 min-w-0 min-h-0 overflow-hidden p-3">
       <div v-if="ready" class="absolute top-2 right-2 z-20">
         <button class="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white/70 dark:bg-gray-800/70 hover:bg-gray-100 dark:hover:bg-gray-700 backdrop-blur cursor-pointer"
                 title="导出 / 复制" @click="menuOpen = !menuOpen">
@@ -147,6 +149,26 @@
       <MapChart v-else-if="chartType === 'mapChina'" map-type="china" :data="pieData" :max="mapMax"/>
       <MapChart v-else-if="chartType === 'mapWorld'" map-type="world" :data="pieData" :max="mapMax"/>
     </div>
+
+    <!-- 单击字段：选择添加到维度/指标（或散点的 X/Y/分组） -->
+    <Teleport to="body">
+      <template v-if="fieldMenu">
+        <div class="fixed inset-0 z-[60]" @click="fieldMenu = null"/>
+        <div class="fixed z-[61] min-w-28 py-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg text-xs"
+             :style="{left: fieldMenu.left + 'px', top: fieldMenu.top + 'px'}">
+          <div class="px-3 py-1 text-[11px] text-gray-400 border-b border-gray-200 dark:border-gray-700 truncate">{{ fieldMenu.name }}</div>
+          <template v-if="meta.layout === 'scatter'">
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('x')">设为 X 指标</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('y')">设为 Y 指标</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('group')">设为分组</button>
+          </template>
+          <template v-else>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-blue-600 dark:text-blue-300" @click="pickTarget('dim')">加为维度</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-emerald-600 dark:text-emerald-300" @click="pickTarget('metric')">加为指标</button>
+          </template>
+        </div>
+      </template>
+    </Teleport>
   </div>
 </template>
 
@@ -464,7 +486,7 @@ const onDropScatter = (zone: 'x' | 'y' | 'group') => {
   dragField = ''
 }
 
-// 双击快速添加
+// 双击快速添加：数值列→指标，文本列→维度（散点：依次 X/Y/分组）
 const quickAdd = (f: { name: string; numeric: boolean }) => {
   if (meta.value.layout === 'scatter') {
     if (f.numeric) {
@@ -488,6 +510,54 @@ const quickAdd = (f: { name: string; numeric: boolean }) => {
   else if (!dimensions.value.includes(f.name)) {
     dimensions.value = [...dimensions.value, f.name]
   }
+}
+
+// 单击字段：在其右侧弹出菜单（延迟以便与双击区分）；双击则快速添加
+const fieldMenu = ref<{ name: string; left: number; top: number } | null>(null)
+let clickTimer: ReturnType<typeof setTimeout> | null = null
+const openFieldMenu = (f: { name: string }, e: MouseEvent) => {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const left = Math.min(r.right + 6, window.innerWidth - 140)
+  if (clickTimer) {
+    clearTimeout(clickTimer)
+  }
+  clickTimer = setTimeout(() => {
+    fieldMenu.value = {name: f.name, left, top: r.top}
+    clickTimer = null
+  }, 220)
+}
+const dblAdd = (f: { name: string; numeric: boolean }) => {
+  if (clickTimer) {
+    clearTimeout(clickTimer)
+    clickTimer = null
+  }
+  quickAdd(f)
+}
+const pickTarget = (target: 'dim' | 'metric' | 'x' | 'y' | 'group') => {
+  const name = fieldMenu.value?.name
+  if (!name) {
+    return
+  }
+  if (target === 'dim') {
+    if (!dimensions.value.includes(name)) {
+      dimensions.value = [...dimensions.value, name]
+    }
+  }
+  else if (target === 'metric') {
+    if (!metrics.value.includes(name)) {
+      metrics.value = [...metrics.value, name]
+    }
+  }
+  else if (target === 'x') {
+    xField.value = name
+  }
+  else if (target === 'y') {
+    yField.value = name
+  }
+  else if (target === 'group') {
+    groupField.value = name
+  }
+  fieldMenu.value = null
 }
 
 const removeDim = (d: string) => {
