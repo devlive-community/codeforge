@@ -100,10 +100,17 @@
 
     <!-- 图表区 -->
     <div ref="chartHost" class="relative flex-1 min-w-0 min-h-0 p-3">
-      <button v-if="ready" class="absolute top-2 right-2 z-10 p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white/70 dark:bg-gray-800/70 hover:bg-gray-100 dark:hover:bg-gray-700 backdrop-blur cursor-pointer"
-              title="导出 PNG" @click="exportPng">
-        <Download class="w-3.5 h-3.5"/>
-      </button>
+      <div v-if="ready" class="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur p-0.5">
+        <button class="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="导出 PNG" @click="exportPng">
+          <Download class="w-3.5 h-3.5"/>
+        </button>
+        <button class="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="复制图片到剪贴板" @click="copyImage">
+          <Copy class="w-3.5 h-3.5"/>
+        </button>
+        <button class="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="导出数据为 CSV" @click="exportCsv">
+          <FileDown class="w-3.5 h-3.5"/>
+        </button>
+      </div>
       <div v-if="!ready" class="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
         <BarChart3 class="w-8 h-8"/>
         <p class="text-xs">{{ meta.empty }}</p>
@@ -144,9 +151,10 @@
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import * as echarts from 'echarts/core'
-import {BarChart3, Download, Hash, Type, X} from 'lucide-vue-next'
+import {BarChart3, Copy, Download, FileDown, Hash, Type, X} from 'lucide-vue-next'
 import {useTheme} from '../../composables/useTheme'
 import {kvGetJSON, kvSetJSON} from '../../composables/useKvStore'
+import {useToast} from '../../plugins/toast'
 import Select from '../../ui/Select.vue'
 import BarChart from './BarChart.vue'
 import LineChart from './LineChart.vue'
@@ -322,20 +330,66 @@ watch([chartType, agg, sortOrder, topN, dimensions, metrics, xField, yField, gro
   horizontal, stacked, smooth, ring, radarFill, showLabel], persist, {deep: true})
 
 const {isDark} = useTheme()
+const toast = useToast()
 const chartHost = ref<HTMLElement>()
 
-// 导出当前图表为 PNG（直接从激活的 echarts 实例取图）
-const exportPng = () => {
+// 取当前激活的 echarts 实例
+const activeChart = (): echarts.ECharts | null => {
   const dom = chartHost.value?.querySelector('div[_echarts_instance_]') as HTMLElement | null
-  const inst = dom ? echarts.getInstanceByDom(dom) : null
-  if (!inst) {
+  return (dom ? echarts.getInstanceByDom(dom) : null) ?? null
+}
+const chartPng = (): string | null => {
+  const inst = activeChart()
+  return inst ? inst.getDataURL({type: 'png', pixelRatio: 2, backgroundColor: isDark.value ? '#111827' : '#ffffff'}) : null
+}
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// 导出当前图表为 PNG
+const exportPng = () => {
+  const url = chartPng()
+  if (!url) {
     return
   }
-  const url = inst.getDataURL({type: 'png', pixelRatio: 2, backgroundColor: isDark.value ? '#111827' : '#ffffff'})
   const a = document.createElement('a')
   a.href = url
   a.download = `chart-${chartType.value}-${Date.now()}.png`
   a.click()
+}
+
+// 复制图片到剪贴板
+const copyImage = async () => {
+  const url = chartPng()
+  if (!url) {
+    return
+  }
+  try {
+    const blob = await (await fetch(url)).blob()
+    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})])
+    toast.success('图片已复制到剪贴板')
+  }
+  catch {
+    toast.error('复制失败，当前环境可能不支持')
+  }
+}
+
+// 导出图表底层数据为 CSV（带 BOM 便于 Excel 识别中文）
+const exportCsv = () => {
+  const esc = (v: any) => {
+    const s = v === null || v === undefined ? '' : String(v)
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const lines = [props.columns.map(esc).join(',')]
+  for (const row of props.rows) {
+    lines.push(props.columns.map((_c, i) => esc(row[i])).join(','))
+  }
+  downloadBlob(new Blob(['﻿' + lines.join('\n')], {type: 'text/csv;charset=utf-8'}), `data-${Date.now()}.csv`)
 }
 
 const fields = computed(() => props.columns.map((name, i) => ({name, numeric: isNumericColumn(props.rows, i)})))
