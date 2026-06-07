@@ -113,6 +113,7 @@
       <LineChart v-else-if="isLineLike" :categories="shaped.categories" :series="shaped.series"
                  :area="chartType === 'area'" :smooth="smooth" :stacked="stacked" :show-label="showLabel"/>
       <PieChart v-else-if="chartType === 'pie'" :data="pieData" :ring="ring" :show-label="showLabel"/>
+      <PieChart v-else-if="chartType === 'rose'" :data="pieData" rose :show-label="showLabel"/>
       <ScatterChart v-else-if="chartType === 'scatter'" :series="scatterSeries" :x-name="xField" :y-name="yField"/>
       <RadarChart v-else-if="chartType === 'radar'" :categories="shaped.categories" :series="shaped.series" :area="radarFill" :show-label="showLabel"/>
       <FunnelChart v-else-if="chartType === 'funnel'" :data="pieData" :show-label="showLabel"/>
@@ -192,7 +193,8 @@ const CHART_META: Record<string, ChartMeta> = {
   candlestick: {label: 'K 线图', layout: 'dims', needDims: 1, needMetrics: 4, dimsZone: true, usesAgg: false, note: '维度作类目轴、指标依次为 开/收/低/高', empty: '拖入一个维度和「开/收/低/高」四个指标'},
   parallel: {label: '平行坐标', layout: 'dims', needDims: 0, needMetrics: 2, dimsZone: true, usesAgg: false, note: '多个指标作平行轴、首个维度可选分组', empty: '拖入≥2 个指标生成平行坐标'},
   themeriver: {label: '主题河流', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为时间、维度2为类别、指标作值', empty: '拖入两个维度(时间,类别)和一个指标生成主题河流'},
-  calendar: {label: '日历图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作日期、首个指标作值', empty: '拖入一个日期维度和一个指标生成日历图'}
+  calendar: {label: '日历图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作日期、首个指标作值', empty: '拖入一个日期维度和一个指标生成日历图'},
+  rose: {label: '玫瑰图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作扇区、首个指标作半径', empty: '拖入「维度」和「指标」生成玫瑰图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -200,7 +202,7 @@ const chartType = ref('bar')
 const meta = computed(() => CHART_META[chartType.value])
 const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
 
-const supportsLabel = computed(() => ['bar', 'line', 'area', 'pie', 'funnel', 'radar', 'heatmap', 'sunburst', 'treemap', 'tree'].includes(chartType.value))
+const supportsLabel = computed(() => ['bar', 'line', 'area', 'pie', 'rose', 'funnel', 'radar', 'heatmap', 'sunburst', 'treemap', 'tree'].includes(chartType.value))
 const hasOptions = computed(() => meta.value.sortable || supportsLabel.value
   || ['bar', 'line', 'area', 'pie', 'radar'].includes(chartType.value))
 

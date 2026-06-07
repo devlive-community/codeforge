@@ -15,6 +15,7 @@ echarts.use([EPie, LegendComponent, TooltipComponent, CanvasRenderer])
 const props = defineProps<{
   data: { name: string; value: number }[]
   ring?: boolean
+  rose?: boolean
   showLabel?: boolean
 }>()
 
@@ -30,10 +31,11 @@ const buildOption = (): echarts.EChartsCoreOption => {
     legend: {type: 'scroll', orient: 'vertical', right: 0, top: 'middle', textStyle: {color: text}},
     series: [{
       type: 'pie',
-      radius: props.ring ? ['45%', '70%'] : '70%',
+      roseType: props.rose ? 'radius' : undefined,
+      radius: props.rose ? ['12%', '72%'] : props.ring ? ['45%', '70%'] : '70%',
       center: ['42%', '52%'],
       avoidLabelOverlap: true,
-      itemStyle: {borderColor: border, borderWidth: 1},
+      itemStyle: {borderColor: border, borderWidth: 1, borderRadius: props.rose ? 4 : 0},
       label: {show: props.showLabel, color: text, formatter: '{b}\n{d}%', fontSize: 10},
       labelLine: {show: props.showLabel},
       data: props.data
@@ -54,7 +56,7 @@ onMounted(() => {
   ro.observe(el.value)
 })
 
-watch(() => [props.data, props.ring, props.showLabel, isDark.value], render, {deep: true})
+watch(() => [props.data, props.ring, props.rose, props.showLabel, isDark.value], render, {deep: true})
 
 onBeforeUnmount(() => {
   ro?.disconnect()
