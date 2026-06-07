@@ -10,13 +10,13 @@
 
       <!-- 可用字段 -->
       <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div class="text-[11px] text-gray-400 mb-1.5">字段（单击添加 / 可拖拽）</div>
+        <div class="text-[11px] text-gray-400 mb-1.5">字段（单击选择 / 可拖拽）</div>
         <div class="flex flex-wrap gap-1.5">
           <div v-for="f in fields" :key="f.name" draggable="true"
                class="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs cursor-pointer active:cursor-grabbing select-none bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-               :title="f.numeric ? '单击加为指标，或拖拽' : '单击加为维度，或拖拽'"
+               title="单击选择添加位置，或拖拽到下方"
                @dragstart="onDragStart($event, f.name)"
-               @click="quickAdd(f)">
+               @click="openFieldMenu(f, $event)">
             <component :is="f.numeric ? Hash : Type" class="w-3 h-3" :class="f.numeric ? 'text-emerald-500' : 'text-amber-500'"/>
             {{ f.name }}
           </div>
@@ -148,6 +148,26 @@
       <MapChart v-else-if="chartType === 'mapChina'" map-type="china" :data="pieData" :max="mapMax"/>
       <MapChart v-else-if="chartType === 'mapWorld'" map-type="world" :data="pieData" :max="mapMax"/>
     </div>
+
+    <!-- 单击字段：选择添加到维度/指标（或散点的 X/Y/分组） -->
+    <Teleport to="body">
+      <template v-if="fieldMenu">
+        <div class="fixed inset-0 z-[60]" @click="fieldMenu = null"/>
+        <div class="fixed z-[61] min-w-28 py-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg text-xs"
+             :style="{left: fieldMenu.left + 'px', top: fieldMenu.top + 'px'}">
+          <div class="px-3 py-1 text-[11px] text-gray-400 border-b border-gray-200 dark:border-gray-700 truncate">{{ fieldMenu.name }}</div>
+          <template v-if="meta.layout === 'scatter'">
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('x')">设为 X 指标</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('y')">设为 Y 指标</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('group')">设为分组</button>
+          </template>
+          <template v-else>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-blue-600 dark:text-blue-300" @click="pickTarget('dim')">加为维度</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-emerald-600 dark:text-emerald-300" @click="pickTarget('metric')">加为指标</button>
+          </template>
+        </div>
+      </template>
+    </Teleport>
   </div>
 </template>
 
@@ -465,30 +485,38 @@ const onDropScatter = (zone: 'x' | 'y' | 'group') => {
   dragField = ''
 }
 
-// 双击快速添加
-const quickAdd = (f: { name: string; numeric: boolean }) => {
-  if (meta.value.layout === 'scatter') {
-    if (f.numeric) {
-      if (!xField.value) {
-        xField.value = f.name
-      }
-      else if (!yField.value) {
-        yField.value = f.name
-      }
-    }
-    else if (!groupField.value) {
-      groupField.value = f.name
-    }
+// 单击字段：在其右侧弹出菜单，选择加到维度/指标（或散点 X/Y/分组）
+const fieldMenu = ref<{ name: string; left: number; top: number } | null>(null)
+const openFieldMenu = (f: { name: string }, e: MouseEvent) => {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const left = Math.min(r.right + 6, window.innerWidth - 140)
+  fieldMenu.value = {name: f.name, left, top: r.top}
+}
+const pickTarget = (target: 'dim' | 'metric' | 'x' | 'y' | 'group') => {
+  const name = fieldMenu.value?.name
+  if (!name) {
     return
   }
-  if (f.numeric) {
-    if (!metrics.value.includes(f.name)) {
-      metrics.value = [...metrics.value, f.name]
+  if (target === 'dim') {
+    if (!dimensions.value.includes(name)) {
+      dimensions.value = [...dimensions.value, name]
     }
   }
-  else if (!dimensions.value.includes(f.name)) {
-    dimensions.value = [...dimensions.value, f.name]
+  else if (target === 'metric') {
+    if (!metrics.value.includes(name)) {
+      metrics.value = [...metrics.value, name]
+    }
   }
+  else if (target === 'x') {
+    xField.value = name
+  }
+  else if (target === 'y') {
+    yField.value = name
+  }
+  else if (target === 'group') {
+    groupField.value = name
+  }
+  fieldMenu.value = null
 }
 
 const removeDim = (d: string) => {
