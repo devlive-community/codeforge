@@ -1,9 +1,10 @@
 <template>
   <div ref="scroller" class="overflow-auto" :class="maxHeight ? '' : 'h-full'" :style="maxHeight ? {maxHeight: maxHeight + 'px'} : undefined" @scroll="onScroll">
-    <table class="border-collapse text-xs" :style="{width: totalWidth + 'px', tableLayout: 'fixed'}">
+    <table class="border-collapse text-xs" :style="{width: '100%', minWidth: totalWidth + 'px', tableLayout: 'fixed'}">
       <colgroup>
         <col v-if="showIndex" :style="{width: indexW + 'px'}"/>
         <col v-for="(_c, ci) in columns" :key="ci" :style="{width: widths[ci] + 'px'}"/>
+        <col/>
       </colgroup>
       <thead class="sticky top-0 z-10">
         <tr class="bg-gray-50 dark:bg-gray-800">
@@ -14,18 +15,20 @@
             {{ c }}<span v-if="sortCol === ci" class="text-blue-500">{{ sortDir === 1 ? ' ▲' : ' ▼' }}</span>
             <span class="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-blue-400/60" @click.stop @mousedown.stop.prevent="startResize(ci, $event)"/>
           </th>
+          <th class="border-b border-gray-200 dark:border-gray-700"/>
         </tr>
       </thead>
       <tbody>
-        <tr v-if="topPad > 0" :style="{height: topPad + 'px'}"/>
+        <tr v-if="topPad > 0" :style="{height: topPad + 'px'}"><td :colspan="colCount"/></tr>
         <tr v-for="(row, i) in visibleRows" :key="start + i" class="hover:bg-gray-50 dark:hover:bg-gray-800/50" :style="{height: rowHeight + 'px'}">
           <td v-if="showIndex" class="px-2 border-b border-gray-100 dark:border-gray-800 text-gray-400 whitespace-nowrap">{{ start + i + 1 }}</td>
           <td v-for="(_c, ci) in columns" :key="ci" class="px-3 border-b border-gray-100 dark:border-gray-800 font-mono overflow-hidden whitespace-nowrap text-ellipsis"
               :class="row[ci] === null || row[ci] === undefined ? 'text-gray-400 italic' : 'text-gray-700 dark:text-gray-300'" :title="fmt(row[ci])">{{ fmt(row[ci]) }}</td>
+          <td class="border-b border-gray-100 dark:border-gray-800"/>
         </tr>
-        <tr v-if="bottomPad > 0" :style="{height: bottomPad + 'px'}"/>
+        <tr v-if="bottomPad > 0" :style="{height: bottomPad + 'px'}"><td :colspan="colCount"/></tr>
         <tr v-if="rows.length === 0">
-          <td :colspan="columns.length + (showIndex ? 1 : 0)" class="px-3 py-2 text-center text-gray-400">（0 行）</td>
+          <td :colspan="colCount" class="px-3 py-2 text-center text-gray-400">（0 行）</td>
         </tr>
       </tbody>
     </table>
@@ -81,6 +84,8 @@ watch(() => props.rows.length, () => {
   }
 })
 const totalWidth = computed(() => (props.showIndex ? indexW : 0) + widths.value.reduce((a, b) => a + b, 0))
+// 列数：行号列 + 数据列 + 末尾填充列
+const colCount = computed(() => props.columns.length + (props.showIndex ? 1 : 0) + 1)
 
 let resizing = -1
 let startX = 0
