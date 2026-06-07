@@ -210,7 +210,7 @@ const toggle = () => {
     if (r) {
       const top = r.bottom + 4
       const left = Math.min(r.left, window.innerWidth - 288 - 8)
-      pos.value = {left: Math.max(8, left), top, maxH: Math.max(160, window.innerHeight - top - 12)}
+      pos.value = {left: Math.max(8, left), top, maxH: Math.max(200, Math.min(380, window.innerHeight - top - 12))}
     }
     load()
   }

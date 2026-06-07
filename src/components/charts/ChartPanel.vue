@@ -1,7 +1,7 @@
 <template>
-  <div class="flex h-full min-h-0">
+  <div class="flex h-full min-h-0 overflow-hidden">
     <!-- 配置侧栏 -->
-    <div class="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 bg-gray-50 dark:bg-gray-800/40 overflow-auto">
+    <div class="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 h-full bg-gray-50 dark:bg-gray-800/40 overflow-y-auto">
       <!-- 图表类型 -->
       <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div class="text-[11px] text-gray-400 mb-1">图表类型</div>

@@ -28,7 +28,7 @@
     </div>
 
     <!-- 图表视图 -->
-    <div v-if="viewMode === 'chart' && parsed.columns.length" class="flex-1 min-h-0">
+    <div v-if="viewMode === 'chart' && parsed.columns.length" class="flex-1 min-h-0 overflow-hidden">
       <ChartPanel :columns="parsed.columns" :rows="parsed.rows"/>
     </div>
     <!-- 表格视图（虚拟滚动，支持大文件） -->
