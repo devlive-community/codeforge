@@ -99,7 +99,11 @@
     </div>
 
     <!-- 图表区 -->
-    <div class="flex-1 min-w-0 min-h-0 p-3">
+    <div ref="chartHost" class="relative flex-1 min-w-0 min-h-0 p-3">
+      <button v-if="ready" class="absolute top-2 right-2 z-10 p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white/70 dark:bg-gray-800/70 hover:bg-gray-100 dark:hover:bg-gray-700 backdrop-blur cursor-pointer"
+              title="导出 PNG" @click="exportPng">
+        <Download class="w-3.5 h-3.5"/>
+      </button>
       <div v-if="!ready" class="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
         <BarChart3 class="w-8 h-8"/>
         <p class="text-xs">{{ meta.empty }}</p>
@@ -129,7 +133,9 @@
 
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
-import {BarChart3, Hash, Type, X} from 'lucide-vue-next'
+import * as echarts from 'echarts/core'
+import {BarChart3, Download, Hash, Type, X} from 'lucide-vue-next'
+import {useTheme} from '../../composables/useTheme'
 import Select from '../../ui/Select.vue'
 import BarChart from './BarChart.vue'
 import LineChart from './LineChart.vue'
@@ -227,6 +233,23 @@ const ring = ref(false)
 const radarFill = ref(true)
 const showLabel = ref(false)
 const dragOver = ref('')
+
+const {isDark} = useTheme()
+const chartHost = ref<HTMLElement>()
+
+// 导出当前图表为 PNG（直接从激活的 echarts 实例取图）
+const exportPng = () => {
+  const dom = chartHost.value?.querySelector('div[_echarts_instance_]') as HTMLElement | null
+  const inst = dom ? echarts.getInstanceByDom(dom) : null
+  if (!inst) {
+    return
+  }
+  const url = inst.getDataURL({type: 'png', pixelRatio: 2, backgroundColor: isDark.value ? '#111827' : '#ffffff'})
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `chart-${chartType.value}-${Date.now()}.png`
+  a.click()
+}
 
 const fields = computed(() => props.columns.map((name, i) => ({name, numeric: isNumericColumn(props.rows, i)})))
 
