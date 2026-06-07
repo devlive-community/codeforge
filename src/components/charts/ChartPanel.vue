@@ -122,6 +122,7 @@
       <CandlestickChart v-else-if="chartType === 'candlestick'" :categories="candle.categories" :values="candle.values"/>
       <ParallelChart v-else-if="chartType === 'parallel'" :axes="parallel.axes" :series="parallel.series"/>
       <ThemeRiverChart v-else-if="chartType === 'themeriver'" :data="river.data" :categories="river.categories"/>
+      <CalendarChart v-else-if="chartType === 'calendar'" :data="calendar.data" :range="calendar.range" :max="calendar.max"/>
     </div>
   </div>
 </template>
@@ -146,7 +147,8 @@ import BoxplotChart from './BoxplotChart.vue'
 import CandlestickChart from './CandlestickChart.vue'
 import ParallelChart from './ParallelChart.vue'
 import ThemeRiverChart from './ThemeRiverChart.vue'
-import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, candlestickData, heatmapData, hierarchy, isNumericColumn, parallelData, pivot, sankeyData, scatterData, sortAndLimit, themeRiverData} from './shape'
+import CalendarChart from './CalendarChart.vue'
+import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, calendarData, candlestickData, heatmapData, hierarchy, isNumericColumn, parallelData, pivot, sankeyData, scatterData, sortAndLimit, themeRiverData} from './shape'
 
 const props = defineProps<{
   columns: string[]
@@ -183,7 +185,8 @@ const CHART_META: Record<string, ChartMeta> = {
   boxplot: {label: '箱线图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: false, note: '首个维度分组、首个指标取原始分布', empty: '拖入一个维度和一个指标生成箱线图'},
   candlestick: {label: 'K 线图', layout: 'dims', needDims: 1, needMetrics: 4, dimsZone: true, usesAgg: false, note: '维度作类目轴、指标依次为 开/收/低/高', empty: '拖入一个维度和「开/收/低/高」四个指标'},
   parallel: {label: '平行坐标', layout: 'dims', needDims: 0, needMetrics: 2, dimsZone: true, usesAgg: false, note: '多个指标作平行轴、首个维度可选分组', empty: '拖入≥2 个指标生成平行坐标'},
-  themeriver: {label: '主题河流', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为时间、维度2为类别、指标作值', empty: '拖入两个维度(时间,类别)和一个指标生成主题河流'}
+  themeriver: {label: '主题河流', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为时间、维度2为类别、指标作值', empty: '拖入两个维度(时间,类别)和一个指标生成主题河流'},
+  calendar: {label: '日历图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作日期、首个指标作值', empty: '拖入一个日期维度和一个指标生成日历图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -347,6 +350,10 @@ const parallel = computed(() => (chartType.value === 'parallel' && ready.value)
 const river = computed(() => (chartType.value === 'themeriver' && ready.value)
   ? themeRiverData(table.value, dimensions.value[0], dimensions.value[1], metrics.value[0], agg.value)
   : {data: [] as [string, number, string][], categories: [] as string[]})
+
+const calendar = computed(() => (chartType.value === 'calendar' && ready.value)
+  ? calendarData(table.value, dimensions.value[0], metrics.value[0], agg.value)
+  : {data: [] as [string, number][], range: new Date().getFullYear().toString() as [string, string] | string, max: 0})
 
 // 仪表盘：首个指标聚合为单值，量程取略大于该值的“整”数
 const niceMax = (v: number): number => {

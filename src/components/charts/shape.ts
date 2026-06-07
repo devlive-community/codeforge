@@ -402,6 +402,71 @@ export function heatmapData(
   return {xCats, yCats, cells, min, max}
 }
 
+/** 把单元格值解析为 YYYY-MM-DD（支持日期字符串/时间戳）；失败返回 null */
+function parseDate(v: any): string | null {
+  if (v === null || v === undefined || v === '') {
+    return null
+  }
+  let dt: Date
+  if (typeof v === 'number') {
+    dt = new Date(v < 1e12 ? v * 1000 : v) // 秒级时间戳兼容
+  }
+  else {
+    const s = String(v).trim()
+    dt = new Date(s.includes('T') || s.includes(' ') ? s : `${s}T00:00:00`)
+  }
+  if (isNaN(dt.getTime())) {
+    return null
+  }
+  const y = dt.getFullYear()
+  const m = String(dt.getMonth() + 1).padStart(2, '0')
+  const d = String(dt.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export interface CalendarData {
+  data: [string, number][]
+  range: [string, string] | string
+  max: number
+}
+
+/** 日历热力图：按日期聚合指标。 */
+export function calendarData(data: TableData, dateDim: string, metric: string, agg: AggKind): CalendarData {
+  const di = data.columns.indexOf(dateDim)
+  const mi = data.columns.indexOf(metric)
+  const year = new Date().getFullYear().toString()
+  if (di < 0 || mi < 0) {
+    return {data: [], range: year, max: 0}
+  }
+  const buckets = new Map<string, number[]>()
+  for (const row of data.rows) {
+    const d = parseDate(row[di])
+    if (!d) {
+      continue
+    }
+    if (!buckets.has(d)) {
+      buckets.set(d, [])
+    }
+    const v = row[mi]
+    if (agg === 'count') {
+      if (v !== null && v !== undefined && v !== '') {
+        buckets.get(d)!.push(1)
+      }
+    }
+    else {
+      const num = typeof v === 'number' ? v : Number(v)
+      if (!isNaN(num)) {
+        buckets.get(d)!.push(num)
+      }
+    }
+  }
+  const dates = [...buckets.keys()].sort()
+  const out: [string, number][] = dates.map(d => [d, aggregate(buckets.get(d)!, agg)])
+  const max = out.reduce((m, [, v]) => Math.max(m, v), 0)
+  const range: [string, string] | string = dates.length > 0 ? [dates[0], dates[dates.length - 1]] : year
+  return {data: out, range, max}
+}
+
 export interface ThemeRiverData {
   data: [string, number, string][] // [time, value, category]
   categories: string[]
