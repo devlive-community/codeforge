@@ -10,13 +10,14 @@
 
       <!-- 可用字段 -->
       <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div class="text-[11px] text-gray-400 mb-1.5">字段（单击选择 / 可拖拽）</div>
+        <div class="text-[11px] text-gray-400 mb-1.5">字段（单击选择 / 双击快速添加 / 可拖拽）</div>
         <div class="flex flex-wrap gap-1.5">
           <div v-for="f in fields" :key="f.name" draggable="true"
                class="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs cursor-pointer active:cursor-grabbing select-none bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-               title="单击选择添加位置，或拖拽到下方"
+               title="单击选择位置 / 双击快速添加 / 拖拽到下方"
                @dragstart="onDragStart($event, f.name)"
-               @click="openFieldMenu(f, $event)">
+               @click="openFieldMenu(f, $event)"
+               @dblclick="dblAdd(f)">
             <component :is="f.numeric ? Hash : Type" class="w-3 h-3" :class="f.numeric ? 'text-emerald-500' : 'text-amber-500'"/>
             {{ f.name }}
           </div>
@@ -485,12 +486,52 @@ const onDropScatter = (zone: 'x' | 'y' | 'group') => {
   dragField = ''
 }
 
-// 单击字段：在其右侧弹出菜单，选择加到维度/指标（或散点 X/Y/分组）
+// 双击快速添加：数值列→指标，文本列→维度（散点：依次 X/Y/分组）
+const quickAdd = (f: { name: string; numeric: boolean }) => {
+  if (meta.value.layout === 'scatter') {
+    if (f.numeric) {
+      if (!xField.value) {
+        xField.value = f.name
+      }
+      else if (!yField.value) {
+        yField.value = f.name
+      }
+    }
+    else if (!groupField.value) {
+      groupField.value = f.name
+    }
+    return
+  }
+  if (f.numeric) {
+    if (!metrics.value.includes(f.name)) {
+      metrics.value = [...metrics.value, f.name]
+    }
+  }
+  else if (!dimensions.value.includes(f.name)) {
+    dimensions.value = [...dimensions.value, f.name]
+  }
+}
+
+// 单击字段：在其右侧弹出菜单（延迟以便与双击区分）；双击则快速添加
 const fieldMenu = ref<{ name: string; left: number; top: number } | null>(null)
+let clickTimer: ReturnType<typeof setTimeout> | null = null
 const openFieldMenu = (f: { name: string }, e: MouseEvent) => {
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
   const left = Math.min(r.right + 6, window.innerWidth - 140)
-  fieldMenu.value = {name: f.name, left, top: r.top}
+  if (clickTimer) {
+    clearTimeout(clickTimer)
+  }
+  clickTimer = setTimeout(() => {
+    fieldMenu.value = {name: f.name, left, top: r.top}
+    clickTimer = null
+  }, 220)
+}
+const dblAdd = (f: { name: string; numeric: boolean }) => {
+  if (clickTimer) {
+    clearTimeout(clickTimer)
+    clickTimer = null
+  }
+  quickAdd(f)
 }
 const pickTarget = (target: 'dim' | 'metric' | 'x' | 'y' | 'group') => {
   const name = fieldMenu.value?.name
