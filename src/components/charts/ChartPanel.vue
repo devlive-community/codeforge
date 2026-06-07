@@ -119,6 +119,7 @@
       <TreemapChart v-else-if="chartType === 'treemap'" :data="treeData" :show-label="showLabel"/>
       <TreeChart v-else-if="chartType === 'tree'" :data="treeData" :show-label="showLabel"/>
       <BoxplotChart v-else-if="chartType === 'boxplot'" :categories="boxplot.categories" :boxes="boxplot.boxes" :outliers="boxplot.outliers"/>
+      <CandlestickChart v-else-if="chartType === 'candlestick'" :categories="candle.categories" :values="candle.values"/>
     </div>
   </div>
 </template>
@@ -140,7 +141,8 @@ import SunburstChart from './SunburstChart.vue'
 import TreemapChart from './TreemapChart.vue'
 import TreeChart from './TreeChart.vue'
 import BoxplotChart from './BoxplotChart.vue'
-import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, heatmapData, hierarchy, isNumericColumn, pivot, sankeyData, scatterData, sortAndLimit} from './shape'
+import CandlestickChart from './CandlestickChart.vue'
+import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, candlestickData, heatmapData, hierarchy, isNumericColumn, pivot, sankeyData, scatterData, sortAndLimit} from './shape'
 
 const props = defineProps<{
   columns: string[]
@@ -174,7 +176,8 @@ const CHART_META: Record<string, ChartMeta> = {
   sunburst: {label: '旭日图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作数值', empty: '拖入维度(层级)和一个指标生成旭日图'},
   treemap: {label: '矩形树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作面积', empty: '拖入维度(层级)和一个指标生成矩形树图'},
   tree: {label: '树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级展开、首个指标作叶子值', empty: '拖入维度(层级)和一个指标生成树图'},
-  boxplot: {label: '箱线图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: false, note: '首个维度分组、首个指标取原始分布', empty: '拖入一个维度和一个指标生成箱线图'}
+  boxplot: {label: '箱线图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: false, note: '首个维度分组、首个指标取原始分布', empty: '拖入一个维度和一个指标生成箱线图'},
+  candlestick: {label: 'K 线图', layout: 'dims', needDims: 1, needMetrics: 4, dimsZone: true, usesAgg: false, note: '维度作类目轴、指标依次为 开/收/低/高', empty: '拖入一个维度和「开/收/低/高」四个指标'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -326,6 +329,10 @@ const treeData = computed(() => (['sunburst', 'treemap', 'tree'].includes(chartT
 const boxplot = computed(() => (chartType.value === 'boxplot' && ready.value)
   ? boxplotData(table.value, dimensions.value[0], metrics.value[0])
   : {categories: [] as string[], boxes: [] as number[][], outliers: [] as [number, number][]})
+
+const candle = computed(() => (chartType.value === 'candlestick' && ready.value)
+  ? candlestickData(table.value, dimensions.value[0], metrics.value[0], metrics.value[1], metrics.value[2], metrics.value[3])
+  : {categories: [] as string[], values: [] as number[][]})
 
 // 仪表盘：首个指标聚合为单值，量程取略大于该值的“整”数
 const niceMax = (v: number): number => {

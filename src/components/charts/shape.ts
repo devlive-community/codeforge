@@ -402,6 +402,59 @@ export function heatmapData(
   return {xCats, yCats, cells, min, max}
 }
 
+export interface CandleData {
+  categories: string[]
+  values: number[][] // [open, close, low, high]
+}
+
+/**
+ * K 线数据：按类目（日期）分组；open=首行、close=末行、low=最小、high=最大。
+ */
+export function candlestickData(
+  data: TableData,
+  categoryDim: string,
+  openF: string,
+  closeF: string,
+  lowF: string,
+  highF: string
+): CandleData {
+  const ci = data.columns.indexOf(categoryDim)
+  const oi = data.columns.indexOf(openF)
+  const cci = data.columns.indexOf(closeF)
+  const li = data.columns.indexOf(lowF)
+  const hi = data.columns.indexOf(highF)
+  if ([ci, oi, cci, li, hi].some(i => i < 0)) {
+    return {categories: [], values: []}
+  }
+  interface E { open: number; close: number; low: number; high: number }
+  const map = new Map<string, E>()
+  const order: string[] = []
+  for (const row of data.rows) {
+    const o = Number(row[oi])
+    const c = Number(row[cci])
+    const l = Number(row[li])
+    const h = Number(row[hi])
+    if ([o, c, l, h].some(isNaN)) {
+      continue
+    }
+    const k = norm(row[ci])
+    if (!map.has(k)) {
+      map.set(k, {open: o, close: c, low: l, high: h})
+      order.push(k)
+    }
+    else {
+      const e = map.get(k)!
+      e.close = c
+      e.low = Math.min(e.low, l)
+      e.high = Math.max(e.high, h)
+    }
+  }
+  return {categories: order, values: order.map(k => {
+    const e = map.get(k)!
+    return [e.open, e.close, e.low, e.high]
+  })}
+}
+
 export interface BoxplotData {
   categories: string[]
   boxes: number[][] // [min, Q1, median, Q3, max]
