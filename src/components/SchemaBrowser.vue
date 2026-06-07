@@ -11,11 +11,17 @@
         <div class="fixed inset-0 z-[60]" @click="open = false"/>
         <div class="fixed z-[61] w-72 overflow-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg text-xs"
              :style="{left: pos.left + 'px', top: pos.top + 'px', maxHeight: pos.maxH + 'px'}">
-          <div class="sticky top-0 z-10 flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-            <span class="font-medium text-gray-600 dark:text-gray-300 truncate">结构 · {{ activeLabel() }}</span>
-            <button class="p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0" title="刷新" @click="load">
-              <RefreshCw class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''"/>
-            </button>
+          <div class="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between px-3 py-2">
+              <span class="font-medium text-gray-600 dark:text-gray-300 truncate">结构 · {{ activeLabel() }}</span>
+              <button class="p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0" title="刷新" @click="load">
+                <RefreshCw class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''"/>
+              </button>
+            </div>
+            <div class="px-2 pb-2">
+              <input v-model="filter" type="text" :placeholder="mode === 'databases' ? '搜索数据库…' : '搜索表 / 字段…'"
+                     class="w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-400"/>
+            </div>
           </div>
 
           <div v-if="loading" class="px-3 py-4 text-center text-gray-400">加载中…</div>
@@ -25,7 +31,7 @@
 
           <!-- 库 → 表 → 字段 -->
           <div v-else-if="mode === 'databases'" class="py-1">
-            <div v-for="db in databases" :key="db.name">
+            <div v-for="db in filteredDatabases" :key="db.name">
               <div class="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="expandDb(db)">
                 <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0" :class="db.expanded ? 'rotate-90' : ''"/>
                 <Database class="w-3 h-3 text-amber-500 flex-shrink-0"/>
@@ -33,7 +39,7 @@
                 <RefreshCw v-if="db.loading" class="w-3 h-3 text-gray-400 animate-spin"/>
               </div>
               <div v-if="db.expanded && db.tables" class="pl-4">
-                <template v-for="t in db.tables" :key="t.name">
+                <template v-for="t in matchTables(db.tables)" :key="t.name">
                   <div class="group flex items-center gap-1 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="toggleTable(db.name + '.' + t.name)">
                     <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0" :class="isOpen(db.name + '.' + t.name) ? 'rotate-90' : ''"/>
                     <Table2 class="w-3 h-3 text-blue-500 flex-shrink-0"/>
@@ -57,7 +63,7 @@
 
           <!-- 表 → 字段 -->
           <div v-else class="py-1">
-            <template v-for="t in tables" :key="t.name">
+            <template v-for="t in filteredTables" :key="t.name">
               <div class="group flex items-center gap-1 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="toggleTable(t.name)">
                 <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0" :class="isOpen(t.name) ? 'rotate-90' : ''"/>
                 <Table2 class="w-3 h-3 text-blue-500 flex-shrink-0"/>
@@ -82,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, watch} from 'vue'
+import {computed, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {ChevronRight, Database, Play, RefreshCw, Table2} from 'lucide-vue-next'
 import {useDbConnections} from '../composables/useDbConnections'
@@ -104,6 +110,24 @@ const mode = ref<'tables' | 'databases'>('tables')
 const tables = ref<Tbl[]>([])
 const databases = ref<Db[]>([])
 const expandedKeys = ref<Set<string>>(new Set())
+const filter = ref('')
+
+// 按名称/字段过滤
+const matchTables = (list: Tbl[]): Tbl[] => {
+  const q = filter.value.trim().toLowerCase()
+  if (!q) {
+    return list
+  }
+  return list.filter(t => t.name.toLowerCase().includes(q) || t.columns.some(c => c.name.toLowerCase().includes(q)))
+}
+const filteredTables = computed(() => matchTables(tables.value))
+const filteredDatabases = computed(() => {
+  const q = filter.value.trim().toLowerCase()
+  if (!q) {
+    return databases.value
+  }
+  return databases.value.filter(d => d.name.toLowerCase().includes(q))
+})
 
 const quote = (kind: string, name: string) => (kind === 'mysql' ? `\`${name}\`` : `"${name}"`)
 const esc = (s: string) => s.replace(/'/g, "''")
@@ -145,6 +169,7 @@ const load = async () => {
   loading.value = true
   error.value = ''
   expandedKeys.value = new Set()
+  filter.value = ''
   try {
     const source = resolveActiveSource()
     if (source.kind === 'mysql' && !source.database) {
