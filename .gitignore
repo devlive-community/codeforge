@@ -26,6 +26,7 @@ pnpm-lock.yaml
 *.csv
 *.json
 !config*.json
+!src/components/charts/geo/*.json
 go.mod
 .RData
 .Rhistory
