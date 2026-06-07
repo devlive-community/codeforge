@@ -26,6 +26,11 @@
         <Ai v-if="activeTab === 'ai'"/>
       </template>
 
+      <!-- 数据库连接 -->
+      <template #database>
+        <Database v-if="activeTab === 'database'"/>
+      </template>
+
       <!-- 语言配置 -->
       <template #language>
         <Language v-if="activeTab === 'language'" @settings-changed="handleLanguageSettingsChanged"/>
@@ -58,6 +63,7 @@ import Language from './setting/Language.vue'
 import Editor from './setting/Editor.vue'
 import Shortcut from './setting/Shortcut.vue'
 import Ai from './setting/Ai.vue'
+import Database from './setting/Database.vue'
 import Network from './setting/Network.vue'
 import Cache from './setting/Cache.vue'
 import Logs from './setting/Logs.vue'

@@ -8,6 +8,7 @@ mod ai_history;
 mod cache;
 mod config;
 mod custom_plugin_commands;
+mod db;
 mod env_commands;
 mod env_manager;
 mod env_providers;
@@ -35,6 +36,7 @@ use crate::custom_plugin_commands::{
     add_custom_plugin, get_custom_plugins, remove_custom_plugin, save_custom_icon,
     update_custom_plugin,
 };
+use crate::db::run_sql;
 use crate::env_commands::{
     EnvironmentManagerState, download_and_install_version, get_environment_info,
     get_supported_environment_languages, switch_environment_version, uninstall_environment_version,
@@ -222,7 +224,9 @@ fn main() {
             terminal_create,
             terminal_write,
             terminal_resize,
-            terminal_kill
+            terminal_kill,
+            // SQL 执行
+            run_sql
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,0 +1,161 @@
+// 表格数据 → 图表数据的塑形工具（与具体数据源解耦：SQL 结果、CSV 等均可复用）
+
+export type AggKind = 'sum' | 'count' | 'avg' | 'max' | 'min'
+
+export interface TableData {
+  columns: string[]
+  rows: any[][]
+}
+
+export interface ShapedSeries {
+  name: string
+  data: (number | null)[]
+}
+
+export interface ShapedData {
+  categories: string[]
+  series: ShapedSeries[]
+}
+
+export const AGG_LABELS: Record<AggKind, string> = {
+  sum: '求和',
+  count: '计数',
+  avg: '平均',
+  max: '最大',
+  min: '最小'
+}
+
+/** 判断某列是否数值型（抽样前若干非空值） */
+export function isNumericColumn(rows: any[][], colIndex: number): boolean {
+  let seen = 0
+  for (const row of rows) {
+    const v = row[colIndex]
+    if (v === null || v === undefined || v === '') {
+      continue
+    }
+    seen++
+    if (typeof v !== 'number' && isNaN(Number(v))) {
+      return false
+    }
+    if (seen >= 20) {
+      break
+    }
+  }
+  return seen > 0
+}
+
+function aggregate(values: number[], kind: AggKind): number {
+  if (values.length === 0) {
+    return 0
+  }
+  switch (kind) {
+    case 'sum':
+      return values.reduce((a, b) => a + b, 0)
+    case 'avg':
+      return values.reduce((a, b) => a + b, 0) / values.length
+    case 'max':
+      return Math.max(...values)
+    case 'min':
+      return Math.min(...values)
+    case 'count':
+      return values.length
+  }
+}
+
+const norm = (v: any): string => (v === null || v === undefined || v === '' ? '(空)' : String(v))
+
+/**
+ * 多维度透视聚合：
+ * - dimensions[0]：分类轴（X）
+ * - dimensions[1..]：分组维度，每个不同组合拆成一条 series
+ * - metrics：一个或多个数值列；多指标时与分组组合，series 名为「组合 · 指标」
+ * - agg：聚合方式；count 统计非空行数
+ */
+export function pivot(
+  data: TableData,
+  dimensions: string[],
+  metrics: string[],
+  agg: AggKind
+): ShapedData {
+  const dims = dimensions.filter(d => data.columns.includes(d))
+  const mets = metrics.filter(m => data.columns.includes(m))
+  if (dims.length === 0 || mets.length === 0) {
+    return {categories: [], series: []}
+  }
+
+  const catIdx = data.columns.indexOf(dims[0])
+  const groupIdx = dims.slice(1).map(d => data.columns.indexOf(d))
+  const metricIdx = mets.map(m => data.columns.indexOf(m))
+  const multiMetric = mets.length > 1
+
+  const categories: string[] = []
+  const catSeen = new Set<string>()
+  // series 名 -> (分类值 -> 待聚合数值数组)
+  const seriesMap = new Map<string, Map<string, number[]>>()
+  const seriesOrder: string[] = []
+
+  for (const row of data.rows) {
+    const catVal = norm(row[catIdx])
+    if (!catSeen.has(catVal)) {
+      catSeen.add(catVal)
+      categories.push(catVal)
+    }
+    const groupVal = groupIdx.map(i => norm(row[i])).join(' / ')
+
+    mets.forEach((m, j) => {
+      let name: string
+      if (groupVal) {
+        name = multiMetric ? `${groupVal} · ${m}` : groupVal
+      }
+      else {
+        name = m
+      }
+      if (!seriesMap.has(name)) {
+        seriesMap.set(name, new Map())
+        seriesOrder.push(name)
+      }
+      const cm = seriesMap.get(name)!
+      if (!cm.has(catVal)) {
+        cm.set(catVal, [])
+      }
+      const v = row[metricIdx[j]]
+      if (agg === 'count') {
+        if (v !== null && v !== undefined && v !== '') {
+          cm.get(catVal)!.push(1)
+        }
+      }
+      else {
+        const num = typeof v === 'number' ? v : Number(v)
+        if (!isNaN(num)) {
+          cm.get(catVal)!.push(num)
+        }
+      }
+    })
+  }
+
+  const series: ShapedSeries[] = seriesOrder.map(name => ({
+    name,
+    data: categories.map(c => {
+      const vals = seriesMap.get(name)!.get(c)
+      return vals && vals.length > 0 ? aggregate(vals, agg) : null
+    })
+  }))
+
+  return {categories, series}
+}
+
+/** 按各分类的指标合计排序并截取前 N 项（topN<=0 表示不限制） */
+export function sortAndLimit(shaped: ShapedData, order: 'none' | 'asc' | 'desc', topN: number): ShapedData {
+  let idx = shaped.categories.map((_, i) => i)
+  if (order !== 'none') {
+    const totals = idx.map(i => shaped.series.reduce((s, ser) => s + (ser.data[i] || 0), 0))
+    idx = [...idx].sort((a, b) => (order === 'asc' ? totals[a] - totals[b] : totals[b] - totals[a]))
+  }
+  if (topN > 0) {
+    idx = idx.slice(0, topN)
+  }
+  return {
+    categories: idx.map(i => shaped.categories[i]),
+    series: shaped.series.map(s => ({name: s.name, data: idx.map(i => s.data[i])}))
+  }
+}

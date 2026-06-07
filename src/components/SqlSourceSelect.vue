@@ -1,0 +1,40 @@
+<template>
+  <Select :model-value="activeRef"
+          :options="sourceOptions"
+          class="w-48"
+          :button-classes="['!py-1', '!px-2.5', 'text-sm', '!rounded-md']"
+          placeholder="选择数据源"
+          @change="onSourceChange"/>
+</template>
+
+<script setup lang="ts">
+import {computed} from 'vue'
+import {open} from '@tauri-apps/plugin-dialog'
+import Select from '../ui/Select.vue'
+import {useDbConnections} from '../composables/useDbConnections'
+
+const {connections, activeRef, setActiveRef, activeLabel} = useDbConnections()
+
+const sourceOptions = computed(() => {
+  const opts: { value: string; label: string }[] = [{value: 'memory', label: '内存数据库'}]
+  for (const c of connections.value) {
+    opts.push({value: `conn:${c.id}`, label: `${c.name}（${c.kind}）`})
+  }
+  if (activeRef.value.startsWith('file:')) {
+    opts.push({value: activeRef.value, label: `${activeLabel()}（文件）`})
+  }
+  opts.push({value: '__pickfile__', label: '选择 SQLite 文件…'})
+  return opts
+})
+
+const onSourceChange = async (value: string) => {
+  if (value === '__pickfile__') {
+    const selected = await open({multiple: false, filters: [{name: 'SQLite', extensions: ['db', 'sqlite', 'sqlite3', 'db3']}]})
+    if (typeof selected === 'string') {
+      setActiveRef(`file:${selected}`)
+    }
+    return
+  }
+  setActiveRef(value)
+}
+</script>

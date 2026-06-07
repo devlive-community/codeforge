@@ -89,6 +89,7 @@
                     · {{ currentFileName }}
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
                   </span>
+                  <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -174,6 +175,14 @@
                         :is-running="isRunning"
                         :execution-time="lastExecutionTime"
                         @clear="clearOutput"/>
+
+              <!-- SQL 表格 -->
+              <SqlTableView v-else-if="consoleType === 'sqltable'"
+                            class="flex-1"
+                            :output="output"
+                            :is-running="isRunning"
+                            :execution-time="lastExecutionTime"
+                            @clear="clearOutput"/>
             </div>
           </template>
         </ResizablePanels>
@@ -197,6 +206,7 @@
               · {{ currentFileName }}
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
             </span>
+            <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -347,6 +357,8 @@ import JsonView from "./components/JsonView.vue";
 import MarkdownView from "./components/MarkdownView.vue";
 import XmlView from "./components/XmlView.vue";
 import YamlView from "./components/YamlView.vue";
+import SqlTableView from "./components/SqlTableView.vue";
+import SqlSourceSelect from "./components/SqlSourceSelect.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
@@ -375,6 +387,7 @@ import Terminal from './components/Terminal.vue'
 import Breadcrumbs from './components/Breadcrumbs.vue'
 import {initSnippets} from './composables/useSnippets'
 import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './composables/useKvStore'
+import {useDbConnections} from './composables/useDbConnections'
 import {useAiConfig} from './composables/useAiConfig'
 import {setGhost, clearGhostIn, ghostActive} from './editor/aiComplete'
 import {cursorInfo} from './editor/cursorInfo'
@@ -1286,6 +1299,39 @@ const showRunPrompt = ref(false)
 
 // 包装运行：仅编辑器模式下点击运行时自动展开控制台；关联文件则按策略就地运行
 // 运行选中片段：以选中文本作为临时代码运行（不就地、不关联文件）
+// SQL 走专用执行（结构化结果 + 错误 + 数据源：内存/SQLite/MySQL）
+const {resolveActiveSource} = useDbConnections()
+const runSql = async (sqlOverride?: string) => {
+  const sql = sqlOverride ?? code.value
+  if (!sql.trim()) {
+    toast.info('没有可执行的 SQL')
+    return
+  }
+  if (layoutMode.value === 'editor') {
+    showConsole.value = true
+  }
+  isRunning.value = true
+  output.value = ''
+  isSuccess.value = false
+  try {
+    const source = resolveActiveSource()
+    const res = await invoke<any>('run_sql', {sql, source})
+    output.value = JSON.stringify(res)
+    isSuccess.value = !res.error
+    lastExecutionTime.value = res.elapsed_ms || 0
+    if (res.error) {
+      toast.error('SQL 执行失败')
+    }
+  }
+  catch (error) {
+    output.value = JSON.stringify({result_sets: [], messages: [], error: String(error)})
+    toast.error('SQL 执行失败: ' + error)
+  }
+  finally {
+    isRunning.value = false
+  }
+}
+
 const runSelection = () => {
   const view = editorView.value
   if (!view) {
@@ -1297,6 +1343,10 @@ const runSelection = () => {
     return
   }
   const selected = view.state.sliceDoc(from, to)
+  if (currentLanguage.value === 'sql') {
+    runSql(selected)
+    return
+  }
   if (layoutMode.value === 'editor') {
     showConsole.value = true
   }
@@ -1304,6 +1354,10 @@ const runSelection = () => {
 }
 
 const handleRunCode = async () => {
+  if (currentLanguage.value === 'sql') {
+    runSql()
+    return
+  }
   if (layoutMode.value === 'editor') {
     showConsole.value = true
   }
