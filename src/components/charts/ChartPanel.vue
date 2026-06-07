@@ -6,11 +6,25 @@
       <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center justify-between mb-1">
           <span class="text-[11px] text-gray-400">图表类型</span>
-          <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 cursor-pointer" title="用自然语言配图" @click="toggleAi">
-            <Sparkles class="w-3 h-3"/>AI 配图
-          </button>
+          <div class="flex items-center gap-1">
+            <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="保存为预设" @click="savePreset">
+              <Star class="w-3 h-3"/>存预设
+            </button>
+            <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 cursor-pointer" title="用自然语言配图" @click="toggleAi">
+              <Sparkles class="w-3 h-3"/>AI 配图
+            </button>
+          </div>
         </div>
         <Select v-model="chartType" :options="chartTypes" searchable :button-classes="['!py-1', '!px-2.5', 'text-xs', '!rounded-md']"/>
+        <!-- 预设列表 -->
+        <div v-if="presets.length" class="mt-1.5 flex flex-wrap gap-1">
+          <span v-for="p in presets" :key="p.name"
+                class="group inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                :title="`套用预设：${p.name}`" @click="applyPreset(p.name)">
+            {{ p.name }}
+            <X class="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 hover:text-red-500" @click.stop="deletePreset(p.name)"/>
+          </span>
+        </div>
         <div v-if="aiOpen" class="mt-2 p-2 rounded border border-violet-200 dark:border-violet-800 bg-violet-50/40 dark:bg-violet-900/10">
           <textarea v-model="aiPrompt" rows="2" :disabled="aiLoading"
                     placeholder="例如：按状态统计数量，用饼图"
@@ -198,7 +212,7 @@ import {debounce} from 'lodash-es'
 import * as echarts from 'echarts/core'
 import {SVGRenderer} from 'echarts/renderers'
 import {invoke} from '@tauri-apps/api/core'
-import {BarChart3, Copy, Download, FileDown, Image as ImageIcon, Hash, RefreshCw, Sparkles, Type, X} from 'lucide-vue-next'
+import {BarChart3, Copy, Download, FileDown, Image as ImageIcon, Hash, RefreshCw, Sparkles, Star, Type, X} from 'lucide-vue-next'
 import {useTheme} from '../../composables/useTheme'
 import {kvGetJSON, kvSetJSON} from '../../composables/useKvStore'
 import {useAiConfig} from '../../composables/useAiConfig'
@@ -359,27 +373,77 @@ if (typeof saved.radarFill === 'boolean') {
   radarFill.value = saved.radarFill
 }
 
-const persist = debounce(() => {
-  kvSetJSON(CFG_KEY, {
-    chartType: chartType.value,
-    agg: agg.value,
-    sortOrder: sortOrder.value,
-    topN: topN.value,
-    dimensions: dimensions.value,
-    metrics: metrics.value,
-    xField: xField.value,
-    yField: yField.value,
-    groupField: groupField.value,
-    horizontal: horizontal.value,
-    stacked: stacked.value,
-    smooth: smooth.value,
-    ring: ring.value,
-    radarFill: radarFill.value,
-    showLabel: showLabel.value
-  })
-}, 300)
+const buildConfig = () => ({
+  chartType: chartType.value,
+  agg: agg.value,
+  sortOrder: sortOrder.value,
+  topN: topN.value,
+  dimensions: dimensions.value,
+  metrics: metrics.value,
+  xField: xField.value,
+  yField: yField.value,
+  groupField: groupField.value,
+  horizontal: horizontal.value,
+  stacked: stacked.value,
+  smooth: smooth.value,
+  ring: ring.value,
+  radarFill: radarFill.value,
+  showLabel: showLabel.value
+})
+// 套用配置（字段按当前列过滤）
+const applyConfig = (cfg: Record<string, any>) => {
+  if (cfg.chartType && CHART_META[cfg.chartType]) {
+    chartType.value = cfg.chartType
+  }
+  if (cfg.agg) {
+    agg.value = cfg.agg
+  }
+  if (cfg.sortOrder) {
+    sortOrder.value = cfg.sortOrder
+  }
+  if (typeof cfg.topN === 'number') {
+    topN.value = cfg.topN
+  }
+  dimensions.value = Array.isArray(cfg.dimensions) ? cfg.dimensions.filter((d: string) => props.columns.includes(d)) : []
+  metrics.value = Array.isArray(cfg.metrics) ? cfg.metrics.filter((m: string) => props.columns.includes(m)) : []
+  xField.value = cfg.xField && props.columns.includes(cfg.xField) ? cfg.xField : ''
+  yField.value = cfg.yField && props.columns.includes(cfg.yField) ? cfg.yField : ''
+  groupField.value = cfg.groupField && props.columns.includes(cfg.groupField) ? cfg.groupField : ''
+  for (const k of ['horizontal', 'stacked', 'smooth', 'ring', 'radarFill', 'showLabel'] as const) {
+    if (typeof cfg[k] === 'boolean') {
+      ({horizontal, stacked, smooth, ring, radarFill, showLabel}[k]).value = cfg[k]
+    }
+  }
+}
+
+const persist = debounce(() => kvSetJSON(CFG_KEY, buildConfig()), 300)
 watch([chartType, agg, sortOrder, topN, dimensions, metrics, xField, yField, groupField,
   horizontal, stacked, smooth, ring, radarFill, showLabel], persist, {deep: true})
+
+// ---- 命名预设 ----
+interface Preset { name: string; config: Record<string, any> }
+const PRESETS_KEY = 'chart.presets'
+const presets = ref<Preset[]>(kvGetJSON<Preset[]>(PRESETS_KEY, []))
+const savePreset = () => {
+  const name = (window.prompt('预设名称') || '').trim()
+  if (!name) {
+    return
+  }
+  const list = presets.value.filter(p => p.name !== name)
+  list.push({name, config: buildConfig()})
+  presets.value = list
+  kvSetJSON(PRESETS_KEY, list)
+}
+const applyPreset = (name: string) => {
+  const p = presets.value.find(x => x.name === name)
+  if (p) {
+    applyConfig(p.config)
+  }
+}
+const deletePreset = (name: string) => {
+  presets.value = presets.value.filter(p => p.name !== name)
+  kvSetJSON(PRESETS_KEY, presets.value)
+}
 
 const {isDark} = useTheme()
 const toast = useToast()
