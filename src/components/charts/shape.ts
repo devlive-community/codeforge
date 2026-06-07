@@ -185,6 +185,88 @@ export function scatterData(
   return order.map(name => ({name, points: map.get(name)!}))
 }
 
+export interface HeatmapData {
+  xCats: string[]
+  yCats: string[]
+  cells: [number, number, number][]
+  min: number
+  max: number
+}
+
+/**
+ * 热力图数据：xDim × yDim 的网格，单元值为 metric 聚合。
+ */
+export function heatmapData(
+  data: TableData,
+  xDim: string,
+  yDim: string,
+  metric: string,
+  agg: AggKind
+): HeatmapData {
+  const xi = data.columns.indexOf(xDim)
+  const yi = data.columns.indexOf(yDim)
+  const mi = data.columns.indexOf(metric)
+  if (xi < 0 || yi < 0 || mi < 0) {
+    return {xCats: [], yCats: [], cells: [], min: 0, max: 0}
+  }
+
+  const xCats: string[] = []
+  const yCats: string[] = []
+  const xIndex = new Map<string, number>()
+  const yIndex = new Map<string, number>()
+  const buckets = new Map<string, number[]>()
+
+  for (const row of data.rows) {
+    const xk = norm(row[xi])
+    const yk = norm(row[yi])
+    if (!xIndex.has(xk)) {
+      xIndex.set(xk, xCats.length)
+      xCats.push(xk)
+    }
+    if (!yIndex.has(yk)) {
+      yIndex.set(yk, yCats.length)
+      yCats.push(yk)
+    }
+    const key = `${xIndex.get(xk)}|${yIndex.get(yk)}`
+    if (!buckets.has(key)) {
+      buckets.set(key, [])
+    }
+    const v = row[mi]
+    if (agg === 'count') {
+      if (v !== null && v !== undefined && v !== '') {
+        buckets.get(key)!.push(1)
+      }
+    }
+    else {
+      const num = typeof v === 'number' ? v : Number(v)
+      if (!isNaN(num)) {
+        buckets.get(key)!.push(num)
+      }
+    }
+  }
+
+  const cells: [number, number, number][] = []
+  let min = Infinity
+  let max = -Infinity
+  for (const [key, vals] of buckets) {
+    if (vals.length === 0) {
+      continue
+    }
+    const [xs, ys] = key.split('|')
+    const val = aggregate(vals, agg)
+    cells.push([Number(xs), Number(ys), val])
+    min = Math.min(min, val)
+    max = Math.max(max, val)
+  }
+  if (!isFinite(min)) {
+    min = 0
+  }
+  if (!isFinite(max)) {
+    max = 0
+  }
+  return {xCats, yCats, cells, min, max}
+}
+
 /** 按各分类的指标合计排序并截取前 N 项（topN<=0 表示不限制） */
 export function sortAndLimit(shaped: ShapedData, order: 'none' | 'asc' | 'desc', topN: number): ShapedData {
   let idx = shaped.categories.map((_, i) => i)

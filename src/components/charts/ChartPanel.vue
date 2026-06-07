@@ -75,11 +75,11 @@
 
       <!-- 显示选项 -->
       <div v-if="!isScatter" class="px-3 py-2 space-y-2">
-        <div class="flex items-center justify-between">
+        <div v-if="!isHeatmap" class="flex items-center justify-between">
           <span class="text-[11px] text-gray-400">排序</span>
           <Select v-model="sortOrder" :options="sortOptions" :button-classes="['!py-0.5', '!px-1.5', 'text-[11px]', '!rounded']" class="w-24"/>
         </div>
-        <div class="flex items-center justify-between">
+        <div v-if="!isHeatmap" class="flex items-center justify-between">
           <span class="text-[11px] text-gray-400">显示前 N 项</span>
           <input v-model.number="topN" type="number" min="0" placeholder="全部"
                  class="w-16 px-1.5 py-0.5 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"/>
@@ -93,6 +93,7 @@
           <label v-if="chartType === 'radar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="radarFill" type="checkbox" class="accent-blue-500"/>填充</label>
         </div>
         <p v-if="chartType === 'pie' || chartType === 'funnel'" class="text-[10px] text-gray-400 leading-snug">取首个维度作分类、首个指标作数值</p>
+        <p v-if="isHeatmap" class="text-[10px] text-gray-400 leading-snug">前两个维度作 X/Y 轴、首个指标作热力值</p>
       </div>
     </div>
 
@@ -100,7 +101,7 @@
     <div class="flex-1 min-w-0 min-h-0 p-3">
       <div v-if="!ready" class="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
         <BarChart3 class="w-8 h-8"/>
-        <p class="text-xs">{{ isScatter ? '拖入「X 指标」和「Y 指标」生成图表' : '拖入「维度」和「指标」生成图表' }}</p>
+        <p class="text-xs">{{ emptyHint }}</p>
       </div>
       <BarChart v-else-if="chartType === 'bar'" :categories="shaped.categories" :series="shaped.series"
                 :horizontal="horizontal" :stacked="stacked" :show-label="showLabel"/>
@@ -110,6 +111,7 @@
       <ScatterChart v-else-if="isScatter" :series="scatterSeries" :x-name="xField" :y-name="yField"/>
       <RadarChart v-else-if="chartType === 'radar'" :categories="shaped.categories" :series="shaped.series" :area="radarFill" :show-label="showLabel"/>
       <FunnelChart v-else-if="chartType === 'funnel'" :data="pieData" :show-label="showLabel"/>
+      <HeatmapChart v-else-if="isHeatmap" :x-cats="heatmap.xCats" :y-cats="heatmap.yCats" :cells="heatmap.cells" :min="heatmap.min" :max="heatmap.max" :show-label="showLabel"/>
     </div>
   </div>
 </template>
@@ -124,7 +126,8 @@ import PieChart from './PieChart.vue'
 import ScatterChart from './ScatterChart.vue'
 import RadarChart from './RadarChart.vue'
 import FunnelChart from './FunnelChart.vue'
-import {AGG_LABELS, type AggKind, isNumericColumn, pivot, scatterData, sortAndLimit} from './shape'
+import HeatmapChart from './HeatmapChart.vue'
+import {AGG_LABELS, type AggKind, heatmapData, isNumericColumn, pivot, scatterData, sortAndLimit} from './shape'
 
 const props = defineProps<{
   columns: string[]
@@ -138,11 +141,22 @@ const chartTypes = [
   {value: 'pie', label: '饼图'},
   {value: 'scatter', label: '散点图'},
   {value: 'radar', label: '雷达图'},
-  {value: 'funnel', label: '漏斗图'}
+  {value: 'funnel', label: '漏斗图'},
+  {value: 'heatmap', label: '热力图'}
 ]
 const chartType = ref('bar')
 const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
 const isScatter = computed(() => chartType.value === 'scatter')
+const isHeatmap = computed(() => chartType.value === 'heatmap')
+const emptyHint = computed(() => {
+  if (isScatter.value) {
+    return '拖入「X 指标」和「Y 指标」生成图表'
+  }
+  if (isHeatmap.value) {
+    return '拖入两个维度和一个指标生成图表'
+  }
+  return '拖入「维度」和「指标」生成图表'
+})
 
 const aggOptions = (Object.keys(AGG_LABELS) as AggKind[]).map(k => ({value: k, label: AGG_LABELS[k]}))
 const agg = ref<AggKind>('sum')
@@ -254,13 +268,23 @@ const removeMetric = (m: string) => {
   metrics.value = metrics.value.filter(x => x !== m)
 }
 
-const ready = computed(() => isScatter.value
-  ? !!xField.value && !!yField.value
-  : dimensions.value.length > 0 && metrics.value.length > 0)
+const ready = computed(() => {
+  if (isScatter.value) {
+    return !!xField.value && !!yField.value
+  }
+  if (isHeatmap.value) {
+    return dimensions.value.length >= 2 && metrics.value.length > 0
+  }
+  return dimensions.value.length > 0 && metrics.value.length > 0
+})
 
 const scatterSeries = computed(() => (isScatter.value && ready.value)
   ? scatterData({columns: props.columns, rows: props.rows}, xField.value, yField.value, groupField.value || undefined)
   : [])
+
+const heatmap = computed(() => (isHeatmap.value && ready.value)
+  ? heatmapData({columns: props.columns, rows: props.rows}, dimensions.value[0], dimensions.value[1], metrics.value[0], agg.value)
+  : {xCats: [], yCats: [], cells: [] as [number, number, number][], min: 0, max: 0})
 
 const shaped = computed(() => {
   if (!ready.value) {
