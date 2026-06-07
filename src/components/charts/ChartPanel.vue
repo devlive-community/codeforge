@@ -115,6 +115,7 @@
       <HeatmapChart v-else-if="chartType === 'heatmap'" :x-cats="heatmap.xCats" :y-cats="heatmap.yCats" :cells="heatmap.cells" :min="heatmap.min" :max="heatmap.max" :show-label="showLabel"/>
       <GaugeChart v-else-if="chartType === 'gauge'" :value="gauge.value" :max="gauge.max" :name="gauge.name"/>
       <SankeyChart v-else-if="chartType === 'sankey'" :nodes="sankey.nodes" :links="sankey.links"/>
+      <SunburstChart v-else-if="chartType === 'sunburst'" :data="treeData" :show-label="showLabel"/>
     </div>
   </div>
 </template>
@@ -132,7 +133,8 @@ import FunnelChart from './FunnelChart.vue'
 import HeatmapChart from './HeatmapChart.vue'
 import GaugeChart from './GaugeChart.vue'
 import SankeyChart from './SankeyChart.vue'
-import {AGG_LABELS, type AggKind, aggregateColumn, heatmapData, isNumericColumn, pivot, sankeyData, scatterData, sortAndLimit} from './shape'
+import SunburstChart from './SunburstChart.vue'
+import {AGG_LABELS, type AggKind, aggregateColumn, heatmapData, hierarchy, isNumericColumn, pivot, sankeyData, scatterData, sortAndLimit} from './shape'
 
 const props = defineProps<{
   columns: string[]
@@ -162,7 +164,8 @@ const CHART_META: Record<string, ChartMeta> = {
   funnel: {label: '漏斗图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作分类、首个指标作数值', empty: '拖入「维度」和「指标」生成图表'},
   heatmap: {label: '热力图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '前两个维度作 X/Y 轴、首个指标作热力值', empty: '拖入两个维度和一个指标生成图表'},
   gauge: {label: '仪表盘', layout: 'dims', needDims: 0, needMetrics: 1, dimsZone: false, usesAgg: true, note: '仪表盘取首个指标聚合为单值', empty: '拖入一个指标生成仪表盘'},
-  sankey: {label: '桑基图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '相邻维度按数据流连接、指标作流量', empty: '拖入≥2 个维度和一个指标生成桑基图'}
+  sankey: {label: '桑基图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '相邻维度按数据流连接、指标作流量', empty: '拖入≥2 个维度和一个指标生成桑基图'},
+  sunburst: {label: '旭日图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作数值', empty: '拖入维度(层级)和一个指标生成旭日图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -170,7 +173,7 @@ const chartType = ref('bar')
 const meta = computed(() => CHART_META[chartType.value])
 const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
 
-const supportsLabel = computed(() => ['bar', 'line', 'area', 'pie', 'funnel', 'radar', 'heatmap'].includes(chartType.value))
+const supportsLabel = computed(() => ['bar', 'line', 'area', 'pie', 'funnel', 'radar', 'heatmap', 'sunburst', 'treemap', 'tree'].includes(chartType.value))
 const hasOptions = computed(() => meta.value.sortable || supportsLabel.value
   || ['bar', 'line', 'area', 'pie', 'radar'].includes(chartType.value))
 
@@ -305,6 +308,11 @@ const heatmap = computed(() => (chartType.value === 'heatmap' && ready.value)
 const sankey = computed(() => (chartType.value === 'sankey' && ready.value)
   ? sankeyData(table.value, dimensions.value, metrics.value[0], agg.value)
   : {nodes: [] as { name: string }[], links: [] as { source: string; target: string; value: number }[]})
+
+// 层级数据：旭日图 / 矩形树图 / 树图共用
+const treeData = computed(() => (['sunburst', 'treemap', 'tree'].includes(chartType.value) && ready.value)
+  ? hierarchy(table.value, dimensions.value, metrics.value[0], agg.value)
+  : [])
 
 // 仪表盘：首个指标聚合为单值，量程取略大于该值的“整”数
 const niceMax = (v: number): number => {

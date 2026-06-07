@@ -208,6 +208,64 @@ export function aggregateColumn(data: TableData, metric: string, agg: AggKind): 
   return vals.length === 0 ? 0 : aggregate(vals, agg)
 }
 
+export interface TreeNode {
+  name: string
+  value?: number
+  children?: TreeNode[]
+}
+
+interface Bucket {
+  children: Map<string, Bucket>
+  values: number[]
+}
+
+/**
+ * 层级数据：维度按顺序嵌套，叶子值为指标聚合。
+ * 供旭日图 / 矩形树图 / 树图复用。
+ */
+export function hierarchy(data: TableData, dims: string[], metric: string, agg: AggKind): TreeNode[] {
+  const dimIdx = dims.map(d => data.columns.indexOf(d)).filter(i => i >= 0)
+  const mi = data.columns.indexOf(metric)
+  if (dimIdx.length === 0 || mi < 0) {
+    return []
+  }
+  const root = new Map<string, Bucket>()
+  const child = (m: Map<string, Bucket>, k: string): Bucket => {
+    if (!m.has(k)) {
+      m.set(k, {children: new Map(), values: []})
+    }
+    return m.get(k)!
+  }
+  for (const row of data.rows) {
+    let level = root
+    let node: Bucket | null = null
+    for (const di of dimIdx) {
+      node = child(level, norm(row[di]))
+      level = node.children
+    }
+    const v = row[mi]
+    if (agg === 'count') {
+      if (v !== null && v !== undefined && v !== '') {
+        node!.values.push(1)
+      }
+    }
+    else {
+      const num = typeof v === 'number' ? v : Number(v)
+      if (!isNaN(num)) {
+        node!.values.push(num)
+      }
+    }
+  }
+  const toNodes = (m: Map<string, Bucket>): TreeNode[] => [...m.entries()].map(([name, b]) => {
+    const children = toNodes(b.children)
+    if (children.length > 0) {
+      return {name, children}
+    }
+    return {name, value: b.values.length > 0 ? aggregate(b.values, agg) : 0}
+  })
+  return toNodes(root)
+}
+
 const LEVEL_SEP = '::'
 /** 去掉桑基/层级节点 id 的层级前缀，得到展示名 */
 export function stripLevel(id: string): string {
