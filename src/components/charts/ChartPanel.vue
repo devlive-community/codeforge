@@ -142,9 +142,11 @@
 
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
+import {debounce} from 'lodash-es'
 import * as echarts from 'echarts/core'
 import {BarChart3, Download, Hash, Type, X} from 'lucide-vue-next'
 import {useTheme} from '../../composables/useTheme'
+import {kvGetJSON, kvSetJSON} from '../../composables/useKvStore'
 import Select from '../../ui/Select.vue'
 import BarChart from './BarChart.vue'
 import LineChart from './LineChart.vue'
@@ -257,6 +259,67 @@ const ring = ref(false)
 const radarFill = ref(true)
 const showLabel = ref(false)
 const dragOver = ref('')
+
+// 配置持久化：恢复上次选择，字段按当前列过滤
+const CFG_KEY = 'chart.lastConfig'
+const saved = kvGetJSON<Record<string, any>>(CFG_KEY, {})
+if (saved.chartType && CHART_META[saved.chartType]) {
+  chartType.value = saved.chartType
+}
+if (saved.agg) {
+  agg.value = saved.agg
+}
+if (saved.sortOrder) {
+  sortOrder.value = saved.sortOrder
+}
+if (typeof saved.topN === 'number') {
+  topN.value = saved.topN
+}
+if (Array.isArray(saved.dimensions)) {
+  dimensions.value = saved.dimensions.filter((d: string) => props.columns.includes(d))
+}
+if (Array.isArray(saved.metrics)) {
+  metrics.value = saved.metrics.filter((m: string) => props.columns.includes(m))
+}
+if (saved.xField && props.columns.includes(saved.xField)) {
+  xField.value = saved.xField
+}
+if (saved.yField && props.columns.includes(saved.yField)) {
+  yField.value = saved.yField
+}
+if (saved.groupField && props.columns.includes(saved.groupField)) {
+  groupField.value = saved.groupField
+}
+for (const k of ['horizontal', 'stacked', 'smooth', 'ring', 'showLabel'] as const) {
+  if (typeof saved[k] === 'boolean') {
+    ({horizontal, stacked, smooth, ring, showLabel}[k]).value = saved[k]
+  }
+}
+if (typeof saved.radarFill === 'boolean') {
+  radarFill.value = saved.radarFill
+}
+
+const persist = debounce(() => {
+  kvSetJSON(CFG_KEY, {
+    chartType: chartType.value,
+    agg: agg.value,
+    sortOrder: sortOrder.value,
+    topN: topN.value,
+    dimensions: dimensions.value,
+    metrics: metrics.value,
+    xField: xField.value,
+    yField: yField.value,
+    groupField: groupField.value,
+    horizontal: horizontal.value,
+    stacked: stacked.value,
+    smooth: smooth.value,
+    ring: ring.value,
+    radarFill: radarFill.value,
+    showLabel: showLabel.value
+  })
+}, 300)
+watch([chartType, agg, sortOrder, topN, dimensions, metrics, xField, yField, groupField,
+  horizontal, stacked, smooth, ring, radarFill, showLabel], persist, {deep: true})
 
 const {isDark} = useTheme()
 const chartHost = ref<HTMLElement>()
