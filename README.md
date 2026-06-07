@@ -47,7 +47,8 @@
 
 ### 📊 结构化数据可视化
 - **JSON / XML / YAML** —— 可折叠**层级树**，以及卡片 + 连线的**关系图**两种可视化
-- **SQL** —— 基于 rusqlite 执行（无需外部 sqlite3），结果渲染为**表格**；可连接内存库或指定 `.sqlite` 文件，失败显示具体错误
+- **SQL** —— 插件式执行器（内存库 / `.sqlite` 文件 / **MySQL**，可在设置中配置连接、运行时选择数据源），结果渲染为**表格**，失败显示具体错误；执行历史与实时运行一致
+- **图表可视化** —— SQL 结果一键切换为图表：**拖拽**字段到「维度 / 指标」即可成图，自动识别数值列，支持聚合（求和/计数/平均/最大/最小）、排序、Top N。内置 **柱状图 · 折线图 · 面积图 · 饼图/环形图 · 散点图 · 雷达图 · 漏斗图 · 热力图 · 仪表盘** 9 种（基于 ECharts，配色跟随主题）。组件与数据源解耦，后续 CSV 等本地数据可复用
 - **Markdown** —— 实时渲染预览（支持内嵌 HTML，DOMPurify 净化防 XSS）
 - **GitHub Actions 工作流** —— 自动识别并渲染为 **Jobs 依赖 DAG 图**（触发事件 → 各 Job → Steps）
 
@@ -144,10 +145,10 @@ pnpm tauri build
 
 | 层 | 技术 |
 | --- | --- |
-| 前端 | Vue 3 · TypeScript · Tailwind CSS · CodeMirror 6 |
-| 后端 | Rust · Tauri 2 |
+| 前端 | Vue 3 · TypeScript · Tailwind CSS · CodeMirror 6 · ECharts |
+| 后端 | Rust · Tauri 2（rusqlite · mysql） |
 | 存储 | SQLite（执行历史 / AI 对话 / 代码片段 / 应用配置统一入库） |
-| 架构 | 插件化语言支持系统 |
+| 架构 | 插件化语言支持系统 · 插件式数据库执行器 · 可复用图表组件 |
 
 ---
 
