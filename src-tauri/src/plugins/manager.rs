@@ -36,6 +36,7 @@ use crate::plugins::swift::SwiftPlugin;
 use crate::plugins::text::TextPlugin;
 use crate::plugins::tsv::TsvPlugin;
 use crate::plugins::typescript::TypeScriptPlugin;
+use crate::plugins::xlsx::XlsxPlugin;
 use crate::plugins::typescript_browser::TypeScriptBrowserPlugin;
 use crate::plugins::typescript_nodejs::TypeScriptNodeJsPlugin;
 use crate::plugins::xml::XmlPlugin;
@@ -80,6 +81,7 @@ impl PluginManager {
             ("text".to_string(), Box::new(TextPlugin)),
             ("csv".to_string(), Box::new(CsvPlugin)),
             ("tsv".to_string(), Box::new(TsvPlugin)),
+            ("xlsx".to_string(), Box::new(XlsxPlugin)),
             ("sql".to_string(), Box::new(SqlPlugin)),
             ("php".to_string(), Box::new(PHPPlugin)),
             ("r".to_string(), Box::new(RPlugin)),

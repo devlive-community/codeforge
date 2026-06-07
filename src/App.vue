@@ -193,6 +193,14 @@
                              :is-running="isRunning"
                              :execution-time="lastExecutionTime"
                              @clear="clearOutput"/>
+
+              <!-- Excel 表 / 图表（xlsx / xls） -->
+              <XlsxView v-else-if="consoleType === 'xlsx'"
+                        class="flex-1 min-h-0"
+                        :output="output"
+                        :is-running="isRunning"
+                        :execution-time="lastExecutionTime"
+                        @clear="clearOutput"/>
             </div>
           </template>
         </ResizablePanels>
@@ -372,6 +380,7 @@ import XmlView from "./components/XmlView.vue";
 import YamlView from "./components/YamlView.vue";
 import SqlTableView from "./components/SqlTableView.vue";
 import DataTableView from "./components/DataTableView.vue";
+import XlsxView from "./components/XlsxView.vue";
 import SqlSourceSelect from "./components/SqlSourceSelect.vue";
 import SchemaBrowser from "./components/SchemaBrowser.vue";
 import AiSql from "./components/AiSql.vue";

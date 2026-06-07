@@ -33,7 +33,7 @@ export function useLanguageSettings(emit: any)
         }
     ]
 
-    const consoleTypes = [{label: '控制台', value: 'console'}, {label: 'Web', value: 'web'}, {label: 'JSON', value: 'json'}, {label: 'Markdown', value: 'markdown'}, {label: 'XML', value: 'xml'}, {label: 'YAML', value: 'yaml'}, {label: 'SQL 表格', value: 'sqltable'}, {label: '数据表/图表', value: 'table'}]
+    const consoleTypes = [{label: '控制台', value: 'console'}, {label: 'Web', value: 'web'}, {label: 'JSON', value: 'json'}, {label: 'Markdown', value: 'markdown'}, {label: 'XML', value: 'xml'}, {label: 'YAML', value: 'yaml'}, {label: 'SQL 表格', value: 'sqltable'}, {label: '数据表/图表', value: 'table'}, {label: 'Excel 表/图表', value: 'xlsx'}]
 
     const {
         activePlugin,

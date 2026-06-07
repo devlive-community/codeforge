@@ -49,7 +49,8 @@
     "markdown-it": "^14.2.0",
     "vue": "^3.5.13",
     "vue-codemirror": "^6.1.1",
-    "vue3-markdown-it": "^1.0.10"
+    "vue3-markdown-it": "^1.0.10",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
