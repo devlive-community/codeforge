@@ -115,6 +115,7 @@
       <PieChart v-else-if="chartType === 'pie'" :data="pieData" :ring="ring" :show-label="showLabel"/>
       <PieChart v-else-if="chartType === 'rose'" :data="pieData" rose :show-label="showLabel"/>
       <ScatterChart v-else-if="chartType === 'scatter'" :series="scatterSeries" :x-name="xField" :y-name="yField"/>
+      <ScatterChart v-else-if="chartType === 'effectScatter'" :series="scatterSeries" :x-name="xField" :y-name="yField" effect/>
       <RadarChart v-else-if="chartType === 'radar'" :categories="shaped.categories" :series="shaped.series" :area="radarFill" :show-label="showLabel"/>
       <FunnelChart v-else-if="chartType === 'funnel'" :data="pieData" :show-label="showLabel"/>
       <HeatmapChart v-else-if="chartType === 'heatmap'" :x-cats="heatmap.xCats" :y-cats="heatmap.yCats" :cells="heatmap.cells" :min="heatmap.min" :max="heatmap.max" :show-label="showLabel"/>
@@ -194,7 +195,8 @@ const CHART_META: Record<string, ChartMeta> = {
   parallel: {label: '平行坐标', layout: 'dims', needDims: 0, needMetrics: 2, dimsZone: true, usesAgg: false, note: '多个指标作平行轴、首个维度可选分组', empty: '拖入≥2 个指标生成平行坐标'},
   themeriver: {label: '主题河流', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为时间、维度2为类别、指标作值', empty: '拖入两个维度(时间,类别)和一个指标生成主题河流'},
   calendar: {label: '日历图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作日期、首个指标作值', empty: '拖入一个日期维度和一个指标生成日历图'},
-  rose: {label: '玫瑰图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作扇区、首个指标作半径', empty: '拖入「维度」和「指标」生成玫瑰图'}
+  rose: {label: '玫瑰图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作扇区、首个指标作半径', empty: '拖入「维度」和「指标」生成玫瑰图'},
+  effectScatter: {label: '涟漪散点图', layout: 'scatter', needDims: 0, needMetrics: 0, empty: '拖入「X 指标」和「Y 指标」生成涟漪散点图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -343,7 +345,7 @@ const ready = computed(() => {
 
 const table = computed(() => ({columns: props.columns, rows: props.rows}))
 
-const scatterSeries = computed(() => (chartType.value === 'scatter' && ready.value)
+const scatterSeries = computed(() => (meta.value.layout === 'scatter' && ready.value)
   ? scatterData(table.value, xField.value, yField.value, groupField.value || undefined)
   : [])
 

@@ -5,17 +5,18 @@
 <script setup lang="ts">
 import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import * as echarts from 'echarts/core'
-import {ScatterChart as EScatter} from 'echarts/charts'
+import {EffectScatterChart, ScatterChart as EScatter} from 'echarts/charts'
 import {GridComponent, LegendComponent, TooltipComponent} from 'echarts/components'
 import {CanvasRenderer} from 'echarts/renderers'
 import {useTheme} from '../../composables/useTheme'
 
-echarts.use([EScatter, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
+echarts.use([EScatter, EffectScatterChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
 
 const props = defineProps<{
   series: { name: string; points: [number, number][] }[]
   xName?: string
   yName?: string
+  effect?: boolean
 }>()
 
 const {isDark} = useTheme()
@@ -37,7 +38,8 @@ const buildOption = (): echarts.EChartsCoreOption => {
     yAxis: {type: 'value', name: props.yName, nameTextStyle: {color: text}, axisLabel: {color: text}, axisLine: {lineStyle: {color: axisLine}}, splitLine: {lineStyle: {color: axisLine}}},
     series: props.series.map(s => ({
       name: s.name,
-      type: 'scatter',
+      type: props.effect ? 'effectScatter' : 'scatter',
+      rippleEffect: props.effect ? {scale: 2.5, brushType: 'stroke'} : undefined,
       symbolSize: 8,
       data: s.points,
       emphasis: {focus: 'series'}
@@ -58,7 +60,7 @@ onMounted(() => {
   ro.observe(el.value)
 })
 
-watch(() => [props.series, props.xName, props.yName, isDark.value], render, {deep: true})
+watch(() => [props.series, props.xName, props.yName, props.effect, isDark.value], render, {deep: true})
 
 onBeforeUnmount(() => {
   ro?.disconnect()
