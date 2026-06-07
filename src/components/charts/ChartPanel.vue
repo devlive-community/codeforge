@@ -7,7 +7,7 @@
         <div class="flex items-center justify-between mb-1">
           <span class="text-[11px] text-gray-400">图表类型</span>
           <div class="flex items-center gap-1">
-            <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="保存为预设" @click="savePreset">
+            <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="保存为预设" @click="savingPreset = !savingPreset">
               <Star class="w-3 h-3"/>存预设
             </button>
             <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 cursor-pointer" title="用自然语言配图" @click="toggleAi">
@@ -16,6 +16,14 @@
           </div>
         </div>
         <Select v-model="chartType" :options="chartTypes" searchable :button-classes="['!py-1', '!px-2.5', 'text-xs', '!rounded-md']"/>
+        <!-- 保存预设输入 -->
+        <div v-if="savingPreset" class="mt-1.5 flex items-center gap-1">
+          <input v-model="presetName" type="text" placeholder="预设名称" autofocus
+                 class="flex-1 min-w-0 px-2 py-0.5 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-400"
+                 @keydown.enter="confirmSavePreset" @keydown.esc="savingPreset = false"/>
+          <button class="px-2 py-0.5 text-[11px] rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 cursor-pointer" :disabled="!presetName.trim()" @click="confirmSavePreset">保存</button>
+          <button class="px-1.5 py-0.5 text-[11px] rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="savingPreset = false">取消</button>
+        </div>
         <!-- 预设列表 -->
         <div v-if="presets.length" class="mt-1.5 flex flex-wrap gap-1">
           <span v-for="p in presets" :key="p.name"
@@ -424,8 +432,10 @@ watch([chartType, agg, sortOrder, topN, dimensions, metrics, xField, yField, gro
 interface Preset { name: string; config: Record<string, any> }
 const PRESETS_KEY = 'chart.presets'
 const presets = ref<Preset[]>(kvGetJSON<Preset[]>(PRESETS_KEY, []))
-const savePreset = () => {
-  const name = (window.prompt('预设名称') || '').trim()
+const savingPreset = ref(false)
+const presetName = ref('')
+const confirmSavePreset = () => {
+  const name = presetName.value.trim()
   if (!name) {
     return
   }
@@ -433,6 +443,8 @@ const savePreset = () => {
   list.push({name, config: buildConfig()})
   presets.value = list
   kvSetJSON(PRESETS_KEY, list)
+  savingPreset.value = false
+  presetName.value = ''
 }
 const applyPreset = (name: string) => {
   const p = presets.value.find(x => x.name === name)
