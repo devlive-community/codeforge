@@ -24,7 +24,7 @@
       </div>
 
       <!-- 维度 -->
-      <div v-if="!isScatter" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
+      <div v-if="!isScatter && !isGauge" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
            @dragover.prevent="dragOver = 'dim'" @dragleave="dragOver = ''" @drop.prevent="onDrop('dim')">
         <div class="text-[11px] text-gray-400 mb-1.5">维度（首个为分类轴，其余分组）</div>
         <div class="min-h-[28px] rounded border border-dashed p-1 flex flex-wrap gap-1 transition-colors"
@@ -54,6 +54,7 @@
           </span>
           <span v-if="metrics.length === 0" class="text-[11px] text-gray-400 px-1 py-0.5">拖入一个或多个数值列</span>
         </div>
+        <p v-if="isGauge" class="text-[10px] text-gray-400 leading-snug mt-1.5">仪表盘取首个指标聚合为单值</p>
       </div>
 
       <!-- 散点图配置：X / Y / 分组 -->
@@ -74,7 +75,7 @@
       </template>
 
       <!-- 显示选项 -->
-      <div v-if="!isScatter" class="px-3 py-2 space-y-2">
+      <div v-if="!isScatter && !isGauge" class="px-3 py-2 space-y-2">
         <div v-if="!isHeatmap" class="flex items-center justify-between">
           <span class="text-[11px] text-gray-400">排序</span>
           <Select v-model="sortOrder" :options="sortOptions" :button-classes="['!py-0.5', '!px-1.5', 'text-[11px]', '!rounded']" class="w-24"/>
@@ -112,6 +113,7 @@
       <RadarChart v-else-if="chartType === 'radar'" :categories="shaped.categories" :series="shaped.series" :area="radarFill" :show-label="showLabel"/>
       <FunnelChart v-else-if="chartType === 'funnel'" :data="pieData" :show-label="showLabel"/>
       <HeatmapChart v-else-if="isHeatmap" :x-cats="heatmap.xCats" :y-cats="heatmap.yCats" :cells="heatmap.cells" :min="heatmap.min" :max="heatmap.max" :show-label="showLabel"/>
+      <GaugeChart v-else-if="isGauge" :value="gauge.value" :max="gauge.max" :name="gauge.name"/>
     </div>
   </div>
 </template>
@@ -127,7 +129,8 @@ import ScatterChart from './ScatterChart.vue'
 import RadarChart from './RadarChart.vue'
 import FunnelChart from './FunnelChart.vue'
 import HeatmapChart from './HeatmapChart.vue'
-import {AGG_LABELS, type AggKind, heatmapData, isNumericColumn, pivot, scatterData, sortAndLimit} from './shape'
+import GaugeChart from './GaugeChart.vue'
+import {AGG_LABELS, type AggKind, aggregateColumn, heatmapData, isNumericColumn, pivot, scatterData, sortAndLimit} from './shape'
 
 const props = defineProps<{
   columns: string[]
@@ -142,18 +145,23 @@ const chartTypes = [
   {value: 'scatter', label: '散点图'},
   {value: 'radar', label: '雷达图'},
   {value: 'funnel', label: '漏斗图'},
-  {value: 'heatmap', label: '热力图'}
+  {value: 'heatmap', label: '热力图'},
+  {value: 'gauge', label: '仪表盘'}
 ]
 const chartType = ref('bar')
 const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
 const isScatter = computed(() => chartType.value === 'scatter')
 const isHeatmap = computed(() => chartType.value === 'heatmap')
+const isGauge = computed(() => chartType.value === 'gauge')
 const emptyHint = computed(() => {
   if (isScatter.value) {
     return '拖入「X 指标」和「Y 指标」生成图表'
   }
   if (isHeatmap.value) {
     return '拖入两个维度和一个指标生成图表'
+  }
+  if (isGauge.value) {
+    return '拖入一个指标生成仪表盘'
   }
   return '拖入「维度」和「指标」生成图表'
 })
@@ -275,6 +283,9 @@ const ready = computed(() => {
   if (isHeatmap.value) {
     return dimensions.value.length >= 2 && metrics.value.length > 0
   }
+  if (isGauge.value) {
+    return metrics.value.length > 0
+  }
   return dimensions.value.length > 0 && metrics.value.length > 0
 })
 
@@ -285,6 +296,23 @@ const scatterSeries = computed(() => (isScatter.value && ready.value)
 const heatmap = computed(() => (isHeatmap.value && ready.value)
   ? heatmapData({columns: props.columns, rows: props.rows}, dimensions.value[0], dimensions.value[1], metrics.value[0], agg.value)
   : {xCats: [], yCats: [], cells: [] as [number, number, number][], min: 0, max: 0})
+
+// 仪表盘：首个指标聚合为单值，量程取略大于该值的“整”数
+const niceMax = (v: number): number => {
+  if (v <= 0) {
+    return 100
+  }
+  const mag = Math.pow(10, Math.floor(Math.log10(v)))
+  return Math.ceil((v * 1.1) / mag) * mag
+}
+const gauge = computed(() => {
+  if (!(isGauge.value && ready.value)) {
+    return {value: 0, max: 100, name: ''}
+  }
+  const m = metrics.value[0]
+  const value = aggregateColumn({columns: props.columns, rows: props.rows}, m, agg.value)
+  return {value, max: niceMax(value), name: `${AGG_LABELS[agg.value]}(${m})`}
+})
 
 const shaped = computed(() => {
   if (!ready.value) {

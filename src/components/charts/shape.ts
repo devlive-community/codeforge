@@ -185,6 +185,29 @@ export function scatterData(
   return order.map(name => ({name, points: map.get(name)!}))
 }
 
+/** 对整列做单值聚合（用于仪表盘等单值图表） */
+export function aggregateColumn(data: TableData, metric: string, agg: AggKind): number {
+  const mi = data.columns.indexOf(metric)
+  if (mi < 0) {
+    return 0
+  }
+  const vals: number[] = []
+  for (const row of data.rows) {
+    const v = row[mi]
+    if (agg === 'count') {
+      if (v !== null && v !== undefined && v !== '') {
+        vals.push(1)
+      }
+      continue
+    }
+    const num = typeof v === 'number' ? v : Number(v)
+    if (!isNaN(num)) {
+      vals.push(num)
+    }
+  }
+  return vals.length === 0 ? 0 : aggregate(vals, agg)
+}
+
 export interface HeatmapData {
   xCats: string[]
   yCats: string[]
