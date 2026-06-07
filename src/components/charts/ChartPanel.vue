@@ -134,6 +134,8 @@
       <PictorialBarChart v-else-if="chartType === 'pictorialBar'" :categories="shaped.categories" :series="shaped.series"/>
       <WordCloudChart v-else-if="chartType === 'wordcloud'" :data="pieData"/>
       <LiquidFillChart v-else-if="chartType === 'liquidFill'" :value="liquid.value" :name="liquid.name"/>
+      <MapChart v-else-if="chartType === 'mapChina'" map-type="china" :data="pieData" :max="mapMax"/>
+      <MapChart v-else-if="chartType === 'mapWorld'" map-type="world" :data="pieData" :max="mapMax"/>
     </div>
   </div>
 </template>
@@ -166,6 +168,7 @@ import PolarBarChart from './PolarBarChart.vue'
 import PictorialBarChart from './PictorialBarChart.vue'
 import WordCloudChart from './WordCloudChart.vue'
 import LiquidFillChart from './LiquidFillChart.vue'
+import MapChart from './MapChart.vue'
 import {AGG_LABELS, type AggKind, aggregateColumn, boxplotData, calendarData, candlestickData, graphData, heatmapData, hierarchy, isNumericColumn, parallelData, pivot, sankeyData, scatterData, sortAndLimit, themeRiverData} from './shape'
 
 const props = defineProps<{
@@ -211,7 +214,9 @@ const CHART_META: Record<string, ChartMeta> = {
   polarBar: {label: '极坐标柱状图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '维度作角度轴、指标作半径', empty: '拖入「维度」和「指标」生成极坐标柱状图'},
   pictorialBar: {label: '象形柱图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '维度作类目轴、指标作高度(图形重复填充)', empty: '拖入「维度」和「指标」生成象形柱图'},
   wordcloud: {label: '词云', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '首个维度作词、首个指标作权重', empty: '拖入「维度」和「指标」生成词云'},
-  liquidFill: {label: '水球图', layout: 'dims', needDims: 0, needMetrics: 1, dimsZone: false, usesAgg: true, note: '首个指标聚合值 ÷ 该列最大值作填充比例', empty: '拖入一个指标生成水球图'}
+  liquidFill: {label: '水球图', layout: 'dims', needDims: 0, needMetrics: 1, dimsZone: false, usesAgg: true, note: '首个指标聚合值 ÷ 该列最大值作填充比例', empty: '拖入一个指标生成水球图'},
+  mapChina: {label: '中国地图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作省份名(如「北京市」)、首个指标作值', empty: '拖入一个省份维度和一个指标生成中国地图'},
+  mapWorld: {label: '世界地图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作国家名(英文)、首个指标作值', empty: '拖入一个国家维度和一个指标生成世界地图'}
 }
 
 const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
@@ -437,7 +442,7 @@ const shaped = computed(() => {
   return sortAndLimit(base, sortOrder.value, topN.value || 0)
 })
 
-// 饼图/漏斗图：取首个维度作扇区、首个指标(系列)作数值
+// 饼图/漏斗图/词云/地图等：取首个维度作分类、首个指标(系列)作数值
 const pieData = computed(() => {
   const s = shaped.value.series[0]
   if (!s) {
@@ -445,4 +450,5 @@ const pieData = computed(() => {
   }
   return shaped.value.categories.map((name, i) => ({name, value: Number(s.data[i] ?? 0)}))
 })
+const mapMax = computed(() => pieData.value.reduce((m, d) => Math.max(m, d.value), 0))
 </script>
