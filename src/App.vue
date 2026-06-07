@@ -90,6 +90,7 @@
                     <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
                   </span>
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+                  <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="runSql" @insert="insertAtCursor"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -215,6 +216,7 @@
               <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
             </span>
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+            <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="runSql" @insert="insertAtCursor"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -368,6 +370,7 @@ import YamlView from "./components/YamlView.vue";
 import SqlTableView from "./components/SqlTableView.vue";
 import DataTableView from "./components/DataTableView.vue";
 import SqlSourceSelect from "./components/SqlSourceSelect.vue";
+import SchemaBrowser from "./components/SchemaBrowser.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
 import Settings from './components/Settings.vue'
@@ -1339,6 +1342,20 @@ const runSql = async (sqlOverride?: string) => {
   finally {
     isRunning.value = false
   }
+}
+
+// 表结构浏览器：在光标处插入表名/列名
+const insertAtCursor = (text: string) => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const {from, to} = view.state.selection.main
+  view.dispatch({
+    changes: {from, to, insert: text},
+    selection: {anchor: from + text.length}
+  })
+  view.focus()
 }
 
 const runSelection = () => {
