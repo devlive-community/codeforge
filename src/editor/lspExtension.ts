@@ -3,6 +3,7 @@ import {invoke} from '@tauri-apps/api/core'
 import {languageServerWithTransport} from 'codemirror-languageserver'
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
+import {lspCustomHover} from './lspHover'
 
 // CodeForge 语言 key → LSP languageId（与后端 server_cmd 对应）
 const LANGUAGE_ID: Record<string, string> = {
@@ -78,7 +79,7 @@ export async function createLspExtensions(
     const documentUri = filePath
       ? toUri(filePath)
       : `untitled:Untitled.${LANGUAGE_EXT[languageId] || 'txt'}`
-    return languageServerWithTransport({
+    const base = languageServerWithTransport({
       transport,
       rootUri,
       workspaceFolders: rootUri ? [{uri: rootUri, name: 'workspace'}] : null,
@@ -87,6 +88,8 @@ export async function createLspExtensions(
       allowHTMLContent: true,
       autoClose: true
     })
+    // 用自绘悬浮替代库的 hover/诊断 tooltip（定位精确到鼠标 + 主题适配）
+    return [base, lspCustomHover]
   }
   catch {
     return null
