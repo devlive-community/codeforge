@@ -384,8 +384,8 @@ export function useCodeMirrorEditor(props: Props)
             }
         }
 
-        // LSP 语义能力（补全/悬浮/诊断/跳转/重命名）；无服务器时为 null，不影响编辑器
-        if (props.language && props.filePath) {
+        // LSP 语义能力（补全/悬浮/诊断/跳转/重命名）；草稿用 untitled 文档，无服务器时为 null
+        if (props.language) {
             try {
                 const lsp = await createLspExtensions(props.language, props.filePath, props.rootDir)
                 if (lsp) {

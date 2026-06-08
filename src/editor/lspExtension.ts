@@ -29,6 +29,13 @@ const LANGUAGE_ID: Record<string, string> = {
   json: 'json'
 }
 
+// 草稿(未保存)时用的文件扩展名，构造 untitled 文档 URI
+const LANGUAGE_EXT: Record<string, string> = {
+  python: 'py', typescript: 'ts', javascript: 'js', rust: 'rs', go: 'go',
+  c: 'c', cpp: 'cpp', 'objective-c': 'm', 'objective-cpp': 'mm',
+  lua: 'lua', php: 'php', ruby: 'rb', html: 'html', css: 'css', json: 'json'
+}
+
 export const lspSupportsLanguage = (language?: string): boolean =>
   !!language && language in LANGUAGE_ID
 
@@ -43,7 +50,7 @@ export async function createLspExtensions(
   filePath: string | null | undefined,
   rootDir?: string | null
 ): Promise<any | null> {
-  if (!language || !filePath) {
+  if (!language) {
     return null
   }
   const languageId = LANGUAGE_ID[language]
@@ -63,13 +70,18 @@ export async function createLspExtensions(
   try {
     const transport = new TauriLspTransport(language)
     const rootUri = rootDir ? toUri(rootDir) : null
+    // 已保存文件用真实路径；草稿用 untitled 文档 URI（语言服务器按内存内容分析）
+    const documentUri = filePath
+      ? toUri(filePath)
+      : `untitled:Untitled.${LANGUAGE_EXT[languageId] || 'txt'}`
     return languageServerWithTransport({
       transport,
       rootUri,
       workspaceFolders: rootUri ? [{uri: rootUri, name: 'workspace'}] : null,
-      documentUri: toUri(filePath),
+      documentUri,
       languageId,
-      allowHTMLContent: true
+      allowHTMLContent: true,
+      autoClose: true
     })
   }
   catch {
