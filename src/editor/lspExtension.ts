@@ -2,6 +2,7 @@
 import {invoke} from '@tauri-apps/api/core'
 import {languageServerWithTransport} from 'codemirror-languageserver'
 import {TauriLspTransport} from './lspTransport'
+import {setLspState} from './lspStatus'
 
 // CodeForge 语言 key → LSP languageId（与后端 server_cmd 对应）
 const LANGUAGE_ID: Record<string, string> = {
@@ -55,6 +56,7 @@ export async function createLspExtensions(
   }
   const languageId = LANGUAGE_ID[language]
   if (!languageId) {
+    setLspState(language || '', 'off')
     return null
   }
   let available = false
@@ -65,8 +67,10 @@ export async function createLspExtensions(
     available = false
   }
   if (!available) {
+    setLspState(language, 'off')
     return null
   }
+  setLspState(language, 'on')
   try {
     const transport = new TauriLspTransport(language)
     const rootUri = rootDir ? toUri(rootDir) : null
