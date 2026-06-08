@@ -35,6 +35,7 @@
 - **快速打开**（`Cmd/Ctrl + P`）—— 模糊匹配 + 最近文件优先
 - **符号大纲**（`Cmd/Ctrl + Shift + O`）、**跳转到行**（`Cmd/Ctrl + G`）
 - **代码片段** —— 自定义前缀，输入后按 `Tab` 展开（`$0` 为光标落点）
+- **LSP 语义能力** —— 接入语言服务器，提供精准补全、悬浮文档、跳转定义、查找引用、重命名与实时诊断（需本机安装对应语言服务器，未安装则自动回退，不影响编辑）
 - **会话恢复** —— 重启自动恢复上次的文件夹与标签页
 - **深色模式** —— 跟随系统 / 浅色 / 深色，编辑器主题同步切换
 
@@ -153,7 +154,9 @@ pnpm tauri build
 | 前端 | Vue 3 · TypeScript · Tailwind CSS · CodeMirror 6 · ECharts |
 | 后端 | Rust · Tauri 2（rusqlite · mysql） |
 | 存储 | SQLite（执行历史 / AI 对话 / 代码片段 / 应用配置统一入库） |
-| 架构 | 插件化语言支持系统 · 插件式数据库执行器 · 可复用图表组件 |
+| 架构 | 插件化语言支持系统 · 插件式数据库执行器 · 可复用图表组件 · LSP 桥接 |
+
+> **LSP 语言服务器**（可选，按需安装）：Python `pyright`、TS/JS `typescript-language-server`、Rust `rust-analyzer`、Go `gopls`、C/C++ `clangd`、Lua `lua-language-server`、PHP `intelephense`、Ruby `solargraph`、HTML/CSS/JSON `vscode-langservers-extracted`。未安装的语言会自动跳过 LSP，仅用基础高亮 + AI 预测。
 
 ---
 
