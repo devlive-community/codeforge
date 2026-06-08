@@ -74,7 +74,7 @@ import {StreamLanguage} from '@codemirror/language'
 import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
-import {EditorView, keymap, tooltips} from "@codemirror/view";
+import {EditorView, keymap} from "@codemirror/view";
 import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
@@ -435,9 +435,7 @@ export function useCodeMirrorEditor(props: Props)
             }
         }
 
-        // tooltip 挂到 body 并以最高优先级生效，避免父级 transform/overflow 导致错位
-        result.push(Prec.highest(tooltips({parent: document.body, position: 'fixed'})))
-        // 自定义悬浮/诊断/补全提示框样式（主题适配）
+        // 自定义悬浮/诊断/补全提示框样式（主题适配，仅样式不改定位）
         result.push(buildTooltipTheme(isDark.value))
 
         // LSP 语义能力（补全/悬浮/诊断/跳转/重命名）；草稿用 untitled 文档，无服务器时为 null
