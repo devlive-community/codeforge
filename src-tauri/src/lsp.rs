@@ -165,13 +165,8 @@ pub fn lsp_install(app: AppHandle, id: String) -> Result<(), String> {
         if let Some(r) = reader {
             std::thread::spawn(move || {
                 let mut buf = BufReader::new(r);
-                loop {
-                    match read_raw_line(&mut buf) {
-                        Some(line) => {
-                            let _ = app.emit("lsp:install", (id.clone(), line));
-                        }
-                        None => break,
-                    }
+                while let Some(line) = read_raw_line(&mut buf) {
+                    let _ = app.emit("lsp:install", (id.clone(), line));
                 }
             });
         }
@@ -318,19 +313,14 @@ pub fn lsp_start(
     let lang_reader = language.clone();
     std::thread::spawn(move || {
         let mut reader = BufReader::new(stdout);
-        loop {
-            match read_message(&mut reader) {
-                Some(body) => {
-                    let _ = app_reader.emit(
-                        "lsp:message",
-                        LspEvent {
-                            language: lang_reader.clone(),
-                            message: body,
-                        },
-                    );
-                }
-                None => break,
-            }
+        while let Some(body) = read_message(&mut reader) {
+            let _ = app_reader.emit(
+                "lsp:message",
+                LspEvent {
+                    language: lang_reader.clone(),
+                    message: body,
+                },
+            );
         }
         let _ = app_reader.emit("lsp:exit", lang_reader.clone());
     });
@@ -366,11 +356,7 @@ pub fn lsp_send(
     let server = servers
         .get_mut(&language)
         .ok_or_else(|| "语言服务器未启动".to_string())?;
-    let frame = format!(
-        "Content-Length: {}\r\n\r\n{}",
-        message.as_bytes().len(),
-        message
-    );
+    let frame = format!("Content-Length: {}\r\n\r\n{}", message.len(), message);
     server
         .stdin
         .write_all(frame.as_bytes())
