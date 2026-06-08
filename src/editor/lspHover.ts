@@ -68,6 +68,20 @@ function makeHoverPlugin() {
         this.hide()
         return
       }
+      // posAtCoords 会就近吸附到最近字符；确认鼠标确实落在该行文本范围内，否则不显示
+      const block = this.view.lineBlockAt(pos)
+      if (y < block.top - 1 || y > block.bottom + 1) {
+        this.hide()
+        return
+      }
+      const line = this.view.state.doc.lineAt(pos)
+      const startC = this.view.coordsAtPos(line.from)
+      const endC = this.view.coordsAtPos(line.to)
+      if ((startC && x < startC.left - 4) || (endC && x > endC.right + 4)) {
+        this.hide()
+        return
+      }
+
       const myReq = ++this.reqId
       const parts: string[] = []
 
