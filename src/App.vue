@@ -673,9 +673,25 @@ const openFolder = async () => {
 const showViewer = ref(false)
 const viewerFile = ref<{ path: string, lineCount: number, sizeBytes: number } | null>(null)
 
+// 二进制数据文件（Excel 等）：切到对应语言并在控制台用数据视图展示，不进代码编辑器
+const openDataFile = (filePath: string, lang: string) => {
+  addRecentFile(filePath)
+  applyLanguage(lang)
+  currentFilePath.value = filePath
+  output.value = filePath
+  showConsole.value = true
+  consoleType.value = getCurrentConsoleType()
+}
+
 // 按文件大小决定：可编辑打开 / 只读查看
 const smartOpen = async (filePath: string) => {
   try {
+    // Excel 等二进制数据文件：直接路由到数据视图，不当文本打开
+    if (/\.(xlsx|xls)$/i.test(filePath)) {
+      openDataFile(filePath, 'xlsx')
+      return
+    }
+
     const meta = await invoke<{ size_bytes: number, line_count: number, is_text: boolean }>('get_text_file_meta', {path: filePath})
     if (!meta.is_text) {
       toast.error('不是文本文件，无法打开')
