@@ -53,6 +53,130 @@ fn server_cmd(language: &str) -> Option<(&'static str, Vec<&'static str>)> {
     }
 }
 
+/// 可在设置中一键安装的语言服务器清单（用于检测与安装）
+/// (id, 展示名, 用于检测的可执行名, 安装命令)
+fn server_defs() -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
+    vec![
+        ("python", "Python (pyright)", "pyright-langserver", "npm i -g pyright"),
+        (
+            "typescript",
+            "TypeScript / JavaScript",
+            "typescript-language-server",
+            "npm i -g typescript-language-server typescript",
+        ),
+        ("rust", "Rust (rust-analyzer)", "rust-analyzer", "rustup component add rust-analyzer"),
+        ("go", "Go (gopls)", "gopls", "go install golang.org/x/tools/gopls@latest"),
+        ("clangd", "C / C++ (clangd)", "clangd", "brew install llvm"),
+        ("lua", "Lua", "lua-language-server", "brew install lua-language-server"),
+        ("php", "PHP (intelephense)", "intelephense", "npm i -g intelephense"),
+        ("ruby", "Ruby (solargraph)", "solargraph", "gem install solargraph"),
+        (
+            "web",
+            "HTML / CSS / JSON",
+            "vscode-html-language-server",
+            "npm i -g vscode-langservers-extracted",
+        ),
+    ]
+}
+
+#[derive(Serialize)]
+pub struct LspServerInfo {
+    id: String,
+    label: String,
+    program: String,
+    installed: bool,
+    install: String,
+}
+
+/// 列出可安装的语言服务器及其安装状态
+#[tauri::command]
+pub fn lsp_server_list() -> Vec<LspServerInfo> {
+    server_defs()
+        .into_iter()
+        .map(|(id, label, program, install)| LspServerInfo {
+            id: id.to_string(),
+            label: label.to_string(),
+            program: program.to_string(),
+            installed: find_in_path(program).is_some(),
+            install: install.to_string(),
+        })
+        .collect()
+}
+
+/// 一键安装某语言服务器：执行其安装命令并实时输出日志（事件 lsp:install / lsp:install-done）
+#[tauri::command]
+pub fn lsp_install(app: AppHandle, id: String) -> Result<(), String> {
+    let def = server_defs()
+        .into_iter()
+        .find(|(d, ..)| *d == id)
+        .ok_or_else(|| "未知的语言服务器".to_string())?;
+    let cmd_str = def.3.to_string();
+
+    let (shell, flag) = if cfg!(windows) { ("cmd", "/C") } else { ("sh", "-c") };
+    let mut child = Command::new(shell)
+        .arg(flag)
+        .arg(&cmd_str)
+        .env("PATH", augmented_path())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("无法执行安装命令: {}", e))?;
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let id_done = id.clone();
+    let app_done = app.clone();
+
+    let emit_lines = |app: AppHandle, id: String, reader: Option<Box<dyn Read + Send>>| {
+        if let Some(r) = reader {
+            std::thread::spawn(move || {
+                let mut buf = BufReader::new(r);
+                loop {
+                    match read_raw_line(&mut buf) {
+                        Some(line) => {
+                            let _ = app.emit("lsp:install", (id.clone(), line));
+                        }
+                        None => break,
+                    }
+                }
+            });
+        }
+    };
+    emit_lines(app.clone(), id.clone(), stdout.map(|s| Box::new(s) as Box<dyn Read + Send>));
+    emit_lines(app.clone(), id.clone(), stderr.map(|s| Box::new(s) as Box<dyn Read + Send>));
+
+    std::thread::spawn(move || {
+        let success = child.wait().map(|s| s.success()).unwrap_or(false);
+        let _ = app_done.emit("lsp:install-done", (id_done, success));
+    });
+    Ok(())
+}
+
+/// 读取一行普通文本（以 \n 结尾，用于安装日志）
+fn read_raw_line<R: Read>(reader: &mut BufReader<R>) -> Option<String> {
+    let mut buf = Vec::new();
+    let mut byte = [0u8; 1];
+    loop {
+        match reader.read(&mut byte) {
+            Ok(0) => {
+                if buf.is_empty() {
+                    return None;
+                }
+                return Some(String::from_utf8_lossy(&buf).to_string());
+            }
+            Ok(_) => {
+                if byte[0] == b'\n' {
+                    return Some(String::from_utf8_lossy(&buf).to_string());
+                }
+                if byte[0] != b'\r' {
+                    buf.push(byte[0]);
+                }
+            }
+            Err(_) => return None,
+        }
+    }
+}
+
 /// GUI 应用 PATH 常缺失，补充常见安装目录
 fn extra_bin_dirs() -> Vec<PathBuf> {
     let mut dirs = vec![

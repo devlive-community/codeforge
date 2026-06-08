@@ -59,7 +59,9 @@ use crate::filesystem::{
     reveal_path, search_in_files, watch_directory, write_file_text,
 };
 use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
-use crate::lsp::{LspState, lsp_available, lsp_send, lsp_start, lsp_stop};
+use crate::lsp::{
+    LspState, lsp_available, lsp_install, lsp_send, lsp_server_list, lsp_start, lsp_stop,
+};
 use crate::plugin::{get_info, get_supported_languages};
 use crate::setup::app::get_app_info;
 use crate::snippets::{Snippets, delete_snippet, get_snippets, save_snippet};
@@ -234,7 +236,9 @@ fn main() {
             lsp_available,
             lsp_start,
             lsp_send,
-            lsp_stop
+            lsp_stop,
+            lsp_server_list,
+            lsp_install
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
