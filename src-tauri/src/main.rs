@@ -18,6 +18,7 @@ mod filesystem;
 mod font;
 mod kv;
 mod logger;
+mod lsp;
 mod plugin;
 mod plugins;
 mod setup;
@@ -58,6 +59,9 @@ use crate::filesystem::{
     reveal_path, search_in_files, watch_directory, write_file_text,
 };
 use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
+use crate::lsp::{
+    LspState, lsp_available, lsp_install, lsp_send, lsp_server_list, lsp_start, lsp_stop,
+};
 use crate::plugin::{get_info, get_supported_languages};
 use crate::setup::app::get_app_info;
 use crate::snippets::{Snippets, delete_snippet, get_snippets, save_snippet};
@@ -97,6 +101,7 @@ fn main() {
         .manage(Snippets::new().expect("failed to initialize snippets database"))
         .manage(KvStore::new().expect("failed to initialize kv store database"))
         .manage(TerminalState::new())
+        .manage(LspState::new())
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
         .manage(EnvironmentManagerState::new(env_manager))
         .setup(|app| {
@@ -226,7 +231,14 @@ fn main() {
             terminal_resize,
             terminal_kill,
             // SQL 执行
-            run_sql
+            run_sql,
+            // LSP 桥接
+            lsp_available,
+            lsp_start,
+            lsp_send,
+            lsp_stop,
+            lsp_server_list,
+            lsp_install
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

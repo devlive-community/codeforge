@@ -54,7 +54,7 @@
                   @after-leave="$emit('after-close')">
         <div v-show="isOpen"
              ref="dropdown"
-             class="fixed z-[99999] bg-white dark:bg-gray-800 dark:text-gray-100 text-base shadow-lg ring-1 ring-blue-200 dark:ring-gray-700 focus:outline-none rounded-md overflow-hidden"
+             class="fixed z-[99999] flex flex-col bg-white dark:bg-gray-800 dark:text-gray-100 text-base shadow-lg ring-1 ring-blue-200 dark:ring-gray-700 focus:outline-none rounded-md overflow-hidden"
              :class="dropdownClasses"
              :style="dropdownStyle"
              role="listbox"
@@ -72,7 +72,7 @@
           </div>
 
           <!-- 选项列表容器 -->
-          <div class="max-h-60 overflow-auto" @scroll.stop>
+          <div class="flex-1 min-h-0 overflow-auto" @scroll.stop>
             <!-- 选项列表 -->
             <template v-if="filteredOptions.length > 0">
               <div v-for="(option, index) in filteredOptions"
@@ -252,8 +252,8 @@ const updateDropdownPosition = async () => {
   let width = buttonRect.width
   let maxHeight = Math.min(totalDropdownHeight, spaceBelow)
 
-  // 如果下方空间不足且上方空间更大，显示在上方
-  if (spaceBelow < 150 && spaceAbove > spaceBelow) {
+  // 下方放不下且上方空间更大时，翻转到上方显示
+  if (spaceBelow < totalDropdownHeight && spaceAbove > spaceBelow) {
     top = buttonRect.top - 4 // 显示在上方，留4px间距
     maxHeight = Math.min(totalDropdownHeight, spaceAbove)
 

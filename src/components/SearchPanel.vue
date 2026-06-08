@@ -25,9 +25,21 @@
         <button class="text-xs px-2 py-1 rounded bg-blue-500 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white flex-shrink-0"
                 :disabled="replacing || results.length === 0"
                 :title="results.length ? `替换全部 ${results.length} 处` : '先搜索出结果'"
-                @click="replaceAll">
+                @click="confirming = true">
           {{ replacing ? '替换中…' : '全部替换' }}
         </button>
+      </div>
+
+      <!-- 全部替换确认 -->
+      <div v-if="confirming" class="px-3 py-2 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 flex-shrink-0 text-xs">
+        <p class="text-amber-700 dark:text-amber-300 mb-2">
+          将把 {{ results.length }} 处「{{ query.trim() }}」替换为「{{ replacement }}」，涉及 {{ affectedCount }} 个文件。<br/>
+          直接写入磁盘且不可撤销，确定继续？
+        </p>
+        <div class="flex justify-end gap-2">
+          <button class="px-2 py-1 rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="confirming = false">取消</button>
+          <button class="px-2 py-1 rounded bg-red-500 hover:bg-red-600 text-white cursor-pointer" @click="replaceAll">确认替换</button>
+        </div>
       </div>
 
       <div class="flex-1 overflow-y-auto">
@@ -78,25 +90,22 @@ const toast = useToast()
 const query = ref('')
 const replacement = ref('')
 const replacing = ref(false)
+const confirming = ref(false)
 const results = ref<Match[]>([])
+const affectedCount = computed(() => new Set(results.value.map(m => m.path)).size)
 const loading = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
 
 onMounted(() => inputRef.value?.focus())
 
-// 全部替换：确认后调用后端，完成后刷新搜索并通知刷新已打开文件
+// 全部替换：经应用内确认后调用后端，完成后刷新搜索并通知刷新已打开文件
 const replaceAll = async () => {
+  confirming.value = false
   const q = query.value.trim()
   if (q.length < 2 || results.value.length === 0) {
     return
   }
   const affected = Array.from(new Set(results.value.map(m => m.path)))
-  const ok = window.confirm(
-      `将把 ${results.value.length} 处「${q}」替换为「${replacement.value}」，涉及 ${affected.length} 个文件。\n此操作会直接写入磁盘且不可撤销，确定继续？`
-  )
-  if (!ok) {
-    return
-  }
   replacing.value = true
   try {
     const summary = await invoke<{ files_changed: number, replacements: number }>('replace_in_files', {

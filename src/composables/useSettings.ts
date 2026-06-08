@@ -1,5 +1,5 @@
 import { nextTick, ref } from 'vue'
-import { BracesIcon, CodeIcon, Database, FileText, Globe, Keyboard, Server, ShieldIcon, Sparkles } from 'lucide-vue-next'
+import { BracesIcon, CodeIcon, Cpu, Database, FileText, Globe, Keyboard, Server, ShieldIcon, Sparkles } from 'lucide-vue-next'
 
 export function useSettings(emit: any)
 {
@@ -15,6 +15,7 @@ export function useSettings(emit: any)
         { key: 'ai', label: 'AI', icon: Sparkles },
         { key: 'database', label: '数据库', icon: Server },
         { key: 'language', label: '语言', icon: BracesIcon },
+        { key: 'lsp', label: '语言服务', icon: Cpu },
         { key: 'network', label: '网络', icon: Globe },
         { key: 'cache', label: '缓存', icon: Database },
         { key: 'logs', label: '日志', icon: FileText }

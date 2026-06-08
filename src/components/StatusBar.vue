@@ -22,6 +22,14 @@
     </div>
 
     <div class="flex items-center space-x-4">
+      <!-- LSP 状态 -->
+      <div v-if="lspState.status !== 'off'" class="flex items-center space-x-1"
+           :title="lspState.status === 'connecting' ? `语言服务索引中：${lspState.language}` : `语言服务已就绪：${lspState.language}`">
+        <RefreshCw v-if="lspState.status === 'connecting'" class="w-3 h-3 animate-spin"/>
+        <span v-else class="w-1.5 h-1.5 rounded-full bg-emerald-300"/>
+        <span>{{ lspState.status === 'connecting' ? 'LSP 索引中' : 'LSP' }}</span>
+      </div>
+
       <div class="flex items-center space-x-2">
         <Hash class="w-3 h-3 font-normal"/>
         <span><strong>{{ codeLength }}</strong> 字符</span>
@@ -41,6 +49,7 @@
 import { Clock, Hash, RefreshCw, Terminal as TerminalIcon } from 'lucide-vue-next'
 import { computed, toRefs } from 'vue'
 import { useStatusBar } from '../composables/useStatusBar'
+import { lspState } from '../editor/lspStatus'
 import { useShortcuts } from '../composables/useShortcuts'
 
 const props = defineProps<{

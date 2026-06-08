@@ -85,11 +85,65 @@ import {markdown} from "@codemirror/lang-markdown";
 import {yaml} from "@codemirror/lang-yaml";
 import {sql} from "@codemirror/lang-sql";
 import {useSnippets} from "./useSnippets";
+import {createLspExtensions} from "../editor/lspExtension";
 
 interface Props
 {
     modelValue: string
     language?: string
+    filePath?: string | null
+    rootDir?: string | null
+}
+
+// 自定义提示框样式（悬浮文档 / 诊断 / 补全），跟随明暗主题
+function buildTooltipTheme(dark: boolean) {
+    const bg = dark ? '#1f2937' : '#ffffff'
+    const border = dark ? '#374151' : '#e5e7eb'
+    const text = dark ? '#e5e7eb' : '#1f2937'
+    const codeBg = dark ? '#111827' : '#f3f4f6'
+    const sel = dark ? '#2563eb' : '#dbeafe'
+    const selText = dark ? '#ffffff' : '#1e3a8a'
+    return EditorView.theme({
+        '.cm-tooltip': {
+            border: `1px solid ${border}`,
+            borderRadius: '8px',
+            backgroundColor: bg,
+            color: text,
+            boxShadow: dark ? '0 8px 28px rgba(0,0,0,0.5)' : '0 8px 28px rgba(0,0,0,0.14)',
+            fontSize: '12px',
+            overflow: 'hidden'
+        },
+        '.cm-tooltip.cm-tooltip-hover': {maxWidth: '480px'},
+        '.cm-tooltip-hover .cm-tooltip-section': {
+            padding: '8px 10px',
+            borderTop: `1px solid ${border}`,
+            lineHeight: '1.5'
+        },
+        '.cm-tooltip-hover .cm-tooltip-section:first-child': {borderTop: 'none'},
+        '.cm-tooltip-hover pre, .cm-tooltip-hover code': {
+            backgroundColor: codeBg,
+            borderRadius: '4px',
+            padding: '1px 4px',
+            fontFamily: 'monospace',
+            whiteSpace: 'pre-wrap'
+        },
+        '.cm-tooltip-hover pre': {padding: '8px 10px', margin: '4px 0', overflowX: 'auto'},
+        // 诊断悬浮
+        '.cm-tooltip.cm-tooltip-lint': {padding: '0'},
+        '.cm-diagnostic': {padding: '6px 10px', borderLeft: 'none', marginLeft: '0'},
+        '.cm-diagnostic-error': {borderLeft: '3px solid #ef4444'},
+        '.cm-diagnostic-warning': {borderLeft: '3px solid #f59e0b'},
+        '.cm-diagnostic-info': {borderLeft: '3px solid #3b82f6'},
+        // 自动补全
+        '.cm-tooltip-autocomplete > ul': {fontFamily: 'monospace', maxHeight: '16em'},
+        '.cm-tooltip-autocomplete > ul > li': {padding: '3px 8px'},
+        '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+            backgroundColor: sel,
+            color: selText
+        },
+        '.cm-completionIcon': {opacity: '0.7', paddingRight: '6px'},
+        '.cm-completionDetail': {color: dark ? '#9ca3af' : '#6b7280', fontStyle: 'normal'}
+    }, {dark})
 }
 
 export function useCodeMirrorEditor(props: Props)
@@ -381,6 +435,22 @@ export function useCodeMirrorEditor(props: Props)
             }
         }
 
+        // 自定义悬浮/诊断/补全提示框样式（主题适配，仅样式不改定位）
+        result.push(buildTooltipTheme(isDark.value))
+
+        // LSP 语义能力（补全/悬浮/诊断/跳转/重命名）；草稿用 untitled 文档，无服务器时为 null
+        if (props.language) {
+            try {
+                const lsp = await createLspExtensions(props.language, props.filePath, props.rootDir)
+                if (lsp) {
+                    result.push(lsp)
+                }
+            }
+            catch (e) {
+                console.warn('LSP 初始化失败:', e)
+            }
+        }
+
         // 处理行号显示逻辑
         const shouldShowLineNumbers = showLineNumbers ?? editorConfig.value?.show_line_numbers ?? false
         // 如果配置为不显示行号，则添加隐藏行号的扩展
@@ -471,6 +541,11 @@ export function useCodeMirrorEditor(props: Props)
     watch(() => props.language, async () => {
         console.log('语言变化:', props.language)
         await reRenderEditor()
+    }, {immediate: false})
+
+    // 文件切换：重建扩展以切换 LSP 文档（就地重配置，避免闪烁）
+    watch(() => props.filePath, async () => {
+        await updateExtensions()
     }, {immediate: false})
 
     // 监听编辑器配置变化

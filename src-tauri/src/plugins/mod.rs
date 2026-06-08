@@ -438,6 +438,7 @@ pub mod tsv;
 pub mod typescript;
 pub mod typescript_browser;
 pub mod typescript_nodejs;
+pub mod xlsx;
 pub mod xml;
 pub mod yaml;
 

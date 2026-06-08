@@ -36,6 +36,11 @@
         <Language v-if="activeTab === 'language'" @settings-changed="handleLanguageSettingsChanged"/>
       </template>
 
+      <!-- 语言服务（LSP） -->
+      <template #lsp>
+        <Lsp v-if="activeTab === 'lsp'"/>
+      </template>
+
       <!-- 网络配置 -->
       <template #network>
         <Network v-if="activeTab === 'network'" @settings-changed="handleNetworkSettingsChanged" @error="handleEditorError"/>
@@ -64,6 +69,7 @@ import Editor from './setting/Editor.vue'
 import Shortcut from './setting/Shortcut.vue'
 import Ai from './setting/Ai.vue'
 import Database from './setting/Database.vue'
+import Lsp from './setting/Lsp.vue'
 import Network from './setting/Network.vue'
 import Cache from './setting/Cache.vue'
 import Logs from './setting/Logs.vue'
