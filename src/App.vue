@@ -106,7 +106,7 @@
                 </div>
               </div>
               <div class="flex-1 overflow-hidden relative">
-                <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey" @ready="editorView = $event"/>
+                <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :file-path="currentFilePath" :root-dir="rootDir" :editor-config="editorConfig" :key="editorConfigKey" @ready="editorView = $event"/>
                 <LargeFileViewer v-if="showViewer && viewerFile"
                                  :file-path="viewerFile.path"
                                  :line-count="viewerFile.lineCount"
@@ -241,7 +241,7 @@
           </div>
         </div>
         <div class="flex-1 overflow-hidden relative">
-          <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :editor-config="editorConfig" :key="editorConfigKey" @ready="editorView = $event"/>
+          <CodeEditor v-model="code" class="h-full" :language="currentLanguage" :file-path="currentFilePath" :root-dir="rootDir" :editor-config="editorConfig" :key="editorConfigKey" @ready="editorView = $event"/>
           <LargeFileViewer v-if="showViewer && viewerFile"
                            :file-path="viewerFile.path"
                            :line-count="viewerFile.lineCount"

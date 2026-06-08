@@ -85,11 +85,14 @@ import {markdown} from "@codemirror/lang-markdown";
 import {yaml} from "@codemirror/lang-yaml";
 import {sql} from "@codemirror/lang-sql";
 import {useSnippets} from "./useSnippets";
+import {createLspExtensions} from "../editor/lspExtension";
 
 interface Props
 {
     modelValue: string
     language?: string
+    filePath?: string | null
+    rootDir?: string | null
 }
 
 export function useCodeMirrorEditor(props: Props)
@@ -381,6 +384,19 @@ export function useCodeMirrorEditor(props: Props)
             }
         }
 
+        // LSP 语义能力（补全/悬浮/诊断/跳转/重命名）；无服务器时为 null，不影响编辑器
+        if (props.language && props.filePath) {
+            try {
+                const lsp = await createLspExtensions(props.language, props.filePath, props.rootDir)
+                if (lsp) {
+                    result.push(lsp)
+                }
+            }
+            catch (e) {
+                console.warn('LSP 初始化失败:', e)
+            }
+        }
+
         // 处理行号显示逻辑
         const shouldShowLineNumbers = showLineNumbers ?? editorConfig.value?.show_line_numbers ?? false
         // 如果配置为不显示行号，则添加隐藏行号的扩展
@@ -471,6 +487,11 @@ export function useCodeMirrorEditor(props: Props)
     watch(() => props.language, async () => {
         console.log('语言变化:', props.language)
         await reRenderEditor()
+    }, {immediate: false})
+
+    // 文件切换：重建扩展以切换 LSP 文档（就地重配置，避免闪烁）
+    watch(() => props.filePath, async () => {
+        await updateExtensions()
     }, {immediate: false})
 
     // 监听编辑器配置变化

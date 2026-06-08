@@ -19,6 +19,8 @@ import { useCodeMirrorEditor } from '../composables/useCodeMirrorEditor'
 const props = defineProps<{
   modelValue: string
   language?: string
+  filePath?: string | null
+  rootDir?: string | null
 }>()
 
 const emit = defineEmits<{
