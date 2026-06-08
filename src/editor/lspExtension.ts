@@ -1,6 +1,6 @@
 // 根据语言/文件构建 CodeMirror LSP 扩展（补全、悬浮、诊断、跳转、重命名）
 import {invoke} from '@tauri-apps/api/core'
-import {languageServerWithTransport} from 'codemirror-languageserver'
+import {LanguageServerClient, languageServerWithTransport} from 'codemirror-languageserver'
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
 import {lspCustomHover} from './lspHover'
@@ -71,7 +71,7 @@ export async function createLspExtensions(
     setLspState(language, 'off')
     return null
   }
-  setLspState(language, 'on')
+  setLspState(language, 'connecting')
   try {
     const transport = new TauriLspTransport(language)
     const rootUri = rootDir ? toUri(rootDir) : null
@@ -79,10 +79,24 @@ export async function createLspExtensions(
     const documentUri = filePath
       ? toUri(filePath)
       : `untitled:Untitled.${LANGUAGE_EXT[languageId] || 'txt'}`
-    const base = languageServerWithTransport({
+    const workspaceFolders = rootUri ? [{uri: rootUri, name: 'workspace'}] : null
+    // 自建 client 以获取初始化完成(capabilities)信号，驱动状态栏的"索引中→就绪"
+    const client = new LanguageServerClient({
       transport,
       rootUri,
-      workspaceFolders: rootUri ? [{uri: rootUri, name: 'workspace'}] : null,
+      workspaceFolders,
+      documentUri,
+      languageId,
+      autoClose: true,
+      onCapabilities: () => setLspState(language, 'on'),
+      onError: () => setLspState(language, 'off'),
+      onClose: () => setLspState(language, 'off')
+    })
+    const base = languageServerWithTransport({
+      client,
+      transport,
+      rootUri,
+      workspaceFolders,
       documentUri,
       languageId,
       allowHTMLContent: true,

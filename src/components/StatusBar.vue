@@ -23,9 +23,11 @@
 
     <div class="flex items-center space-x-4">
       <!-- LSP 状态 -->
-      <div v-if="lspState.status === 'on'" class="flex items-center space-x-1" :title="`语言服务已启用：${lspState.language}`">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"/>
-        <span>LSP</span>
+      <div v-if="lspState.status !== 'off'" class="flex items-center space-x-1"
+           :title="lspState.status === 'connecting' ? `语言服务索引中：${lspState.language}` : `语言服务已就绪：${lspState.language}`">
+        <RefreshCw v-if="lspState.status === 'connecting'" class="w-3 h-3 animate-spin"/>
+        <span v-else class="w-1.5 h-1.5 rounded-full bg-emerald-300"/>
+        <span>{{ lspState.status === 'connecting' ? 'LSP 索引中' : 'LSP' }}</span>
       </div>
 
       <div class="flex items-center space-x-2">
