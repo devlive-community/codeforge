@@ -436,9 +436,9 @@ pub mod swift;
 pub mod text;
 pub mod tsv;
 pub mod typescript;
-pub mod xlsx;
 pub mod typescript_browser;
 pub mod typescript_nodejs;
+pub mod xlsx;
 pub mod xml;
 pub mod yaml;
 

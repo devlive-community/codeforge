@@ -57,19 +57,49 @@ fn server_cmd(language: &str) -> Option<(&'static str, Vec<&'static str>)> {
 /// (id, 展示名, 用于检测的可执行名, 安装命令)
 fn server_defs() -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
     vec![
-        ("python", "Python (pyright)", "pyright-langserver", "npm i -g pyright"),
+        (
+            "python",
+            "Python (pyright)",
+            "pyright-langserver",
+            "npm i -g pyright",
+        ),
         (
             "typescript",
             "TypeScript / JavaScript",
             "typescript-language-server",
             "npm i -g typescript-language-server typescript",
         ),
-        ("rust", "Rust (rust-analyzer)", "rust-analyzer", "rustup component add rust-analyzer"),
-        ("go", "Go (gopls)", "gopls", "go install golang.org/x/tools/gopls@latest"),
+        (
+            "rust",
+            "Rust (rust-analyzer)",
+            "rust-analyzer",
+            "rustup component add rust-analyzer",
+        ),
+        (
+            "go",
+            "Go (gopls)",
+            "gopls",
+            "go install golang.org/x/tools/gopls@latest",
+        ),
         ("clangd", "C / C++ (clangd)", "clangd", "brew install llvm"),
-        ("lua", "Lua", "lua-language-server", "brew install lua-language-server"),
-        ("php", "PHP (intelephense)", "intelephense", "npm i -g intelephense"),
-        ("ruby", "Ruby (solargraph)", "solargraph", "gem install solargraph"),
+        (
+            "lua",
+            "Lua",
+            "lua-language-server",
+            "brew install lua-language-server",
+        ),
+        (
+            "php",
+            "PHP (intelephense)",
+            "intelephense",
+            "npm i -g intelephense",
+        ),
+        (
+            "ruby",
+            "Ruby (solargraph)",
+            "solargraph",
+            "gem install solargraph",
+        ),
         (
             "web",
             "HTML / CSS / JSON",
@@ -112,7 +142,11 @@ pub fn lsp_install(app: AppHandle, id: String) -> Result<(), String> {
         .ok_or_else(|| "未知的语言服务器".to_string())?;
     let cmd_str = def.3.to_string();
 
-    let (shell, flag) = if cfg!(windows) { ("cmd", "/C") } else { ("sh", "-c") };
+    let (shell, flag) = if cfg!(windows) {
+        ("cmd", "/C")
+    } else {
+        ("sh", "-c")
+    };
     let mut child = Command::new(shell)
         .arg(flag)
         .arg(&cmd_str)
@@ -142,8 +176,16 @@ pub fn lsp_install(app: AppHandle, id: String) -> Result<(), String> {
             });
         }
     };
-    emit_lines(app.clone(), id.clone(), stdout.map(|s| Box::new(s) as Box<dyn Read + Send>));
-    emit_lines(app.clone(), id.clone(), stderr.map(|s| Box::new(s) as Box<dyn Read + Send>));
+    emit_lines(
+        app.clone(),
+        id.clone(),
+        stdout.map(|s| Box::new(s) as Box<dyn Read + Send>),
+    );
+    emit_lines(
+        app.clone(),
+        id.clone(),
+        stderr.map(|s| Box::new(s) as Box<dyn Read + Send>),
+    );
 
     std::thread::spawn(move || {
         let success = child.wait().map(|s| s.success()).unwrap_or(false);
@@ -242,7 +284,11 @@ pub fn lsp_available(language: String) -> bool {
 
 /// 启动语言服务器；已启动则直接返回 true。
 #[tauri::command]
-pub fn lsp_start(app: AppHandle, state: State<'_, LspState>, language: String) -> Result<bool, String> {
+pub fn lsp_start(
+    app: AppHandle,
+    state: State<'_, LspState>,
+    language: String,
+) -> Result<bool, String> {
     {
         let servers = state.servers.lock().map_err(|e| e.to_string())?;
         if servers.contains_key(&language) {
@@ -250,7 +296,8 @@ pub fn lsp_start(app: AppHandle, state: State<'_, LspState>, language: String) -
         }
     }
     let (prog, args) = server_cmd(&language).ok_or_else(|| "该语言暂不支持 LSP".to_string())?;
-    let exe = find_in_path(prog).ok_or_else(|| format!("未找到语言服务器：{}（请先安装并确保在 PATH 中）", prog))?;
+    let exe = find_in_path(prog)
+        .ok_or_else(|| format!("未找到语言服务器：{}（请先安装并确保在 PATH 中）", prog))?;
 
     let mut cmd = Command::new(&exe);
     cmd.args(&args)
@@ -259,7 +306,9 @@ pub fn lsp_start(app: AppHandle, state: State<'_, LspState>, language: String) -
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let mut child = cmd.spawn().map_err(|e| format!("启动 {} 失败: {}", prog, e))?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("启动 {} 失败: {}", prog, e))?;
     let stdin = child.stdin.take().ok_or("无法获取 stdin")?;
     let stdout = child.stdout.take().ok_or("无法获取 stdout")?;
     let stderr = child.stderr.take();
@@ -308,12 +357,20 @@ pub fn lsp_start(app: AppHandle, state: State<'_, LspState>, language: String) -
 
 /// 向语言服务器发送一条 JSON-RPC（已是完整 JSON 字符串）
 #[tauri::command]
-pub fn lsp_send(state: State<'_, LspState>, language: String, message: String) -> Result<(), String> {
+pub fn lsp_send(
+    state: State<'_, LspState>,
+    language: String,
+    message: String,
+) -> Result<(), String> {
     let mut servers = state.servers.lock().map_err(|e| e.to_string())?;
     let server = servers
         .get_mut(&language)
         .ok_or_else(|| "语言服务器未启动".to_string())?;
-    let frame = format!("Content-Length: {}\r\n\r\n{}", message.as_bytes().len(), message);
+    let frame = format!(
+        "Content-Length: {}\r\n\r\n{}",
+        message.as_bytes().len(),
+        message
+    );
     server
         .stdin
         .write_all(frame.as_bytes())
