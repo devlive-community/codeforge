@@ -37,7 +37,7 @@ features:
 
     - icon: >-
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6 text-indigo-600">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2[...]
         </svg>
       title: 易于使用
       description: 直观的界面设计，简单易上手
@@ -51,7 +51,7 @@ stats:
     - label: 跨平台性(Windows、macOS)
       value: 3+
     - label: 支持的语言
-      value: 20+
+      value: 7+
     - label: 轻量级级别
       value: 10 M+
 
