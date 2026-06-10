@@ -4,6 +4,7 @@ import {LanguageServerClient, languageServerWithTransport} from 'codemirror-lang
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
 import {lspCustomHover} from './lspHover'
+import {lspCompletion} from './lspCompletion'
 
 // 代次：每次构建 LSP 扩展自增，过期 client 的回调据此忽略
 let stateGen = 0
@@ -119,8 +120,8 @@ export async function createLspExtensions(
       allowHTMLContent: true,
       autoClose: true
     })
-    // 用自绘悬浮替代库的 hover/诊断 tooltip（定位精确到鼠标 + 主题适配）
-    return [base, lspCustomHover]
+    // 自绘悬浮 + 显式 LSP 补全(本编辑器未启用 basicSetup, 需自带补全键位与源)
+    return [base, lspCustomHover, lspCompletion]
   }
   catch {
     return null
