@@ -4,6 +4,10 @@ import {LanguageServerClient, languageServerWithTransport} from 'codemirror-lang
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
 import {lspCustomHover} from './lspHover'
+import {lspCompletion} from './lspCompletion'
+
+// 代次：每次构建 LSP 扩展自增，过期 client 的回调据此忽略
+let stateGen = 0
 
 // CodeForge 语言 key → LSP languageId（与后端 server_cmd 对应）
 const LANGUAGE_ID: Record<string, string> = {
@@ -71,6 +75,8 @@ export async function createLspExtensions(
     setLspState(language, 'off')
     return null
   }
+  // 代次令牌：扩展重建时旧 client 的 onClose/onError 不应覆盖最新状态
+  const myGen = ++stateGen
   setLspState(language, 'connecting')
   try {
     const transport = new TauriLspTransport(language)
@@ -88,9 +94,21 @@ export async function createLspExtensions(
       documentUri,
       languageId,
       autoClose: true,
-      onCapabilities: () => setLspState(language, 'on'),
-      onError: () => setLspState(language, 'off'),
-      onClose: () => setLspState(language, 'off')
+      onCapabilities: () => {
+        if (myGen === stateGen) {
+          setLspState(language, 'on')
+        }
+      },
+      onError: () => {
+        if (myGen === stateGen) {
+          setLspState(language, 'off')
+        }
+      },
+      onClose: () => {
+        if (myGen === stateGen) {
+          setLspState(language, 'off')
+        }
+      }
     })
     const base = languageServerWithTransport({
       client,
@@ -102,8 +120,8 @@ export async function createLspExtensions(
       allowHTMLContent: true,
       autoClose: true
     })
-    // 用自绘悬浮替代库的 hover/诊断 tooltip（定位精确到鼠标 + 主题适配）
-    return [base, lspCustomHover]
+    // 自绘悬浮 + 显式 LSP 补全(本编辑器未启用 basicSetup, 需自带补全键位与源)
+    return [base, lspCustomHover, lspCompletion]
   }
   catch {
     return null
