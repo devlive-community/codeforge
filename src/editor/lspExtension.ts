@@ -34,6 +34,39 @@ const uriToPath = (uri: string): string | null => {
   return p
 }
 
+/**
+ * 在指定位置（默认光标处）请求跳转定义。
+ * 同文件交给库内部移动光标；跨文件则派发 lsp:open-location 由 App 打开目标文件并定位。
+ * 供 F12 键位、Cmd+Click 与右键菜单共用。
+ */
+export const runGotoDefinition = (view: EditorView, pos?: number): boolean => {
+  const plugin: any = view.plugin(languageServerPlugin as any)
+  if (!plugin?.requestDefinition) {
+    return false
+  }
+  const at = pos ?? view.state.selection.main.head
+  const currentUri = plugin.documentUri
+  Promise.resolve(plugin.requestDefinition(view, offsetToLspPos(view.state.doc, at)))
+    .then((loc: any) => {
+      if (!loc?.uri || loc.uri === currentUri) {
+        return
+      }
+      const targetPath = uriToPath(loc.uri)
+      if (!targetPath) {
+        return
+      }
+      window.dispatchEvent(new CustomEvent('lsp:open-location', {
+        detail: {
+          path: targetPath,
+          line: (loc.range?.start?.line ?? 0) + 1,
+          character: loc.range?.start?.character ?? 0
+        }
+      }))
+    })
+    .catch(() => {})
+  return true
+}
+
 // 代次：每次构建 LSP 扩展自增，过期 client 的回调据此忽略
 let stateGen = 0
 
@@ -177,36 +210,10 @@ export async function createLspExtensions(
     })
 
     // 跨文件跳转定义：库自带的 F12 / Cmd+Click 只处理同文件，跨文件时丢弃结果。
-    // 这里在指定位置请求定义——同文件交给库内部移动光标，跨文件则派发事件由 App 打开目标文件并定位。
-    const gotoDefinitionAt = (view: EditorView, pos: number): boolean => {
-      const plugin: any = view.plugin(languageServerPlugin as any)
-      if (!plugin?.requestDefinition) {
-        return false
-      }
-      Promise.resolve(plugin.requestDefinition(view, offsetToLspPos(view.state.doc, pos)))
-        .then((loc: any) => {
-          // 同文件：requestDefinition 内部已移动光标，无需处理
-          if (!loc?.uri || loc.uri === documentUri) {
-            return
-          }
-          const targetPath = uriToPath(loc.uri)
-          if (!targetPath) {
-            return
-          }
-          window.dispatchEvent(new CustomEvent('lsp:open-location', {
-            detail: {
-              path: targetPath,
-              line: (loc.range?.start?.line ?? 0) + 1,
-              character: loc.range?.start?.character ?? 0
-            }
-          }))
-        })
-        .catch(() => {})
-      return true
-    }
+    // 这里用 runGotoDefinition 接管——同文件交给库内部移动光标，跨文件派发事件由 App 打开。
     // Prec.highest 确保覆盖 base 内置的 F12 绑定与 Cmd+Click 处理器
     const gotoKeymap = Prec.highest(keymap.of([
-      {key: 'F12', run: (v) => gotoDefinitionAt(v, v.state.selection.main.head), preventDefault: true}
+      {key: 'F12', run: (v) => runGotoDefinition(v), preventDefault: true}
     ]))
     const gotoMouse = Prec.highest(EditorView.domEventHandlers({
       mousedown: (event, view) => {
@@ -217,7 +224,7 @@ export async function createLspExtensions(
         if (pos == null) {
           return false
         }
-        const ok = gotoDefinitionAt(view, pos)
+        const ok = runGotoDefinition(view, pos)
         if (ok) {
           event.preventDefault()
         }
