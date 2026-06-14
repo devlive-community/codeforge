@@ -366,7 +366,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
@@ -942,7 +942,11 @@ const confirmApplyAi = () => {
 }
 
 // 当前 CodeMirror view（用于在光标处插入生成的代码）
-const editorView = ref<any>(null)
+// shallowRef：EditorView 是含 LSP client/plugin 等大量可变内部状态的对象，
+// 绝不能被 Vue 深度响应式代理。否则 watch(editorView) 会在 view 内部每次 mutation 时触发，
+// 与 applyDiffMarkers 的 dispatch 形成 mutation→watch→dispatch→mutation 无限循环导致整页卡死
+// （LSP 接入后 client 持续 mutate 会立刻触发该循环）。
+const editorView = shallowRef<any>(null)
 
 // AI 自然语言生成 / 选区改写
 const showGenerate = ref(false)
