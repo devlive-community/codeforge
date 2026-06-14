@@ -4,7 +4,6 @@ import {LanguageServerClient, languageServerWithTransport} from 'codemirror-lang
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
 import {lspCustomHover} from './lspHover'
-import {lspCompletion} from './lspCompletion'
 
 // 代次：每次构建 LSP 扩展自增，过期 client 的回调据此忽略
 let stateGen = 0
@@ -120,8 +119,10 @@ export async function createLspExtensions(
       allowHTMLContent: true,
       autoClose: true
     })
-    // 自绘悬浮 + 显式 LSP 补全(本编辑器未启用 basicSetup, 需自带补全键位与源)
-    return [base, lspCustomHover, lspCompletion]
+    // base 已内置 LSP 补全(源 + 默认补全键位 Ctrl+Space/Enter/方向键)；
+    // 不要再叠加自定义 autocompletion，否则与其 override 字段冲突("Config merge conflict for field override")。
+    // 仅追加自绘悬浮样式。
+    return [base, lspCustomHover]
   }
   catch {
     return null
