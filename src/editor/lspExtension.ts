@@ -9,7 +9,7 @@ import {
   formattingOptions,
   renameSymbol
 } from 'codemirror-languageserver'
-import {keymap, type EditorView} from '@codemirror/view'
+import {keymap, EditorView} from '@codemirror/view'
 import {Prec} from '@codemirror/state'
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
@@ -167,14 +167,13 @@ export async function createLspExtensions(
       insertSpaces: fmtOptions?.insertSpaces ?? true
     })
 
-    // 跨文件跳转定义：库自带的 F12 只处理同文件，跨文件时丢弃结果。
-    // 这里覆盖 F12——同文件交给库内部移动光标，跨文件则派发事件由 App 打开目标文件并定位。
-    const gotoDefinition = (view: EditorView): boolean => {
+    // 跨文件跳转定义：库自带的 F12 / Cmd+Click 只处理同文件，跨文件时丢弃结果。
+    // 这里在指定位置请求定义——同文件交给库内部移动光标，跨文件则派发事件由 App 打开目标文件并定位。
+    const gotoDefinitionAt = (view: EditorView, pos: number): boolean => {
       const plugin: any = view.plugin(languageServerPlugin as any)
       if (!plugin?.requestDefinition) {
         return false
       }
-      const pos = view.state.selection.main.head
       Promise.resolve(plugin.requestDefinition(view, offsetToLspPos(view.state.doc, pos)))
         .then((loc: any) => {
           // 同文件：requestDefinition 内部已移动光标，无需处理
@@ -196,12 +195,28 @@ export async function createLspExtensions(
         .catch(() => {})
       return true
     }
-    // Prec.highest 确保覆盖 base 内置的 F12 绑定
+    // Prec.highest 确保覆盖 base 内置的 F12 绑定与 Cmd+Click 处理器
     const gotoKeymap = Prec.highest(keymap.of([
-      {key: 'F12', run: gotoDefinition, preventDefault: true}
+      {key: 'F12', run: (v) => gotoDefinitionAt(v, v.state.selection.main.head), preventDefault: true}
     ]))
+    const gotoMouse = Prec.highest(EditorView.domEventHandlers({
+      mousedown: (event, view) => {
+        if (!event.ctrlKey && !event.metaKey) {
+          return false
+        }
+        const pos = view.posAtCoords({x: event.clientX, y: event.clientY})
+        if (pos == null) {
+          return false
+        }
+        const ok = gotoDefinitionAt(view, pos)
+        if (ok) {
+          event.preventDefault()
+        }
+        return ok
+      }
+    }))
 
-    return [base, lspCustomHover, lspKeymap, fmt, gotoKeymap]
+    return [base, lspCustomHover, lspKeymap, fmt, gotoKeymap, gotoMouse]
   }
   catch {
     return null

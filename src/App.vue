@@ -985,14 +985,16 @@ const openSearch = () => {
   showSearch.value = true
 }
 
-const gotoLine = (line: number) => {
+const gotoLine = (line: number, character?: number) => {
   const view = editorView.value
   if (!view) {
     return
   }
   const target = Math.max(1, Math.min(line, view.state.doc.lines))
   const l = view.state.doc.line(target)
-  view.dispatch({selection: {anchor: l.from}, scrollIntoView: true})
+  // 带列号时精确定位到列（夹在行内），否则定位到行首
+  const anchor = character != null ? Math.min(l.from + character, l.to) : l.from
+  view.dispatch({selection: {anchor}, scrollIntoView: true})
   view.focus()
 }
 
@@ -1052,7 +1054,7 @@ const onLspOpenLocation = async (e: Event) => {
   }
   await smartOpen(detail.path)
   await nextTick()
-  gotoLine(detail.line)
+  gotoLine(detail.line, detail.character)
 }
 
 // 全局替换后：刷新涉及到的已打开标签（保留有未保存修改的标签）
