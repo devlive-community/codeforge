@@ -444,7 +444,10 @@ export function useCodeMirrorEditor(props: Props)
         // LSP 语义能力（补全/悬浮/诊断/跳转/重命名）；草稿用 untitled 文档，无服务器时为 null
         if (props.language) {
             try {
-                const lsp = await createLspExtensions(props.language, props.filePath, props.rootDir)
+                const lsp = await createLspExtensions(props.language, props.filePath, props.rootDir, {
+                    tabSize: editorConfig.value?.tab_size ?? 4,
+                    insertSpaces: !editorConfig.value?.indent_with_tab
+                })
                 if (lsp) {
                     result.push(lsp)
                 }

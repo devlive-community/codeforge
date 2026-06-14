@@ -1,6 +1,14 @@
-// 根据语言/文件构建 CodeMirror LSP 扩展（补全、悬浮、诊断、跳转、重命名）
+// 根据语言/文件构建 CodeMirror LSP 扩展（补全、悬浮、诊断、跳转、重命名、格式化）
 import {invoke} from '@tauri-apps/api/core'
-import {LanguageServerClient, languageServerWithTransport} from 'codemirror-languageserver'
+import {
+  LanguageServerClient,
+  languageServerWithTransport,
+  formatDocument,
+  formatSelection,
+  formattingOptions,
+  renameSymbol
+} from 'codemirror-languageserver'
+import {keymap} from '@codemirror/view'
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
 import {lspCustomHover} from './lspHover'
@@ -53,7 +61,8 @@ const toUri = (p: string): string =>
 export async function createLspExtensions(
   language: string | undefined,
   filePath: string | null | undefined,
-  rootDir?: string | null
+  rootDir?: string | null,
+  fmtOptions?: {tabSize?: number; insertSpaces?: boolean}
 ): Promise<any | null> {
   if (!language) {
     return null
@@ -119,10 +128,24 @@ export async function createLspExtensions(
       allowHTMLContent: true,
       autoClose: true
     })
-    // base 已内置 LSP 补全(源 + 默认补全键位 Ctrl+Space/Enter/方向键)；
-    // 不要再叠加自定义 autocompletion，否则与其 override 字段冲突("Config merge conflict for field override")。
-    // 仅追加自绘悬浮样式。
-    return [base, lspCustomHover]
+    // base 已内置：补全(源+键位)、悬浮、文档高亮、跳转定义(F12/Cmd+Click)、
+    // 重命名基建(renameExtension)。不要重复添加这些，否则触发配置冲突。
+    // 此处仅补 base 未绑定的触发键与未接入的能力：
+    //   - F2：触发重命名(base 有 renameExtension 但未绑键)
+    //   - Shift-Alt-F / Mod-Shift-I：格式化整篇文档(base 未接入格式化)
+    //   - Mod-K Mod-F：格式化选中区域
+    //   - formattingOptions：将格式化的缩进与编辑器配置对齐
+    const lspKeymap = keymap.of([
+      {key: 'F2', run: renameSymbol},
+      {key: 'Shift-Alt-f', run: formatDocument},
+      {key: 'Mod-Shift-i', run: formatDocument},
+      {key: 'Mod-k Mod-f', run: formatSelection}
+    ])
+    const fmt = formattingOptions.of({
+      tabSize: fmtOptions?.tabSize ?? 4,
+      insertSpaces: fmtOptions?.insertSpaces ?? true
+    })
+    return [base, lspCustomHover, lspKeymap, fmt]
   }
   catch {
     return null
