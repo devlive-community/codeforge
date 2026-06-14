@@ -67,13 +67,13 @@
           </button>
         </div>
         <div class="flex items-center gap-2">
-          <Button size="sm" :loading="pending === 'commit'" :disabled="busy || !canCommit" @click="commit">
+          <Button size="sm" custom-class="[transform:translateZ(0)]" :loading="pending === 'commit'" :disabled="busy || !canCommit" @click="commit">
             提交{{ staged.length ? ` (${staged.length})` : '' }}
           </Button>
-          <Button size="sm" type="secondary" :loading="pending === 'commitPush'" :disabled="busy" @click="commitAndPush">
+          <Button size="sm" type="secondary" custom-class="[transform:translateZ(0)]" :loading="pending === 'commitPush'" :disabled="busy" @click="commitAndPush">
             提交并推送
           </Button>
-          <Button size="sm" type="secondary" :loading="pending === 'push'" :disabled="busy" @click="push">
+          <Button size="sm" type="secondary" custom-class="[transform:translateZ(0)]" :loading="pending === 'push'" :disabled="busy" @click="push">
             推送{{ status.ahead ? ` (↑${status.ahead})` : '' }}
           </Button>
         </div>
