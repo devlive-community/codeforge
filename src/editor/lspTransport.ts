@@ -17,9 +17,11 @@ export class TauriLspTransport implements Transport {
   }
 
   private async init() {
-    const un1 = await listen<{ language: string; message: string }>('lsp:message', (e) => {
+    const un1 = await listen<{ language: string; messages: string[] }>('lsp:messages', (e) => {
       if (e.payload.language === this.language) {
-        this.msgCb?.(e.payload.message)
+        for (const m of e.payload.messages) {
+          this.msgCb?.(m)
+        }
       }
     })
     const un2 = await listen<string>('lsp:exit', (e) => {
