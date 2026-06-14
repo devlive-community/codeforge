@@ -22,13 +22,19 @@
     </div>
 
     <div class="flex items-center space-x-4">
-      <!-- LSP 状态 -->
-      <div v-if="lspState.status !== 'off'" class="flex items-center space-x-1"
-           :title="lspState.status === 'connecting' ? `语言服务索引中：${lspState.language}` : `语言服务已就绪：${lspState.language}`">
-        <RefreshCw v-if="lspState.status === 'connecting'" class="w-3 h-3 animate-spin"/>
-        <span v-else class="w-1.5 h-1.5 rounded-full bg-emerald-300"/>
-        <span>{{ lspState.status === 'connecting' ? 'LSP 索引中' : 'LSP' }}</span>
-      </div>
+      <!-- LSP 状态（点击开关问题面板）-->
+      <button v-if="lspState.status !== 'off'"
+              class="flex items-center space-x-2 px-1 rounded cursor-pointer hover:bg-white/20 transition-colors"
+              :title="lspState.status === 'connecting' ? `语言服务索引中：${lspState.language}` : `语言服务已就绪：${lspState.language}（点击查看问题）`"
+              @click="emit('toggleProblems')">
+        <span class="flex items-center space-x-1">
+          <RefreshCw v-if="lspState.status === 'connecting'" class="w-3 h-3 animate-spin"/>
+          <span v-else class="w-1.5 h-1.5 rounded-full bg-emerald-300"/>
+          <span>{{ lspState.status === 'connecting' ? 'LSP 索引中' : 'LSP' }}</span>
+        </span>
+        <span v-if="errorCount" class="flex items-center space-x-0.5"><XCircle class="w-3 h-3"/><span>{{ errorCount }}</span></span>
+        <span v-if="warningCount" class="flex items-center space-x-0.5"><AlertTriangle class="w-3 h-3"/><span>{{ warningCount }}</span></span>
+      </button>
 
       <div class="flex items-center space-x-2">
         <Hash class="w-3 h-3 font-normal"/>
@@ -46,10 +52,11 @@
 </template>
 
 <script setup lang="ts">
-import { Clock, Hash, RefreshCw, Terminal as TerminalIcon } from 'lucide-vue-next'
+import { AlertTriangle, Clock, Hash, RefreshCw, Terminal as TerminalIcon, XCircle } from 'lucide-vue-next'
 import { computed, toRefs } from 'vue'
 import { useStatusBar } from '../composables/useStatusBar'
 import { lspState } from '../editor/lspStatus'
+import { diagnostics } from '../editor/lspDiagnostics'
 import { useShortcuts } from '../composables/useShortcuts'
 
 const props = defineProps<{
@@ -67,7 +74,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   checkEnvironment: []
   toggleTerminal: []
+  toggleProblems: []
 }>()
+
+const errorCount = computed(() => diagnostics.value.filter(d => d.severity === 'error').length)
+const warningCount = computed(() => diagnostics.value.filter(d => d.severity === 'warning').length)
 
 const { envInfo, isLoading } = toRefs(props)
 

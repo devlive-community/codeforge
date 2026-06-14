@@ -67,11 +67,13 @@
           </button>
         </div>
         <div class="flex items-center gap-2">
-          <Button size="sm" :disabled="!canCommit" @click="commit">
+          <Button size="sm" :loading="pending === 'commit'" :disabled="busy || !canCommit" @click="commit">
             提交{{ staged.length ? ` (${staged.length})` : '' }}
           </Button>
-          <Button size="sm" type="secondary" :disabled="busy" @click="commitAndPush">提交并推送</Button>
-          <Button size="sm" type="secondary" :disabled="busy" @click="push">
+          <Button size="sm" type="secondary" :loading="pending === 'commitPush'" :disabled="busy" @click="commitAndPush">
+            提交并推送
+          </Button>
+          <Button size="sm" type="secondary" :loading="pending === 'push'" :disabled="busy" @click="push">
             推送{{ status.ahead ? ` (↑${status.ahead})` : '' }}
           </Button>
         </div>
@@ -101,7 +103,9 @@ const status = ref<GitStatusData>({is_repo: false, branch: '', ahead: 0, behind:
 const branches = ref<string[]>([])
 const message = ref('')
 const loading = ref(false)
-const busy = ref(false)
+// 正在进行的提交/推送动作，用于按钮加载状态；busy 据此派生
+const pending = ref<'commit' | 'push' | 'commitPush' | null>(null)
+const busy = computed(() => pending.value !== null)
 const generating = ref(false)
 
 // 文件视为已暂存：index 列非空且非未跟踪
@@ -155,29 +159,37 @@ const unstage = async (paths: string[]) => {
 const stageAll = () => stage(unstaged.value.map(f => f.path))
 const unstageAll = () => unstage(staged.value.map(f => f.path))
 
+// 仅执行 git 调用，不管 pending（供组合动作复用）
+const doCommit = async () => {
+  await invoke('git_commit', {root: props.rootDir, message: message.value.trim()})
+  message.value = ''
+}
+const doPush = async () => {
+  await invoke('git_push', {root: props.rootDir})
+}
+
 const commit = async () => {
   if (!canCommit.value) {
     return
   }
-  busy.value = true
+  pending.value = 'commit'
   try {
-    await invoke('git_commit', {root: props.rootDir, message: message.value.trim()})
+    await doCommit()
     toast.success('已提交')
-    message.value = ''
     await refresh()
   }
   catch (error) {
     toast.error('提交失败: ' + error)
   }
   finally {
-    busy.value = false
+    pending.value = null
   }
 }
 
 const push = async () => {
-  busy.value = true
+  pending.value = 'push'
   try {
-    await invoke('git_push', {root: props.rootDir})
+    await doPush()
     toast.success('已推送')
     await refresh()
   }
@@ -185,7 +197,7 @@ const push = async () => {
     toast.error('推送失败: ' + error)
   }
   finally {
-    busy.value = false
+    pending.value = null
   }
 }
 
@@ -194,8 +206,19 @@ const commitAndPush = async () => {
     toast.info('请填写提交信息并暂存改动')
     return
   }
-  await commit()
-  await push()
+  pending.value = 'commitPush'
+  try {
+    await doCommit()
+    await doPush()
+    toast.success('已提交并推送')
+    await refresh()
+  }
+  catch (error) {
+    toast.error('提交并推送失败: ' + error)
+  }
+  finally {
+    pending.value = null
+  }
 }
 
 const onBranchChange = async (e: Event) => {

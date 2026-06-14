@@ -1,4 +1,4 @@
-import {nextTick, ref, watch} from 'vue'
+import {nextTick, ref, shallowRef, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {useTheme} from './useTheme'
 import {python} from '@codemirror/lang-python'
@@ -154,7 +154,10 @@ export function useCodeMirrorEditor(props: Props)
 
     // 状态管理
     const isReady = ref(false)
-    const extensions = ref<any[]>([])
+    // shallowRef：扩展里含 CodeMirror/LSP 客户端等大量可变内部状态的对象，
+    // 绝不能被 Vue 深层响应式代理（会拖垮性能并触发"诊断→重建→重连"无限循环导致页面卡死）。
+    // 仅在显式整体赋值 extensions.value = result 时才触发重建。
+    const extensions = shallowRef<any[]>([])
     const editorConfig = ref<EditorConfig>({})
     const defaultConfig = {
         theme: 'githubLight',
@@ -441,7 +444,10 @@ export function useCodeMirrorEditor(props: Props)
         // LSP 语义能力（补全/悬浮/诊断/跳转/重命名）；草稿用 untitled 文档，无服务器时为 null
         if (props.language) {
             try {
-                const lsp = await createLspExtensions(props.language, props.filePath, props.rootDir)
+                const lsp = await createLspExtensions(props.language, props.filePath, props.rootDir, {
+                    tabSize: editorConfig.value?.tab_size ?? 4,
+                    insertSpaces: !editorConfig.value?.indent_with_tab
+                })
                 if (lsp) {
                     result.push(lsp)
                 }

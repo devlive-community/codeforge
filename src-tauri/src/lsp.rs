@@ -5,13 +5,14 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Write};
 use std::path::PathBuf;
-use std::process::{Child, ChildStdin, Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex as StdMutex;
 use tauri::{AppHandle, Emitter, State};
 
 struct Server {
     child: Child,
-    stdin: ChildStdin,
+    // 写入通过独立线程，避免 stdin 写阻塞主线程（语言服务器索引时可能来不及读）
+    tx: std::sync::mpsc::Sender<Vec<u8>>,
 }
 
 pub struct LspState {
@@ -27,9 +28,9 @@ impl LspState {
 }
 
 #[derive(Clone, Serialize)]
-struct LspEvent {
+struct LspBatch {
     language: String,
-    message: String,
+    messages: Vec<String>,
 }
 
 /// 语言 -> (可执行名, 参数)。新增语言在此加一行。
@@ -49,6 +50,13 @@ fn server_cmd(language: &str) -> Option<(&'static str, Vec<&'static str>)> {
         "html" => Some(("vscode-html-language-server", vec!["--stdio"])),
         "css" => Some(("vscode-css-language-server", vec!["--stdio"])),
         "json" => Some(("vscode-json-language-server", vec!["--stdio"])),
+        "java" => Some(("jdtls", vec![])),
+        "kotlin" => Some(("kotlin-language-server", vec![])),
+        "swift" => Some(("sourcekit-lsp", vec![])),
+        "scala" => Some(("metals", vec![])),
+        "yaml" => Some(("yaml-language-server", vec!["--stdio"])),
+        "shell" => Some(("bash-language-server", vec!["start"])),
+        "haskell" => Some(("haskell-language-server-wrapper", vec!["--lsp"])),
         _ => None,
     }
 }
@@ -105,6 +113,43 @@ fn server_defs() -> Vec<(&'static str, &'static str, &'static str, &'static str)
             "HTML / CSS / JSON",
             "vscode-html-language-server",
             "npm i -g vscode-langservers-extracted",
+        ),
+        ("java", "Java (jdtls)", "jdtls", "brew install jdtls"),
+        (
+            "kotlin",
+            "Kotlin",
+            "kotlin-language-server",
+            "brew install kotlin-language-server",
+        ),
+        (
+            "swift",
+            "Swift (sourcekit-lsp)",
+            "sourcekit-lsp",
+            "xcode-select --install",
+        ),
+        (
+            "scala",
+            "Scala (metals)",
+            "metals",
+            "coursier install metals",
+        ),
+        (
+            "yaml",
+            "YAML",
+            "yaml-language-server",
+            "npm i -g yaml-language-server",
+        ),
+        (
+            "shell",
+            "Shell / Bash",
+            "bash-language-server",
+            "npm i -g bash-language-server",
+        ),
+        (
+            "haskell",
+            "Haskell (HLS)",
+            "haskell-language-server-wrapper",
+            "ghcup install hls",
         ),
     ]
 }
@@ -308,21 +353,45 @@ pub fn lsp_start(
     let stdout = child.stdout.take().ok_or("无法获取 stdout")?;
     let stderr = child.stderr.take();
 
-    // 读取线程：解析 Content-Length 帧，原样转发 JSON 给前端
-    let app_reader = app.clone();
+    // 读取线程：解析 Content-Length 帧，把消息体丢进 channel
+    let (msg_tx, msg_rx) = std::sync::mpsc::channel::<String>();
     let lang_reader = language.clone();
     std::thread::spawn(move || {
         let mut reader = BufReader::new(stdout);
         while let Some(body) = read_message(&mut reader) {
+            if msg_tx.send(body).is_err() {
+                break;
+            }
+        }
+        // 发送端 drop → 下面的 emitter 收到 Err 后发 lsp:exit
+        let _ = &lang_reader;
+    });
+
+    // 发射线程：合批转发。索引时语言服务器会突发成千上万条通知，
+    // 逐条 emit 会让 webview 主线程被 IPC 反序列化压垮（编辑器/环境检查随之卡死）。
+    // 这里把"此刻已排队"的消息一次性打包成一个事件，空闲时则单条即时下发。
+    let app_reader = app.clone();
+    let lang_emit = language.clone();
+    std::thread::spawn(move || {
+        // 阻塞等待第一条；channel 关闭(语言服务器退出)时 recv 返回 Err，循环结束
+        while let Ok(first) = msg_rx.recv() {
+            let mut batch = vec![first];
+            // 排空当前已到达的消息，凑成一批（上限防止单批过大）
+            while let Ok(m) = msg_rx.try_recv() {
+                batch.push(m);
+                if batch.len() >= 512 {
+                    break;
+                }
+            }
             let _ = app_reader.emit(
-                "lsp:message",
-                LspEvent {
-                    language: lang_reader.clone(),
-                    message: body,
+                "lsp:messages",
+                LspBatch {
+                    language: lang_emit.clone(),
+                    messages: batch,
                 },
             );
         }
-        let _ = app_reader.emit("lsp:exit", lang_reader.clone());
+        let _ = app_reader.emit("lsp:exit", lang_emit.clone());
     });
 
     // 排空 stderr，避免阻塞
@@ -337,11 +406,27 @@ pub fn lsp_start(
         });
     }
 
+    // 写入线程：独占 stdin，从 channel 取帧写入。
+    // 这样 lsp_send 只需把帧塞进 channel（瞬时返回），即便语言服务器索引时
+    // 不读 stdin 导致管道写阻塞，也只阻塞这个后台线程，不会卡住主线程的命令循环。
+    let (tx, rx) = std::sync::mpsc::channel::<Vec<u8>>();
+    std::thread::spawn(move || {
+        let mut stdin = stdin;
+        while let Ok(frame) = rx.recv() {
+            if stdin.write_all(&frame).is_err() {
+                break;
+            }
+            if stdin.flush().is_err() {
+                break;
+            }
+        }
+    });
+
     state
         .servers
         .lock()
         .map_err(|e| e.to_string())?
-        .insert(language, Server { child, stdin });
+        .insert(language, Server { child, tx });
     Ok(true)
 }
 
@@ -352,16 +437,16 @@ pub fn lsp_send(
     language: String,
     message: String,
 ) -> Result<(), String> {
-    let mut servers = state.servers.lock().map_err(|e| e.to_string())?;
+    let servers = state.servers.lock().map_err(|e| e.to_string())?;
     let server = servers
-        .get_mut(&language)
+        .get(&language)
         .ok_or_else(|| "语言服务器未启动".to_string())?;
     let frame = format!("Content-Length: {}\r\n\r\n{}", message.len(), message);
+    // 仅入队，不在持锁/主线程上做阻塞写
     server
-        .stdin
-        .write_all(frame.as_bytes())
-        .map_err(|e| e.to_string())?;
-    server.stdin.flush().map_err(|e| e.to_string())?;
+        .tx
+        .send(frame.into_bytes())
+        .map_err(|_| "语言服务器写入通道已关闭".to_string())?;
     Ok(())
 }
 

@@ -263,7 +263,7 @@
               @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
-    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal"/>
+    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal" @toggle-problems="showDiagnostics = !showDiagnostics"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
@@ -360,18 +360,47 @@
               @refresh="refreshGitStatus"
               @close="showGit = false"/>
 
+    <!-- LSP 问题面板 -->
+    <DiagnosticsPanel v-if="showDiagnostics"
+                      @go="(line, col) => gotoLine(line, col)"
+                      @close="showDiagnostics = false"/>
+
+    <!-- 编辑器 LSP 右键菜单 -->
+    <div v-if="editorCtx.visible" class="fixed inset-0 z-50" @click="closeEditorCtx" @contextmenu.prevent="closeEditorCtx">
+      <div class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[170px]"
+           :style="{ top: `${editorCtx.y}px`, left: `${editorCtx.x}px` }"
+           @click.stop>
+        <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(runGotoDefinition)">
+          <span>跳转到定义</span><span class="text-gray-400 text-xs ml-6">F12</span>
+        </button>
+        <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(renameSymbol)">
+          <span>重命名符号</span><span class="text-gray-400 text-xs ml-6">F2</span>
+        </button>
+        <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+        <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatDocument)">
+          <span>格式化文档</span><span class="text-gray-400 text-xs ml-6">⇧⌥F</span>
+        </button>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatSelection)">
+          格式化选中
+        </button>
+      </div>
+    </div>
+
     <!-- Toast 组件 -->
     <Toast/>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, watch} from 'vue'
 import {debounce} from 'lodash-es'
+import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
+import {runGotoDefinition, lspSupportsLanguage} from './editor/lspExtension'
 import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
+import DiagnosticsPanel from './components/DiagnosticsPanel.vue'
 import ConsoleOutput from './components/ConsoleOutput.vue'
 import WebOutput from "./components/WebOutput.vue";
 import JsonView from "./components/JsonView.vue";
@@ -942,7 +971,11 @@ const confirmApplyAi = () => {
 }
 
 // 当前 CodeMirror view（用于在光标处插入生成的代码）
-const editorView = ref<any>(null)
+// shallowRef：EditorView 是含 LSP client/plugin 等大量可变内部状态的对象，
+// 绝不能被 Vue 深度响应式代理。否则 watch(editorView) 会在 view 内部每次 mutation 时触发，
+// 与 applyDiffMarkers 的 dispatch 形成 mutation→watch→dispatch→mutation 无限循环导致整页卡死
+// （LSP 接入后 client 持续 mutate 会立刻触发该循环）。
+const editorView = shallowRef<any>(null)
 
 // AI 自然语言生成 / 选区改写
 const showGenerate = ref(false)
@@ -981,14 +1014,16 @@ const openSearch = () => {
   showSearch.value = true
 }
 
-const gotoLine = (line: number) => {
+const gotoLine = (line: number, character?: number) => {
   const view = editorView.value
   if (!view) {
     return
   }
   const target = Math.max(1, Math.min(line, view.state.doc.lines))
   const l = view.state.doc.line(target)
-  view.dispatch({selection: {anchor: l.from}, scrollIntoView: true})
+  // 带列号时精确定位到列（夹在行内），否则定位到行首
+  const anchor = character != null ? Math.min(l.from + character, l.to) : l.from
+  view.dispatch({selection: {anchor}, scrollIntoView: true})
   view.focus()
 }
 
@@ -1038,6 +1073,51 @@ const openSearchResult = async (path: string, line: number) => {
   await smartOpen(path)
   await nextTick()
   gotoLine(line)
+}
+
+// LSP 跨文件跳转定义：编辑器扩展派发 lsp:open-location，这里打开目标文件并定位
+const onLspOpenLocation = async (e: Event) => {
+  const detail = (e as CustomEvent).detail as {path: string; line: number; character?: number}
+  if (!detail?.path) {
+    return
+  }
+  await smartOpen(detail.path)
+  await nextTick()
+  gotoLine(detail.line, detail.character)
+}
+
+// LSP 问题面板显隐
+const showDiagnostics = ref(false)
+
+// ===== 编辑器 LSP 右键菜单（跳转定义 / 重命名 / 格式化）=====
+const editorCtx = reactive({visible: false, x: 0, y: 0})
+const closeEditorCtx = () => {
+  editorCtx.visible = false
+}
+const onEditorContext = (e: MouseEvent) => {
+  const target = e.target as HTMLElement | null
+  // 仅在编辑器内容区、且当前语言支持 LSP 时弹出
+  if (!target?.closest('.cm-content') || !lspSupportsLanguage(currentLanguage.value) || !editorView.value) {
+    return
+  }
+  e.preventDefault()
+  // 将光标移到右键处，使命令作用于点击位置
+  const view = editorView.value
+  const pos = view.posAtCoords({x: e.clientX, y: e.clientY})
+  if (pos != null) {
+    view.dispatch({selection: {anchor: pos}})
+  }
+  // 夹取到视口内，避免贴边裁切（菜单约 180×180）
+  editorCtx.x = Math.min(e.clientX, window.innerWidth - 190)
+  editorCtx.y = Math.min(e.clientY, window.innerHeight - 190)
+  editorCtx.visible = true
+}
+const runEditorCommand = (cmd: (v: any) => boolean) => {
+  closeEditorCtx()
+  // 不在此处 focus 编辑器：重命名会弹出需要焦点的内联输入框
+  if (editorView.value) {
+    cmd(editorView.value)
+  }
 }
 
 // 全局替换后：刷新涉及到的已打开标签（保留有未保存修改的标签）
@@ -1653,6 +1733,8 @@ onMounted(async () => {
   await restoreSession()
 
   window.addEventListener('keydown', onGlobalKeydown, true)
+  window.addEventListener('lsp:open-location', onLspOpenLocation)
+  window.addEventListener('contextmenu', onEditorContext)
 
   // 触发 app-ready 事件，通知主进程
   window.dispatchEvent(new CustomEvent('app-ready'))
@@ -1661,5 +1743,7 @@ onMounted(async () => {
 onUnmounted(() => {
   cleanupEventListeners()
   window.removeEventListener('keydown', onGlobalKeydown, true)
+  window.removeEventListener('lsp:open-location', onLspOpenLocation)
+  window.removeEventListener('contextmenu', onEditorContext)
 })
 </script>

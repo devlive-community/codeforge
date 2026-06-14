@@ -1,10 +1,72 @@
-// 根据语言/文件构建 CodeMirror LSP 扩展（补全、悬浮、诊断、跳转、重命名）
+// 根据语言/文件构建 CodeMirror LSP 扩展（补全、悬浮、诊断、跳转、重命名、格式化）
 import {invoke} from '@tauri-apps/api/core'
-import {LanguageServerClient, languageServerWithTransport} from 'codemirror-languageserver'
+import {
+  LanguageServerClient,
+  languageServerWithTransport,
+  languageServerPlugin,
+  formatDocument,
+  formatSelection,
+  formattingOptions,
+  renameSymbol
+} from 'codemirror-languageserver'
+import {keymap, EditorView} from '@codemirror/view'
+import {Prec} from '@codemirror/state'
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
 import {lspCustomHover} from './lspHover'
-import {lspCompletion} from './lspCompletion'
+import {diagnosticsCollector} from './lspDiagnostics'
+
+// CodeMirror 偏移量 → LSP 0 基行列
+const offsetToLspPos = (doc: any, offset: number) => {
+  const line = doc.lineAt(offset)
+  return {line: line.number - 1, character: offset - line.from}
+}
+
+// file:// URI 还原为本地路径（toUri 的逆操作）
+const uriToPath = (uri: string): string | null => {
+  if (!uri.startsWith('file://')) {
+    return null
+  }
+  let p = decodeURIComponent(uri.slice('file://'.length))
+  // Windows: file:///C:/... → C:/...
+  if (/^\/[A-Za-z]:/.test(p)) {
+    p = p.slice(1)
+  }
+  return p
+}
+
+/**
+ * 在指定位置（默认光标处）请求跳转定义。
+ * 同文件交给库内部移动光标；跨文件则派发 lsp:open-location 由 App 打开目标文件并定位。
+ * 供 F12 键位、Cmd+Click 与右键菜单共用。
+ */
+export const runGotoDefinition = (view: EditorView, pos?: number): boolean => {
+  const plugin: any = view.plugin(languageServerPlugin as any)
+  if (!plugin?.requestDefinition) {
+    return false
+  }
+  const at = pos ?? view.state.selection.main.head
+  const currentUri = plugin.documentUri
+  Promise.resolve(plugin.requestDefinition(view, offsetToLspPos(view.state.doc, at)))
+    .then((loc: any) => {
+      if (!loc?.uri || loc.uri === currentUri) {
+        return
+      }
+      const targetPath = uriToPath(loc.uri)
+      if (!targetPath) {
+        return
+      }
+      window.dispatchEvent(new CustomEvent('lsp:open-location', {
+        detail: {
+          path: targetPath,
+          line: (loc.range?.start?.line ?? 0) + 1,
+          character: loc.range?.start?.character ?? 0
+        }
+      }))
+    })
+    .catch(() => {})
+  return true
+}
 
 // 代次：每次构建 LSP 扩展自增，过期 client 的回调据此忽略
 let stateGen = 0
@@ -32,14 +94,23 @@ const LANGUAGE_ID: Record<string, string> = {
   ruby: 'ruby',
   html: 'html',
   css: 'css',
-  json: 'json'
+  json: 'json',
+  java: 'java',
+  kotlin: 'kotlin',
+  swift: 'swift',
+  scala: 'scala',
+  yaml: 'yaml',
+  shell: 'shellscript',
+  haskell: 'haskell'
 }
 
 // 草稿(未保存)时用的文件扩展名，构造 untitled 文档 URI
 const LANGUAGE_EXT: Record<string, string> = {
   python: 'py', typescript: 'ts', javascript: 'js', rust: 'rs', go: 'go',
   c: 'c', cpp: 'cpp', 'objective-c': 'm', 'objective-cpp': 'mm',
-  lua: 'lua', php: 'php', ruby: 'rb', html: 'html', css: 'css', json: 'json'
+  lua: 'lua', php: 'php', ruby: 'rb', html: 'html', css: 'css', json: 'json',
+  java: 'java', kotlin: 'kt', swift: 'swift', scala: 'scala', yaml: 'yaml',
+  shellscript: 'sh', haskell: 'hs'
 }
 
 export const lspSupportsLanguage = (language?: string): boolean =>
@@ -54,7 +125,8 @@ const toUri = (p: string): string =>
 export async function createLspExtensions(
   language: string | undefined,
   filePath: string | null | undefined,
-  rootDir?: string | null
+  rootDir?: string | null,
+  fmtOptions?: {tabSize?: number; insertSpaces?: boolean}
 ): Promise<any | null> {
   if (!language) {
     return null
@@ -120,8 +192,48 @@ export async function createLspExtensions(
       allowHTMLContent: true,
       autoClose: true
     })
-    // 自绘悬浮 + 显式 LSP 补全(本编辑器未启用 basicSetup, 需自带补全键位与源)
-    return [base, lspCustomHover, lspCompletion]
+    // base 已内置：补全(源+键位)、悬浮、文档高亮、跳转定义(F12/Cmd+Click)、
+    // 重命名基建(renameExtension)。不要重复添加这些，否则触发配置冲突。
+    // 此处仅补 base 未绑定的触发键与未接入的能力：
+    //   - F2：触发重命名(base 有 renameExtension 但未绑键)
+    //   - Shift-Alt-F / Mod-Shift-I：格式化整篇文档(base 未接入格式化)
+    //   - Mod-K Mod-F：格式化选中区域
+    //   - formattingOptions：将格式化的缩进与编辑器配置对齐
+    const lspKeymap = keymap.of([
+      {key: 'F2', run: renameSymbol},
+      {key: 'Shift-Alt-f', run: formatDocument},
+      {key: 'Mod-Shift-i', run: formatDocument},
+      {key: 'Mod-k Mod-f', run: formatSelection}
+    ])
+    const fmt = formattingOptions.of({
+      tabSize: fmtOptions?.tabSize ?? 4,
+      insertSpaces: fmtOptions?.insertSpaces ?? true
+    })
+
+    // 跨文件跳转定义：库自带的 F12 / Cmd+Click 只处理同文件，跨文件时丢弃结果。
+    // 这里用 runGotoDefinition 接管——同文件交给库内部移动光标，跨文件派发事件由 App 打开。
+    // Prec.highest 确保覆盖 base 内置的 F12 绑定与 Cmd+Click 处理器
+    const gotoKeymap = Prec.highest(keymap.of([
+      {key: 'F12', run: (v) => runGotoDefinition(v), preventDefault: true}
+    ]))
+    const gotoMouse = Prec.highest(EditorView.domEventHandlers({
+      mousedown: (event, view) => {
+        if (!event.ctrlKey && !event.metaKey) {
+          return false
+        }
+        const pos = view.posAtCoords({x: event.clientX, y: event.clientY})
+        if (pos == null) {
+          return false
+        }
+        const ok = runGotoDefinition(view, pos)
+        if (ok) {
+          event.preventDefault()
+        }
+        return ok
+      }
+    }))
+
+    return [base, lspCustomHover, lspKeymap, fmt, gotoKeymap, gotoMouse, diagnosticsCollector]
   }
   catch {
     return null
