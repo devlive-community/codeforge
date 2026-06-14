@@ -373,12 +373,8 @@ pub fn lsp_start(
     let app_reader = app.clone();
     let lang_emit = language.clone();
     std::thread::spawn(move || {
-        loop {
-            // 阻塞等待第一条；channel 关闭即语言服务器退出
-            let first = match msg_rx.recv() {
-                Ok(m) => m,
-                Err(_) => break,
-            };
+        // 阻塞等待第一条；channel 关闭(语言服务器退出)时 recv 返回 Err，循环结束
+        while let Ok(first) = msg_rx.recv() {
             let mut batch = vec![first];
             // 排空当前已到达的消息，凑成一批（上限防止单批过大）
             while let Ok(m) = msg_rx.try_recv() {
