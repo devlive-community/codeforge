@@ -67,12 +67,17 @@
           </button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <Button size="sm" custom-class="shrink-0 whitespace-nowrap" :disabled="!canCommit" :loading="pending === 'commit'" @click="commit">
-            提交{{ staged.length ? ` (${staged.length})` : '' }}
+          <Button size="sm" custom-class="shrink-0 whitespace-nowrap min-w-[72px]" :disabled="busy || !canCommit" @click="commit">
+            <Loader2 v-if="pending === 'commit'" class="w-4 h-4 animate-spin"/>
+            <template v-else>提交{{ staged.length ? ` (${staged.length})` : '' }}</template>
           </Button>
-          <Button size="sm" type="secondary" custom-class="shrink-0 whitespace-nowrap" :disabled="busy" :loading="pending === 'commitPush'" @click="commitAndPush">提交并推送</Button>
-          <Button size="sm" type="secondary" custom-class="shrink-0 whitespace-nowrap" :disabled="busy" :loading="pending === 'push'" @click="push">
-            推送{{ status.ahead ? ` (↑${status.ahead})` : '' }}
+          <Button size="sm" type="secondary" custom-class="shrink-0 whitespace-nowrap min-w-[96px]" :disabled="busy" @click="commitAndPush">
+            <Loader2 v-if="pending === 'commitPush'" class="w-4 h-4 animate-spin"/>
+            <template v-else>提交并推送</template>
+          </Button>
+          <Button size="sm" type="secondary" custom-class="shrink-0 whitespace-nowrap min-w-[80px]" :disabled="busy" @click="push">
+            <Loader2 v-if="pending === 'push'" class="w-4 h-4 animate-spin"/>
+            <template v-else>推送{{ status.ahead ? ` (↑${status.ahead})` : '' }}</template>
           </Button>
         </div>
       </div>
@@ -83,7 +88,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {GitBranch, RefreshCw, Sparkles, X} from 'lucide-vue-next'
+import {GitBranch, Loader2, RefreshCw, Sparkles, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import {useToast} from '../plugins/toast'
 import {useAiConfig} from '../composables/useAiConfig'
