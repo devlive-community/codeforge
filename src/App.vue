@@ -263,7 +263,7 @@
               @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
-    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal"/>
+    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal" @toggle-problems="showDiagnostics = !showDiagnostics"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
@@ -360,6 +360,11 @@
               @refresh="refreshGitStatus"
               @close="showGit = false"/>
 
+    <!-- LSP 问题面板 -->
+    <DiagnosticsPanel v-if="showDiagnostics"
+                      @go="(line, col) => gotoLine(line, col)"
+                      @close="showDiagnostics = false"/>
+
     <!-- 编辑器 LSP 右键菜单 -->
     <div v-if="editorCtx.visible" class="fixed inset-0 z-50" @click="closeEditorCtx" @contextmenu.prevent="closeEditorCtx">
       <div class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[170px]"
@@ -395,6 +400,7 @@ import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCom
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
+import DiagnosticsPanel from './components/DiagnosticsPanel.vue'
 import ConsoleOutput from './components/ConsoleOutput.vue'
 import WebOutput from "./components/WebOutput.vue";
 import JsonView from "./components/JsonView.vue";
@@ -1079,6 +1085,9 @@ const onLspOpenLocation = async (e: Event) => {
   await nextTick()
   gotoLine(detail.line, detail.character)
 }
+
+// LSP 问题面板显隐
+const showDiagnostics = ref(false)
 
 // ===== 编辑器 LSP 右键菜单（跳转定义 / 重命名 / 格式化）=====
 const editorCtx = reactive({visible: false, x: 0, y: 0})

@@ -14,6 +14,7 @@ import {Prec} from '@codemirror/state'
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
 import {lspCustomHover} from './lspHover'
+import {diagnosticsCollector} from './lspDiagnostics'
 
 // CodeMirror 偏移量 → LSP 0 基行列
 const offsetToLspPos = (doc: any, offset: number) => {
@@ -232,7 +233,7 @@ export async function createLspExtensions(
       }
     }))
 
-    return [base, lspCustomHover, lspKeymap, fmt, gotoKeymap, gotoMouse]
+    return [base, lspCustomHover, lspKeymap, fmt, gotoKeymap, gotoMouse, diagnosticsCollector]
   }
   catch {
     return null
