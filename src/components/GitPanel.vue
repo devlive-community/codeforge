@@ -66,12 +66,12 @@
             <Sparkles class="w-4 h-4" :class="{ 'animate-pulse': generating }"/>
           </button>
         </div>
-        <div class="flex items-center gap-2">
-          <Button size="sm" :disabled="!canCommit" :loading="pending === 'commit'" @click="commit">
+        <div class="flex flex-wrap items-center gap-2">
+          <Button size="sm" custom-class="shrink-0 whitespace-nowrap" :disabled="!canCommit" :loading="pending === 'commit'" @click="commit">
             提交{{ staged.length ? ` (${staged.length})` : '' }}
           </Button>
-          <Button size="sm" type="secondary" :disabled="busy" :loading="pending === 'commitPush'" @click="commitAndPush">提交并推送</Button>
-          <Button size="sm" type="secondary" :disabled="busy" :loading="pending === 'push'" @click="push">
+          <Button size="sm" type="secondary" custom-class="shrink-0 whitespace-nowrap" :disabled="busy" :loading="pending === 'commitPush'" @click="commitAndPush">提交并推送</Button>
+          <Button size="sm" type="secondary" custom-class="shrink-0 whitespace-nowrap" :disabled="busy" :loading="pending === 'push'" @click="push">
             推送{{ status.ahead ? ` (↑${status.ahead})` : '' }}
           </Button>
         </div>
