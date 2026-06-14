@@ -60,14 +60,23 @@ const LANGUAGE_ID: Record<string, string> = {
   ruby: 'ruby',
   html: 'html',
   css: 'css',
-  json: 'json'
+  json: 'json',
+  java: 'java',
+  kotlin: 'kotlin',
+  swift: 'swift',
+  scala: 'scala',
+  yaml: 'yaml',
+  shell: 'shellscript',
+  haskell: 'haskell'
 }
 
 // 草稿(未保存)时用的文件扩展名，构造 untitled 文档 URI
 const LANGUAGE_EXT: Record<string, string> = {
   python: 'py', typescript: 'ts', javascript: 'js', rust: 'rs', go: 'go',
   c: 'c', cpp: 'cpp', 'objective-c': 'm', 'objective-cpp': 'mm',
-  lua: 'lua', php: 'php', ruby: 'rb', html: 'html', css: 'css', json: 'json'
+  lua: 'lua', php: 'php', ruby: 'rb', html: 'html', css: 'css', json: 'json',
+  java: 'java', kotlin: 'kt', swift: 'swift', scala: 'scala', yaml: 'yaml',
+  shellscript: 'sh', haskell: 'hs'
 }
 
 export const lspSupportsLanguage = (language?: string): boolean =>

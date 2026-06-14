@@ -50,6 +50,13 @@ fn server_cmd(language: &str) -> Option<(&'static str, Vec<&'static str>)> {
         "html" => Some(("vscode-html-language-server", vec!["--stdio"])),
         "css" => Some(("vscode-css-language-server", vec!["--stdio"])),
         "json" => Some(("vscode-json-language-server", vec!["--stdio"])),
+        "java" => Some(("jdtls", vec![])),
+        "kotlin" => Some(("kotlin-language-server", vec![])),
+        "swift" => Some(("sourcekit-lsp", vec![])),
+        "scala" => Some(("metals", vec![])),
+        "yaml" => Some(("yaml-language-server", vec!["--stdio"])),
+        "shell" => Some(("bash-language-server", vec!["start"])),
+        "haskell" => Some(("haskell-language-server-wrapper", vec!["--lsp"])),
         _ => None,
     }
 }
@@ -106,6 +113,43 @@ fn server_defs() -> Vec<(&'static str, &'static str, &'static str, &'static str)
             "HTML / CSS / JSON",
             "vscode-html-language-server",
             "npm i -g vscode-langservers-extracted",
+        ),
+        ("java", "Java (jdtls)", "jdtls", "brew install jdtls"),
+        (
+            "kotlin",
+            "Kotlin",
+            "kotlin-language-server",
+            "brew install kotlin-language-server",
+        ),
+        (
+            "swift",
+            "Swift (sourcekit-lsp)",
+            "sourcekit-lsp",
+            "xcode-select --install",
+        ),
+        (
+            "scala",
+            "Scala (metals)",
+            "metals",
+            "coursier install metals",
+        ),
+        (
+            "yaml",
+            "YAML",
+            "yaml-language-server",
+            "npm i -g yaml-language-server",
+        ),
+        (
+            "shell",
+            "Shell / Bash",
+            "bash-language-server",
+            "npm i -g bash-language-server",
+        ),
+        (
+            "haskell",
+            "Haskell (HLS)",
+            "haskell-language-server-wrapper",
+            "ghcup install hls",
         ),
     ]
 }
