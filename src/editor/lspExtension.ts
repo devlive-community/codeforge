@@ -3,15 +3,36 @@ import {invoke} from '@tauri-apps/api/core'
 import {
   LanguageServerClient,
   languageServerWithTransport,
+  languageServerPlugin,
   formatDocument,
   formatSelection,
   formattingOptions,
   renameSymbol
 } from 'codemirror-languageserver'
-import {keymap} from '@codemirror/view'
+import {keymap, type EditorView} from '@codemirror/view'
+import {Prec} from '@codemirror/state'
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
 import {lspCustomHover} from './lspHover'
+
+// CodeMirror 偏移量 → LSP 0 基行列
+const offsetToLspPos = (doc: any, offset: number) => {
+  const line = doc.lineAt(offset)
+  return {line: line.number - 1, character: offset - line.from}
+}
+
+// file:// URI 还原为本地路径（toUri 的逆操作）
+const uriToPath = (uri: string): string | null => {
+  if (!uri.startsWith('file://')) {
+    return null
+  }
+  let p = decodeURIComponent(uri.slice('file://'.length))
+  // Windows: file:///C:/... → C:/...
+  if (/^\/[A-Za-z]:/.test(p)) {
+    p = p.slice(1)
+  }
+  return p
+}
 
 // 代次：每次构建 LSP 扩展自增，过期 client 的回调据此忽略
 let stateGen = 0
@@ -145,7 +166,42 @@ export async function createLspExtensions(
       tabSize: fmtOptions?.tabSize ?? 4,
       insertSpaces: fmtOptions?.insertSpaces ?? true
     })
-    return [base, lspCustomHover, lspKeymap, fmt]
+
+    // 跨文件跳转定义：库自带的 F12 只处理同文件，跨文件时丢弃结果。
+    // 这里覆盖 F12——同文件交给库内部移动光标，跨文件则派发事件由 App 打开目标文件并定位。
+    const gotoDefinition = (view: EditorView): boolean => {
+      const plugin: any = view.plugin(languageServerPlugin as any)
+      if (!plugin?.requestDefinition) {
+        return false
+      }
+      const pos = view.state.selection.main.head
+      Promise.resolve(plugin.requestDefinition(view, offsetToLspPos(view.state.doc, pos)))
+        .then((loc: any) => {
+          // 同文件：requestDefinition 内部已移动光标，无需处理
+          if (!loc?.uri || loc.uri === documentUri) {
+            return
+          }
+          const targetPath = uriToPath(loc.uri)
+          if (!targetPath) {
+            return
+          }
+          window.dispatchEvent(new CustomEvent('lsp:open-location', {
+            detail: {
+              path: targetPath,
+              line: (loc.range?.start?.line ?? 0) + 1,
+              character: loc.range?.start?.character ?? 0
+            }
+          }))
+        })
+        .catch(() => {})
+      return true
+    }
+    // Prec.highest 确保覆盖 base 内置的 F12 绑定
+    const gotoKeymap = Prec.highest(keymap.of([
+      {key: 'F12', run: gotoDefinition, preventDefault: true}
+    ]))
+
+    return [base, lspCustomHover, lspKeymap, fmt, gotoKeymap]
   }
   catch {
     return null

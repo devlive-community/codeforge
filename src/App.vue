@@ -1044,6 +1044,17 @@ const openSearchResult = async (path: string, line: number) => {
   gotoLine(line)
 }
 
+// LSP 跨文件跳转定义：编辑器扩展派发 lsp:open-location，这里打开目标文件并定位
+const onLspOpenLocation = async (e: Event) => {
+  const detail = (e as CustomEvent).detail as {path: string; line: number; character?: number}
+  if (!detail?.path) {
+    return
+  }
+  await smartOpen(detail.path)
+  await nextTick()
+  gotoLine(detail.line)
+}
+
 // 全局替换后：刷新涉及到的已打开标签（保留有未保存修改的标签）
 const reloadAffectedFiles = async (paths: string[]) => {
   const set = new Set(paths)
@@ -1657,6 +1668,7 @@ onMounted(async () => {
   await restoreSession()
 
   window.addEventListener('keydown', onGlobalKeydown, true)
+  window.addEventListener('lsp:open-location', onLspOpenLocation)
 
   // 触发 app-ready 事件，通知主进程
   window.dispatchEvent(new CustomEvent('app-ready'))
@@ -1665,5 +1677,6 @@ onMounted(async () => {
 onUnmounted(() => {
   cleanupEventListeners()
   window.removeEventListener('keydown', onGlobalKeydown, true)
+  window.removeEventListener('lsp:open-location', onLspOpenLocation)
 })
 </script>
