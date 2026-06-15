@@ -48,7 +48,7 @@ fn server_cmd(language: &str) -> Option<(&'static str, Vec<&'static str>)> {
         "php" => Some(("intelephense", vec!["--stdio"])),
         "ruby" => Some(("solargraph", vec!["stdio"])),
         "html" => Some(("vscode-html-language-server", vec!["--stdio"])),
-        "css" => Some(("vscode-css-language-server", vec!["--stdio"])),
+        "css" | "less" | "scss" => Some(("vscode-css-language-server", vec!["--stdio"])),
         "json" => Some(("vscode-json-language-server", vec!["--stdio"])),
         "java" => Some(("jdtls", vec![])),
         "kotlin" => Some(("kotlin-language-server", vec![])),

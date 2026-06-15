@@ -17,6 +17,7 @@ use crate::plugins::javascript_jquery::JavaScriptJQueryPlugin;
 use crate::plugins::javascript_nodejs::JavaScriptNodeJsPlugin;
 use crate::plugins::json::JsonPlugin;
 use crate::plugins::kotlin::KotlinPlugin;
+use crate::plugins::less::LessPlugin;
 use crate::plugins::lua::LuaPlugin;
 use crate::plugins::markdown::MarkdownPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
@@ -73,6 +74,7 @@ impl PluginManager {
             ("groovy".to_string(), Box::new(GroovyPlugin)),
             ("html".to_string(), Box::new(HtmlPlugin)),
             ("css".to_string(), Box::new(CssPlugin)),
+            ("less".to_string(), Box::new(LessPlugin)),
             ("svg".to_string(), Box::new(SvgPlugin)),
             ("json".to_string(), Box::new(JsonPlugin)),
             ("xml".to_string(), Box::new(XmlPlugin)),

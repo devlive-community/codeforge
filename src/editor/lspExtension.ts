@@ -221,6 +221,7 @@ const LANGUAGE_ID: Record<string, string> = {
   ruby: 'ruby',
   html: 'html',
   css: 'css',
+  less: 'less',
   json: 'json',
   java: 'java',
   kotlin: 'kotlin',
@@ -235,7 +236,7 @@ const LANGUAGE_ID: Record<string, string> = {
 const LANGUAGE_EXT: Record<string, string> = {
   python: 'py', typescript: 'ts', javascript: 'js', rust: 'rs', go: 'go',
   c: 'c', cpp: 'cpp', 'objective-c': 'm', 'objective-cpp': 'mm',
-  lua: 'lua', php: 'php', ruby: 'rb', html: 'html', css: 'css', json: 'json',
+  lua: 'lua', php: 'php', ruby: 'rb', html: 'html', css: 'css', less: 'less', json: 'json',
   java: 'java', kotlin: 'kt', swift: 'swift', scala: 'scala', yaml: 'yaml',
   shellscript: 'sh', haskell: 'hs'
 }
