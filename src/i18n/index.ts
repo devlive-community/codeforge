@@ -47,6 +47,17 @@ const messages = {
         savingGithub: '保存中...',
         clearToken: '清除 Token'
       },
+      editor: {
+        indentWithTab: '是否使用 Tab 缩进',
+        showLineNumbers: '是否显示行号',
+        showFunctionHelp: '是否显示函数帮助信息',
+        spaceDotOmission: '是否显示空格省略',
+        tabSize: '缩进空格数',
+        font: '编辑器字体',
+        fontSize: '字体大小',
+        theme: '编辑器主题',
+        selectTheme: '选择编辑器主题'
+      },
       theme: {system: '跟随系统', light: '浅色', dark: '深色'},
       runStrategy: {autoSave: '自动保存后运行', ask: '每次询问', tempCopy: '运行副本(不保存)'}
     }
@@ -87,6 +98,17 @@ const messages = {
         saveGithub: 'Save GitHub config',
         savingGithub: 'Saving...',
         clearToken: 'Clear token'
+      },
+      editor: {
+        indentWithTab: 'Use Tab for indentation',
+        showLineNumbers: 'Show line numbers',
+        showFunctionHelp: 'Show function help',
+        spaceDotOmission: 'Show whitespace dots',
+        tabSize: 'Indent size',
+        font: 'Editor font',
+        fontSize: 'Font size',
+        theme: 'Editor theme',
+        selectTheme: 'Select editor theme'
       },
       theme: {system: 'Follow system', light: 'Light', dark: 'Dark'},
       runStrategy: {autoSave: 'Auto-save then run', ask: 'Ask every time', tempCopy: 'Run a copy (no save)'}
