@@ -31,6 +31,10 @@
                   :disabled="!firstResultSet" :title="firstResultSet ? '图表' : '无数据可绘图'" @click="viewMode = 'chart'">
             <BarChart3 class="w-3.5 h-3.5" :class="!firstResultSet ? 'opacity-40' : ''"/>
           </button>
+          <button class="p-1 transition-colors" :class="viewMode === 'pivot' ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
+                  :disabled="!firstResultSet" :title="firstResultSet ? '透视表' : '无数据可透视'" @click="viewMode = 'pivot'">
+            <Grid3x3 class="w-3.5 h-3.5" :class="!firstResultSet ? 'opacity-40' : ''"/>
+          </button>
         </div>
         <button v-if="firstResultSet" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="导出 CSV" @click="exportCsv">
           <FileDown class="w-3.5 h-3.5"/>
@@ -45,6 +49,10 @@
     <div v-if="viewMode === 'chart' && firstResultSet" class="flex-1 min-h-0 overflow-hidden">
       <ChartPanel :columns="firstResultSet.columns" :rows="firstResultSet.rows"/>
     </div>
+    <!-- 透视表视图 -->
+    <div v-else-if="viewMode === 'pivot' && firstResultSet" class="flex-1 min-h-0 overflow-hidden">
+      <PivotTable :columns="firstResultSet.columns" :rows="firstResultSet.rows"/>
+    </div>
     <!-- 表格视图 -->
     <div v-else class="flex-1 overflow-auto p-2">
       <SqlResultTable :output="stable" :empty-text="`运行后在此查看 SQL 结果（数据源：${activeLabel()}）`"/>
@@ -55,10 +63,11 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {BarChart3, ChevronLeft, ChevronRight, Database, FileDown, Table2, Trash2} from 'lucide-vue-next'
+import {BarChart3, ChevronLeft, ChevronRight, Database, FileDown, Grid3x3, Table2, Trash2} from 'lucide-vue-next'
 import {useDbConnections} from '../composables/useDbConnections'
 import SqlSourceSelect from './SqlSourceSelect.vue'
 import SqlResultTable from './SqlResultTable.vue'
+import PivotTable from './PivotTable.vue'
 import ChartPanel from './charts/ChartPanel.vue'
 import {downloadCsv} from '../utils/csv'
 
@@ -70,7 +79,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ clear: []; prev: []; next: [] }>()
 
-const viewMode = ref<'table' | 'chart'>('table')
+const viewMode = ref<'table' | 'chart' | 'pivot'>('table')
 
 // 当前页码（1 基）
 const pageNo = computed(() => (props.paging ? Math.floor(props.paging.offset / props.paging.pageSize) + 1 : 1))
