@@ -12,7 +12,20 @@ const LOCALE_KEY = 'app-locale'
 const messages = {
   'zh-CN': {
     settings: {
+      title: '设置',
       uiLanguage: '界面语言',
+      nav: {
+        general: '通用',
+        editor: '编辑器',
+        shortcut: '快捷键',
+        ai: 'AI',
+        database: '数据库',
+        language: '语言',
+        lsp: '语言服务',
+        network: '网络',
+        cache: '缓存',
+        logs: '日志'
+      },
       general: {
         appearance: '外观',
         theme: '主题',
@@ -40,7 +53,20 @@ const messages = {
   },
   en: {
     settings: {
+      title: 'Settings',
       uiLanguage: 'Language',
+      nav: {
+        general: 'General',
+        editor: 'Editor',
+        shortcut: 'Shortcuts',
+        ai: 'AI',
+        database: 'Database',
+        language: 'Languages',
+        lsp: 'Language Server',
+        network: 'Network',
+        cache: 'Cache',
+        logs: 'Logs'
+      },
       general: {
         appearance: 'Appearance',
         theme: 'Theme',
