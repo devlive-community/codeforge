@@ -3,7 +3,7 @@ import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './useKvStore'
 
 export interface DataSource
 {
-    kind: 'memory' | 'sqlite' | 'mysql'
+    kind: 'memory' | 'sqlite' | 'mysql' | 'postgres'
     file?: string
     host?: string
     port?: number
