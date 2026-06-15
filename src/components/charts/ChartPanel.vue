@@ -138,6 +138,7 @@
           <label v-if="(chartType === 'bar' || isLineLike || chartType === 'polarBar') && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="stacked" type="checkbox" class="accent-blue-500"/>堆叠</label>
           <label v-if="chartType === 'pie'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="ring" type="checkbox" class="accent-blue-500"/>环形</label>
           <label v-if="chartType === 'radar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="radarFill" type="checkbox" class="accent-blue-500"/>填充</label>
+          <label v-if="chartType === 'combo' && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="dualAxis" type="checkbox" class="accent-blue-500"/>双 Y 轴</label>
         </div>
       </div>
     </div>
@@ -166,6 +167,8 @@
                 :horizontal="horizontal" :stacked="stacked" :show-label="showLabel"/>
       <LineChart v-else-if="isLineLike" :categories="shaped.categories" :series="shaped.series"
                  :area="chartType === 'area'" :smooth="smooth" :stacked="stacked" :show-label="showLabel"/>
+      <ComboChart v-else-if="chartType === 'combo'" :categories="shaped.categories" :series="shaped.series"
+                  :dual-axis="dualAxis" :show-label="showLabel"/>
       <PieChart v-else-if="chartType === 'pie'" :data="pieData" :ring="ring" :show-label="showLabel"/>
       <PieChart v-else-if="chartType === 'rose'" :data="pieData" rose :show-label="showLabel"/>
       <ScatterChart v-else-if="chartType === 'scatter'" :series="scatterSeries" :x-name="xField" :y-name="yField"/>
@@ -232,6 +235,7 @@ import Select from '../../ui/Select.vue'
 echarts.use([SVGRenderer])
 import BarChart from './BarChart.vue'
 import LineChart from './LineChart.vue'
+import ComboChart from './ComboChart.vue'
 import PieChart from './PieChart.vue'
 import ScatterChart from './ScatterChart.vue'
 import RadarChart from './RadarChart.vue'
@@ -276,6 +280,7 @@ interface ChartMeta {
 const CHART_META: Record<string, ChartMeta> = {
   bar: {label: '柱状图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, empty: '拖入「维度」和「指标」生成图表'},
   line: {label: '折线图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, empty: '拖入「维度」和「指标」生成图表'},
+  combo: {label: '组合图(柱+线)', layout: 'dims', needDims: 1, needMetrics: 2, dimsZone: true, usesAgg: true, sortable: true, note: '首个指标作柱、其余作线；可开「双 Y 轴」', empty: '拖入「维度」和≥2 个「指标」生成组合图'},
   area: {label: '面积图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, empty: '拖入「维度」和「指标」生成图表'},
   pie: {label: '饼图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作分类、首个指标作数值', empty: '拖入「维度」和「指标」生成图表'},
   scatter: {label: '散点图', layout: 'scatter', needDims: 0, needMetrics: 0, empty: '拖入「X 指标」和「Y 指标」生成图表'},
@@ -308,7 +313,7 @@ const chartType = ref('bar')
 const meta = computed(() => CHART_META[chartType.value])
 const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
 
-const supportsLabel = computed(() => ['bar', 'line', 'area', 'pie', 'rose', 'funnel', 'radar', 'heatmap', 'sunburst', 'treemap', 'tree'].includes(chartType.value))
+const supportsLabel = computed(() => ['bar', 'line', 'area', 'combo', 'pie', 'rose', 'funnel', 'radar', 'heatmap', 'sunburst', 'treemap', 'tree'].includes(chartType.value))
 const hasOptions = computed(() => meta.value.sortable || supportsLabel.value
   || ['bar', 'line', 'area', 'pie', 'radar'].includes(chartType.value))
 
@@ -340,6 +345,7 @@ const smooth = ref(false)
 const ring = ref(false)
 const radarFill = ref(true)
 const showLabel = ref(false)
+const dualAxis = ref(false)
 const dragOver = ref('')
 
 // 配置持久化：恢复上次选择，字段按当前列过滤
@@ -372,9 +378,9 @@ if (saved.yField && props.columns.includes(saved.yField)) {
 if (saved.groupField && props.columns.includes(saved.groupField)) {
   groupField.value = saved.groupField
 }
-for (const k of ['horizontal', 'stacked', 'smooth', 'ring', 'showLabel'] as const) {
+for (const k of ['horizontal', 'stacked', 'smooth', 'ring', 'showLabel', 'dualAxis'] as const) {
   if (typeof saved[k] === 'boolean') {
-    ({horizontal, stacked, smooth, ring, showLabel}[k]).value = saved[k]
+    ({horizontal, stacked, smooth, ring, showLabel, dualAxis}[k]).value = saved[k]
   }
 }
 if (typeof saved.radarFill === 'boolean') {
@@ -396,7 +402,8 @@ const buildConfig = () => ({
   smooth: smooth.value,
   ring: ring.value,
   radarFill: radarFill.value,
-  showLabel: showLabel.value
+  showLabel: showLabel.value,
+  dualAxis: dualAxis.value
 })
 // 套用配置（字段按当前列过滤）
 const applyConfig = (cfg: Record<string, any>) => {
@@ -417,16 +424,16 @@ const applyConfig = (cfg: Record<string, any>) => {
   xField.value = cfg.xField && props.columns.includes(cfg.xField) ? cfg.xField : ''
   yField.value = cfg.yField && props.columns.includes(cfg.yField) ? cfg.yField : ''
   groupField.value = cfg.groupField && props.columns.includes(cfg.groupField) ? cfg.groupField : ''
-  for (const k of ['horizontal', 'stacked', 'smooth', 'ring', 'radarFill', 'showLabel'] as const) {
+  for (const k of ['horizontal', 'stacked', 'smooth', 'ring', 'radarFill', 'showLabel', 'dualAxis'] as const) {
     if (typeof cfg[k] === 'boolean') {
-      ({horizontal, stacked, smooth, ring, radarFill, showLabel}[k]).value = cfg[k]
+      ({horizontal, stacked, smooth, ring, radarFill, showLabel, dualAxis}[k]).value = cfg[k]
     }
   }
 }
 
 const persist = debounce(() => kvSetJSON(CFG_KEY, buildConfig()), 300)
 watch([chartType, agg, sortOrder, topN, dimensions, metrics, xField, yField, groupField,
-  horizontal, stacked, smooth, ring, radarFill, showLabel], persist, {deep: true})
+  horizontal, stacked, smooth, ring, radarFill, showLabel, dualAxis], persist, {deep: true})
 
 // ---- 命名预设 ----
 interface Preset { name: string; config: Record<string, any> }
