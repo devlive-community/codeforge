@@ -69,6 +69,23 @@ const messages = {
         info2: 'API Key 仅保存在本机',
         info3: '留空接口地址则使用服务商默认地址'
       },
+      network: {
+        title: 'CDN 镜像配置',
+        enable: '启用 CDN 镜像加速',
+        enabled: '已启用',
+        disabled: '未启用',
+        baseUrl: 'CDN 基础 URL',
+        fallback: 'CDN 下载失败时自动回退到 GitHub 官方源',
+        infoTitle: 'CDN 镜像说明',
+        info1: 'CDN 镜像用于加速环境安装包的下载',
+        info2: '启用自动回退后，CDN 下载失败会自动使用 GitHub 官方源',
+        info3: '关闭自动回退后，CDN 下载失败将直接报错，不会尝试其他源',
+        save: '保存配置',
+        saving: '保存中...',
+        reset: '重置为默认',
+        test: '测试连接',
+        testing: '测试中...'
+      },
       theme: {system: '跟随系统', light: '浅色', dark: '深色'},
       runStrategy: {autoSave: '自动保存后运行', ask: '每次询问', tempCopy: '运行副本(不保存)'}
     }
@@ -131,6 +148,23 @@ const messages = {
         info1: 'Requests are proxied by the local backend to avoid CORS issues',
         info2: 'The API Key is stored only on this machine',
         info3: 'Leave the endpoint empty to use the provider default'
+      },
+      network: {
+        title: 'CDN Mirror',
+        enable: 'Enable CDN mirror acceleration',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        baseUrl: 'CDN base URL',
+        fallback: 'Fall back to official GitHub source when CDN download fails',
+        infoTitle: 'About CDN mirror',
+        info1: 'CDN mirror speeds up downloading environment install packages',
+        info2: 'With fallback on, a failed CDN download automatically uses the official GitHub source',
+        info3: 'With fallback off, a failed CDN download errors out without trying other sources',
+        save: 'Save',
+        saving: 'Saving...',
+        reset: 'Reset to default',
+        test: 'Test connection',
+        testing: 'Testing...'
       },
       theme: {system: 'Follow system', light: 'Light', dark: 'Dark'},
       runStrategy: {autoSave: 'Auto-save then run', ask: 'Ask every time', tempCopy: 'Run a copy (no save)'}
