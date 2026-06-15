@@ -54,8 +54,8 @@
       <PivotTable :columns="firstResultSet.columns" :rows="firstResultSet.rows"/>
     </div>
     <!-- 表格视图 -->
-    <div v-else class="flex-1 overflow-auto p-2">
-      <SqlResultTable :output="stable" :empty-text="`运行后在此查看 SQL 结果（数据源：${activeLabel()}）`"/>
+    <div v-else class="flex-1 min-h-0 overflow-auto p-2">
+      <SqlResultTable :output="stable" fill-height :empty-text="`运行后在此查看 SQL 结果（数据源：${activeLabel()}）`"/>
     </div>
   </div>
 </template>
