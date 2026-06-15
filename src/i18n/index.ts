@@ -108,6 +108,21 @@ const messages = {
         clearedPlugins: '插件执行缓存已清理',
         clearedAll: '所有缓存已清理'
       },
+      logs: {
+        title: '日志设置',
+        currentDir: '当前日志目录',
+        loading: '加载中...',
+        selectDir: '选择新的日志目录',
+        dirPlaceholder: '选择或输入日志目录路径',
+        apply: '应用更改',
+        openDir: '打开日志目录',
+        resetDefault: '重置为默认',
+        recentFiles: '最近的日志文件',
+        mgmtTitle: '日志管理',
+        cleanup: '清理日志',
+        keepDaysPlaceholder: '选择保留天数',
+        clearNow: '立即清理'
+      },
       theme: {system: '跟随系统', light: '浅色', dark: '深色'},
       runStrategy: {autoSave: '自动保存后运行', ask: '每次询问', tempCopy: '运行副本(不保存)'}
     }
@@ -209,6 +224,21 @@ const messages = {
         clear: 'Clear',
         clearedPlugins: 'Plugin execution cache cleared',
         clearedAll: 'All cache cleared'
+      },
+      logs: {
+        title: 'Logs',
+        currentDir: 'Current log directory',
+        loading: 'Loading...',
+        selectDir: 'Choose a new log directory',
+        dirPlaceholder: 'Select or enter a log directory path',
+        apply: 'Apply changes',
+        openDir: 'Open log directory',
+        resetDefault: 'Reset to default',
+        recentFiles: 'Recent log files',
+        mgmtTitle: 'Log management',
+        cleanup: 'Clean logs',
+        keepDaysPlaceholder: 'Days to keep',
+        clearNow: 'Clean now'
       },
       theme: {system: 'Follow system', light: 'Light', dark: 'Dark'},
       runStrategy: {autoSave: 'Auto-save then run', ask: 'Ask every time', tempCopy: 'Run a copy (no save)'}
