@@ -50,6 +50,7 @@
 
       <div class="flex items-center gap-2">
         <Button size="sm" :disabled="!canSave" @click="submit">{{ editingId ? '保存修改' : '添加连接' }}</Button>
+        <Button size="sm" type="secondary" :disabled="!canTest" :loading="testing" @click="testConnection">测试连接</Button>
         <Button v-if="editingId" size="sm" type="secondary" @click="resetForm">取消</Button>
       </div>
     </div>
@@ -58,13 +59,16 @@
 
 <script setup lang="ts">
 import {computed, reactive, ref} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
 import {open} from '@tauri-apps/plugin-dialog'
 import {Pencil, Trash2} from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
 import Select from '../../ui/Select.vue'
-import {useDbConnections, type DbConnection} from '../../composables/useDbConnections'
+import {useDbConnections, type DataSource, type DbConnection} from '../../composables/useDbConnections'
+import {useToast} from '../../plugins/toast'
 
 const {connections, add, update, remove} = useDbConnections()
+const toast = useToast()
 
 const kindOptions = [
   {value: 'mysql', label: 'MySQL'},
@@ -86,6 +90,41 @@ const canSave = computed(() => {
   if (form.kind === 'sqlite') return !!form.file.trim()
   return !!form.host.trim() || true
 })
+
+// 测试连接：sqlite 需文件，其余用默认值即可
+const canTest = computed(() => (form.kind === 'sqlite' ? !!form.file.trim() : true))
+
+// 由当前表单构建可执行的数据源（不含名称/id）
+const buildSource = (): DataSource => form.kind === 'sqlite'
+    ? {kind: 'sqlite', file: form.file.trim()}
+    : {
+      kind: form.kind,
+      host: form.host.trim() || '127.0.0.1',
+      port: form.port || defaultPortOf(form.kind),
+      user: form.user.trim(),
+      password: form.password,
+      database: form.database.trim() || undefined
+    }
+
+const testing = ref(false)
+const testConnection = async () => {
+  testing.value = true
+  try {
+    const res = await invoke<{ error?: string }>('run_sql', {sql: 'SELECT 1', source: buildSource()})
+    if (res.error) {
+      toast.error('连接失败：' + res.error)
+    }
+    else {
+      toast.success('连接成功')
+    }
+  }
+  catch (e: any) {
+    toast.error('连接失败：' + String(e?.message || e))
+  }
+  finally {
+    testing.value = false
+  }
+}
 
 const resetForm = () => {
   editingId.value = null
