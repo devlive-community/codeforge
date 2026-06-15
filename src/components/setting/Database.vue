@@ -1,71 +1,75 @@
 <template>
-  <div class="space-y-4 max-w-3xl">
-    <div class="text-sm text-gray-600 dark:text-gray-300">
+  <div class="-mt-1">
+    <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
       管理数据库连接，运行 SQL 时可在输出区选择数据源。密码以明文保存在本地数据库中。
-    </div>
+    </p>
 
-    <!-- 连接列表 -->
-    <div v-if="connections.length" class="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
-      <div v-for="c in connections" :key="c.id" class="flex items-center gap-3 px-3 py-2">
-        <span class="text-[10px] px-1.5 py-0.5 rounded uppercase font-semibold"
-              :class="c.kind === 'mysql' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300' : c.kind === 'postgres' ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300' : c.kind === 'clickhouse' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' : c.kind === 'duckdb' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'">{{ c.kind }}</span>
-        <div class="flex-1 min-w-0">
-          <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{{ c.name }}</div>
-          <div class="text-xs text-gray-400 truncate">
-            {{ isFileKind(c.kind) ? (c.file || '内存库') : `${c.user || ''}@${c.host || ''}:${c.port || defaultPortOf(c.kind)}/${c.database || ''}` }}
+    <!-- 主从布局：左侧连接列表 + 右侧表单 -->
+    <div class="flex gap-4 items-start">
+      <!-- 左：连接列表 -->
+      <div class="w-64 flex-shrink-0 space-y-2">
+        <Button size="sm" :icon="Plus" class="w-full" :type="editingId ? 'secondary' : 'primary'" @click="resetForm">新增连接</Button>
+        <div class="space-y-1 max-h-[55vh] overflow-y-auto pr-0.5">
+          <button v-for="c in connections" :key="c.id"
+                  class="group w-full text-left rounded-lg border px-2.5 py-2 transition-colors cursor-pointer"
+                  :class="editingId === c.id ? 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'"
+                  @click="startEdit(c)">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] px-1.5 py-0.5 rounded uppercase font-semibold flex-shrink-0"
+                    :class="c.kind === 'mysql' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300' : c.kind === 'postgres' ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300' : c.kind === 'clickhouse' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' : c.kind === 'duckdb' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'">{{ c.kind }}</span>
+              <span class="flex-1 truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ c.name }}</span>
+              <Trash2 class="w-3.5 h-3.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 flex-shrink-0" title="删除" @click.stop="remove(c.id)"/>
+            </div>
+            <div class="text-xs text-gray-400 truncate mt-0.5">
+              {{ isFileKind(c.kind) ? (c.file || '内存库') : `${c.user || ''}@${c.host || ''}:${c.port || defaultPortOf(c.kind)}/${c.database || ''}` }}
+            </div>
+          </button>
+          <div v-if="!connections.length" class="text-xs text-gray-400 text-center py-6">还没有连接</div>
+        </div>
+      </div>
+
+      <!-- 右：表单 -->
+      <div class="flex-1 min-w-0 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
+        <div class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ editingId ? '编辑连接' : '新增连接' }}</div>
+
+        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+          <Label label="类型">
+            <Select v-model="form.kind" :options="kindOptions" class="w-full" :button-classes="['!py-1.5', 'text-sm', 'w-full']"/>
+          </Label>
+          <Label label="连接名称">
+            <Input v-model="form.name" placeholder="例如：本地数据源"/>
+          </Label>
+        </div>
+
+        <div v-if="!isFileKind(form.kind)" class="grid grid-cols-2 gap-x-4 gap-y-3">
+          <Label label="主机">
+            <Input v-model="form.host" placeholder="默认 127.0.0.1"/>
+          </Label>
+          <Label label="端口">
+            <Number v-model="form.port" :placeholder="`默认 ${defaultPortOf(form.kind)}`"/>
+          </Label>
+          <Label label="用户名">
+            <Input v-model="form.user" placeholder="用户名"/>
+          </Label>
+          <Label label="密码">
+            <Input v-model="form.password" type="password" placeholder="密码"/>
+          </Label>
+          <Label label="数据库名" custom-class="col-span-2">
+            <Input v-model="form.database" placeholder="数据库名（可选）"/>
+          </Label>
+        </div>
+        <Label v-else :label="form.kind === 'duckdb' ? 'DuckDB 文件' : 'SQLite 文件'">
+          <div class="flex gap-2">
+            <Input v-model="form.file" class="flex-1" :placeholder="form.kind === 'duckdb' ? '文件路径（留空则用内存库）' : 'SQLite 文件路径'"/>
+            <Button size="sm" type="secondary" @click="pickFile">选择文件</Button>
           </div>
+        </Label>
+
+        <div class="flex items-center gap-2 pt-1">
+          <Button size="sm" :disabled="!canSave" @click="submit">{{ editingId ? '保存修改' : '添加连接' }}</Button>
+          <Button size="sm" type="secondary" :disabled="!canTest" :loading="testing" @click="testConnection">测试连接</Button>
+          <Button v-if="editingId" size="sm" type="secondary" @click="resetForm">取消</Button>
         </div>
-        <button class="p-1 text-gray-400 hover:text-blue-500 cursor-pointer" title="编辑" @click="startEdit(c)">
-          <Pencil class="w-3.5 h-3.5"/>
-        </button>
-        <button class="p-1 text-gray-400 hover:text-red-500 cursor-pointer" title="删除" @click="remove(c.id)">
-          <Trash2 class="w-3.5 h-3.5"/>
-        </button>
-      </div>
-    </div>
-    <div v-else class="text-sm text-gray-400 px-1">还没有连接，在下方添加</div>
-
-    <!-- 表单 -->
-    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
-      <div class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ editingId ? '编辑连接' : '新增连接' }}</div>
-
-      <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-        <Label label="类型">
-          <Select v-model="form.kind" :options="kindOptions" class="w-full" :button-classes="['!py-1.5', 'text-sm', 'w-full']"/>
-        </Label>
-        <Label label="连接名称">
-          <Input v-model="form.name" placeholder="例如：本地数据源"/>
-        </Label>
-      </div>
-
-      <div v-if="!isFileKind(form.kind)" class="grid grid-cols-2 gap-x-4 gap-y-3">
-        <Label label="主机">
-          <Input v-model="form.host" placeholder="默认 127.0.0.1"/>
-        </Label>
-        <Label label="端口">
-          <Number v-model="form.port" :placeholder="`默认 ${defaultPortOf(form.kind)}`"/>
-        </Label>
-        <Label label="用户名">
-          <Input v-model="form.user" placeholder="用户名"/>
-        </Label>
-        <Label label="密码">
-          <Input v-model="form.password" type="password" placeholder="密码"/>
-        </Label>
-        <Label label="数据库名" custom-class="col-span-2">
-          <Input v-model="form.database" placeholder="数据库名（可选）"/>
-        </Label>
-      </div>
-      <Label v-else :label="form.kind === 'duckdb' ? 'DuckDB 文件' : 'SQLite 文件'">
-        <div class="flex gap-2">
-          <Input v-model="form.file" class="flex-1" :placeholder="form.kind === 'duckdb' ? '文件路径（留空则用内存库）' : 'SQLite 文件路径'"/>
-          <Button size="sm" type="secondary" @click="pickFile">选择文件</Button>
-        </div>
-      </Label>
-
-      <div class="flex items-center gap-2 pt-1">
-        <Button size="sm" :disabled="!canSave" @click="submit">{{ editingId ? '保存修改' : '添加连接' }}</Button>
-        <Button size="sm" type="secondary" :disabled="!canTest" :loading="testing" @click="testConnection">测试连接</Button>
-        <Button v-if="editingId" size="sm" type="secondary" @click="resetForm">取消</Button>
       </div>
     </div>
   </div>
@@ -75,7 +79,7 @@
 import {computed, reactive, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {open} from '@tauri-apps/plugin-dialog'
-import {Pencil, Trash2} from 'lucide-vue-next'
+import {Plus, Trash2} from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
 import Select from '../../ui/Select.vue'
 import Input from '../../ui/Input.vue'
