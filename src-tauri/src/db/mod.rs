@@ -2,6 +2,8 @@
 //! 每种数据库类型实现 `DbExecutor` 并在 `executors()` 中注册一行，新增类型互不影响。
 
 mod clickhouse;
+// DuckDB bundled 的 vendored C++ 在部分新版 MSVC 上编译失败，仅在非 Windows 启用
+#[cfg(not(target_os = "windows"))]
 mod duckdb;
 mod mysql;
 mod postgres;
@@ -68,6 +70,7 @@ fn executors() -> Vec<Box<dyn DbExecutor>> {
         Box::new(mysql::MysqlExecutor),
         Box::new(postgres::PostgresExecutor),
         Box::new(clickhouse::ClickhouseExecutor),
+        #[cfg(not(target_os = "windows"))]
         Box::new(duckdb::DuckdbExecutor),
     ]
 }

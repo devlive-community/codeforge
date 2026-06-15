@@ -91,12 +91,14 @@ import {useToast} from '../../plugins/toast'
 const {connections, add, update, remove} = useDbConnections()
 const toast = useToast()
 
+// DuckDB 在 Windows 上未编译(bundled C++ 不兼容部分 MSVC)，故隐藏该选项
+const isWindows = /Windows/i.test(navigator.userAgent)
 const kindOptions = [
   {value: 'mysql', label: 'MySQL'},
   {value: 'postgres', label: 'PostgreSQL'},
   {value: 'clickhouse', label: 'ClickHouse'},
   {value: 'sqlite', label: 'SQLite'},
-  {value: 'duckdb', label: 'DuckDB'}
+  ...(isWindows ? [] : [{value: 'duckdb', label: 'DuckDB'}])
 ]
 
 // 各网络型数据源的默认端口
