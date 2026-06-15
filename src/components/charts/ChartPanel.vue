@@ -1,9 +1,9 @@
 <template>
   <div class="flex h-full min-h-0 overflow-hidden">
     <!-- 配置侧栏 -->
-    <div class="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 h-full bg-gray-50 dark:bg-gray-800/40 overflow-y-auto">
-      <!-- 图表类型 -->
-      <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+    <div class="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 h-full bg-gray-50 dark:bg-gray-800/40">
+      <!-- 图表类型（固定在顶部）-->
+      <div class="flex-shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center justify-between mb-1">
           <span class="text-[11px] text-gray-400">图表类型</span>
           <div class="flex items-center gap-1">
@@ -50,8 +50,8 @@
         </div>
       </div>
 
-      <!-- 可用字段 -->
-      <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+      <!-- 可用字段（独立滚动）-->
+      <div class="flex-1 min-h-0 overflow-y-auto px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div class="text-[11px] text-gray-400 mb-1.5">字段（单击选择 / 双击快速添加 / 可拖拽）</div>
         <div class="flex flex-wrap gap-1.5">
           <div v-for="f in fields" :key="f.name" draggable="true"
@@ -67,6 +67,8 @@
         </div>
       </div>
 
+      <!-- 维度/指标/散点/选项：固定在下方始终可见 -->
+      <div class="flex-shrink-0 overflow-y-auto max-h-[60%] border-t border-gray-200 dark:border-gray-700">
       <!-- 维度 -->
       <div v-if="meta.layout === 'dims' && meta.dimsZone" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
            @dragover.prevent="dragOver = 'dim'" @dragleave="dragOver = ''" @drop.prevent="onDrop('dim')">
@@ -140,6 +142,7 @@
           <label v-if="chartType === 'radar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="radarFill" type="checkbox" class="accent-blue-500"/>填充</label>
           <label v-if="chartType === 'combo' && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="dualAxis" type="checkbox" class="accent-blue-500"/>双 Y 轴</label>
         </div>
+      </div>
       </div>
     </div>
 
