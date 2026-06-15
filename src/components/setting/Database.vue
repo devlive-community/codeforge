@@ -8,11 +8,11 @@
     <div v-if="connections.length" class="border border-gray-200 dark:border-gray-700 rounded divide-y divide-gray-100 dark:divide-gray-700">
       <div v-for="c in connections" :key="c.id" class="flex items-center gap-3 px-3 py-2">
         <span class="text-[10px] px-1.5 py-0.5 rounded uppercase font-semibold"
-              :class="c.kind === 'mysql' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300' : c.kind === 'postgres' ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'">{{ c.kind }}</span>
+              :class="c.kind === 'mysql' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300' : c.kind === 'postgres' ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300' : c.kind === 'clickhouse' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'">{{ c.kind }}</span>
         <div class="flex-1 min-w-0">
           <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{{ c.name }}</div>
           <div class="text-xs text-gray-400 truncate">
-            {{ c.kind === 'sqlite' ? c.file : `${c.user || ''}@${c.host || ''}:${c.port || (c.kind === 'postgres' ? 5432 : 3306)}/${c.database || ''}` }}
+            {{ c.kind === 'sqlite' ? c.file : `${c.user || ''}@${c.host || ''}:${c.port || defaultPortOf(c.kind)}/${c.database || ''}` }}
           </div>
         </div>
         <button class="p-1 text-gray-400 hover:text-blue-500 cursor-pointer" title="编辑" @click="startEdit(c)">
@@ -32,10 +32,10 @@
         <input v-model="form.name" placeholder="连接名称" class="flex-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
       </div>
 
-      <template v-if="form.kind === 'mysql' || form.kind === 'postgres'">
+      <template v-if="form.kind !== 'sqlite'">
         <div class="grid grid-cols-2 gap-2">
           <input v-model="form.host" placeholder="主机（默认 127.0.0.1）" class="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
-          <input v-model.number="form.port" type="number" :placeholder="`端口（默认 ${form.kind === 'postgres' ? 5432 : 3306}）`" class="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
+          <input v-model.number="form.port" type="number" :placeholder="`端口（默认 ${defaultPortOf(form.kind)}）`" class="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
           <input v-model="form.user" placeholder="用户名" class="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
           <input v-model="form.password" type="password" placeholder="密码" class="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
           <input v-model="form.database" placeholder="数据库名" class="col-span-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
@@ -66,10 +66,18 @@ import {useDbConnections, type DbConnection} from '../../composables/useDbConnec
 
 const {connections, add, update, remove} = useDbConnections()
 
-const kindOptions = [{value: 'mysql', label: 'MySQL'}, {value: 'postgres', label: 'PostgreSQL'}, {value: 'sqlite', label: 'SQLite'}]
+const kindOptions = [
+  {value: 'mysql', label: 'MySQL'},
+  {value: 'postgres', label: 'PostgreSQL'},
+  {value: 'clickhouse', label: 'ClickHouse'},
+  {value: 'sqlite', label: 'SQLite'}
+]
+
+// 各网络型数据源的默认端口
+const defaultPortOf = (kind: string) => (kind === 'postgres' ? 5432 : kind === 'clickhouse' ? 8123 : 3306)
 
 const editingId = ref<string | null>(null)
-const form = reactive<{ kind: 'mysql' | 'postgres' | 'sqlite'; name: string; host: string; port: number | null; user: string; password: string; database: string; file: string }>({
+const form = reactive<{ kind: 'mysql' | 'postgres' | 'clickhouse' | 'sqlite'; name: string; host: string; port: number | null; user: string; password: string; database: string; file: string }>({
   kind: 'mysql', name: '', host: '', port: null, user: '', password: '', database: '', file: ''
 })
 
@@ -87,7 +95,7 @@ const resetForm = () => {
 const startEdit = (c: DbConnection) => {
   editingId.value = c.id
   Object.assign(form, {
-    kind: c.kind === 'sqlite' || c.kind === 'postgres' ? c.kind : 'mysql',
+    kind: c.kind === 'sqlite' || c.kind === 'postgres' || c.kind === 'clickhouse' ? c.kind : 'mysql',
     name: c.name,
     host: c.host || '', port: c.port ?? null, user: c.user || '', password: c.password || '',
     database: c.database || '', file: c.file || ''
@@ -105,7 +113,7 @@ const submit = () => {
   if (!canSave.value) return
   const payload = form.kind === 'sqlite'
       ? {kind: 'sqlite' as const, name: form.name.trim(), file: form.file.trim()}
-      : {kind: form.kind, name: form.name.trim(), host: form.host.trim() || '127.0.0.1', port: form.port || (form.kind === 'postgres' ? 5432 : 3306), user: form.user.trim(), password: form.password, database: form.database.trim()}
+      : {kind: form.kind, name: form.name.trim(), host: form.host.trim() || '127.0.0.1', port: form.port || defaultPortOf(form.kind), user: form.user.trim(), password: form.password, database: form.database.trim()}
   if (editingId.value) {
     update(editingId.value, payload)
   }

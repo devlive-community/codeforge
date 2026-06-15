@@ -144,7 +144,7 @@ const filteredDatabases = computed(() => {
   return databases.value.filter(d => d.name.toLowerCase().includes(q))
 })
 
-const quote = (kind: string, name: string) => (kind === 'mysql' ? `\`${name}\`` : `"${name}"`)
+const quote = (kind: string, name: string) => (kind === 'mysql' || kind === 'clickhouse' ? `\`${name}\`` : `"${name}"`)
 const esc = (s: string) => s.replace(/'/g, "''")
 
 const tablesSql = (kind: string, db?: string): string => {
@@ -158,6 +158,11 @@ const tablesSql = (kind: string, db?: string): string => {
       + 'FROM information_schema.columns '
       + "WHERE table_schema NOT IN ('pg_catalog', 'information_schema') "
       + 'ORDER BY table_name, ordinal_position'
+  }
+  if (kind === 'clickhouse') {
+    return 'SELECT table AS tbl, name AS col, type AS typ '
+      + 'FROM system.columns WHERE database = currentDatabase() '
+      + 'ORDER BY table, position'
   }
   return 'SELECT m.name AS tbl, p.name AS col, p.type AS typ '
     + 'FROM sqlite_master m JOIN pragma_table_info(m.name) p '
@@ -279,11 +284,11 @@ const copyDdl = async (name: string, db?: string) => {
       return
     }
     const qualified = db ? `${quote(source.kind, db)}.${quote(source.kind, name)}` : quote(source.kind, name)
-    const sql = source.kind === 'mysql'
+    const sql = source.kind === 'mysql' || source.kind === 'clickhouse'
       ? `SHOW CREATE TABLE ${qualified}`
       : `SELECT sql FROM sqlite_master WHERE name = '${esc(name)}'`
     const rows = await runRows(sql)
-    // MySQL: 第 2 列为建表语句；SQLite: 第 1 列
+    // MySQL: 第 2 列为建表语句；ClickHouse/SQLite: 第 1 列
     const ddl = String((source.kind === 'mysql' ? rows[0]?.[1] : rows[0]?.[0]) ?? '')
     if (!ddl) {
       toast.error('未获取到建表语句')

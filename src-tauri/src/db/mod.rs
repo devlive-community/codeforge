@@ -1,6 +1,7 @@
 //! 数据库执行器：插件式架构。
 //! 每种数据库类型实现 `DbExecutor` 并在 `executors()` 中注册一行，新增类型互不影响。
 
+mod clickhouse;
 mod mysql;
 mod postgres;
 mod sqlite;
@@ -65,6 +66,7 @@ fn executors() -> Vec<Box<dyn DbExecutor>> {
         Box::new(sqlite::SqliteExecutor),
         Box::new(mysql::MysqlExecutor),
         Box::new(postgres::PostgresExecutor),
+        Box::new(clickhouse::ClickhouseExecutor),
     ]
 }
 
