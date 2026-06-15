@@ -58,6 +58,17 @@ const messages = {
         theme: '编辑器主题',
         selectTheme: '选择编辑器主题'
       },
+      ai: {
+        title: 'AI 助手',
+        provider: '服务商',
+        apiKey: 'API Key',
+        apiKeyHint: '填写所选服务商的 API Key',
+        model: '模型',
+        baseUrl: '接口地址（可选）',
+        info1: '请求经本地后端转发，避免浏览器跨域问题',
+        info2: 'API Key 仅保存在本机',
+        info3: '留空接口地址则使用服务商默认地址'
+      },
       theme: {system: '跟随系统', light: '浅色', dark: '深色'},
       runStrategy: {autoSave: '自动保存后运行', ask: '每次询问', tempCopy: '运行副本(不保存)'}
     }
@@ -109,6 +120,17 @@ const messages = {
         fontSize: 'Font size',
         theme: 'Editor theme',
         selectTheme: 'Select editor theme'
+      },
+      ai: {
+        title: 'AI Assistant',
+        provider: 'Provider',
+        apiKey: 'API Key',
+        apiKeyHint: 'Enter the API Key for the selected provider',
+        model: 'Model',
+        baseUrl: 'API endpoint (optional)',
+        info1: 'Requests are proxied by the local backend to avoid CORS issues',
+        info2: 'The API Key is stored only on this machine',
+        info3: 'Leave the endpoint empty to use the provider default'
       },
       theme: {system: 'Follow system', light: 'Light', dark: 'Dark'},
       runStrategy: {autoSave: 'Auto-save then run', ask: 'Ask every time', tempCopy: 'Run a copy (no save)'}
