@@ -210,3 +210,57 @@ pub async fn run_sql(
 
     Ok(result)
 }
+
+/// 分页执行单条查询：把语句包成子查询加 LIMIT/OFFSET，按需拉取一页，避免一次性取全量。
+/// 仅供前端对单条 SELECT/WITH 调用；record=true 时按原始 SQL 记入历史（首页传 true，翻页传 false）。
+#[tauri::command]
+pub async fn run_sql_paged(
+    sql: String,
+    source: DataSource,
+    limit: u32,
+    offset: u32,
+    record: bool,
+    history: tauri::State<'_, crate::execution::ExecutionHistory>,
+) -> Result<SqlRunResult, String> {
+    let original = sql.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let inner = sql.trim().trim_end_matches(';').trim();
+        let wrapped = format!(
+            "SELECT * FROM (\n{}\n) AS __cf_page LIMIT {} OFFSET {}",
+            inner, limit, offset
+        );
+        let start = std::time::Instant::now();
+        let execs = executors();
+        let mut result = match execs.iter().find(|e| e.handles(&source.kind)) {
+            Some(exec) => exec.run(&wrapped, &source),
+            None => {
+                let mut r = SqlRunResult::new();
+                r.error = Some(format!("不支持的数据源类型: {}", source.kind));
+                r
+            }
+        };
+        result.elapsed_ms = start.elapsed().as_millis();
+        result
+    })
+    .await
+    .map_err(|e| format!("SQL 任务失败: {}", e))?;
+
+    if record {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let rec = crate::plugins::ExecutionResult {
+            id: None,
+            success: result.error.is_none(),
+            code: original,
+            stdout: serde_json::to_string(&result).unwrap_or_default(),
+            stderr: result.error.clone().unwrap_or_default(),
+            execution_time: result.elapsed_ms,
+            timestamp,
+            language: "sql".to_string(),
+        };
+        let _ = history.insert(&rec);
+    }
+    Ok(result)
+}

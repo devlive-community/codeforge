@@ -10,6 +10,18 @@
         <SqlSourceSelect/>
       </div>
       <div class="flex items-center gap-1">
+        <!-- 分页控件（单条 SELECT 分页拉取时显示）-->
+        <div v-if="paging?.active" class="flex items-center gap-1 mr-1 text-xs text-gray-500 dark:text-gray-400">
+          <button class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  :disabled="paging.offset === 0 || isRunning" title="上一页" @click="emit('prev')">
+            <ChevronLeft class="w-3.5 h-3.5"/>
+          </button>
+          <span>第 {{ pageNo }} 页 · 每页 {{ paging.pageSize }}</span>
+          <button class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  :disabled="!paging.hasMore || isRunning" title="下一页" @click="emit('next')">
+            <ChevronRight class="w-3.5 h-3.5"/>
+          </button>
+        </div>
         <!-- 表格 / 图表 切换 -->
         <div class="flex items-center rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
           <button class="p-1 transition-colors" :class="viewMode === 'table' ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'" title="表格" @click="viewMode = 'table'">
@@ -43,7 +55,7 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
-import {BarChart3, Database, FileDown, Table2, Trash2} from 'lucide-vue-next'
+import {BarChart3, ChevronLeft, ChevronRight, Database, FileDown, Table2, Trash2} from 'lucide-vue-next'
 import {useDbConnections} from '../composables/useDbConnections'
 import SqlSourceSelect from './SqlSourceSelect.vue'
 import SqlResultTable from './SqlResultTable.vue'
@@ -54,10 +66,14 @@ const props = defineProps<{
   output: string
   isRunning: boolean
   executionTime?: number
+  paging?: { active: boolean; offset: number; pageSize: number; hasMore: boolean }
 }>()
-const emit = defineEmits<{ clear: [] }>()
+const emit = defineEmits<{ clear: []; prev: []; next: [] }>()
 
 const viewMode = ref<'table' | 'chart'>('table')
+
+// 当前页码（1 基）
+const pageNo = computed(() => (props.paging ? Math.floor(props.paging.offset / props.paging.pageSize) + 1 : 1))
 
 // 流式输出防抖
 const stable = ref(props.output)

@@ -184,6 +184,9 @@
                             :output="output"
                             :is-running="isRunning"
                             :execution-time="lastExecutionTime"
+                            :paging="sqlPaging"
+                            @prev="sqlPrevPage"
+                            @next="sqlNextPage"
                             @clear="clearOutput"/>
 
               <!-- 数据表 / 图表（CSV / TSV） -->
@@ -1472,20 +1475,72 @@ const showRunPrompt = ref(false)
 // 运行选中片段：以选中文本作为临时代码运行（不就地、不关联文件）
 // SQL 走专用执行（结构化结果 + 错误 + 数据源：内存/SQLite/MySQL）
 const {resolveActiveSource} = useDbConnections()
+
+// 结果分页：超大结果集按页拉取，避免一次性取全量
+const SQL_PAGE_SIZE = 500
+const sqlPage = reactive<{ active: boolean; sql: string; source: any; offset: number; hasMore: boolean }>({
+  active: false, sql: '', source: null, offset: 0, hasMore: false
+})
+const sqlPaging = computed(() => ({active: sqlPage.active, offset: sqlPage.offset, pageSize: SQL_PAGE_SIZE, hasMore: sqlPage.hasMore}))
+// 单条 SELECT/WITH 才可分页（去掉尾分号后无其它分号，且以 select/with 开头）
+const isPageableSql = (sql: string): boolean => {
+  const s = sql.trim().replace(/;\s*$/, '')
+  return !s.includes(';') && /^(select|with)\b/i.test(s)
+}
+
+const loadSqlPage = async (offset: number, record: boolean) => {
+  if (layoutMode.value === 'editor') {
+    showConsole.value = true
+  }
+  isRunning.value = true
+  try {
+    const res = await invoke<any>('run_sql_paged', {
+      sql: sqlPage.sql, source: sqlPage.source, limit: SQL_PAGE_SIZE, offset, record
+    })
+    output.value = JSON.stringify(res)
+    isSuccess.value = !res.error
+    lastExecutionTime.value = res.elapsed_ms || 0
+    sqlPage.offset = offset
+    sqlPage.hasMore = ((res.result_sets || [])[0]?.rows || []).length === SQL_PAGE_SIZE
+    if (res.error) {
+      toast.error('SQL 执行失败')
+    }
+  }
+  catch (error) {
+    output.value = JSON.stringify({result_sets: [], messages: [], error: String(error)})
+    toast.error('SQL 执行失败: ' + error)
+  }
+  finally {
+    isRunning.value = false
+  }
+}
+const sqlPrevPage = () => sqlPage.offset > 0 && loadSqlPage(Math.max(0, sqlPage.offset - SQL_PAGE_SIZE), false)
+const sqlNextPage = () => sqlPage.hasMore && loadSqlPage(sqlPage.offset + SQL_PAGE_SIZE, false)
+
 const runSql = async (sqlOverride?: string) => {
   const sql = sqlOverride ?? code.value
   if (!sql.trim()) {
     toast.info('没有可执行的 SQL')
     return
   }
+  const source = resolveActiveSource()
+  output.value = ''
+  isSuccess.value = false
+  // 可分页查询：走分页拉取（首页记入历史）
+  if (isPageableSql(sql)) {
+    sqlPage.active = true
+    sqlPage.sql = sql
+    sqlPage.source = source
+    sqlPage.offset = 0
+    await loadSqlPage(0, true)
+    return
+  }
+  sqlPage.active = false
   if (layoutMode.value === 'editor') {
     showConsole.value = true
   }
   isRunning.value = true
-  output.value = ''
-  isSuccess.value = false
   try {
-    const source = resolveActiveSource()
     const res = await invoke<any>('run_sql', {sql, source})
     output.value = JSON.stringify(res)
     isSuccess.value = !res.error
