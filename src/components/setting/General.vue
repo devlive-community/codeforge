@@ -4,27 +4,32 @@
     <div class="mb-6">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
         <Palette class="w-5 h-5 mr-2"/>
-        外观
+        {{ t('settings.general.appearance') }}
       </h3>
-      <Label label="主题">
-        <Select v-model="appTheme" class="w-1/3" :options="themeOptions" @change="onThemeChange"/>
-      </Label>
+      <div class="space-y-4">
+        <Label :label="t('settings.uiLanguage')">
+          <Select v-model="locale" class="w-1/3" :options="localeOptions" @change="onLocaleChange"/>
+        </Label>
+        <Label :label="t('settings.general.theme')">
+          <Select v-model="appTheme" class="w-1/3" :options="themeOptions" @change="onThemeChange"/>
+        </Label>
+      </div>
     </div>
 
     <!-- 运行与文件 -->
     <div class="mb-6">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
         <Play class="w-5 h-5 mr-2"/>
-        运行与文件
+        {{ t('settings.general.runAndFile') }}
       </h3>
 
       <div class="space-y-4">
-        <Label label="运行未保存文件时">
-          <Select v-model="runSaveStrategy" class="w-1/3" placeholder="选择运行策略" :options="runSaveStrategyOptions" @change="saveBehaviorConfig"/>
+        <Label :label="t('settings.general.runUnsaved')">
+          <Select v-model="runSaveStrategy" class="w-1/3" :placeholder="t('settings.general.selectStrategy')" :options="runSaveStrategyOptions" @change="saveBehaviorConfig"/>
         </Label>
 
-        <Label label="打开文件大小上限 (MB)">
-          <Number v-model="maxOpenFileSize" :min="1" :max="200" placeholder="超过该大小将以只读方式查看" @change="saveBehaviorConfig"/>
+        <Label :label="t('settings.general.maxFileSize')">
+          <Number v-model="maxOpenFileSize" :min="1" :max="200" :placeholder="t('settings.general.maxFileSizeHint')" @change="saveBehaviorConfig"/>
         </Label>
       </div>
     </div>
@@ -33,11 +38,11 @@
     <div class="mb-6">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
         <Github class="w-5 h-5 mr-2"/>
-        GitHub 配置
+        {{ t('settings.general.github') }}
       </h3>
 
       <div class="space-y-4">
-        <Label label="GitHub Token (可选)">
+        <Label :label="t('settings.general.githubToken')">
           <Input v-model="githubToken"
                  type="password"
                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
@@ -49,12 +54,12 @@
           <div class="flex items-start">
             <Info class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"/>
             <div class="text-sm text-blue-800 dark:text-blue-300">
-              <p class="font-medium mb-2">GitHub Token 说明</p>
+              <p class="font-medium mb-2">{{ t('settings.general.githubInfoTitle') }}</p>
               <ul class="space-y-1 list-disc list-inside">
-                <li>用于提高 GitHub API 请求速率限制（从 60次/小时 提升到 5000次/小时）</li>
-                <li>在 <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:text-blue-600 dark:hover:text-blue-200">GitHub Settings</a> 创建 Personal Access Token</li>
-                <li>Token 不需要任何权限（public access 即可）</li>
-                <li>留空则使用未认证模式访问 GitHub API</li>
+                <li>{{ t('settings.general.githubInfo1') }}</li>
+                <li>{{ t('settings.general.githubInfo2Pre') }}<a href="https://github.com/settings/tokens" target="_blank" class="underline hover:text-blue-600 dark:hover:text-blue-200">{{ t('settings.general.githubInfo2Link') }}</a>{{ t('settings.general.githubInfo2Post') }}</li>
+                <li>{{ t('settings.general.githubInfo3') }}</li>
+                <li>{{ t('settings.general.githubInfo4') }}</li>
               </ul>
             </div>
           </div>
@@ -63,10 +68,10 @@
         <!-- GitHub 操作按钮 -->
         <div class="flex gap-3 pt-0.5">
           <Button @click="saveGithubConfig" :disabled="!hasGithubChanges || isSavingGithub" :loading="isSavingGithub" type="primary">
-            {{ isSavingGithub ? '保存中...' : '保存 GitHub 配置' }}
+            {{ isSavingGithub ? t('settings.general.savingGithub') : t('settings.general.saveGithub') }}
           </Button>
           <Button @click="clearGithubToken" type="secondary">
-            清除 Token
+            {{ t('settings.general.clearToken') }}
           </Button>
         </div>
       </div>
@@ -83,24 +88,32 @@ import Input from '../../ui/Input.vue'
 import Number from '../../ui/Number.vue'
 import Select from '../../ui/Select.vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useI18n } from 'vue-i18n'
 import { useToast } from '../../plugins/toast'
 import { useTheme, type AppTheme } from '../../composables/useTheme'
+import { SUPPORTED_LOCALES, setLocale, getLocale } from '../../i18n'
 
 const emit = defineEmits<{
   'settings-changed': [type: string, value: any]
   'error': [message: string]
 }>()
 
+const {t} = useI18n()
 const toast = useToast()
 const {setTheme} = useTheme()
 
+// 界面语言
+const locale = ref(getLocale())
+const localeOptions = SUPPORTED_LOCALES
+const onLocaleChange = () => setLocale(locale.value)
+
 // 外观主题
 const appTheme = ref<AppTheme>('system')
-const themeOptions = [
-  {label: '跟随系统', value: 'system'},
-  {label: '浅色', value: 'light'},
-  {label: '深色', value: 'dark'}
-]
+const themeOptions = computed(() => [
+  {label: t('settings.theme.system'), value: 'system'},
+  {label: t('settings.theme.light'), value: 'light'},
+  {label: t('settings.theme.dark'), value: 'dark'}
+])
 
 const loadAppearance = async () => {
   try {
@@ -133,11 +146,11 @@ const isSavingGithub = ref(false)
 const runSaveStrategy = ref('auto-save')
 const maxOpenFileSize = ref(5)
 
-const runSaveStrategyOptions = [
-  {label: '自动保存后运行', value: 'auto-save'},
-  {label: '每次询问', value: 'ask'},
-  {label: '运行副本(不保存)', value: 'temp-copy'}
-]
+const runSaveStrategyOptions = computed(() => [
+  {label: t('settings.runStrategy.autoSave'), value: 'auto-save'},
+  {label: t('settings.runStrategy.ask'), value: 'ask'},
+  {label: t('settings.runStrategy.tempCopy'), value: 'temp-copy'}
+])
 
 const loadBehaviorConfig = async () => {
   try {
