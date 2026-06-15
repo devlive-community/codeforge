@@ -27,6 +27,7 @@ use crate::plugins::php::PHPPlugin;
 use crate::plugins::python2::Python2Plugin;
 use crate::plugins::python3::Python3Plugin;
 use crate::plugins::r::RPlugin;
+use crate::plugins::react::ReactPlugin;
 use crate::plugins::ruby::RubyPlugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
@@ -70,6 +71,7 @@ impl PluginManager {
             ("ruby".to_string(), Box::new(RubyPlugin)),
             ("applescript".to_string(), Box::new(AppleScriptPlugin)),
             ("typescript".to_string(), Box::new(TypeScriptPlugin)),
+            ("react".to_string(), Box::new(ReactPlugin)),
             ("cpp".to_string(), Box::new(CppPlugin)),
             ("groovy".to_string(), Box::new(GroovyPlugin)),
             ("html".to_string(), Box::new(HtmlPlugin)),

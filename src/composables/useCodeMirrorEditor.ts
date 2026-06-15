@@ -324,6 +324,8 @@ export function useCodeMirrorEditor(props: Props)
             case 'javascript-browser':
             case 'javascript-nodejs':
                 return javascript()
+            case 'react':
+                return javascript({jsx: true})
             case 'go':
                 return go()
             case 'java':

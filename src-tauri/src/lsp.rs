@@ -38,7 +38,7 @@ fn server_cmd(language: &str) -> Option<(&'static str, Vec<&'static str>)> {
     match language {
         "python3" | "python2" | "python" => Some(("pyright-langserver", vec!["--stdio"])),
         "typescript" | "typescript-nodejs" | "typescript-browser" | "javascript-nodejs"
-        | "javascript-browser" | "javascript-jquery" | "nodejs" => {
+        | "javascript-browser" | "javascript-jquery" | "nodejs" | "react" => {
             Some(("typescript-language-server", vec!["--stdio"]))
         }
         "rust" => Some(("rust-analyzer", vec![])),

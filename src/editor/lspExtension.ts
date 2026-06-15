@@ -210,6 +210,7 @@ const LANGUAGE_ID: Record<string, string> = {
   'javascript-browser': 'javascript',
   'javascript-jquery': 'javascript',
   nodejs: 'javascript',
+  react: 'javascriptreact',
   rust: 'rust',
   go: 'go',
   c: 'c',
@@ -237,6 +238,7 @@ const LANGUAGE_EXT: Record<string, string> = {
   python: 'py', typescript: 'ts', javascript: 'js', rust: 'rs', go: 'go',
   c: 'c', cpp: 'cpp', 'objective-c': 'm', 'objective-cpp': 'mm',
   lua: 'lua', php: 'php', ruby: 'rb', html: 'html', css: 'css', less: 'less', json: 'json',
+  javascriptreact: 'jsx',
   java: 'java', kotlin: 'kt', swift: 'swift', scala: 'scala', yaml: 'yaml',
   shellscript: 'sh', haskell: 'hs'
 }
