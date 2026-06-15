@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- 头部 -->
+  <circle cx="56" cy="64" r="42" fill="#FFF000"/>
+  <!-- 喙 -->
+  <path d="M92 56 L122 60 Q126 64 122 68 L92 74 Z" fill="#FB8C00"/>
+  <!-- 眼睛 -->
+  <circle cx="70" cy="48" r="7" fill="#1A1A1A"/>
+</svg>

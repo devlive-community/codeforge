@@ -8,11 +8,11 @@
     <div v-if="connections.length" class="border border-gray-200 dark:border-gray-700 rounded divide-y divide-gray-100 dark:divide-gray-700">
       <div v-for="c in connections" :key="c.id" class="flex items-center gap-3 px-3 py-2">
         <span class="text-[10px] px-1.5 py-0.5 rounded uppercase font-semibold"
-              :class="c.kind === 'mysql' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300' : c.kind === 'postgres' ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300' : c.kind === 'clickhouse' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'">{{ c.kind }}</span>
+              :class="c.kind === 'mysql' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300' : c.kind === 'postgres' ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300' : c.kind === 'clickhouse' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' : c.kind === 'duckdb' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'">{{ c.kind }}</span>
         <div class="flex-1 min-w-0">
           <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{{ c.name }}</div>
           <div class="text-xs text-gray-400 truncate">
-            {{ c.kind === 'sqlite' ? c.file : `${c.user || ''}@${c.host || ''}:${c.port || defaultPortOf(c.kind)}/${c.database || ''}` }}
+            {{ isFileKind(c.kind) ? (c.file || '内存库') : `${c.user || ''}@${c.host || ''}:${c.port || defaultPortOf(c.kind)}/${c.database || ''}` }}
           </div>
         </div>
         <button class="p-1 text-gray-400 hover:text-blue-500 cursor-pointer" title="编辑" @click="startEdit(c)">
@@ -32,7 +32,7 @@
         <input v-model="form.name" placeholder="连接名称" class="flex-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
       </div>
 
-      <template v-if="form.kind !== 'sqlite'">
+      <template v-if="!isFileKind(form.kind)">
         <div class="grid grid-cols-2 gap-2">
           <input v-model="form.host" placeholder="主机（默认 127.0.0.1）" class="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
           <input v-model.number="form.port" type="number" :placeholder="`端口（默认 ${defaultPortOf(form.kind)}）`" class="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
@@ -43,7 +43,7 @@
       </template>
       <template v-else>
         <div class="flex gap-2">
-          <input v-model="form.file" placeholder="SQLite 文件路径" class="flex-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
+          <input v-model="form.file" :placeholder="form.kind === 'duckdb' ? 'DuckDB 文件路径（留空则用内存库）' : 'SQLite 文件路径'" class="flex-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"/>
           <Button size="sm" type="secondary" @click="pickFile">选择文件</Button>
         </div>
       </template>
@@ -74,29 +74,32 @@ const kindOptions = [
   {value: 'mysql', label: 'MySQL'},
   {value: 'postgres', label: 'PostgreSQL'},
   {value: 'clickhouse', label: 'ClickHouse'},
-  {value: 'sqlite', label: 'SQLite'}
+  {value: 'sqlite', label: 'SQLite'},
+  {value: 'duckdb', label: 'DuckDB'}
 ]
 
 // 各网络型数据源的默认端口
 const defaultPortOf = (kind: string) => (kind === 'postgres' ? 5432 : kind === 'clickhouse' ? 8123 : 3306)
+// 文件型数据源（用文件路径而非主机端口）
+const isFileKind = (kind: string) => kind === 'sqlite' || kind === 'duckdb'
 
 const editingId = ref<string | null>(null)
-const form = reactive<{ kind: 'mysql' | 'postgres' | 'clickhouse' | 'sqlite'; name: string; host: string; port: number | null; user: string; password: string; database: string; file: string }>({
+const form = reactive<{ kind: 'mysql' | 'postgres' | 'clickhouse' | 'sqlite' | 'duckdb'; name: string; host: string; port: number | null; user: string; password: string; database: string; file: string }>({
   kind: 'mysql', name: '', host: '', port: null, user: '', password: '', database: '', file: ''
 })
 
 const canSave = computed(() => {
   if (!form.name.trim()) return false
-  if (form.kind === 'sqlite') return !!form.file.trim()
-  return !!form.host.trim() || true
+  if (form.kind === 'sqlite') return !!form.file.trim() // SQLite 必须指定文件；DuckDB 可留空用内存库
+  return true
 })
 
-// 测试连接：sqlite 需文件，其余用默认值即可
+// 测试连接：仅 SQLite 必须文件，其余（含 DuckDB 内存库、网络型默认值）均可
 const canTest = computed(() => (form.kind === 'sqlite' ? !!form.file.trim() : true))
 
 // 由当前表单构建可执行的数据源（不含名称/id）
-const buildSource = (): DataSource => form.kind === 'sqlite'
-    ? {kind: 'sqlite', file: form.file.trim()}
+const buildSource = (): DataSource => isFileKind(form.kind)
+    ? {kind: form.kind, file: form.file.trim()}
     : {
       kind: form.kind,
       host: form.host.trim() || '127.0.0.1',
@@ -134,7 +137,7 @@ const resetForm = () => {
 const startEdit = (c: DbConnection) => {
   editingId.value = c.id
   Object.assign(form, {
-    kind: c.kind === 'sqlite' || c.kind === 'postgres' || c.kind === 'clickhouse' ? c.kind : 'mysql',
+    kind: c.kind === 'sqlite' || c.kind === 'duckdb' || c.kind === 'postgres' || c.kind === 'clickhouse' ? c.kind : 'mysql',
     name: c.name,
     host: c.host || '', port: c.port ?? null, user: c.user || '', password: c.password || '',
     database: c.database || '', file: c.file || ''
@@ -142,7 +145,7 @@ const startEdit = (c: DbConnection) => {
 }
 
 const pickFile = async () => {
-  const selected = await open({multiple: false, filters: [{name: 'SQLite', extensions: ['db', 'sqlite', 'sqlite3', 'db3']}]})
+  const selected = await open({multiple: false, filters: [{name: '数据库文件', extensions: ['db', 'sqlite', 'sqlite3', 'db3', 'duckdb', 'ddb']}]})
   if (typeof selected === 'string') {
     form.file = selected
   }
@@ -150,8 +153,8 @@ const pickFile = async () => {
 
 const submit = () => {
   if (!canSave.value) return
-  const payload = form.kind === 'sqlite'
-      ? {kind: 'sqlite' as const, name: form.name.trim(), file: form.file.trim()}
+  const payload = isFileKind(form.kind)
+      ? {kind: form.kind, name: form.name.trim(), file: form.file.trim()}
       : {kind: form.kind, name: form.name.trim(), host: form.host.trim() || '127.0.0.1', port: form.port || defaultPortOf(form.kind), user: form.user.trim(), password: form.password, database: form.database.trim()}
   if (editingId.value) {
     update(editingId.value, payload)

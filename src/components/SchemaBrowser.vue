@@ -164,6 +164,12 @@ const tablesSql = (kind: string, db?: string): string => {
       + 'FROM system.columns WHERE database = currentDatabase() '
       + 'ORDER BY table, position'
   }
+  if (kind === 'duckdb') {
+    return 'SELECT table_name AS tbl, column_name AS col, data_type AS typ '
+      + 'FROM information_schema.columns '
+      + "WHERE table_schema NOT IN ('information_schema', 'pg_catalog') "
+      + 'ORDER BY table_name, ordinal_position'
+  }
   return 'SELECT m.name AS tbl, p.name AS col, p.type AS typ '
     + 'FROM sqlite_master m JOIN pragma_table_info(m.name) p '
     + "WHERE m.type IN ('table','view') AND m.name NOT LIKE 'sqlite\\_%' ESCAPE '\\' "
@@ -279,8 +285,8 @@ const exportCsv = async (name: string, db?: string) => {
 const copyDdl = async (name: string, db?: string) => {
   try {
     const source = resolveActiveSource()
-    if (source.kind === 'postgres') {
-      toast.info('PostgreSQL 暂不支持一键复制建表语句')
+    if (source.kind === 'postgres' || source.kind === 'duckdb') {
+      toast.info(`${source.kind === 'duckdb' ? 'DuckDB' : 'PostgreSQL'} 暂不支持一键复制建表语句`)
       return
     }
     const qualified = db ? `${quote(source.kind, db)}.${quote(source.kind, name)}` : quote(source.kind, name)

@@ -38,6 +38,7 @@ async-trait = "0.1"
 mysql = { version = "25", default-features = false, features = ["minimal", "rustls-tls"] }
 postgres = "0.19"
 ureq = { version = "2", features = ["tls"] }
+duckdb = { version = "1", features = ["bundled"] }
 # 固定 mysql_common 的构建依赖 subprocess 到不依赖 let 链的旧版，兼容当前 Rust 工具链
 subprocess = "=0.2.9"
 portable-pty = "0.8"
