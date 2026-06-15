@@ -1,8 +1,8 @@
 <template>
   <div class="flex h-full min-h-0 overflow-hidden">
-    <!-- 配置侧栏 -->
-    <div class="w-52 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-800/40 text-xs">
-      <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+    <!-- 配置侧栏：字段区独立滚动，行/列/值放置区固定在下方始终可见 -->
+    <div class="w-52 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 bg-gray-50 dark:bg-gray-800/40 text-xs">
+      <div class="flex-1 min-h-0 overflow-y-auto px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div class="text-[11px] text-gray-400 mb-1.5">字段（拖拽到下方区域）</div>
         <div class="flex flex-wrap gap-1.5">
           <div v-for="f in columns" :key="f" draggable="true"
@@ -14,8 +14,9 @@
         </div>
       </div>
 
-      <div v-for="zone in zones" :key="zone.key" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
-           @dragover.prevent="dragOver = zone.key" @dragleave="dragOver = ''" @drop.prevent="onDrop(zone.key)">
+      <div class="flex-shrink-0 overflow-y-auto max-h-[55%]">
+        <div v-for="zone in zones" :key="zone.key" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
+             @dragover.prevent="dragOver = zone.key" @dragleave="dragOver = ''" @drop.prevent="onDrop(zone.key)">
         <div class="text-[11px] text-gray-400 mb-1.5 flex items-center justify-between">
           <span>{{ zone.label }}</span>
           <Select v-if="zone.key === 'val'" v-model="agg" :options="aggOptions" :button-classes="['!py-0.5', '!px-1.5', 'text-[11px]', '!rounded']" class="w-20"/>
@@ -28,6 +29,7 @@
             <X class="w-3 h-3 cursor-pointer hover:text-red-500" @click="removeFrom(zone.key, f)"/>
           </span>
           <span v-if="!zone.list.value.length" class="text-[11px] text-gray-400 px-1 py-0.5">{{ zone.hint }}</span>
+        </div>
         </div>
       </div>
     </div>
