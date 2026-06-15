@@ -376,12 +376,29 @@
         <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(renameSymbol)">
           <span>重命名符号</span><span class="text-gray-400 text-xs ml-6">F2</span>
         </button>
+        <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(triggerCodeActions)">
+          <span>代码操作 / 快速修复</span><span class="text-gray-400 text-xs ml-6">⌘.</span>
+        </button>
         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
         <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatDocument)">
           <span>格式化文档</span><span class="text-gray-400 text-xs ml-6">⇧⌥F</span>
         </button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatSelection)">
           格式化选中
+        </button>
+      </div>
+    </div>
+
+    <!-- LSP 代码操作选择菜单 -->
+    <div v-if="codeActionMenu.visible" class="fixed inset-0 z-50" @click="codeActionMenu.visible = false" @contextmenu.prevent="codeActionMenu.visible = false">
+      <div class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[200px] max-w-[420px] max-h-[320px] overflow-y-auto"
+           :style="{ top: `${codeActionMenu.y}px`, left: `${codeActionMenu.x}px` }"
+           @click.stop>
+        <button v-for="(a, i) in codeActionMenu.actions" :key="i"
+                class="block w-full truncate text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                :title="a.title"
+                @click="pickCodeAction(a)">
+          {{ a.title }}
         </button>
       </div>
     </div>
@@ -395,7 +412,7 @@
 import {computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
-import {runGotoDefinition, lspSupportsLanguage} from './editor/lspExtension'
+import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction} from './editor/lspExtension'
 import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
@@ -1120,6 +1137,39 @@ const runEditorCommand = (cmd: (v: any) => boolean) => {
   }
 }
 
+// ===== LSP 代码操作选择菜单 =====
+const codeActionMenu = reactive<{visible: boolean; x: number; y: number; actions: any[]}>({
+  visible: false, x: 0, y: 0, actions: []
+})
+// 编辑器扩展请求完成后派发 lsp:code-actions：有结果则弹菜单，无则提示
+const onLspCodeActions = (e: Event) => {
+  const detail = (e as CustomEvent).detail as {actions: any[]; x: number; y: number}
+  const actions = detail?.actions ?? []
+  if (!actions.length) {
+    toast.info('当前位置没有可用的代码操作')
+    return
+  }
+  codeActionMenu.actions = actions
+  codeActionMenu.x = Math.min(detail.x, window.innerWidth - 430)
+  codeActionMenu.y = Math.min(detail.y, window.innerHeight - 340)
+  codeActionMenu.visible = true
+}
+const pickCodeAction = async (action: any) => {
+  codeActionMenu.visible = false
+  if (!editorView.value) {
+    return
+  }
+  try {
+    const {otherFiles} = await applyCodeAction(editorView.value, action)
+    if (otherFiles > 0) {
+      toast.info(`该操作还涉及 ${otherFiles} 个其它文件的修改，暂未自动应用`)
+    }
+  }
+  catch (err) {
+    toast.error('应用代码操作失败: ' + err)
+  }
+}
+
 // 全局替换后：刷新涉及到的已打开标签（保留有未保存修改的标签）
 const reloadAffectedFiles = async (paths: string[]) => {
   const set = new Set(paths)
@@ -1734,6 +1784,7 @@ onMounted(async () => {
 
   window.addEventListener('keydown', onGlobalKeydown, true)
   window.addEventListener('lsp:open-location', onLspOpenLocation)
+  window.addEventListener('lsp:code-actions', onLspCodeActions)
   window.addEventListener('contextmenu', onEditorContext)
 
   // 触发 app-ready 事件，通知主进程
@@ -1744,6 +1795,7 @@ onUnmounted(() => {
   cleanupEventListeners()
   window.removeEventListener('keydown', onGlobalKeydown, true)
   window.removeEventListener('lsp:open-location', onLspOpenLocation)
+  window.removeEventListener('lsp:code-actions', onLspCodeActions)
   window.removeEventListener('contextmenu', onEditorContext)
 })
 </script>

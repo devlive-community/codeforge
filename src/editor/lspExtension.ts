@@ -11,6 +11,7 @@ import {
 } from 'codemirror-languageserver'
 import {keymap, EditorView} from '@codemirror/view'
 import {Prec} from '@codemirror/state'
+import {forEachDiagnostic} from '@codemirror/lint'
 import {TauriLspTransport} from './lspTransport'
 import {setLspState} from './lspStatus'
 import {lspCustomHover} from './lspHover'
@@ -65,6 +66,132 @@ export const runGotoDefinition = (view: EditorView, pos?: number): boolean => {
       }))
     })
     .catch(() => {})
+  return true
+}
+
+// LSP 行列 → CodeMirror 偏移量
+const lspPosToOffset = (doc: any, pos: {line: number; character: number}): number => {
+  const line = doc.line(Math.min(Math.max(pos.line + 1, 1), doc.lines))
+  return Math.min(line.from + pos.character, line.to)
+}
+
+// CodeMirror 诊断 severity → LSP severity 数字
+const SEVERITY: Record<string, number> = {error: 1, warning: 2, info: 3, hint: 4}
+
+/**
+ * 向语言服务器请求当前选区/光标处的代码操作（含重叠诊断作为 context）。
+ * 返回 (Command | CodeAction)[]，无能力或出错时返回 []。
+ */
+export const requestCodeActions = async (view: EditorView): Promise<any[]> => {
+  const plugin: any = view.plugin(languageServerPlugin as any)
+  const client = plugin?.client
+  if (!client?.ready || !client.capabilities?.codeActionProvider) {
+    return []
+  }
+  const doc = view.state.doc
+  const sel = view.state.selection.main
+  // 收集与选区重叠的诊断作为 context（库未保留原始 LSP 诊断，此处由编辑器诊断重建）
+  const diagnostics: any[] = []
+  forEachDiagnostic(view.state, (d, from, to) => {
+    if (to >= sel.from && from <= sel.to) {
+      diagnostics.push({
+        range: {start: offsetToLspPos(doc, from), end: offsetToLspPos(doc, to)},
+        message: d.message,
+        severity: SEVERITY[d.severity] ?? 1
+      })
+    }
+  })
+  const params = {
+    textDocument: {uri: plugin.documentUri},
+    range: {start: offsetToLspPos(doc, sel.from), end: offsetToLspPos(doc, sel.to)},
+    context: {diagnostics}
+  }
+  try {
+    const res = await client.request('textDocument/codeAction', params, 10000)
+    return Array.isArray(res) ? res : []
+  }
+  catch {
+    return []
+  }
+}
+
+/**
+ * 应用一个代码操作：先 resolve 补全 edit，应用当前文件的 WorkspaceEdit，
+ * 再尽力执行其 command。返回涉及但未自动应用的其它文件数。
+ */
+export const applyCodeAction = async (view: EditorView, action: any): Promise<{otherFiles: number}> => {
+  const plugin: any = view.plugin(languageServerPlugin as any)
+  const client = plugin?.client
+  let act = action
+  // 惰性 edit：无 edit 但有 data 且服务器支持 resolve 时，先解析
+  if (act && !act.edit && act.data !== undefined && client?.capabilities?.codeActionProvider?.resolveProvider) {
+    try {
+      act = await client.request('codeAction/resolve', act, 10000)
+    }
+    catch { /* 解析失败则按原样处理 */ }
+  }
+
+  let otherFiles = 0
+  const edit = act?.edit
+  if (edit) {
+    // 汇总每个文件的 TextEdit[]
+    const perUri: Record<string, any[]> = {}
+    if (edit.changes) {
+      for (const [uri, edits] of Object.entries<any[]>(edit.changes)) {
+        perUri[uri] = (perUri[uri] || []).concat(edits)
+      }
+    }
+    if (Array.isArray(edit.documentChanges)) {
+      for (const dc of edit.documentChanges) {
+        if (dc?.textDocument?.uri && Array.isArray(dc.edits)) {
+          perUri[dc.textDocument.uri] = (perUri[dc.textDocument.uri] || []).concat(dc.edits)
+        }
+      }
+    }
+    const doc = view.state.doc
+    const current = perUri[plugin.documentUri]
+    if (current?.length) {
+      const changes = current
+        .map((te: any) => ({
+          from: lspPosToOffset(doc, te.range.start),
+          to: lspPosToOffset(doc, te.range.end),
+          insert: te.newText ?? ''
+        }))
+        .sort((a, b) => a.from - b.from)
+      view.dispatch({changes})
+    }
+    otherFiles = Object.keys(perUri).filter(u => u !== plugin.documentUri && perUri[u]?.length).length
+  }
+
+  // command：Command 形如 {title, command:string, arguments}；CodeAction.command 为其对象
+  const cmd = typeof act?.command === 'string'
+    ? {command: act.command, arguments: act.arguments}
+    : act?.command
+  if (cmd?.command && client) {
+    try {
+      await client.request('workspace/executeCommand', {command: cmd.command, arguments: cmd.arguments}, 10000)
+    }
+    catch { /* 忽略命令执行失败 */ }
+  }
+  return {otherFiles}
+}
+
+/**
+ * 触发代码操作：请求后派发 lsp:code-actions（携带动作与锚点坐标）由 App 弹菜单。
+ * 供 Cmd+. 键位与右键菜单共用。
+ */
+export const triggerCodeActions = (view: EditorView): boolean => {
+  const head = view.state.selection.main.head
+  const coords = view.coordsAtPos(head)
+  requestCodeActions(view).then((actions) => {
+    window.dispatchEvent(new CustomEvent('lsp:code-actions', {
+      detail: {
+        actions,
+        x: coords ? coords.left : 0,
+        y: coords ? coords.bottom : 0
+      }
+    }))
+  })
   return true
 }
 
@@ -203,7 +330,8 @@ export async function createLspExtensions(
       {key: 'F2', run: renameSymbol},
       {key: 'Shift-Alt-f', run: formatDocument},
       {key: 'Mod-Shift-i', run: formatDocument},
-      {key: 'Mod-k Mod-f', run: formatSelection}
+      {key: 'Mod-k Mod-f', run: formatSelection},
+      {key: 'Mod-.', run: triggerCodeActions}
     ])
     const fmt = formattingOptions.of({
       tabSize: fmtOptions?.tabSize ?? 4,
