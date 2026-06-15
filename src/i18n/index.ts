@@ -86,6 +86,14 @@ const messages = {
         test: '测试连接',
         testing: '测试中...'
       },
+      shortcut: {
+        resetAll: '全部重置',
+        press: '按下快捷键…',
+        cancel: '取消',
+        edit: '修改',
+        reset: '重置',
+        hint: '提示：修改后关闭设置即生效。'
+      },
       theme: {system: '跟随系统', light: '浅色', dark: '深色'},
       runStrategy: {autoSave: '自动保存后运行', ask: '每次询问', tempCopy: '运行副本(不保存)'}
     }
@@ -165,6 +173,14 @@ const messages = {
         reset: 'Reset to default',
         test: 'Test connection',
         testing: 'Testing...'
+      },
+      shortcut: {
+        resetAll: 'Reset all',
+        press: 'Press a shortcut…',
+        cancel: 'Cancel',
+        edit: 'Edit',
+        reset: 'Reset',
+        hint: 'Tip: changes take effect after closing Settings.'
       },
       theme: {system: 'Follow system', light: 'Light', dark: 'Dark'},
       runStrategy: {autoSave: 'Auto-save then run', ask: 'Ask every time', tempCopy: 'Run a copy (no save)'}
