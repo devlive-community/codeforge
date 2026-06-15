@@ -43,7 +43,9 @@ impl DbExecutor for PostgresExecutor {
 
         let mut columns: Vec<String> = Vec::new();
         let mut rows: Vec<Vec<JsonValue>> = Vec::new();
-        let flush = |columns: &mut Vec<String>, rows: &mut Vec<Vec<JsonValue>>, result: &mut SqlRunResult| {
+        let flush = |columns: &mut Vec<String>,
+                     rows: &mut Vec<Vec<JsonValue>>,
+                     result: &mut SqlRunResult| {
             if !columns.is_empty() {
                 result.result_sets.push(SqlResultSet {
                     columns: std::mem::take(columns),

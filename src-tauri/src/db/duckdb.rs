@@ -1,4 +1,4 @@
-use super::{split_sql, DataSource, DbExecutor, SqlResultSet, SqlRunResult};
+use super::{DataSource, DbExecutor, SqlResultSet, SqlRunResult, split_sql};
 use duckdb::Connection;
 use serde_json::Value as JsonValue;
 
