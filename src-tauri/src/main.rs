@@ -37,7 +37,7 @@ use crate::custom_plugin_commands::{
     add_custom_plugin, get_custom_plugins, remove_custom_plugin, save_custom_icon,
     update_custom_plugin,
 };
-use crate::db::run_sql;
+use crate::db::{run_sql, run_sql_paged};
 use crate::env_commands::{
     EnvironmentManagerState, download_and_install_version, get_environment_info,
     get_supported_environment_languages, switch_environment_version, uninstall_environment_version,
@@ -232,6 +232,7 @@ fn main() {
             terminal_kill,
             // SQL 执行
             run_sql,
+            run_sql_paged,
             // LSP 桥接
             lsp_available,
             lsp_start,

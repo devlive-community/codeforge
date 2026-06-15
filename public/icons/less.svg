@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="lessGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A4B8D"/>
+      <stop offset="1" stop-color="#172E4F"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="24" width="116" height="80" rx="14" fill="url(#lessGrad)"/>
+  <text x="64" y="80" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" fill="#ffffff">Less</text>
+</svg>

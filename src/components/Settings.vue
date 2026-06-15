@@ -1,5 +1,5 @@
 <template>
-  <Modal v-model:show="isVisible" title="设置" size="5xl" :content-class="['min-h-[60vh]']" :close-on-backdrop="false" :close-on-esc="false" @close="closeSettings">
+  <Modal v-model:show="isVisible" :title="t('settings.title')" size="5xl" :content-class="['min-h-[60vh]']" :close-on-backdrop="false" :close-on-esc="false" @close="closeSettings">
     <Tabs v-model="activeTab"
           type="card"
           size="md"
@@ -61,6 +61,7 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Modal from '../ui/Modal.vue'
 import Tabs from '../ui/Tabs.vue'
 import General from './setting/General.vue'
@@ -79,6 +80,8 @@ const emit = defineEmits<{
   close: []
   'settings-changed': [config: any]
 }>()
+
+const {t} = useI18n()
 
 const {
   isVisible,

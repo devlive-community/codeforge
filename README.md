@@ -48,7 +48,7 @@
 
 ### 📊 结构化数据可视化
 - **JSON / XML / YAML** —— 可折叠**层级树**，以及卡片 + 连线的**关系图**两种可视化
-- **SQL** —— 插件式执行器（内存库 / `.sqlite` 文件 / **MySQL**，可在设置中配置连接、运行时选择数据源），结果渲染为**表格**，失败显示具体错误；执行历史与实时运行一致
+- **SQL** —— 插件式执行器（内存库 / `.sqlite` 文件 / **MySQL** / **PostgreSQL** / **ClickHouse** / **DuckDB**，可在设置中配置连接、运行时选择数据源），结果渲染为**表格**，失败显示具体错误；执行历史与实时运行一致
 - **图表可视化** —— SQL 结果一键切换为图表：**拖拽**字段到「维度 / 指标」即可成图，自动识别数值列，支持聚合（求和/计数/平均/最大/最小）、排序、Top N。基于 ECharts，内置 **27 种**图表：柱状图 · 折线图 · 面积图 · 饼图/环形图 · 玫瑰图 · 散点图 · 涟漪散点图 · 雷达图 · 漏斗图 · 热力图 · 仪表盘 · 桑基图 · 关系图 · 旭日图 · 矩形树图 · 树图 · 箱线图 · K 线图 · 平行坐标 · 主题河流 · 日历热力图 · 极坐标柱状图 · 象形柱图 · 词云 · 水球图 · 中国地图 · 世界地图（配色跟随主题，支持导出 PNG）。配置面板表驱动，组件与数据源解耦，后续 CSV 等本地数据可复用
 - **CSV / TSV** —— 解析为**数据表**（支持引号转义、字段内换行、自动识别分隔符、Web Worker 后台解析 + 进度），并可一键切换为上述 27 种图表（与 SQL 共用图表面板）
 - **Excel（.xlsx / .xls）** —— 用 SheetJS 解析，**多工作表**切换，同样可切表格 / 27 种图表 / 导出 CSV
@@ -84,6 +84,7 @@
   <img src="public/icons/javascript-nodejs.svg" width="48" title="JavaScript (Node.js)" />
   <img src="public/icons/javascript-browser.svg" width="48" title="JavaScript (Browser)" />
   <img src="public/icons/javascript-jquery.svg" width="48" title="JavaScript (jQuery)" />
+  <img src="public/icons/react.svg" width="48" title="React (JSX)" />
   <img src="public/icons/go.svg" width="48" title="Go" />
   <img src="public/icons/rust.svg" width="48" title="Rust" />
   <img src="public/icons/java.svg" width="48" title="Java" />
@@ -106,6 +107,7 @@
   <img src="public/icons/applescript.svg" width="48" title="AppleScript" />
   <img src="public/icons/html.svg" width="48" title="HTML" />
   <img src="public/icons/css.svg" width="48" title="CSS" />
+  <img src="public/icons/less.svg" width="48" title="Less" />
   <img src="public/icons/svg.svg" width="48" title="SVG" />
   <img src="public/icons/sql.svg" width="48" title="SQL" />
   <img src="public/icons/json.svg" width="48" title="JSON" />
@@ -120,7 +122,7 @@
 
 <div align="center">
 
-`Python` · `Node.js` · `TypeScript` · `JavaScript` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Ruby` · `PHP` · `R` · `Lua` · `Haskell` · `Cangjie` · `Shell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Excel` · `Text`
+`Python` · `Node.js` · `TypeScript` · `JavaScript` · `React` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Ruby` · `PHP` · `R` · `Lua` · `Haskell` · `Cangjie` · `Shell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `Less` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Excel` · `Text`
 
 </div>
 
@@ -152,7 +154,7 @@ pnpm tauri build
 | 层 | 技术 |
 | --- | --- |
 | 前端 | Vue 3 · TypeScript · Tailwind CSS · CodeMirror 6 · ECharts |
-| 后端 | Rust · Tauri 2（rusqlite · mysql） |
+| 后端 | Rust · Tauri 2（rusqlite · mysql · postgres · clickhouse(HTTP)） |
 | 存储 | SQLite（执行历史 / AI 对话 / 代码片段 / 应用配置统一入库） |
 | 架构 | 插件化语言支持系统 · 插件式数据库执行器 · 可复用图表组件 · LSP 桥接 |
 

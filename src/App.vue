@@ -184,6 +184,9 @@
                             :output="output"
                             :is-running="isRunning"
                             :execution-time="lastExecutionTime"
+                            :paging="sqlPaging"
+                            @prev="sqlPrevPage"
+                            @next="sqlNextPage"
                             @clear="clearOutput"/>
 
               <!-- 数据表 / 图表（CSV / TSV） -->
@@ -376,12 +379,29 @@
         <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(renameSymbol)">
           <span>重命名符号</span><span class="text-gray-400 text-xs ml-6">F2</span>
         </button>
+        <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(triggerCodeActions)">
+          <span>代码操作 / 快速修复</span><span class="text-gray-400 text-xs ml-6">⌘.</span>
+        </button>
         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
         <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatDocument)">
           <span>格式化文档</span><span class="text-gray-400 text-xs ml-6">⇧⌥F</span>
         </button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatSelection)">
           格式化选中
+        </button>
+      </div>
+    </div>
+
+    <!-- LSP 代码操作选择菜单 -->
+    <div v-if="codeActionMenu.visible" class="fixed inset-0 z-50" @click="codeActionMenu.visible = false" @contextmenu.prevent="codeActionMenu.visible = false">
+      <div class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[200px] max-w-[420px] max-h-[320px] overflow-y-auto"
+           :style="{ top: `${codeActionMenu.y}px`, left: `${codeActionMenu.x}px` }"
+           @click.stop>
+        <button v-for="(a, i) in codeActionMenu.actions" :key="i"
+                class="block w-full truncate text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                :title="a.title"
+                @click="pickCodeAction(a)">
+          {{ a.title }}
         </button>
       </div>
     </div>
@@ -395,7 +415,7 @@
 import {computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
-import {runGotoDefinition, lspSupportsLanguage} from './editor/lspExtension'
+import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction} from './editor/lspExtension'
 import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
@@ -1120,6 +1140,39 @@ const runEditorCommand = (cmd: (v: any) => boolean) => {
   }
 }
 
+// ===== LSP 代码操作选择菜单 =====
+const codeActionMenu = reactive<{visible: boolean; x: number; y: number; actions: any[]}>({
+  visible: false, x: 0, y: 0, actions: []
+})
+// 编辑器扩展请求完成后派发 lsp:code-actions：有结果则弹菜单，无则提示
+const onLspCodeActions = (e: Event) => {
+  const detail = (e as CustomEvent).detail as {actions: any[]; x: number; y: number}
+  const actions = detail?.actions ?? []
+  if (!actions.length) {
+    toast.info('当前位置没有可用的代码操作')
+    return
+  }
+  codeActionMenu.actions = actions
+  codeActionMenu.x = Math.min(detail.x, window.innerWidth - 430)
+  codeActionMenu.y = Math.min(detail.y, window.innerHeight - 340)
+  codeActionMenu.visible = true
+}
+const pickCodeAction = async (action: any) => {
+  codeActionMenu.visible = false
+  if (!editorView.value) {
+    return
+  }
+  try {
+    const {otherFiles} = await applyCodeAction(editorView.value, action)
+    if (otherFiles > 0) {
+      toast.info(`该操作还涉及 ${otherFiles} 个其它文件的修改，暂未自动应用`)
+    }
+  }
+  catch (err) {
+    toast.error('应用代码操作失败: ' + err)
+  }
+}
+
 // 全局替换后：刷新涉及到的已打开标签（保留有未保存修改的标签）
 const reloadAffectedFiles = async (paths: string[]) => {
   const set = new Set(paths)
@@ -1422,20 +1475,72 @@ const showRunPrompt = ref(false)
 // 运行选中片段：以选中文本作为临时代码运行（不就地、不关联文件）
 // SQL 走专用执行（结构化结果 + 错误 + 数据源：内存/SQLite/MySQL）
 const {resolveActiveSource} = useDbConnections()
+
+// 结果分页：超大结果集按页拉取，避免一次性取全量
+const SQL_PAGE_SIZE = 500
+const sqlPage = reactive<{ active: boolean; sql: string; source: any; offset: number; hasMore: boolean }>({
+  active: false, sql: '', source: null, offset: 0, hasMore: false
+})
+const sqlPaging = computed(() => ({active: sqlPage.active, offset: sqlPage.offset, pageSize: SQL_PAGE_SIZE, hasMore: sqlPage.hasMore}))
+// 单条 SELECT/WITH 才可分页（去掉尾分号后无其它分号，且以 select/with 开头）
+const isPageableSql = (sql: string): boolean => {
+  const s = sql.trim().replace(/;\s*$/, '')
+  return !s.includes(';') && /^(select|with)\b/i.test(s)
+}
+
+const loadSqlPage = async (offset: number, record: boolean) => {
+  if (layoutMode.value === 'editor') {
+    showConsole.value = true
+  }
+  isRunning.value = true
+  try {
+    const res = await invoke<any>('run_sql_paged', {
+      sql: sqlPage.sql, source: sqlPage.source, limit: SQL_PAGE_SIZE, offset, record
+    })
+    output.value = JSON.stringify(res)
+    isSuccess.value = !res.error
+    lastExecutionTime.value = res.elapsed_ms || 0
+    sqlPage.offset = offset
+    sqlPage.hasMore = ((res.result_sets || [])[0]?.rows || []).length === SQL_PAGE_SIZE
+    if (res.error) {
+      toast.error('SQL 执行失败')
+    }
+  }
+  catch (error) {
+    output.value = JSON.stringify({result_sets: [], messages: [], error: String(error)})
+    toast.error('SQL 执行失败: ' + error)
+  }
+  finally {
+    isRunning.value = false
+  }
+}
+const sqlPrevPage = () => sqlPage.offset > 0 && loadSqlPage(Math.max(0, sqlPage.offset - SQL_PAGE_SIZE), false)
+const sqlNextPage = () => sqlPage.hasMore && loadSqlPage(sqlPage.offset + SQL_PAGE_SIZE, false)
+
 const runSql = async (sqlOverride?: string) => {
   const sql = sqlOverride ?? code.value
   if (!sql.trim()) {
     toast.info('没有可执行的 SQL')
     return
   }
+  const source = resolveActiveSource()
+  output.value = ''
+  isSuccess.value = false
+  // 可分页查询：走分页拉取（首页记入历史）
+  if (isPageableSql(sql)) {
+    sqlPage.active = true
+    sqlPage.sql = sql
+    sqlPage.source = source
+    sqlPage.offset = 0
+    await loadSqlPage(0, true)
+    return
+  }
+  sqlPage.active = false
   if (layoutMode.value === 'editor') {
     showConsole.value = true
   }
   isRunning.value = true
-  output.value = ''
-  isSuccess.value = false
   try {
-    const source = resolveActiveSource()
     const res = await invoke<any>('run_sql', {sql, source})
     output.value = JSON.stringify(res)
     isSuccess.value = !res.error
@@ -1734,6 +1839,7 @@ onMounted(async () => {
 
   window.addEventListener('keydown', onGlobalKeydown, true)
   window.addEventListener('lsp:open-location', onLspOpenLocation)
+  window.addEventListener('lsp:code-actions', onLspCodeActions)
   window.addEventListener('contextmenu', onEditorContext)
 
   // 触发 app-ready 事件，通知主进程
@@ -1744,6 +1850,7 @@ onUnmounted(() => {
   cleanupEventListeners()
   window.removeEventListener('keydown', onGlobalKeydown, true)
   window.removeEventListener('lsp:open-location', onLspOpenLocation)
+  window.removeEventListener('lsp:code-actions', onLspCodeActions)
   window.removeEventListener('contextmenu', onEditorContext)
 })
 </script>

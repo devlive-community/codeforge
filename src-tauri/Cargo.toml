@@ -36,6 +36,8 @@ rfd = "0.15"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 async-trait = "0.1"
 mysql = { version = "25", default-features = false, features = ["minimal", "rustls-tls"] }
+postgres = "0.19"
+ureq = { version = "2", features = ["tls"] }
 # 固定 mysql_common 的构建依赖 subprocess 到不依赖 let 链的旧版，兼容当前 Rust 工具链
 subprocess = "=0.2.9"
 portable-pty = "0.8"
@@ -45,3 +47,8 @@ tar = "0.4"
 xz2 = "0.1"
 zstd = "0.13"
 notify = "6"
+
+# DuckDB 走 bundled 编译，其 vendored C++(fmt) 在部分新版 MSVC 上编译失败，
+# 故仅在非 Windows 平台启用；Windows 不提供 DuckDB 数据源。
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+duckdb = { version = "1", features = ["bundled"] }

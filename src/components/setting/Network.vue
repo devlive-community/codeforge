@@ -4,7 +4,7 @@
     <div class="mb-6">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
         <Globe class="w-5 h-5 mr-2"/>
-        CDN 镜像配置
+        {{ t('settings.network.title') }}
       </h3>
 
       <div class="space-y-4">
@@ -17,23 +17,23 @@
                      class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                      @change="handleCdnEnabledChange">
               <label for="cdn-enabled" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 cursor-pointer">
-                启用 CDN 镜像加速
+                {{ t('settings.network.enable') }}
               </label>
             </div>
           </div>
           <div class="flex items-center space-x-2">
             <div v-if="cdnEnabled" class="flex items-center text-green-600 dark:text-green-400 text-sm">
               <CheckCircle class="w-4 h-4 mr-1"/>
-              已启用
+              {{ t('settings.network.enabled') }}
             </div>
             <div v-else class="flex items-center text-gray-500 dark:text-gray-400 text-sm">
               <XCircle class="w-4 h-4 mr-1"/>
-              未启用
+              {{ t('settings.network.disabled') }}
             </div>
           </div>
         </div>
 
-        <Label label="CDN 基础 URL">
+        <Label :label="t('settings.network.baseUrl')">
           <Input v-model="cdnBaseUrl"
                  placeholder="https://cdn.global.devlive.top"
                  class="w-full"
@@ -52,18 +52,18 @@
                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   @change="handleFallbackEnabledChange">
               <label for="fallback-enabled" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 cursor-pointer">
-                CDN 下载失败时自动回退到 GitHub 官方源
+                {{ t('settings.network.fallback') }}
               </label>
             </div>
           </div>
           <div class="flex items-center space-x-2">
             <div v-if="fallbackEnabled" class="flex items-center text-green-600 dark:text-green-400 text-sm">
               <CheckCircle class="w-4 h-4 mr-1"/>
-              已启用
+              {{ t('settings.network.enabled') }}
             </div>
             <div v-else class="flex items-center text-orange-500 dark:text-orange-400 text-sm">
               <AlertCircle class="w-4 h-4 mr-1"/>
-              未启用
+              {{ t('settings.network.disabled') }}
             </div>
           </div>
         </div>
@@ -72,14 +72,11 @@
           <div class="flex items-start">
             <Info class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"/>
             <div class="text-sm text-blue-800 dark:text-blue-300">
-              <p class="font-medium mb-2">CDN 镜像说明</p>
+              <p class="font-medium mb-2">{{ t('settings.network.infoTitle') }}</p>
               <ul class="space-y-1 list-disc list-inside">
-                <li>CDN 镜像用于加速环境安装包的下载</li>
-<!--                <li>URL 格式：<code class="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded">{base_url}/{language}/{version}/{filename}</code></li>-->
-<!--                <li>例如：<code class="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded">https://cdn.global.devlive.top/clojure/1.12.4.1582/clojure-tools-1.12.4.1582.tar.gz</code>-->
-<!--                </li>-->
-                <li>启用自动回退后，CDN 下载失败会自动使用 GitHub 官方源</li>
-                <li>关闭自动回退后，CDN 下载失败将直接报错，不会尝试其他源</li>
+                <li>{{ t('settings.network.info1') }}</li>
+                <li>{{ t('settings.network.info2') }}</li>
+                <li>{{ t('settings.network.info3') }}</li>
               </ul>
             </div>
           </div>
@@ -88,13 +85,13 @@
         <!-- 操作按钮 -->
         <div class="flex gap-3 pt-0.5">
           <Button @click="saveCdnConfig" :disabled="!hasChanges || isSaving" :loading="isSaving" type="primary">
-            {{ isSaving ? '保存中...' : '保存配置' }}
+            {{ isSaving ? t('settings.network.saving') : t('settings.network.save') }}
           </Button>
           <Button @click="resetCdnConfig" type="secondary">
-            重置为默认
+            {{ t('settings.network.reset') }}
           </Button>
           <Button @click="testCdnConnection" :loading="isTesting" :disabled="!cdnEnabled || !cdnBaseUrl || isTesting" type="secondary">
-            {{ isTesting ? '测试中...' : '测试连接' }}
+            {{ isTesting ? t('settings.network.testing') : t('settings.network.test') }}
           </Button>
         </div>
       </div>
@@ -105,12 +102,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertCircle, CheckCircle, Globe, Info, XCircle } from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
 import Label from '../../ui/Label.vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '../../plugins/toast'
 import Input from "../../ui/Input.vue";
+
+const {t} = useI18n()
 
 const emit = defineEmits<{
   'settings-changed': [type: string, value: any]

@@ -324,6 +324,8 @@ export function useCodeMirrorEditor(props: Props)
             case 'javascript-browser':
             case 'javascript-nodejs':
                 return javascript()
+            case 'react':
+                return javascript({jsx: true})
             case 'go':
                 return go()
             case 'java':
@@ -356,6 +358,8 @@ export function useCodeMirrorEditor(props: Props)
             case 'html':
                 return html()
             case 'css':
+            case 'less':
+                // Less 是 CSS 超集，暂复用 CSS 高亮（未引入 lang-less 依赖）
                 return css()
             case 'svg':
                 return xml()

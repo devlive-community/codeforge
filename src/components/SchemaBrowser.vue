@@ -144,13 +144,30 @@ const filteredDatabases = computed(() => {
   return databases.value.filter(d => d.name.toLowerCase().includes(q))
 })
 
-const quote = (kind: string, name: string) => (kind === 'mysql' ? `\`${name}\`` : `"${name}"`)
+const quote = (kind: string, name: string) => (kind === 'mysql' || kind === 'clickhouse' ? `\`${name}\`` : `"${name}"`)
 const esc = (s: string) => s.replace(/'/g, "''")
 
 const tablesSql = (kind: string, db?: string): string => {
   if (kind === 'mysql') {
     return 'SELECT table_name AS tbl, column_name AS col, column_type AS typ '
       + `FROM information_schema.columns WHERE table_schema = '${esc(db || '')}' `
+      + 'ORDER BY table_name, ordinal_position'
+  }
+  if (kind === 'postgres') {
+    return 'SELECT table_name AS tbl, column_name AS col, data_type AS typ '
+      + 'FROM information_schema.columns '
+      + "WHERE table_schema NOT IN ('pg_catalog', 'information_schema') "
+      + 'ORDER BY table_name, ordinal_position'
+  }
+  if (kind === 'clickhouse') {
+    return 'SELECT table AS tbl, name AS col, type AS typ '
+      + 'FROM system.columns WHERE database = currentDatabase() '
+      + 'ORDER BY table, position'
+  }
+  if (kind === 'duckdb') {
+    return 'SELECT table_name AS tbl, column_name AS col, data_type AS typ '
+      + 'FROM information_schema.columns '
+      + "WHERE table_schema NOT IN ('information_schema', 'pg_catalog') "
       + 'ORDER BY table_name, ordinal_position'
   }
   return 'SELECT m.name AS tbl, p.name AS col, p.type AS typ '
@@ -268,12 +285,16 @@ const exportCsv = async (name: string, db?: string) => {
 const copyDdl = async (name: string, db?: string) => {
   try {
     const source = resolveActiveSource()
+    if (source.kind === 'postgres' || source.kind === 'duckdb') {
+      toast.info(`${source.kind === 'duckdb' ? 'DuckDB' : 'PostgreSQL'} 暂不支持一键复制建表语句`)
+      return
+    }
     const qualified = db ? `${quote(source.kind, db)}.${quote(source.kind, name)}` : quote(source.kind, name)
-    const sql = source.kind === 'mysql'
+    const sql = source.kind === 'mysql' || source.kind === 'clickhouse'
       ? `SHOW CREATE TABLE ${qualified}`
       : `SELECT sql FROM sqlite_master WHERE name = '${esc(name)}'`
     const rows = await runRows(sql)
-    // MySQL: 第 2 列为建表语句；SQLite: 第 1 列
+    // MySQL: 第 2 列为建表语句；ClickHouse/SQLite: 第 1 列
     const ddl = String((source.kind === 'mysql' ? rows[0]?.[1] : rows[0]?.[0]) ?? '')
     if (!ddl) {
       toast.error('未获取到建表语句')
