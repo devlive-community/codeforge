@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-6">
     <div class="space-y-4">
-      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">缓存管理</h3>
+      <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ t('settings.cache.title') }}</h3>
       <p class="text-sm text-gray-600 dark:text-gray-400">
-        管理应用缓存，包括代码执行临时文件等
+        {{ t('settings.cache.desc') }}
       </p>
     </div>
 
@@ -12,7 +12,7 @@
       <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-600 dark:text-gray-400">插件执行缓存</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('settings.cache.pluginsCache') }}</p>
             <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-1">
               {{ formatSize(cacheInfo.plugins_cache_size) }}
             </p>
@@ -24,7 +24,7 @@
       <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-600 dark:text-gray-400">总缓存大小</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('settings.cache.totalCache') }}</p>
             <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-1">
               {{ formatSize(cacheInfo.total_cache_size) }}
             </p>
@@ -41,7 +41,7 @@
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <span>加载中...</span>
+        <span>{{ t('settings.cache.loading') }}</span>
       </div>
     </div>
 
@@ -65,9 +65,9 @@
     <div class="space-y-4">
       <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div class="flex-1">
-          <h4 class="font-medium text-gray-900 dark:text-gray-100">清理插件执行缓存</h4>
+          <h4 class="font-medium text-gray-900 dark:text-gray-100">{{ t('settings.cache.clearPluginsTitle') }}</h4>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            清理代码执行产生的临时文件
+            {{ t('settings.cache.clearPluginsDesc') }}
           </p>
         </div>
         <Button
@@ -75,15 +75,15 @@
           :icon="Trash2"
           :disabled="isClearing"
           @click="clearPluginsCache">
-          清理
+          {{ t('settings.cache.clear') }}
         </Button>
       </div>
 
       <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div class="flex-1">
-          <h4 class="font-medium text-gray-900 dark:text-gray-100">清理所有缓存</h4>
+          <h4 class="font-medium text-gray-900 dark:text-gray-100">{{ t('settings.cache.clearAllTitle') }}</h4>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            清理应用所有缓存数据
+            {{ t('settings.cache.clearAllDesc') }}
           </p>
         </div>
         <Button
@@ -91,7 +91,7 @@
           :icon="Trash2"
           :disabled="isClearing"
           @click="clearAllCache">
-          清理
+          {{ t('settings.cache.clear') }}
         </Button>
       </div>
     </div>
@@ -100,9 +100,12 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { AlertCircle, CheckCircle, FolderOpen, HardDrive, Trash2 } from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
+
+const {t} = useI18n()
 
 interface CacheInfo {
   plugins_cache_size: number
@@ -150,7 +153,7 @@ const clearPluginsCache = async () => {
 
   try {
     await invoke('clear_plugins_cache')
-    success.value = '插件执行缓存已清理'
+    success.value = t('settings.cache.clearedPlugins')
     await fetchCacheInfo()
 
     // 3秒后清除成功信息
@@ -175,7 +178,7 @@ const clearAllCache = async () => {
 
   try {
     await invoke('clear_all_cache')
-    success.value = '所有缓存已清理'
+    success.value = t('settings.cache.clearedAll')
     await fetchCacheInfo()
 
     // 3秒后清除成功信息

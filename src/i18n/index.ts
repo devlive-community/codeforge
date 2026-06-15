@@ -94,6 +94,20 @@ const messages = {
         reset: '重置',
         hint: '提示：修改后关闭设置即生效。'
       },
+      cache: {
+        title: '缓存管理',
+        desc: '管理应用缓存，包括代码执行临时文件等',
+        pluginsCache: '插件执行缓存',
+        totalCache: '总缓存大小',
+        loading: '加载中...',
+        clearPluginsTitle: '清理插件执行缓存',
+        clearPluginsDesc: '清理代码执行产生的临时文件',
+        clearAllTitle: '清理所有缓存',
+        clearAllDesc: '清理应用所有缓存数据',
+        clear: '清理',
+        clearedPlugins: '插件执行缓存已清理',
+        clearedAll: '所有缓存已清理'
+      },
       theme: {system: '跟随系统', light: '浅色', dark: '深色'},
       runStrategy: {autoSave: '自动保存后运行', ask: '每次询问', tempCopy: '运行副本(不保存)'}
     }
@@ -181,6 +195,20 @@ const messages = {
         edit: 'Edit',
         reset: 'Reset',
         hint: 'Tip: changes take effect after closing Settings.'
+      },
+      cache: {
+        title: 'Cache',
+        desc: 'Manage app cache, including temporary files from code execution',
+        pluginsCache: 'Plugin execution cache',
+        totalCache: 'Total cache size',
+        loading: 'Loading...',
+        clearPluginsTitle: 'Clear plugin execution cache',
+        clearPluginsDesc: 'Clear temporary files produced by code execution',
+        clearAllTitle: 'Clear all cache',
+        clearAllDesc: 'Clear all cached data of the app',
+        clear: 'Clear',
+        clearedPlugins: 'Plugin execution cache cleared',
+        clearedAll: 'All cache cleared'
       },
       theme: {system: 'Follow system', light: 'Light', dark: 'Dark'},
       runStrategy: {autoSave: 'Auto-save then run', ask: 'Ask every time', tempCopy: 'Run a copy (no save)'}
