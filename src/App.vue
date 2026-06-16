@@ -413,6 +413,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction} from './editor/lspExtension'
@@ -482,6 +483,7 @@ import {useEditorConfig} from './composables/useEditorConfig'
 import Update from './components/Update.vue'
 
 const toast = useToast()
+const {t} = useI18n()
 const showHistory = ref(false)
 
 const {
@@ -1766,39 +1768,39 @@ const applyTheme = async (t: AppTheme) => {
 // 命令面板命令列表（含快捷键提示）
 const hintOf = (id: string) => formatCombo(getBinding(id))
 const paletteCommands = computed<PaletteCommand[]>(() => [
-  {id: 'run', label: '运行代码', icon: Play, hint: hintOf('run'), run: () => handleRunCode()},
-  {id: 'runSelection', label: '运行选中片段', icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
-  {id: 'watchMode', label: watchMode.value ? '关闭监听模式（保存自动运行）' : '开启监听模式（保存自动运行）', icon: Eye, run: () => { watchMode.value = !watchMode.value }},
-  {id: 'aiCompletion', label: aiCompletion.value ? '关闭 AI 代码预测' : '开启 AI 代码预测（Tab 补全）', icon: Sparkles, run: () => toggleAiCompletion()},
-  {id: 'open', label: '打开文件', icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
-  {id: 'openFolder', label: '打开文件夹', icon: FolderOpen, run: () => openFolder()},
-  {id: 'save', label: '保存文件', icon: Save, hint: hintOf('save'), run: () => saveFile()},
-  {id: 'saveAs', label: '另存为', icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
-  {id: 'newTab', label: '新建标签', icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
-  {id: 'closeTab', label: '关闭标签', icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
-  {id: 'quickOpen', label: '快速打开文件', icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
-  {id: 'gotoLine', label: '跳转到行', icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
-  {id: 'outline', label: '符号大纲', icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},
-  {id: 'snippets', label: '管理代码片段', icon: Code2, run: () => { showSnippets.value = true }},
-  {id: 'terminal', label: '切换终端', icon: TerminalIcon, hint: hintOf('toggleTerminal'), run: () => toggleTerminal()},
-  {id: 'searchInFiles', label: '在文件夹内搜索', icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
-  {id: 'generate', label: 'AI 生成代码', icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
-  {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},
-  {id: 'explainCode', label: 'AI 解释代码（选中或全文）', icon: Sparkles, run: () => explainCode()},
-  {id: 'generateTests', label: 'AI 生成测试（选中或全文）', icon: Sparkles, run: () => generateTests()},
-  {id: 'formatWithAi', label: 'AI 格式化代码', icon: Sparkles, run: () => formatWithAi()},
-  {id: 'history', label: '执行历史', icon: History, run: () => { showHistory.value = true }},
-  {id: 'diff', label: '差异对比（当前 vs 已保存）', icon: GitCompare, run: () => openDiff()},
-  {id: 'preview', label: '实时预览（Markdown / HTML）', icon: Eye, run: () => togglePreview()},
-  {id: 'git', label: 'Git 源代码管理', icon: GitBranch, run: () => openGit()},
-  {id: 'toggleSidebar', label: '切换侧栏', icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
-  {id: 'layoutHorizontal', label: '布局：左右', group: '布局', icon: PanelRight, run: () => handleLayoutChange('horizontal')},
-  {id: 'layoutVertical', label: '布局：上下', group: '布局', icon: PanelBottom, run: () => handleLayoutChange('vertical')},
-  {id: 'layoutEditor', label: '布局：仅编辑器', group: '布局', icon: Maximize2, run: () => handleLayoutChange('editor')},
-  {id: 'themeSystem', label: '主题：跟随系统', group: '主题', icon: Monitor, run: () => applyTheme('system')},
-  {id: 'themeLight', label: '主题：浅色', group: '主题', icon: Sun, run: () => applyTheme('light')},
-  {id: 'themeDark', label: '主题：深色', group: '主题', icon: Moon, run: () => applyTheme('dark')},
-  {id: 'settings', label: '打开设置', icon: SettingsIcon, run: () => { showSettings.value = true }}
+  {id: 'run', label: t('command.run'), icon: Play, hint: hintOf('run'), run: () => handleRunCode()},
+  {id: 'runSelection', label: t('command.runSelection'), icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
+  {id: 'watchMode', label: watchMode.value ? t('command.watchModeOff') : t('command.watchModeOn'), icon: Eye, run: () => { watchMode.value = !watchMode.value }},
+  {id: 'aiCompletion', label: aiCompletion.value ? t('command.aiCompletionOff') : t('command.aiCompletionOn'), icon: Sparkles, run: () => toggleAiCompletion()},
+  {id: 'open', label: t('command.open'), icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
+  {id: 'openFolder', label: t('command.openFolder'), icon: FolderOpen, run: () => openFolder()},
+  {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => saveFile()},
+  {id: 'saveAs', label: t('command.saveAs'), icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
+  {id: 'newTab', label: t('command.newTab'), icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
+  {id: 'closeTab', label: t('command.closeTab'), icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
+  {id: 'quickOpen', label: t('command.quickOpen'), icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
+  {id: 'gotoLine', label: t('command.gotoLine'), icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
+  {id: 'outline', label: t('command.outline'), icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},
+  {id: 'snippets', label: t('command.snippets'), icon: Code2, run: () => { showSnippets.value = true }},
+  {id: 'terminal', label: t('command.terminal'), icon: TerminalIcon, hint: hintOf('toggleTerminal'), run: () => toggleTerminal()},
+  {id: 'searchInFiles', label: t('command.searchInFiles'), icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
+  {id: 'generate', label: t('command.generate'), icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
+  {id: 'showAi', label: t('command.showAi'), icon: Sparkles, run: () => handleShowAi()},
+  {id: 'explainCode', label: t('command.explainCode'), icon: Sparkles, run: () => explainCode()},
+  {id: 'generateTests', label: t('command.generateTests'), icon: Sparkles, run: () => generateTests()},
+  {id: 'formatWithAi', label: t('command.formatWithAi'), icon: Sparkles, run: () => formatWithAi()},
+  {id: 'history', label: t('command.history'), icon: History, run: () => { showHistory.value = true }},
+  {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
+  {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
+  {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
+  {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
+  {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
+  {id: 'layoutVertical', label: t('command.layoutVertical'), group: t('command.groupLayout'), icon: PanelBottom, run: () => handleLayoutChange('vertical')},
+  {id: 'layoutEditor', label: t('command.layoutEditor'), group: t('command.groupLayout'), icon: Maximize2, run: () => handleLayoutChange('editor')},
+  {id: 'themeSystem', label: t('command.themeSystem'), group: t('command.groupTheme'), icon: Monitor, run: () => applyTheme('system')},
+  {id: 'themeLight', label: t('command.themeLight'), group: t('command.groupTheme'), icon: Sun, run: () => applyTheme('light')},
+  {id: 'themeDark', label: t('command.themeDark'), group: t('command.groupTheme'), icon: Moon, run: () => applyTheme('dark')},
+  {id: 'settings', label: t('command.settings'), icon: SettingsIcon, run: () => { showSettings.value = true }}
 ])
 
 const onGlobalKeydown = (e: KeyboardEvent) => {
