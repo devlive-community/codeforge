@@ -4,24 +4,24 @@
     <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
         <Table2 class="w-3.5 h-3.5 flex-shrink-0"/>
-        <span>数据表</span>
-        <span v-if="isRunning || parsing" class="text-blue-500">解析中{{ parsing && percent > 0 ? ` ${percent}%` : '' }}…</span>
-        <span v-else-if="parsed.rows.length" class="text-gray-400">{{ parsed.columns.length }} 列 · {{ parsed.rows.length }} 行</span>
+        <span>{{ t('view.dataTitle') }}</span>
+        <span v-if="isRunning || parsing" class="text-blue-500">{{ t('view.parsing') }}{{ parsing && percent > 0 ? ` ${percent}%` : '' }}…</span>
+        <span v-else-if="parsed.rows.length" class="text-gray-400">{{ t('view.colsRows', { cols: parsed.columns.length, rows: parsed.rows.length }) }}</span>
       </div>
       <div class="flex items-center gap-1">
         <div class="flex items-center rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <button class="p-1 transition-colors" :class="viewMode === 'table' ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'" title="表格" @click="viewMode = 'table'">
+          <button class="p-1 transition-colors" :class="viewMode === 'table' ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'" :title="t('view.table')" @click="viewMode = 'table'">
             <Table2 class="w-3.5 h-3.5"/>
           </button>
           <button class="p-1 transition-colors" :class="viewMode === 'chart' ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
-                  :disabled="!parsed.columns.length" :title="parsed.columns.length ? '图表' : '无数据可绘图'" @click="viewMode = 'chart'">
+                  :disabled="!parsed.columns.length" :title="parsed.columns.length ? t('view.chart') : t('view.noChartData')" @click="viewMode = 'chart'">
             <BarChart3 class="w-3.5 h-3.5" :class="!parsed.columns.length ? 'opacity-40' : ''"/>
           </button>
         </div>
-        <button v-if="parsed.columns.length" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="导出 CSV" @click="exportCsv">
+        <button v-if="parsed.columns.length" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('view.exportCsv')" @click="exportCsv">
           <FileDown class="w-3.5 h-3.5"/>
         </button>
-        <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
+        <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('view.clear')" @click="emit('clear')">
           <Trash2 class="w-3.5 h-3.5"/>
         </button>
       </div>
@@ -33,7 +33,7 @@
     </div>
     <!-- 表格视图（虚拟滚动，支持大文件） -->
     <div v-if="!parsed.columns.length" class="flex-1 overflow-auto p-2 text-xs">
-      <div class="text-gray-400 px-2 py-4 text-center">运行后在此查看数据表（支持 CSV / TSV）</div>
+      <div class="text-gray-400 px-2 py-4 text-center">{{ t('view.emptyData') }}</div>
     </div>
     <VirtualTable v-else class="flex-1" :columns="parsed.columns" :rows="parsed.rows"/>
   </div>
@@ -41,6 +41,7 @@
 
 <script setup lang="ts">
 import {onBeforeUnmount, ref, shallowRef, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {debounce} from 'lodash-es'
 import {BarChart3, FileDown, Table2, Trash2} from 'lucide-vue-next'
 import ChartPanel from './charts/ChartPanel.vue'
@@ -54,6 +55,7 @@ const props = defineProps<{
   executionTime?: number
 }>()
 const emit = defineEmits<{ clear: [] }>()
+const {t} = useI18n()
 
 const viewMode = ref<'table' | 'chart'>('table')
 // shallowRef：大数组不做深度响应，避免开销
