@@ -125,6 +125,22 @@ const messages = {
       },
       theme: {system: '跟随系统', light: '浅色', dark: '深色'},
       runStrategy: {autoSave: '自动保存后运行', ask: '每次询问', tempCopy: '运行副本(不保存)'}
+    },
+    header: {
+      selectLanguage: '选择语言',
+      run: '运行代码',
+      stop: '停止执行',
+      loadExample: '加载示例',
+      history: '执行历史',
+      openFile: '打开文件',
+      saveFile: '保存文件',
+      ai: 'AI 助手',
+      showSidebar: '显示侧栏',
+      hideSidebar: '隐藏侧栏',
+      layoutHorizontal: '左右布局',
+      layoutVertical: '上下布局',
+      layoutEditor: '仅编辑器',
+      hasUpdate: '有新版本'
     }
   },
   en: {
@@ -242,6 +258,22 @@ const messages = {
       },
       theme: {system: 'Follow system', light: 'Light', dark: 'Dark'},
       runStrategy: {autoSave: 'Auto-save then run', ask: 'Ask every time', tempCopy: 'Run a copy (no save)'}
+    },
+    header: {
+      selectLanguage: 'Select language',
+      run: 'Run',
+      stop: 'Stop',
+      loadExample: 'Load example',
+      history: 'History',
+      openFile: 'Open file',
+      saveFile: 'Save file',
+      ai: 'AI Assistant',
+      showSidebar: 'Show sidebar',
+      hideSidebar: 'Hide sidebar',
+      layoutHorizontal: 'Side-by-side',
+      layoutVertical: 'Top-bottom',
+      layoutEditor: 'Editor only',
+      hasUpdate: 'Update available'
     }
   }
 }
