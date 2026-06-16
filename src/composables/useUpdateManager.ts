@@ -3,6 +3,9 @@ import {invoke} from '@tauri-apps/api/core'
 import {listen} from '@tauri-apps/api/event'
 import {CheckCircle, Download, RefreshCw, Wifi} from 'lucide-vue-next'
 import {kvSet} from './useKvStore'
+import {i18n} from '../i18n'
+
+const t = (key: string) => i18n.global.t(key)
 
 interface UpdateInfo
 {
@@ -44,7 +47,7 @@ export function useUpdateManager()
     const downloadSpeed = ref(0)
     const errorMessage = ref('')
     const lastCheckTime = ref<string | null>(null)
-    const progressText = ref('准备下载...')
+    const progressText = ref(t('update.prepareDownload'))
     const updateInfo = ref<UpdateInfo | null>(null)
     const currentStatus = ref<keyof typeof UpdateStatus>('NO_UPDATE')
 
@@ -106,38 +109,38 @@ export function useUpdateManager()
     const getStatusTitle = () => {
         switch (currentStatus.value) {
             case 'CHECKING':
-                return '检查更新中'
+                return t('update.statusCheckingTitle')
             case 'UPDATE_AVAILABLE':
-                return '发现新版本'
+                return t('update.statusAvailableTitle')
             case 'DOWNLOADING':
-                return '正在下载'
+                return t('update.statusDownloadingTitle')
             case 'INSTALLING':
-                return '正在安装'
+                return t('update.statusInstallingTitle')
             case 'COMPLETED':
-                return '更新完成'
+                return t('update.statusCompletedTitle')
             case 'ERROR':
-                return '更新失败'
+                return t('update.statusErrorTitle')
             default:
-                return '检查应用更新'
+                return t('update.statusDefaultTitle')
         }
     }
 
     const getStatusDescription = () => {
         switch (currentStatus.value) {
             case 'CHECKING':
-                return '正在检查是否有可用的应用更新...'
+                return t('update.statusCheckingDesc')
             case 'UPDATE_AVAILABLE':
-                return '发现新版本可用，建议您立即更新以获得最新功能和修复。'
+                return t('update.statusAvailableDesc')
             case 'DOWNLOADING':
-                return '正在下载更新文件，请稍候...'
+                return t('update.statusDownloadingDesc')
             case 'INSTALLING':
-                return '正在安装更新，请不要关闭应用程序...'
+                return t('update.statusInstallingDesc')
             case 'COMPLETED':
-                return '更新已成功完成，重启应用后生效。'
+                return t('update.statusCompletedDesc')
             case 'ERROR':
-                return '更新过程中出现错误，请稍后重试或手动下载。'
+                return t('update.statusErrorDesc')
             default:
-                return '点击检查更新按钮来查看是否有新版本可用。'
+                return t('update.statusDefaultDesc')
         }
     }
 
@@ -223,11 +226,11 @@ export function useUpdateManager()
             downloadSpeed.value = speed
 
             if (status === 'downloading') {
-                progressText.value = '正在下载更新文件...'
+                progressText.value = t('update.downloadingFile')
                 currentStatus.value = 'DOWNLOADING'
             }
             else if (status === 'installing') {
-                progressText.value = '正在安装更新...'
+                progressText.value = t('update.installingUpdate')
                 currentStatus.value = 'INSTALLING'
             }
         })
@@ -237,7 +240,7 @@ export function useUpdateManager()
             downloadProgress.value = 100
             currentStatus.value = 'COMPLETED'
             isUpdating.value = false
-            progressText.value = '更新完成'
+            progressText.value = t('update.completed')
         })
 
         // 监听更新错误

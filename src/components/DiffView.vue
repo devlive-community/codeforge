@@ -5,7 +5,7 @@
       <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
           <GitCompare class="w-4 h-4 text-gray-400"/>
-          <span>{{ title || '差异对比' }}</span>
+          <span>{{ title || t('diff.title') }}</span>
           <span v-if="fileName" class="text-xs text-gray-400">· {{ fileName }}</span>
         </div>
         <div class="flex items-center gap-3 text-xs">
@@ -16,18 +16,18 @@
                   @click="emit('confirm')">
             {{ confirmLabel }}
           </button>
-          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" title="关闭" @click="emit('close')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('diff.close')" @click="emit('close')">
             <X class="w-4 h-4"/>
           </button>
         </div>
       </div>
 
       <div class="flex items-center px-4 py-1.5 text-xs text-gray-400 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-        {{ subtitle || '已保存（红） → 当前（绿）' }}
+        {{ subtitle || t('diff.subtitle') }}
       </div>
 
       <div class="flex-1 overflow-auto font-mono text-xs leading-5 max-h-[70vh]">
-        <div v-if="rows.length === 0" class="px-4 py-10 text-center text-sm text-gray-400">没有差异，内容一致</div>
+        <div v-if="rows.length === 0" class="px-4 py-10 text-center text-sm text-gray-400">{{ t('diff.noDiff') }}</div>
         <div v-for="(row, i) in rows" :key="i"
              class="flex"
              :class="rowClass(row.type)">
@@ -43,7 +43,10 @@
 
 <script setup lang="ts">
 import {computed} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {GitCompare, X} from 'lucide-vue-next'
+
+const {t} = useI18n()
 
 const props = defineProps<{
   original: string
@@ -65,7 +68,7 @@ const rows = computed<DiffRow[]>(() => {
 
   // 超大文件不做精细 diff，避免 O(n*m) 卡顿
   if (n * m > 4_000_000) {
-    return [{type: 'del' as const, text: '（文件过大，无法显示逐行差异）'}]
+    return [{type: 'del' as const, text: t('diff.tooLarge')}]
   }
 
   const dp: number[][] = Array.from({length: n + 1}, () => new Array(m + 1).fill(0))

@@ -5,12 +5,12 @@
       <div class="flex items-center space-x-3 min-w-0">
         <FileText class="w-4 h-4 text-gray-500 flex-shrink-0"/>
         <span class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{{ fileName }}</span>
-        <span class="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex-shrink-0">只读</span>
-        <span class="text-xs text-gray-400 flex-shrink-0">{{ humanSize }} · 共 {{ lineCount.toLocaleString() }} 行</span>
+        <span class="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex-shrink-0">{{ t('largeFile.readonly') }}</span>
+        <span class="text-xs text-gray-400 flex-shrink-0">{{ humanSize }} · {{ t('largeFile.lineCount', { n: lineCount.toLocaleString() }) }}</span>
       </div>
       <div class="flex items-center space-x-3 flex-shrink-0">
         <span class="text-xs text-gray-400">{{ rangeText }}</span>
-        <button class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer" title="关闭" @click="emit('close')">
+        <button class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer" :title="t('largeFile.close')" @click="emit('close')">
           <X class="w-4 h-4"/>
         </button>
       </div>
@@ -34,7 +34,10 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
+import {useI18n} from 'vue-i18n'
 import {FileText, X} from 'lucide-vue-next'
+
+const {t} = useI18n()
 
 const props = defineProps<{
   filePath: string
@@ -67,7 +70,7 @@ const bottomPad = computed(() => Math.max(0, (props.lineCount - windowStart.valu
 
 const rangeText = computed(() => {
   if (windowLines.value.length === 0) return ''
-  return `第 ${windowStart.value + 1}–${windowStart.value + windowLines.value.length} 行`
+  return t('largeFile.range', { from: windowStart.value + 1, to: windowStart.value + windowLines.value.length })
 })
 
 const visibleCount = () => Math.ceil((scroller.value?.clientHeight || 600) / lineHeight)
@@ -97,7 +100,7 @@ const loadWindow = async () => {
     windowLines.value = lines
   }
   catch (error) {
-    console.error('读取文件行失败:', error)
+    console.error(t('largeFile.readFailed'), error)
   }
   loading = false
   if (pending) {

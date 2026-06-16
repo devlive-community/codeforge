@@ -3,7 +3,7 @@
     <!-- 配置侧栏：字段区独立滚动，行/列/值放置区固定在下方始终可见 -->
     <div class="w-52 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 bg-gray-50 dark:bg-gray-800/40 text-xs">
       <div class="flex-1 min-h-0 overflow-y-auto px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div class="text-[11px] text-gray-400 mb-1.5">字段（拖拽到下方区域）</div>
+        <div class="text-[11px] text-gray-400 mb-1.5">{{ t('sql.fields') }}</div>
         <div class="flex flex-wrap gap-1.5">
           <div v-for="f in columns" :key="f" draggable="true"
                class="inline-flex items-center gap-1 px-2 py-1 rounded border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400 cursor-grab active:cursor-grabbing select-none"
@@ -45,7 +45,7 @@
             <th v-for="ck in pivot.colKeys" :key="ck" class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-right text-gray-600 dark:text-gray-300 font-medium whitespace-nowrap">
               {{ ck }}
             </th>
-            <th v-if="pivot.colKeys.length > 1" class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-right text-gray-500 dark:text-gray-400 font-semibold whitespace-nowrap">合计</th>
+            <th v-if="pivot.colKeys.length > 1" class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-right text-gray-500 dark:text-gray-400 font-semibold whitespace-nowrap">{{ t('sql.total') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -55,14 +55,14 @@
             <td v-if="pivot.colKeys.length > 1" class="border border-gray-200 dark:border-gray-700 px-2 py-1 text-right font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap tabular-nums">{{ fmt(pivot.rowTotal(rk)) }}</td>
           </tr>
           <tr v-if="pivot.rowKeys.length > 1" class="bg-gray-50 dark:bg-gray-800/60 font-semibold">
-            <td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-gray-500 dark:text-gray-400">合计</td>
+            <td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-gray-500 dark:text-gray-400">{{ t('sql.total') }}</td>
             <td v-for="ck in pivot.colKeys" :key="ck" class="border border-gray-200 dark:border-gray-700 px-2 py-1 text-right text-gray-700 dark:text-gray-200 tabular-nums">{{ fmt(pivot.colTotal(ck)) }}</td>
             <td v-if="pivot.colKeys.length > 1" class="border border-gray-200 dark:border-gray-700 px-2 py-1 text-right text-gray-700 dark:text-gray-200 tabular-nums">{{ fmt(pivot.grandTotal()) }}</td>
           </tr>
         </tbody>
       </table>
       <div v-else class="h-full flex items-center justify-center text-gray-400 text-xs">
-        把字段拖到「值」即可生成透视表
+        {{ t('sql.pivotHint') }}
       </div>
     </div>
   </div>
@@ -70,8 +70,11 @@
 
 <script setup lang="ts">
 import {computed, ref} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {Hash, Type, X} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
+
+const {t} = useI18n()
 
 const props = defineProps<{
   columns: string[]
@@ -85,19 +88,19 @@ const agg = ref<'sum' | 'count' | 'avg' | 'min' | 'max'>('sum')
 const dragField = ref('')
 const dragOver = ref('')
 
-const aggOptions = [
-  {value: 'sum', label: '求和'},
-  {value: 'count', label: '计数'},
-  {value: 'avg', label: '平均'},
-  {value: 'min', label: '最小'},
-  {value: 'max', label: '最大'}
-]
+const aggOptions = computed(() => [
+  {value: 'sum', label: t('sql.sum')},
+  {value: 'count', label: t('sql.count')},
+  {value: 'avg', label: t('sql.avg')},
+  {value: 'min', label: t('sql.min')},
+  {value: 'max', label: t('sql.max')}
+])
 
-const zones = [
-  {key: 'row', label: '行', hint: '拖入行字段', list: rowFields, cls: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'},
-  {key: 'col', label: '列', hint: '拖入列字段', list: colFields, cls: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'},
-  {key: 'val', label: '值', hint: '拖入数值字段', list: valFields, cls: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'}
-] as const
+const zones = computed(() => [
+  {key: 'row' as const, label: t('sql.zoneRow'), hint: t('sql.hintRow'), list: rowFields, cls: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'},
+  {key: 'col' as const, label: t('sql.zoneCol'), hint: t('sql.hintCol'), list: colFields, cls: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'},
+  {key: 'val' as const, label: t('sql.zoneVal'), hint: t('sql.hintVal'), list: valFields, cls: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'}
+])
 
 // 数值列判定：该列存在可解析为数字的非空值
 const numericCols = computed(() => {
@@ -165,7 +168,7 @@ const pivot = computed(() => {
   const bucket = new Map<string, number[]>()
   const cellKey = (rk: string, ck: string) => rk + ' ' + ck
   for (const row of props.rows) {
-    const rk = rowFields.value.length ? keyOf(row, rowFields.value) : '全部'
+    const rk = rowFields.value.length ? keyOf(row, rowFields.value) : t('sql.all')
     const ck = colFields.value.length ? keyOf(row, colFields.value) : (valField)
     rowKeySet.add(rk)
     colKeySet.add(ck)

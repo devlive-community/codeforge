@@ -1,6 +1,6 @@
 <template>
   <Modal v-model:show="visible"
-         title="执行历史"
+         :title="t('history.title')"
          size="5xl"
          :close-on-backdrop="false"
          content-class="h-[66vh] overflow-hidden">
@@ -8,25 +8,25 @@
       <aside class="border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-col min-h-0">
         <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div class="text-sm font-medium text-gray-700 dark:text-gray-200">
-            共 {{ total }} 条
+            {{ t('history.count', { n: total }) }}
           </div>
           <Button type="secondary"
                   variant="ghost"
                   size="sm"
                   :icon="RefreshCw"
                   :icon-only="true"
-                  title="刷新"
+                  :title="t('history.refresh')"
                   :loading="isLoading"
                   @click="reloadHistory"/>
         </div>
 
         <div v-if="isLoading" class="flex-1 flex items-center justify-center text-sm text-gray-500">
-          加载中...
+          {{ t('history.loading') }}
         </div>
 
         <div v-else-if="history.length === 0" class="flex-1 flex flex-col items-center justify-center text-gray-400 space-y-2">
           <History class="w-10 h-10"/>
-          <p class="text-sm">暂无执行历史</p>
+          <p class="text-sm">{{ t('history.empty') }}</p>
         </div>
 
         <div v-else class="flex-1 overflow-y-auto p-2 space-y-1" @scroll="handleHistoryScroll">
@@ -41,22 +41,22 @@
               </span>
               <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
                     :class="item.success ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
-                {{ item.success ? '成功' : '失败' }}
+                {{ item.success ? t('history.success') : t('history.fail') }}
               </span>
             </div>
             <div class="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span class="flex items-center gap-1">
                 {{ formatTime(item.timestamp) }}
-                <Sparkles v-if="hasAi(item)" class="w-3 h-3 text-blue-500" title="有 AI 对话"/>
+                <Sparkles v-if="hasAi(item)" class="w-3 h-3 text-blue-500" :title="t('history.hasAi')"/>
               </span>
               <span>{{ item.execution_time }} ms</span>
             </div>
           </button>
           <div v-if="isLoadingMore" class="py-3 text-center text-xs text-gray-500">
-            加载更多...
+            {{ t('history.loadingMore') }}
           </div>
           <div v-else-if="!hasMore && history.length > 0" class="py-3 text-center text-xs text-gray-400">
-            已加载全部历史
+            {{ t('history.allLoaded') }}
           </div>
         </div>
       </aside>
@@ -72,22 +72,22 @@
                 <span class="text-xs text-gray-500">{{ formatTime(selectedItem.timestamp) }}</span>
               </div>
               <div class="mt-1 text-xs text-gray-500">
-                {{ selectedItem.execution_time }} ms · {{ selectedItem.code.length }} 字符
+                {{ selectedItem.execution_time }} ms · {{ selectedItem.code.length }} {{ t('history.chars') }}
               </div>
             </div>
 
             <div class="flex items-center gap-2">
               <Button v-if="selectedItem.id != null" type="secondary" variant="outline" size="sm" :icon="Sparkles" @click="openAi">
-                {{ hasAi(selectedItem) ? 'AI 对话' : '问 AI' }}
+                {{ hasAi(selectedItem) ? t('history.aiChat') : t('history.askAi') }}
               </Button>
               <Button type="secondary" variant="outline" size="sm" :icon="Copy" @click="copyOutput">
-                复制输出
+                {{ t('history.copyOutput') }}
               </Button>
               <Button type="secondary" variant="outline" size="sm" :icon="RotateCcw" @click="restoreSelected">
-                恢复代码
+                {{ t('history.restoreCode') }}
               </Button>
               <Button size="sm" :icon="Play" @click="rerunSelected">
-                重新运行
+                {{ t('history.rerun') }}
               </Button>
             </div>
           </div>
@@ -95,14 +95,14 @@
           <div class="flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
             <div class="min-h-0 border-b border-gray-200 dark:border-gray-700 flex flex-col">
               <div class="px-4 py-2 bg-gray-50 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-300">
-                代码
+                {{ t('history.code') }}
               </div>
               <pre class="flex-1 overflow-auto p-4 text-sm leading-relaxed bg-white dark:bg-gray-950 text-gray-800 dark:text-gray-100 font-mono whitespace-pre-wrap">{{ selectedItem.code }}</pre>
             </div>
 
             <div class="min-h-0 flex flex-col">
               <div class="px-4 py-2 bg-gray-50 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-300">
-                输出
+                {{ t('history.output') }}
               </div>
               <!-- SQL：用表格视图渲染，与运行时一致 -->
               <div v-if="selectedItem.language === 'sql'" class="flex-1 overflow-auto p-3 bg-white dark:bg-gray-900">
@@ -116,7 +116,7 @@
 
         <div v-else class="h-full flex flex-col items-center justify-center text-gray-400 space-y-2">
           <History class="w-12 h-12"/>
-          <p class="text-sm">选择一条历史记录查看详情</p>
+          <p class="text-sm">{{ t('history.selectHint') }}</p>
         </div>
       </section>
     </div>
@@ -129,9 +129,9 @@
                 :icon="Trash2"
                 :disabled="total === 0"
                 @click="clearHistory">
-          清空历史
+          {{ t('history.clear') }}
         </Button>
-        <Button type="secondary" size="sm" @click="visible = false">关闭</Button>
+        <Button type="secondary" size="sm" @click="visible = false">{{ t('history.close') }}</Button>
       </div>
     </template>
   </Modal>
@@ -146,6 +146,7 @@ import Button from '../ui/Button.vue'
 import SqlResultTable from './SqlResultTable.vue'
 import type { ExecutionResult, Language } from '../types/app'
 import { useToast } from '../plugins/toast'
+import { useI18n } from 'vue-i18n'
 
 interface ExecutionHistoryPage
 {
@@ -166,6 +167,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n()
 const history = ref<ExecutionResult[]>([])
 // 有 AI 对话的执行 id 集合
 const aiConversationIds = ref<Set<number>>(new Set())
@@ -189,7 +191,7 @@ const selectedOutput = computed(() => {
   }
   const stdout = selectedItem.value.stdout.trim()
   const stderr = selectedItem.value.stderr.trim()
-  return [stdout, stderr].filter(Boolean).join('\n\n') || '代码执行成功 (无输出)'
+  return [stdout, stderr].filter(Boolean).join('\n\n') || t('history.noOutput')
 })
 
 const getLanguageDisplayName = (languageValue: string) => {
@@ -240,7 +242,7 @@ const reloadHistory = async () => {
     await loadAiConversationIds()
   }
   catch (error) {
-    toast.error('加载执行历史失败: ' + error)
+    toast.error(t('history.loadFailed') + error)
   }
   finally {
     isLoading.value = false
@@ -257,7 +259,7 @@ const loadMoreHistory = async () => {
     await loadHistoryPage(history.value.length)
   }
   catch (error) {
-    toast.error('加载更多历史失败: ' + error)
+    toast.error(t('history.loadMoreFailed') + error)
   }
   finally {
     isLoadingMore.value = false
@@ -278,10 +280,10 @@ const clearHistory = async () => {
     history.value = []
     selectedItem.value = null
     total.value = 0
-    toast.success('执行历史已清空')
+    toast.success(t('history.cleared'))
   }
   catch (error) {
-    toast.error('清空执行历史失败: ' + error)
+    toast.error(t('history.clearFailed') + error)
   }
 }
 
@@ -315,10 +317,10 @@ const copyOutput = async () => {
   }
   try {
     await navigator.clipboard.writeText(selectedOutput.value)
-    toast.success('输出已复制')
+    toast.success(t('history.outputCopied'))
   }
   catch (error) {
-    toast.error('复制失败: ' + error)
+    toast.error(t('history.copyFailed') + error)
   }
 }
 

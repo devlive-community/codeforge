@@ -1,6 +1,7 @@
 import {ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {kvGet, kvGetJSON, kvSet, kvRemove} from './useKvStore'
+import {i18n} from '../i18n'
 
 export interface DataSource
 {
@@ -115,13 +116,13 @@ export function useDbConnections()
     const activeLabel = (): string => {
         const t = activeRef.value
         if (t.startsWith('conn:')) {
-            return connections.value.find(c => c.id === t.slice(5))?.name || '(已删除)'
+            return connections.value.find(c => c.id === t.slice(5))?.name || i18n.global.t('sql.deleted')
         }
         if (t.startsWith('file:')) {
             const p = t.slice(5)
             return p.split(/[\\/]/).pop() || p
         }
-        return '内存数据库'
+        return i18n.global.t('sql.memoryDb')
     }
 
     return {connections, activeRef, add, update, remove, setActiveRef, resolveActiveSource, activeLabel}

@@ -1,7 +1,7 @@
 <template>
   <div class="inline-block">
     <button ref="btnRef" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 cursor-pointer"
-            title="用自然语言生成 SQL" @click="toggle">
+            :title="t('sql.aiTitle')" @click="toggle">
       <Sparkles class="w-3.5 h-3.5"/>
       <span>AI</span>
     </button>
@@ -12,11 +12,11 @@
         <div class="fixed z-[61] w-80 p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg text-xs"
              :style="{left: pos.left + 'px', top: pos.top + 'px'}">
           <div class="flex items-center gap-1 mb-2 text-gray-600 dark:text-gray-300 font-medium">
-            <Sparkles class="w-3.5 h-3.5 text-violet-500"/>自然语言生成 SQL
+            <Sparkles class="w-3.5 h-3.5 text-violet-500"/>{{ t('sql.aiHeading') }}
             <span class="ml-auto text-[10px] text-gray-400">{{ active.model }}</span>
           </div>
           <textarea v-model="prompt" rows="3" :disabled="loading"
-                    placeholder="描述你想查询的内容，例如：统计每天的注册用户数，按日期倒序"
+                    :placeholder="t('sql.aiPlaceholder')"
                     class="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 resize-none focus:outline-none focus:border-violet-400"
                     @keydown.meta.enter="generate" @keydown.ctrl.enter="generate"/>
           <div v-if="error" class="mt-1 text-red-500 whitespace-pre-wrap">{{ error }}</div>
@@ -26,7 +26,7 @@
                     :disabled="loading || !prompt.trim()" @click="generate">
               <RefreshCw v-if="loading" class="w-3 h-3 animate-spin"/>
               <Sparkles v-else class="w-3 h-3"/>
-              {{ loading ? '生成中…' : '生成 (⌘↵)' }}
+              {{ loading ? t('sql.generating') : t('sql.generate') }}
             </button>
           </div>
         </div>
@@ -39,10 +39,12 @@
 import {ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {RefreshCw, Sparkles} from 'lucide-vue-next'
+import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
 import {useDbConnections} from '../composables/useDbConnections'
 
 const emit = defineEmits<{ generated: [sql: string] }>()
+const {t} = useI18n()
 
 const {active} = useAiConfig()
 const {resolveActiveSource} = useDbConnections()
@@ -111,7 +113,7 @@ const generate = async () => {
     return
   }
   if (!active.value.apiKey?.trim()) {
-    error.value = '未配置 AI API Key，请在设置 → AI 中填写'
+    error.value = t('sql.noApiKey')
     return
   }
   loading.value = true
@@ -119,9 +121,9 @@ const generate = async () => {
   try {
     const source = resolveActiveSource()
     const dialect = source.kind === 'mysql' ? 'MySQL' : 'SQLite'
-    schemaNote.value = '读取结构中…'
+    schemaNote.value = t('sql.readingSchema')
     const schema = await fetchSchema(source)
-    schemaNote.value = schema ? '已附带数据库结构' : '未读取到结构'
+    schemaNote.value = schema ? t('sql.schemaAttached') : t('sql.schemaNone')
     const system = `你是资深数据库工程师。根据「数据库结构」和用户需求，生成可直接执行的 ${dialect} SQL。`
       + '要求：只输出 SQL 本身，不要任何解释，不要使用 Markdown 代码块标记。\n'
       + `数据库结构：\n${schema || '(未提供，请根据需求合理假设表名与字段名)'}`
@@ -135,7 +137,7 @@ const generate = async () => {
     })
     const sql = stripFences(text)
     if (!sql) {
-      error.value = 'AI 未返回内容'
+      error.value = t('sql.aiNoContent')
       return
     }
     emit('generated', sql)

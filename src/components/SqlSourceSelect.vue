@@ -3,27 +3,29 @@
           :options="sourceOptions"
           class="w-48"
           :button-classes="['!py-1', '!px-2.5', 'text-sm', '!rounded-md']"
-          placeholder="选择数据源"
+          :placeholder="t('sql.selectSource')"
           @change="onSourceChange"/>
 </template>
 
 <script setup lang="ts">
 import {computed} from 'vue'
 import {open} from '@tauri-apps/plugin-dialog'
+import {useI18n} from 'vue-i18n'
 import Select from '../ui/Select.vue'
 import {useDbConnections} from '../composables/useDbConnections'
 
+const {t} = useI18n()
 const {connections, activeRef, setActiveRef, activeLabel} = useDbConnections()
 
 const sourceOptions = computed(() => {
-  const opts: { value: string; label: string }[] = [{value: 'memory', label: '内存数据库'}]
+  const opts: { value: string; label: string }[] = [{value: 'memory', label: t('sql.memoryDb')}]
   for (const c of connections.value) {
     opts.push({value: `conn:${c.id}`, label: `${c.name}（${c.kind}）`})
   }
   if (activeRef.value.startsWith('file:')) {
-    opts.push({value: activeRef.value, label: `${activeLabel()}（文件）`})
+    opts.push({value: activeRef.value, label: `${activeLabel()}（${t('sql.fileTag')}）`})
   }
-  opts.push({value: '__pickfile__', label: '选择 SQLite 文件…'})
+  opts.push({value: '__pickfile__', label: t('sql.pickFile')})
   return opts
 })
 

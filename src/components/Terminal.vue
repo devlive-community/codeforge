@@ -17,22 +17,22 @@
            :class="s.id === activeId ? 'bg-[#1e1e1e] text-gray-200' : 'text-gray-400 hover:bg-[#333333]'"
            @click="switchTo(s.id)">
         <span>{{ s.title }}</span>
-        <span v-if="s.exited" class="text-gray-500">·已结束</span>
+        <span v-if="s.exited" class="text-gray-500">{{ t('terminal.exited') }}</span>
         <button class="rounded p-0.5 text-gray-400 hover:text-gray-200 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
                 :class="{ 'opacity-100': s.id === activeId }"
-                title="关闭"
+                :title="t('terminal.close')"
                 @click.stop="closeSession(s.id)">
           <X class="w-3 h-3"/>
         </button>
       </div>
       <button class="flex items-center justify-center px-2 text-gray-400 hover:text-gray-200 hover:bg-[#333333] cursor-pointer flex-shrink-0"
-              title="新建终端"
+              :title="t('terminal.newTerminal')"
               @click="createSession">
         <Plus class="w-3.5 h-3.5"/>
       </button>
       <div class="flex-1"></div>
       <button class="flex items-center justify-center px-2 text-gray-400 hover:text-gray-200 cursor-pointer flex-shrink-0"
-              title="收起终端面板（保留会话）"
+              :title="t('terminal.collapse')"
               @click="emit('collapse')">
         <ChevronDown class="w-4 h-4"/>
       </button>
@@ -57,6 +57,9 @@ import {Terminal} from '@xterm/xterm'
 import {FitAddon} from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import {ChevronDown, Plus, X, Terminal as TerminalIcon} from 'lucide-vue-next'
+import {useI18n} from 'vue-i18n'
+
+const {t} = useI18n()
 
 const props = defineProps<{ rootDir?: string | null }>()
 // close：所有会话已关闭，应彻底关掉面板；collapse：仅收起，保留会话
@@ -133,7 +136,7 @@ const initXterm = async (id: string) => {
       if (s) {
         s.exited = true
       }
-      term.write('\r\n\x1b[90m[进程已退出]\x1b[0m\r\n')
+      term.write(`\r\n\x1b[90m${t('terminal.processExited')}\x1b[0m\r\n`)
     }
   })
   term.onData((data) => {
@@ -144,7 +147,7 @@ const initXterm = async (id: string) => {
     await invoke('terminal_create', {id, cwd: props.rootDir || null, cols: term.cols, rows: term.rows})
   }
   catch (error) {
-    term.write(`\r\n\x1b[31m启动终端失败: ${error}\x1b[0m\r\n`)
+    term.write(`\r\n\x1b[31m${t('terminal.startFailed')}${error}\x1b[0m\r\n`)
   }
 
   bundle.observer = new ResizeObserver(() => fitOne(id))
@@ -155,7 +158,7 @@ const initXterm = async (id: string) => {
 const createSession = () => {
   const id = genId()
   seq++
-  sessions.value.push({id, title: `终端 ${seq}`, exited: false})
+  sessions.value.push({id, title: t('terminal.tabTitle', {n: seq}), exited: false})
   activeId.value = id
   initXterm(id)
 }

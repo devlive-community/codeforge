@@ -1,5 +1,5 @@
 <template>
-  <Modal v-model:show="isVisible" title="应用更新" size="3xl" :close-on-backdrop="false" :close-on-esc="false" @close="closeUpdate">
+  <Modal v-model:show="isVisible" :title="t('update.title')" size="3xl" :close-on-backdrop="false" :close-on-esc="false" @close="closeUpdate">
     <div class="space-y-6 select-none">
       <!-- 更新图标和状态 -->
       <div class="text-center mb-6">
@@ -19,19 +19,19 @@
       <div class="mb-6 transition-all duration-600 delay-300">
         <div class="bg-gray-50/80 dark:bg-gray-700/80 backdrop-blur-sm rounded-lg p-4 space-y-3 border border-gray-200/50 dark:border-gray-600/50">
           <div class="flex justify-between items-center transform transition-all duration-200 hover:scale-95">
-            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">当前版本</span>
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ t('update.currentVersion') }}</span>
             <span class="text-sm text-gray-900 dark:text-white font-mono bg-gray-100 dark:bg-gray-900/50 px-2 py-1 rounded">{{ currentVersion }}</span>
           </div>
           <div v-if="updateInfo && updateInfo.version" class="flex justify-between items-center transform transition-all duration-200 hover:scale-95">
-            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">最新版本</span>
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ t('update.latestVersion') }}</span>
             <span class="text-sm text-gray-900 dark:text-white font-mono bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded">{{ updateInfo.version }}</span>
           </div>
           <div v-if="updateInfo && updateInfo.date" class="flex justify-between items-center transform transition-all duration-200 hover:scale-95">
-            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">发布时间</span>
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ t('update.releaseDate') }}</span>
             <span class="text-sm text-gray-900 dark:text-white font-mono">{{ formatDate(updateInfo.date) }}</span>
           </div>
           <div v-if="updateInfo && updateInfo.size" class="flex justify-between items-center transform transition-all duration-200 hover:scale-95">
-            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">更新大小</span>
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ t('update.updateSize') }}</span>
             <span class="text-sm text-gray-900 dark:text-white font-mono">{{ formatSize(updateInfo.size) }}</span>
           </div>
         </div>
@@ -39,7 +39,7 @@
 
       <!-- 更新进度 -->
       <div v-if="isUpdating || downloadProgress > 0" class="mb-6 transition-all duration-600 delay-400">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">更新进度</h3>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ t('update.progress') }}</h3>
         <div class="space-y-3">
           <div class="flex justify-between text-sm">
             <span class="text-gray-600 dark:text-gray-300">{{ progressText }}</span>
@@ -50,14 +50,14 @@
                  :style="{ width: `${downloadProgress}%` }"></div>
           </div>
           <div v-if="downloadSpeed" class="text-xs text-gray-500 dark:text-gray-400 text-center">
-            下载速度: {{ formatSpeed(downloadSpeed) }}
+            {{ t('update.downloadSpeed') }}: {{ formatSpeed(downloadSpeed) }}
           </div>
         </div>
       </div>
 
       <!-- 更新内容 -->
       <div v-if="updateInfo && updateInfo.notes" class="mb-6 transition-all duration-600 delay-500">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">更新内容</h3>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ t('update.releaseNotes') }}</h3>
         <div class="bg-gray-50/50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-200/30 dark:border-gray-600/30 max-h-40 overflow-y-auto">
           <div class="prose prose-sm dark:prose-invert max-w-none">
             <VueMarkdownIt :source="updateInfo.notes"/>
@@ -71,7 +71,7 @@
           <div class="flex items-start space-x-3">
             <AlertCircle class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"/>
             <div>
-              <h4 class="text-sm font-medium text-red-800 dark:text-red-200 mb-1">更新失败</h4>
+              <h4 class="text-sm font-medium text-red-800 dark:text-red-200 mb-1">{{ t('update.failedTitle') }}</h4>
               <p class="text-sm text-red-700 dark:text-red-300">{{ errorMessage }}</p>
             </div>
           </div>
@@ -83,7 +83,7 @@
       <div class="flex justify-between items-center  border-gray-200/50 dark:border-gray-600/50">
         <div class="text-xs text-gray-500 dark:text-gray-400">
           <span v-if="lastCheckTime">
-            上次检查: {{ formatDate(lastCheckTime) }}
+            {{ t('update.lastCheck') }}: {{ formatDate(lastCheckTime) }}
           </span>
         </div>
         <div class="flex space-x-3">
@@ -91,17 +91,17 @@
                   @click="checkForUpdates"
                   :disabled="isChecking"
                   class="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-600/50 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors duration-200 disabled:opacity-50">
-            {{ isChecking ? '检查中...' : '检查更新' }}
+            {{ isChecking ? t('update.checking') : t('update.checkUpdate') }}
           </Button>
 
           <Button v-if="hasUpdate && !isUpdating"
                   @click="startUpdate"
                   class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-200 transform hover:scale-105">
-            立即更新
+            {{ t('update.updateNow') }}
           </Button>
 
           <Button v-if="hasUpdate && !isUpdating" type="secondary" @click="skipUpdate">
-            跳过此版本
+            {{ t('update.skipVersion') }}
           </Button>
         </div>
       </div>
@@ -111,6 +111,7 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertCircle } from 'lucide-vue-next'
 import Modal from '../ui/Modal.vue'
 import Button from '../ui/Button.vue'
@@ -121,6 +122,8 @@ import { useUpdateManager } from '../composables/useUpdateManager'
 const emit = defineEmits<{
   close: []
 }>()
+
+const { t } = useI18n()
 
 const {
   // 状态
