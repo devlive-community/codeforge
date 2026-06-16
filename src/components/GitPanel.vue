@@ -10,17 +10,17 @@
                 @change="onBranchChange">
           <option v-for="b in branches" :key="b" :value="b" class="dark:bg-gray-800">{{ b }}</option>
         </select>
-        <span v-else class="text-gray-400">非 Git 仓库</span>
+        <span v-else class="text-gray-400">{{ t('git.notRepo') }}</span>
         <span v-if="status.ahead || status.behind" class="text-xs text-gray-400 flex-shrink-0">
           <span v-if="status.ahead">↑{{ status.ahead }}</span>
           <span v-if="status.behind">↓{{ status.behind }}</span>
         </span>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
-        <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" title="刷新" @click="refresh">
+        <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.refresh')" @click="refresh">
           <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': loading }"/>
         </button>
-        <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" title="关闭" @click="emit('close')">
+        <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.close')" @click="emit('close')">
           <X class="w-4 h-4"/>
         </button>
       </div>
@@ -31,22 +31,22 @@
       <div class="flex-1 overflow-y-auto">
         <div v-if="staged.length" class="py-1">
           <div class="px-4 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 flex items-center justify-between">
-            <span>暂存的更改 ({{ staged.length }})</span>
-            <button class="text-blue-500 hover:underline cursor-pointer" @click="unstageAll">全部取消暂存</button>
+            <span>{{ t('git.staged') }} ({{ staged.length }})</span>
+            <button class="text-blue-500 hover:underline cursor-pointer" @click="unstageAll">{{ t('git.unstageAll') }}</button>
           </div>
           <FileRow v-for="f in staged" :key="'s' + f.path" :file="f" staged @toggle="unstage([f.path])" @open="openFile(f.path)"/>
         </div>
 
         <div v-if="unstaged.length" class="py-1">
           <div class="px-4 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 flex items-center justify-between">
-            <span>更改 ({{ unstaged.length }})</span>
-            <button class="text-blue-500 hover:underline cursor-pointer" @click="stageAll">全部暂存</button>
+            <span>{{ t('git.changes') }} ({{ unstaged.length }})</span>
+            <button class="text-blue-500 hover:underline cursor-pointer" @click="stageAll">{{ t('git.stageAll') }}</button>
           </div>
           <FileRow v-for="f in unstaged" :key="'u' + f.path" :file="f" @toggle="stage([f.path])" @open="openFile(f.path)"/>
         </div>
 
         <div v-if="!staged.length && !unstaged.length" class="px-4 py-10 text-center text-sm text-gray-400">
-          没有未提交的更改
+          {{ t('git.clean') }}
         </div>
       </div>
 
@@ -56,25 +56,25 @@
           <textarea v-model="message"
                     rows="3"
                     class="w-full text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 pr-9 focus:outline-none focus:border-blue-500 resize-none"
-                    placeholder="提交信息…（Cmd/Ctrl+Enter 提交）"
+                    :placeholder="t('git.messagePlaceholder')"
                     @keydown.meta.enter.prevent="commit"
                     @keydown.ctrl.enter.prevent="commit"/>
           <button class="absolute top-1.5 right-1.5 p-1 rounded text-gray-400 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   :disabled="generating"
-                  title="用 AI 根据改动生成提交信息"
+                  :title="t('git.aiGenTitle')"
                   @click="genMessage">
             <Sparkles class="w-4 h-4" :class="{ 'animate-pulse': generating }"/>
           </button>
         </div>
         <div class="flex items-center gap-2">
           <Button size="sm" custom-class="[transform:translateZ(0)]" :loading="pending === 'commit'" :disabled="busy || !canCommit" @click="commit">
-            提交{{ staged.length ? ` (${staged.length})` : '' }}
+            {{ t('git.commit') }}{{ staged.length ? ` (${staged.length})` : '' }}
           </Button>
           <Button size="sm" type="secondary" custom-class="[transform:translateZ(0)]" :loading="pending === 'commitPush'" :disabled="busy" @click="commitAndPush">
-            提交并推送
+            {{ t('git.commitPush') }}
           </Button>
           <Button size="sm" type="secondary" custom-class="[transform:translateZ(0)]" :loading="pending === 'push'" :disabled="busy" @click="push">
-            推送{{ status.ahead ? ` (↑${status.ahead})` : '' }}
+            {{ t('git.push') }}{{ status.ahead ? ` (↑${status.ahead})` : '' }}
           </Button>
         </div>
       </div>
@@ -88,6 +88,7 @@ import {invoke} from '@tauri-apps/api/core'
 import {GitBranch, RefreshCw, Sparkles, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import {useToast} from '../plugins/toast'
+import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
 
 interface GitFile { path: string; index: string; worktree: string }
@@ -97,6 +98,7 @@ const props = defineProps<{ rootDir: string }>()
 const emit = defineEmits<{ close: []; refresh: []; open: [path: string] }>()
 
 const toast = useToast()
+const {t} = useI18n()
 const {active, reload: reloadAi} = useAiConfig()
 
 const status = ref<GitStatusData>({is_repo: false, branch: '', ahead: 0, behind: 0, files: []})
@@ -129,7 +131,7 @@ const refresh = async () => {
     emit('refresh')
   }
   catch (error) {
-    toast.error('读取 Git 状态失败: ' + error)
+    toast.error(t('git.statusFailed') + ': ' + error)
   }
   finally {
     loading.value = false
@@ -144,7 +146,7 @@ const stage = async (paths: string[]) => {
     await refresh()
   }
   catch (error) {
-    toast.error('暂存失败: ' + error)
+    toast.error(t('git.stageFailed') + ': ' + error)
   }
 }
 const unstage = async (paths: string[]) => {
@@ -153,7 +155,7 @@ const unstage = async (paths: string[]) => {
     await refresh()
   }
   catch (error) {
-    toast.error('取消暂存失败: ' + error)
+    toast.error(t('git.unstageFailed') + ': ' + error)
   }
 }
 const stageAll = () => stage(unstaged.value.map(f => f.path))
@@ -175,11 +177,11 @@ const commit = async () => {
   pending.value = 'commit'
   try {
     await doCommit()
-    toast.success('已提交')
+    toast.success(t('git.committed'))
     await refresh()
   }
   catch (error) {
-    toast.error('提交失败: ' + error)
+    toast.error(t('git.commitFailed') + ': ' + error)
   }
   finally {
     pending.value = null
@@ -190,11 +192,11 @@ const push = async () => {
   pending.value = 'push'
   try {
     await doPush()
-    toast.success('已推送')
+    toast.success(t('git.pushed'))
     await refresh()
   }
   catch (error) {
-    toast.error('推送失败: ' + error)
+    toast.error(t('git.pushFailed') + ': ' + error)
   }
   finally {
     pending.value = null
@@ -203,18 +205,18 @@ const push = async () => {
 
 const commitAndPush = async () => {
   if (!canCommit.value) {
-    toast.info('请填写提交信息并暂存改动')
+    toast.info(t('git.needMessage'))
     return
   }
   pending.value = 'commitPush'
   try {
     await doCommit()
     await doPush()
-    toast.success('已提交并推送')
+    toast.success(t('git.committedPushed'))
     await refresh()
   }
   catch (error) {
-    toast.error('提交并推送失败: ' + error)
+    toast.error(t('git.commitPushFailed') + ': ' + error)
   }
   finally {
     pending.value = null
@@ -228,11 +230,11 @@ const onBranchChange = async (e: Event) => {
   }
   try {
     await invoke('git_checkout', {root: props.rootDir, branch})
-    toast.success(`已切换到 ${branch}`)
+    toast.success(t('git.switched', { branch }))
     await refresh()
   }
   catch (error) {
-    toast.error('切换分支失败: ' + error)
+    toast.error(t('git.switchFailed') + ': ' + error)
     await refresh()
   }
 }
@@ -254,14 +256,14 @@ const genMessage = async () => {
   }
   reloadAi()
   if (!active.value.apiKey) {
-    toast.info('请先在设置中配置 AI 的 API Key')
+    toast.info(t('git.aiNeedKey'))
     return
   }
   generating.value = true
   try {
     const diff = await invoke<string>('git_diff', {root: props.rootDir})
     if (!diff.trim()) {
-      toast.info('没有可用于生成的改动')
+      toast.info(t('git.noDiff'))
       return
     }
     const prompt = `根据下面的 git diff 生成一条简洁的中文提交信息，格式为「类型: 描述」（类型如 feat/fix/docs/refactor/chore），只输出一行提交信息，不要解释、不要代码块：\n\n${diff}`
@@ -276,7 +278,7 @@ const genMessage = async () => {
     message.value = cleanupMessage(res)
   }
   catch (error) {
-    toast.error('生成失败: ' + error)
+    toast.error(t('git.genFailed') + ': ' + error)
   }
   finally {
     generating.value = false
