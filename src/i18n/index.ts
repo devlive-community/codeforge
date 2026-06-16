@@ -189,7 +189,10 @@ const messages = {
       quickOpenPlaceholder: '按文件名快速打开…',
       quickOpenLoading: '加载文件列表…',
       quickOpenEmpty: '无匹配文件',
-      recent: '最近'
+      recent: '最近',
+      outlinePlaceholder: '跳转到符号…',
+      outlineNoSymbols: '未识别到符号',
+      outlineEmpty: '无匹配符号'
     },
     search: {
       placeholder: '在文件夹内搜索…',
@@ -388,7 +391,10 @@ const messages = {
       quickOpenPlaceholder: 'Quick open by file name…',
       quickOpenLoading: 'Loading files…',
       quickOpenEmpty: 'No matching files',
-      recent: 'Recent'
+      recent: 'Recent',
+      outlinePlaceholder: 'Go to symbol…',
+      outlineNoSymbols: 'No symbols detected',
+      outlineEmpty: 'No matching symbols'
     },
     search: {
       placeholder: 'Search in folder…',
