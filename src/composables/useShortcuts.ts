@@ -1,5 +1,6 @@
 import {computed, ref} from 'vue'
 import {kvGetJSON, kvSetJSON} from './useKvStore'
+import {i18n} from '../i18n'
 
 export interface ShortcutAction
 {
@@ -8,23 +9,24 @@ export interface ShortcutAction
     default: string
 }
 
-// 可自定义的快捷键动作及默认绑定（Mod = mac 上 ⌘，其他平台 Ctrl）
-export const SHORTCUT_ACTIONS: ShortcutAction[] = [
-    {id: 'run', label: '运行代码', default: 'Mod+Enter'},
-    {id: 'runSelection', label: '运行选中片段', default: 'Mod+Shift+Enter'},
-    {id: 'save', label: '保存文件', default: 'Mod+S'},
-    {id: 'saveAs', label: '另存为', default: 'Mod+Shift+S'},
-    {id: 'open', label: '打开文件', default: 'Mod+O'},
-    {id: 'quickOpen', label: '快速打开文件', default: 'Mod+P'},
-    {id: 'commandPalette', label: '命令面板', default: 'Mod+Shift+P'},
-    {id: 'gotoLine', label: '跳转到行', default: 'Mod+G'},
-    {id: 'outline', label: '符号大纲', default: 'Mod+Shift+O'},
-    {id: 'searchInFiles', label: '文件夹内搜索', default: 'Mod+Shift+F'},
-    {id: 'generate', label: 'AI 生成代码', default: 'Mod+K'},
-    {id: 'newTab', label: '新建标签', default: 'Mod+N'},
-    {id: 'closeTab', label: '关闭标签', default: 'Mod+W'},
-    {id: 'toggleSidebar', label: '切换侧栏', default: 'Mod+B'},
-    {id: 'toggleTerminal', label: '切换终端', default: 'Mod+`'}
+// 可自定义的快捷键动作及默认绑定（Mod = mac 上 ⌘，其他平台 Ctrl）。
+// 动作名（label）由 i18n 提供（shortcutAction.<id>），随界面语言切换。
+const SHORTCUT_DEFS: { id: string; default: string }[] = [
+    {id: 'run', default: 'Mod+Enter'},
+    {id: 'runSelection', default: 'Mod+Shift+Enter'},
+    {id: 'save', default: 'Mod+S'},
+    {id: 'saveAs', default: 'Mod+Shift+S'},
+    {id: 'open', default: 'Mod+O'},
+    {id: 'quickOpen', default: 'Mod+P'},
+    {id: 'commandPalette', default: 'Mod+Shift+P'},
+    {id: 'gotoLine', default: 'Mod+G'},
+    {id: 'outline', default: 'Mod+Shift+O'},
+    {id: 'searchInFiles', default: 'Mod+Shift+F'},
+    {id: 'generate', default: 'Mod+K'},
+    {id: 'newTab', default: 'Mod+N'},
+    {id: 'closeTab', default: 'Mod+W'},
+    {id: 'toggleSidebar', default: 'Mod+B'},
+    {id: 'toggleTerminal', default: 'Mod+`'}
 ]
 
 const STORAGE_KEY = 'shortcuts'
@@ -78,7 +80,7 @@ export function useShortcuts()
     // 当前生效的绑定（默认 + 覆盖）
     const bindings = computed<Record<string, string>>(() => {
         const map: Record<string, string> = {}
-        for (const action of SHORTCUT_ACTIONS) {
+        for (const action of SHORTCUT_DEFS) {
             map[action.id] = overrides.value[action.id] || action.default
         }
         return map
@@ -109,7 +111,7 @@ export function useShortcuts()
         if (!combo) {
             return null
         }
-        for (const action of SHORTCUT_ACTIONS) {
+        for (const action of SHORTCUT_DEFS) {
             if (bindings.value[action.id] === combo) {
                 return action.id
             }
@@ -117,8 +119,13 @@ export function useShortcuts()
         return null
     }
 
+    // 动作列表：label 从 i18n 取，随语言响应式更新
+    const actions = computed<ShortcutAction[]>(() =>
+        SHORTCUT_DEFS.map(a => ({id: a.id, label: i18n.global.t(`shortcutAction.${a.id}`), default: a.default}))
+    )
+
     return {
-        actions: SHORTCUT_ACTIONS,
+        actions,
         bindings,
         getBinding,
         setBinding,

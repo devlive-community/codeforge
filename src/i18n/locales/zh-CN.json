@@ -258,6 +258,23 @@
     "groupLayout": "布局",
     "groupTheme": "主题"
   },
+  "shortcutAction": {
+    "run": "运行代码",
+    "runSelection": "运行选中片段",
+    "save": "保存文件",
+    "saveAs": "另存为",
+    "open": "打开文件",
+    "quickOpen": "快速打开文件",
+    "commandPalette": "命令面板",
+    "gotoLine": "跳转到行",
+    "outline": "符号大纲",
+    "searchInFiles": "文件夹内搜索",
+    "generate": "AI 生成代码",
+    "newTab": "新建标签",
+    "closeTab": "关闭标签",
+    "toggleSidebar": "切换侧栏",
+    "toggleTerminal": "切换终端"
+  },
   "search": {
     "placeholder": "在文件夹内搜索…",
     "searching": "搜索中…",

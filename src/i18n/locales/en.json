@@ -258,6 +258,23 @@
     "groupLayout": "Layout",
     "groupTheme": "Theme"
   },
+  "shortcutAction": {
+    "run": "Run code",
+    "runSelection": "Run selection",
+    "save": "Save file",
+    "saveAs": "Save as",
+    "open": "Open file",
+    "quickOpen": "Quick open file",
+    "commandPalette": "Command palette",
+    "gotoLine": "Go to line",
+    "outline": "Symbol outline",
+    "searchInFiles": "Search in folder",
+    "generate": "AI generate code",
+    "newTab": "New tab",
+    "closeTab": "Close tab",
+    "toggleSidebar": "Toggle sidebar",
+    "toggleTerminal": "Toggle terminal"
+  },
   "search": {
     "placeholder": "Search in folder…",
     "searching": "Searching…",
