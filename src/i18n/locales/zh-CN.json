@@ -34,7 +34,11 @@
       "githubInfo4": "留空则使用未认证模式访问 GitHub API",
       "saveGithub": "保存 GitHub 配置",
       "savingGithub": "保存中...",
-      "clearToken": "清除 Token"
+      "clearToken": "清除 Token",
+      "saveThemeFailed": "保存主题失败: ",
+      "saveConfigFailed": "保存配置失败: ",
+      "githubSaved": "GitHub 配置已保存",
+      "saveGithubFailed": "保存 GitHub 配置失败: "
     },
     "editor": {
       "indentWithTab": "是否使用 Tab 缩进",
@@ -73,7 +77,13 @@
       "saving": "保存中...",
       "reset": "重置为默认",
       "test": "测试连接",
-      "testing": "测试中..."
+      "testing": "测试中...",
+      "loadFailed": "加载 CDN 配置失败: ",
+      "saved": "CDN 配置已保存",
+      "saveFailed": "保存 CDN 配置失败: ",
+      "needBaseUrl": "请先输入 CDN 基础 URL",
+      "testSuccess": "CDN 连接测试成功",
+      "testWarn": "无法直接测试 CDN 连接，但这可能是正常的（CORS 限制）。请尝试下载环境包以验证 CDN 是否正常工作。"
     },
     "shortcut": {
       "resetAll": "全部重置",

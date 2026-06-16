@@ -134,7 +134,7 @@ const onThemeChange = async () => {
     await invoke('update_app_config', {config})
   }
   catch (error) {
-    toast.error('保存主题失败: ' + error)
+    toast.error(t('settings.general.saveThemeFailed') + error)
   }
 }
 
@@ -178,7 +178,7 @@ const saveBehaviorConfig = async () => {
   }
   catch (error) {
     console.error('保存运行配置失败:', error)
-    toast.error('保存配置失败: ' + error)
+    toast.error(t('settings.general.saveConfigFailed') + error)
   }
 }
 
@@ -211,13 +211,13 @@ const saveGithubConfig = async () => {
 
     originalGithubToken.value = githubToken.value
 
-    toast.success('GitHub 配置已保存')
+    toast.success(t('settings.general.githubSaved'))
     emit('settings-changed', 'github', config.github)
   }
   catch (error) {
     console.error('保存 GitHub 配置失败:', error)
-    toast.error('保存 GitHub 配置失败: ' + error)
-    emit('error', '保存 GitHub 配置失败')
+    toast.error(t('settings.general.saveGithubFailed') + error)
+    emit('error', t('settings.general.saveGithubFailed'))
   }
   finally {
     isSavingGithub.value = false

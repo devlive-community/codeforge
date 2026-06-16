@@ -34,7 +34,11 @@
       "githubInfo4": "Leave empty to access the GitHub API unauthenticated",
       "saveGithub": "Save GitHub config",
       "savingGithub": "Saving...",
-      "clearToken": "Clear token"
+      "clearToken": "Clear token",
+      "saveThemeFailed": "Failed to save theme: ",
+      "saveConfigFailed": "Failed to save config: ",
+      "githubSaved": "GitHub config saved",
+      "saveGithubFailed": "Failed to save GitHub config: "
     },
     "editor": {
       "indentWithTab": "Use Tab for indentation",
@@ -73,7 +77,13 @@
       "saving": "Saving...",
       "reset": "Reset to default",
       "test": "Test connection",
-      "testing": "Testing..."
+      "testing": "Testing...",
+      "loadFailed": "Failed to load CDN config: ",
+      "saved": "CDN config saved",
+      "saveFailed": "Failed to save CDN config: ",
+      "needBaseUrl": "Enter the CDN base URL first",
+      "testSuccess": "CDN connection test succeeded",
+      "testWarn": "Could not test the CDN connection directly, but this may be normal (CORS restriction). Try downloading an environment package to verify the CDN works."
     },
     "shortcut": {
       "resetAll": "Reset all",
