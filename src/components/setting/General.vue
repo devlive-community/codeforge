@@ -91,7 +91,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '../../plugins/toast'
 import { useTheme, type AppTheme } from '../../composables/useTheme'
-import { SUPPORTED_LOCALES, setLocale, getLocale } from '../../i18n'
+import { availableLocales, setLocale, getLocale } from '../../i18n'
 
 const emit = defineEmits<{
   'settings-changed': [type: string, value: any]
@@ -102,9 +102,9 @@ const {t} = useI18n()
 const toast = useToast()
 const {setTheme} = useTheme()
 
-// 界面语言
+// 界面语言（含用户新增的自定义语言包）
 const locale = ref(getLocale())
-const localeOptions = SUPPORTED_LOCALES
+const localeOptions = availableLocales
 const onLocaleChange = () => setLocale(locale.value)
 
 // 外观主题

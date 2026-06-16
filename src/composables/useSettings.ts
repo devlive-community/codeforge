@@ -1,5 +1,5 @@
 import { computed, nextTick, ref } from 'vue'
-import { BracesIcon, CodeIcon, Cpu, Database, FileText, Globe, Keyboard, Server, ShieldIcon, Sparkles } from 'lucide-vue-next'
+import { BracesIcon, CodeIcon, Cpu, Database, FileText, Globe, Keyboard, Languages, Server, ShieldIcon, Sparkles } from 'lucide-vue-next'
 import { i18n } from '../i18n'
 
 export function useSettings(emit: any)
@@ -21,7 +21,8 @@ export function useSettings(emit: any)
         { key: 'lsp', label: t('settings.nav.lsp'), icon: Cpu },
         { key: 'network', label: t('settings.nav.network'), icon: Globe },
         { key: 'cache', label: t('settings.nav.cache'), icon: Database },
-        { key: 'logs', label: t('settings.nav.logs'), icon: FileText }
+        { key: 'logs', label: t('settings.nav.logs'), icon: FileText },
+        { key: 'i18n', label: t('settings.nav.i18n'), icon: Languages }
     ])
 
     const handleEditorSettingsChanged = (config: any) => {

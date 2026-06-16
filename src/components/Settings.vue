@@ -55,6 +55,11 @@
       <template #logs>
         <Logs v-if="activeTab === 'logs'" @settings-changed="handleNetworkSettingsChanged" @error="handleEditorError"/>
       </template>
+
+      <!-- 语言包 -->
+      <template #i18n>
+        <I18n v-if="activeTab === 'i18n'"/>
+      </template>
     </Tabs>
   </Modal>
 </template>
@@ -74,6 +79,7 @@ import Lsp from './setting/Lsp.vue'
 import Network from './setting/Network.vue'
 import Cache from './setting/Cache.vue'
 import Logs from './setting/Logs.vue'
+import I18n from './setting/I18n.vue'
 import { useSettings } from '../composables/useSettings.ts'
 
 const emit = defineEmits<{
