@@ -4,6 +4,7 @@
 
 <script setup lang="ts">
 import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import * as echarts from 'echarts/core'
 import {BoxplotChart as EBox, ScatterChart as EScatter} from 'echarts/charts'
 import {GridComponent, TooltipComponent} from 'echarts/components'
@@ -19,6 +20,7 @@ const props = defineProps<{
 }>()
 
 const {isDark} = useTheme()
+const {t} = useI18n()
 const el = ref<HTMLElement>()
 let chart: echarts.ECharts | null = null
 
@@ -31,8 +33,8 @@ const buildOption = (): echarts.EChartsCoreOption => {
     xAxis: {type: 'category', data: props.categories, axisLabel: {color: text, rotate: props.categories.length > 8 ? 30 : 0}, axisLine: {lineStyle: {color: axisLine}}},
     yAxis: {type: 'value', axisLabel: {color: text}, splitLine: {lineStyle: {color: axisLine}}},
     series: [
-      {name: '箱线', type: 'boxplot', data: props.boxes, itemStyle: {borderColor: '#3b82f6'}},
-      {name: '离群', type: 'scatter', data: props.outliers, symbolSize: 6, itemStyle: {color: '#ef4444'}}
+      {name: t('chart.boxName'), type: 'boxplot', data: props.boxes, itemStyle: {borderColor: '#3b82f6'}},
+      {name: t('chart.outlierName'), type: 'scatter', data: props.outliers, symbolSize: 6, itemStyle: {color: '#ef4444'}}
     ]
   }
 }

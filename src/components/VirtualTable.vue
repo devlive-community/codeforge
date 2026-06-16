@@ -21,7 +21,7 @@
         </tr>
         <tr v-if="bottomPad > 0" :style="{height: bottomPad + 'px'}"><td :colspan="colCount"/></tr>
         <tr v-if="rows.length === 0">
-          <td :colspan="colCount" class="px-3 py-2 text-center text-gray-400">（0 行）</td>
+          <td :colspan="colCount" class="px-3 py-2 text-center text-gray-400">{{ t('view.zeroRows') }}</td>
         </tr>
       </tbody>
     </table>
@@ -30,6 +30,9 @@
 
 <script setup lang="ts">
 import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
+
+const {t} = useI18n()
 
 const props = withDefaults(defineProps<{
   columns: string[]
