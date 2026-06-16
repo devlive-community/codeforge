@@ -10,14 +10,14 @@
         <button @click="handleCheckEnvironment"
                 :disabled="isLoading"
                 class="ml-2 p-1 rounded cursor-pointer hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="重新检查环境">
+                :title="t('status.recheck')">
           <RefreshCw :class="{ 'animate-spin': isLoading }" class="w-3.5 h-3.5"/>
         </button>
       </div>
 
       <div v-if="executionTime > 0" class="flex items-center space-x-2">
         <Clock class="w-4 h-4"/>
-        <span>最新: <strong>{{ executionTime }}</strong> 毫秒</span>
+        <span>{{ t('status.latency', { ms: executionTime }) }}</span>
       </div>
     </div>
 
@@ -25,12 +25,12 @@
       <!-- LSP 状态（点击开关问题面板）-->
       <button v-if="lspState.status !== 'off'"
               class="flex items-center space-x-2 px-1 rounded cursor-pointer hover:bg-white/20 transition-colors"
-              :title="lspState.status === 'connecting' ? `语言服务索引中：${lspState.language}` : `语言服务已就绪：${lspState.language}（点击查看问题）`"
+              :title="lspState.status === 'connecting' ? t('status.lspIndexing', { lang: lspState.language }) : t('status.lspReady', { lang: lspState.language })"
               @click="emit('toggleProblems')">
         <span class="flex items-center space-x-1">
           <RefreshCw v-if="lspState.status === 'connecting'" class="w-3 h-3 animate-spin"/>
           <span v-else class="w-1.5 h-1.5 rounded-full bg-emerald-300"/>
-          <span>{{ lspState.status === 'connecting' ? 'LSP 索引中' : 'LSP' }}</span>
+          <span>{{ lspState.status === 'connecting' ? t('status.lspBadgeIndexing') : 'LSP' }}</span>
         </span>
         <span v-if="errorCount" class="flex items-center space-x-0.5"><XCircle class="w-3 h-3"/><span>{{ errorCount }}</span></span>
         <span v-if="warningCount" class="flex items-center space-x-0.5"><AlertTriangle class="w-3 h-3"/><span>{{ warningCount }}</span></span>
@@ -38,13 +38,13 @@
 
       <div class="flex items-center space-x-2">
         <Hash class="w-3 h-3 font-normal"/>
-        <span><strong>{{ codeLength }}</strong> 字符</span>
+        <span><strong>{{ codeLength }}</strong> {{ t('status.chars') }}</span>
       </div>
 
       <!-- 终端 -->
       <button @click="emit('toggleTerminal')"
               class="p-1 rounded cursor-pointer hover:bg-white/20 transition-colors"
-              :title="`终端（${terminalShortcut}）`">
+              :title="t('status.terminalTip', { key: terminalShortcut })">
         <TerminalIcon class="w-3.5 h-3.5"/>
       </button>
     </div>
@@ -54,10 +54,13 @@
 <script setup lang="ts">
 import { AlertTriangle, Clock, Hash, RefreshCw, Terminal as TerminalIcon, XCircle } from 'lucide-vue-next'
 import { computed, toRefs } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useStatusBar } from '../composables/useStatusBar'
 import { lspState } from '../editor/lspStatus'
 import { diagnostics } from '../editor/lspDiagnostics'
 import { useShortcuts } from '../composables/useShortcuts'
+
+const {t} = useI18n()
 
 const props = defineProps<{
   envInfo: {

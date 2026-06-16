@@ -141,6 +141,17 @@ const messages = {
       layoutVertical: '上下布局',
       layoutEditor: '仅编辑器',
       hasUpdate: '有新版本'
+    },
+    status: {
+      checking: '检查环境中...',
+      notInstalled: '环境未安装',
+      recheck: '重新检查环境',
+      latency: '最新: {ms} 毫秒',
+      lspIndexing: '语言服务索引中：{lang}',
+      lspReady: '语言服务已就绪：{lang}（点击查看问题）',
+      lspBadgeIndexing: 'LSP 索引中',
+      chars: '字符',
+      terminalTip: '终端（{key}）'
     }
   },
   en: {
@@ -274,6 +285,17 @@ const messages = {
       layoutVertical: 'Top-bottom',
       layoutEditor: 'Editor only',
       hasUpdate: 'Update available'
+    },
+    status: {
+      checking: 'Checking environment...',
+      notInstalled: 'Not installed',
+      recheck: 'Recheck environment',
+      latency: 'Last: {ms} ms',
+      lspIndexing: 'Language server indexing: {lang}',
+      lspReady: 'Language server ready: {lang} (click to view problems)',
+      lspBadgeIndexing: 'LSP indexing',
+      chars: 'chars',
+      terminalTip: 'Terminal ({key})'
     }
   }
 }

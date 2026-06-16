@@ -1,9 +1,11 @@
 import {type Ref} from 'vue'
 import {CheckCircle, Loader2, XCircle} from 'lucide-vue-next'
 import {EnvInfo} from '../types/app.ts'
+import {i18n} from '../i18n'
 
 export function useStatusBar(envInfo: Ref<EnvInfo>, isLoading: Ref<boolean>)
 {
+    const t = i18n.global.t
     // 计算状态颜色
     const getStatusColor = () => {
         if (isLoading.value) {
@@ -31,14 +33,14 @@ export function useStatusBar(envInfo: Ref<EnvInfo>, isLoading: Ref<boolean>)
     // 计算状态文本
     const getStatusText = () => {
         if (isLoading.value) {
-            return `${envInfo.value.language}: 检查环境中...`
+            return `${envInfo.value.language}: ${t('status.checking')}`
         }
 
         if (envInfo.value.installed) {
             return `${envInfo.value.language}: ${envInfo.value.version || '--'}`
         }
         else {
-            return `${envInfo.value.language}: 环境未安装`
+            return `${envInfo.value.language}: ${t('status.notInstalled')}`
         }
     }
 
