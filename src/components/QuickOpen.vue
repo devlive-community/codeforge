@@ -7,7 +7,7 @@
         <input ref="inputRef"
                v-model="query"
                class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
-               placeholder="按文件名快速打开…"
+               :placeholder="t('dialog.quickOpenPlaceholder')"
                @keydown.down.prevent="move(1)"
                @keydown.up.prevent="move(-1)"
                @keydown.enter.prevent="choose(filtered[activeIndex])"
@@ -15,8 +15,8 @@
       </div>
 
       <div ref="listRef" class="overflow-y-auto py-1">
-        <div v-if="loading" class="px-4 py-6 text-center text-sm text-gray-400">加载文件列表…</div>
-        <div v-else-if="filtered.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">无匹配文件</div>
+        <div v-if="loading" class="px-4 py-6 text-center text-sm text-gray-400">{{ t('dialog.quickOpenLoading') }}</div>
+        <div v-else-if="filtered.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">{{ t('dialog.quickOpenEmpty') }}</div>
 
         <button v-for="(file, i) in filtered"
                 :key="file.path"
@@ -28,7 +28,7 @@
           <FileText class="w-4 h-4 text-gray-400 flex-shrink-0 mr-2"/>
           <span class="text-sm text-gray-800 dark:text-gray-100 truncate">{{ file.name }}</span>
           <span class="ml-2 text-xs text-gray-400 truncate">{{ file.dir }}</span>
-          <span v-if="!query && recentSet.has(file.path)" class="ml-auto pl-2 text-[10px] text-blue-500 flex-shrink-0">最近</span>
+          <span v-if="!query && recentSet.has(file.path)" class="ml-auto pl-2 text-[10px] text-blue-500 flex-shrink-0">{{ t('dialog.recent') }}</span>
         </button>
       </div>
     </div>
@@ -37,8 +37,11 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {invoke} from '@tauri-apps/api/core'
 import {FileText, Search} from 'lucide-vue-next'
+
+const {t} = useI18n()
 
 interface FileItem
 {

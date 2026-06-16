@@ -182,6 +182,14 @@ const messages = {
       aiNeedKey: '请先在设置中配置 AI 的 API Key',
       noDiff: '没有可用于生成的改动',
       genFailed: '生成失败'
+    },
+    dialog: {
+      gotoLinePlaceholder: '跳转到行（1 - {max}）',
+      gotoLineHint: '共 {n} 行 · 回车跳转',
+      quickOpenPlaceholder: '按文件名快速打开…',
+      quickOpenLoading: '加载文件列表…',
+      quickOpenEmpty: '无匹配文件',
+      recent: '最近'
     }
   },
   en: {
@@ -356,6 +364,14 @@ const messages = {
       aiNeedKey: 'Configure the AI API Key in Settings first',
       noDiff: 'No changes to generate from',
       genFailed: 'Generation failed'
+    },
+    dialog: {
+      gotoLinePlaceholder: 'Go to line (1 - {max})',
+      gotoLineHint: '{n} lines · Enter to jump',
+      quickOpenPlaceholder: 'Quick open by file name…',
+      quickOpenLoading: 'Loading files…',
+      quickOpenEmpty: 'No matching files',
+      recent: 'Recent'
     }
   }
 }
