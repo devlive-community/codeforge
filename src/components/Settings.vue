@@ -3,8 +3,8 @@
     <Tabs v-model="activeTab"
           type="card"
           size="md"
-          :nav-class="['w-full']"
-          :tab-button-class="['flex', 'flex-col']"
+          :nav-class="['w-full', 'flex-nowrap', 'overflow-x-auto']"
+          :tab-button-class="['flex', 'flex-col', 'flex-shrink-0']"
           :tabs="tabsData">
       <!-- 通用配置 -->
       <template #general>
