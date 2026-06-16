@@ -34,6 +34,28 @@ export const availableLocales = ref<{ value: string; label: string; builtin: boo
 const readCustom = (): Record<string, LocaleDef> => kvGetJSON<Record<string, LocaleDef>>(CUSTOM_KEY, {})
 const writeCustom = (data: Record<string, LocaleDef>) => kvSetJSON(CUSTOM_KEY, data)
 
+// 深合并：override 优先，缺失的键用 base 填充（对象递归，数组/基本类型直接覆盖）
+const deepMerge = (base: any, override: any): any => {
+  if (!base || typeof base !== 'object' || Array.isArray(base)) {
+    return override ?? base
+  }
+  if (!override || typeof override !== 'object' || Array.isArray(override)) {
+    return override ?? base
+  }
+  const out: Record<string, any> = {...base}
+  for (const k of Object.keys(override)) {
+    out[k] = k in base ? deepMerge(base[k], override[k]) : override[k]
+  }
+  return out
+}
+
+// 某语言的最终生效文案：内置 JSON 作底，数据库自定义覆盖（DB 优先，缺失用 JSON 填充）
+const effectiveMessages = (code: string, custom?: Record<string, LocaleDef>): Record<string, any> => {
+  const c = custom ?? readCustom()
+  const base = BUILTIN[code]?.messages ?? {}
+  return c[code] ? deepMerge(base, c[code].messages) : base
+}
+
 const rebuildAvailable = (custom: Record<string, LocaleDef>) => {
   const list: { value: string; label: string; builtin: boolean }[] = []
   for (const [code, def] of Object.entries(BUILTIN)) {
@@ -50,8 +72,9 @@ const rebuildAvailable = (custom: Record<string, LocaleDef>) => {
 // 启动时调用（须在 loadKvStore 之后）：合并 DB 自定义语言包并恢复上次语言
 export const loadLocales = () => {
   const custom = readCustom()
-  for (const [code, def] of Object.entries(custom)) {
-    i18n.global.setLocaleMessage(code, def.messages as any)
+  // 数据库优先、JSON 填充：内置语言把自定义合并到 JSON 底；纯自定义语言直接用其文案
+  for (const code of Object.keys(custom)) {
+    i18n.global.setLocaleMessage(code, effectiveMessages(code, custom) as any)
   }
   rebuildAvailable(custom)
   const saved = kvGet(LOCALE_KEY)
@@ -70,17 +93,8 @@ export const getLocale = (): string => i18n.global.locale.value as string
 
 export const isBuiltinLocale = (code: string) => !!BUILTIN[code]
 
-// 取某语言当前完整文案（自定义优先，否则内置）；用于编辑器预填
-export const getLocaleMessages = (code: string): Record<string, any> => {
-  const custom = readCustom()
-  if (custom[code]) {
-    return custom[code].messages
-  }
-  if (BUILTIN[code]) {
-    return BUILTIN[code].messages
-  }
-  return {}
-}
+// 取某语言当前最终生效文案（JSON 底 + 数据库覆盖）；用于编辑器预填，便于看到全部键
+export const getLocaleMessages = (code: string): Record<string, any> => effectiveMessages(code)
 
 // 取内置默认文案（用于以某内置语言为模板新建）
 export const getBuiltinMessages = (code: string): Record<string, any> => BUILTIN[code]?.messages ?? BUILTIN['zh-CN'].messages
@@ -90,7 +104,8 @@ export const saveLocale = (code: string, name: string, messages: Record<string, 
   const custom = readCustom()
   custom[code] = {name, messages}
   writeCustom(custom)
-  i18n.global.setLocaleMessage(code, messages as any)
+  // 运行时仍以 JSON 为底合并（即便用户删了某些键，也会用 JSON 填充）
+  i18n.global.setLocaleMessage(code, effectiveMessages(code, custom) as any)
   rebuildAvailable(custom)
 }
 
