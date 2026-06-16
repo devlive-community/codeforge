@@ -1,16 +1,16 @@
 <template>
   <div class="flex flex-col h-full bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
     <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-      <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 truncate uppercase">{{ rootName || '资源管理器' }}</span>
+      <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 truncate uppercase">{{ rootName || t('sidebar.explorer') }}</span>
       <div class="flex items-center space-x-1">
         <button class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
-                title="打开文件夹"
+                :title="t('sidebar.openFolder')"
                 @click="emit('open-folder')">
           <FolderOpen class="w-4 h-4"/>
         </button>
         <button v-if="rootDir"
                 class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
-                title="刷新"
+                :title="t('sidebar.refresh')"
                 @click="loadRoot">
           <RefreshCw class="w-4 h-4"/>
         </button>
@@ -20,12 +20,12 @@
     <div class="flex-1 overflow-auto py-1">
       <div v-if="!rootDir" class="px-3 py-6">
         <div class="text-center">
-          <p class="text-xs text-gray-400 mb-3">未打开文件夹</p>
-          <Button size="sm" @click="emit('open-folder')">打开文件夹</Button>
+          <p class="text-xs text-gray-400 mb-3">{{ t('sidebar.noFolder') }}</p>
+          <Button size="sm" @click="emit('open-folder')">{{ t('sidebar.openFolder') }}</Button>
         </div>
 
         <div v-if="recentFolders && recentFolders.length" class="mt-6">
-          <p class="text-xs font-semibold text-gray-400 mb-1 px-1">最近打开</p>
+          <p class="text-xs font-semibold text-gray-400 mb-1 px-1">{{ t('sidebar.recent') }}</p>
           <button v-for="folder in recentFolders"
                   :key="folder"
                   class="w-full flex items-center space-x-2 px-2 py-1 rounded text-left text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -51,15 +51,15 @@
            :style="{ top: `${ctx.y}px`, left: `${ctx.x}px` }"
            @click.stop>
         <template v-if="!ctx.node || ctx.node.is_dir">
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptCreate('file')">新建文件</button>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptCreate('folder')">新建文件夹</button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptCreate('file')">{{ t('sidebar.newFile') }}</button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptCreate('folder')">{{ t('sidebar.newFolder') }}</button>
         </template>
         <template v-if="ctx.node">
           <div v-if="!ctx.node || ctx.node.is_dir" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptRename">重命名</button>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-600" @click="confirmDelete">删除</button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptRename">{{ t('sidebar.rename') }}</button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-600" @click="confirmDelete">{{ t('sidebar.delete') }}</button>
           <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="reveal">在{{ revealLabel }}中显示</button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="reveal">{{ t('sidebar.revealIn', { label: revealLabel }) }}</button>
         </template>
       </div>
     </div>
@@ -69,21 +69,21 @@
       <div class="space-y-4">
         <Input v-model="nameModal.value" class="w-full" :placeholder="nameModalPlaceholder" @keyup.enter="submitName"/>
         <div class="flex justify-end space-x-2">
-          <Button type="secondary" size="sm" @click="nameModal.show = false">取消</Button>
-          <Button size="sm" @click="submitName">确定</Button>
+          <Button type="secondary" size="sm" @click="nameModal.show = false">{{ t('sidebar.cancel') }}</Button>
+          <Button size="sm" @click="submitName">{{ t('sidebar.confirm') }}</Button>
         </div>
       </div>
     </Modal>
 
     <!-- 删除确认 -->
-    <Modal v-model:show="deleteModal.show" title="确认删除" size="sm">
+    <Modal v-model:show="deleteModal.show" :title="t('sidebar.confirmDeleteTitle')" size="sm">
       <div class="space-y-4">
         <p class="text-sm text-gray-700 dark:text-gray-300">
-          确定删除 <strong>{{ deleteModal.node?.name }}</strong>{{ deleteModal.node?.is_dir ? '（及其内容）' : '' }}？此操作不可恢复。
+          {{ t('sidebar.deleteConfirmPre') }}<strong>{{ deleteModal.node?.name }}</strong>{{ deleteModal.node?.is_dir ? t('sidebar.deleteConfirmDir') : '' }}{{ t('sidebar.deleteConfirmPost') }}
         </p>
         <div class="flex justify-end space-x-2">
-          <Button type="secondary" size="sm" @click="deleteModal.show = false">取消</Button>
-          <Button size="sm" class="bg-red-500 hover:bg-red-600 text-white" @click="doDelete">删除</Button>
+          <Button type="secondary" size="sm" @click="deleteModal.show = false">{{ t('sidebar.cancel') }}</Button>
+          <Button size="sm" class="bg-red-500 hover:bg-red-600 text-white" @click="doDelete">{{ t('sidebar.delete') }}</Button>
         </div>
       </div>
     </Modal>
@@ -100,6 +100,7 @@ import Modal from '../ui/Modal.vue'
 import Input from '../ui/Input.vue'
 import FileTreeNode from './FileTreeNode.vue'
 import {useToast} from '../plugins/toast'
+import {useI18n} from 'vue-i18n'
 
 interface FileNode
 {
@@ -135,6 +136,7 @@ const rootName = computed(() => {
 })
 
 const toast = useToast()
+const {t} = useI18n()
 
 provide('treeOpenFile', (path: string) => emit('open-file', path))
 // 当前激活文件路径（用于文件树高亮选中项）
@@ -236,7 +238,7 @@ const onRootContext = (e: MouseEvent) => {
 }
 
 const isMac = /Mac/i.test(navigator.platform)
-const revealLabel = isMac ? '访达' : (/Win/i.test(navigator.platform) ? '资源管理器' : '文件管理器')
+const revealLabel = computed(() => isMac ? t('sidebar.revealFinder') : (/Win/i.test(navigator.platform) ? t('sidebar.revealExplorer') : t('sidebar.revealManager')))
 
 const dirOf = (path: string) => path.replace(/[\\/][^\\/]*$/, '')
 const joinPath = (dir: string, name: string) => `${dir}/${name}`
@@ -245,8 +247,8 @@ const joinPath = (dir: string, name: string) => `${dir}/${name}`
 const nameModal = reactive<{ show: boolean, mode: 'file' | 'folder' | 'rename', node: FileNode | null, value: string }>({
   show: false, mode: 'file', node: null, value: ''
 })
-const nameModalTitle = computed(() => ({file: '新建文件', folder: '新建文件夹', rename: '重命名'})[nameModal.mode])
-const nameModalPlaceholder = computed(() => nameModal.mode === 'rename' ? '输入新名称' : '输入名称')
+const nameModalTitle = computed(() => ({file: t('sidebar.newFile'), folder: t('sidebar.newFolder'), rename: t('sidebar.rename')})[nameModal.mode])
+const nameModalPlaceholder = computed(() => nameModal.mode === 'rename' ? t('sidebar.renamePlaceholder') : t('sidebar.namePlaceholder'))
 
 const promptCreate = (kind: 'file' | 'folder') => {
   nameModal.mode = kind
@@ -273,18 +275,18 @@ const submitName = async () => {
       const to = joinPath(dirOf(nameModal.node.path), name)
       await invoke('rename_path', {from: nameModal.node.path, to})
       emit('renamed', nameModal.node.path, to)
-      toast.success('已重命名')
+      toast.success(t('sidebar.renamed'))
     }
     else {
       const target = joinPath(nameModal.node.path, name)
       await invoke(nameModal.mode === 'file' ? 'create_file' : 'create_directory', {path: target})
-      toast.success(nameModal.mode === 'file' ? '已新建文件' : '已新建文件夹')
+      toast.success(nameModal.mode === 'file' ? t('sidebar.createdFile') : t('sidebar.createdFolder'))
     }
     nameModal.show = false
     triggerRefresh()
   }
   catch (error) {
-    toast.error('操作失败: ' + error)
+    toast.error(t('sidebar.opFailed') + ': ' + error)
   }
 }
 
@@ -302,12 +304,12 @@ const doDelete = async () => {
   try {
     await invoke('delete_path', {path: deleteModal.node.path})
     emit('deleted', deleteModal.node.path)
-    toast.success('已删除')
+    toast.success(t('sidebar.deleted'))
     deleteModal.show = false
     triggerRefresh()
   }
   catch (error) {
-    toast.error('删除失败: ' + error)
+    toast.error(t('sidebar.deleteFailed') + ': ' + error)
   }
 }
 
@@ -320,7 +322,7 @@ const reveal = async () => {
     await invoke('reveal_path', {path: ctx.node.path})
   }
   catch (error) {
-    toast.error('打开失败: ' + error)
+    toast.error(t('sidebar.openFailed') + ': ' + error)
   }
   closeCtx()
 }
