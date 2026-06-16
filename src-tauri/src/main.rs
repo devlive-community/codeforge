@@ -9,6 +9,7 @@ mod cache;
 mod config;
 mod custom_plugin_commands;
 mod db;
+mod db_connections;
 mod env_commands;
 mod env_manager;
 mod env_providers;
@@ -38,6 +39,9 @@ use crate::custom_plugin_commands::{
     update_custom_plugin,
 };
 use crate::db::{run_sql, run_sql_paged};
+use crate::db_connections::{
+    DbConnStore, db_connection_delete, db_connection_save, db_connections_list,
+};
 use crate::env_commands::{
     EnvironmentManagerState, download_and_install_version, get_environment_info,
     get_supported_environment_languages, switch_environment_version, uninstall_environment_version,
@@ -100,6 +104,7 @@ fn main() {
         .manage(AiHistory::new().expect("failed to initialize ai history database"))
         .manage(Snippets::new().expect("failed to initialize snippets database"))
         .manage(KvStore::new().expect("failed to initialize kv store database"))
+        .manage(DbConnStore::new().expect("failed to initialize db connections database"))
         .manage(TerminalState::new())
         .manage(LspState::new())
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
@@ -225,6 +230,10 @@ fn main() {
             kv_get_all,
             kv_set,
             kv_delete,
+            // 数据库连接（独立表）
+            db_connections_list,
+            db_connection_save,
+            db_connection_delete,
             // 集成终端
             terminal_create,
             terminal_write,
