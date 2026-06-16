@@ -3,20 +3,20 @@
     <div class="p-2 border-b border-gray-700 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <Terminal class="w-4 h-4"/>
-        <span class="text-sm font-medium">控制台</span>
+        <span class="text-sm font-medium">{{ t('console.title') }}</span>
         <div v-if="isRunning" class="flex items-center space-x-1 text-yellow-400">
           <Loader class="w-3 h-3 animate-spin"/>
-          <span class="text-xs">执行中</span>
+          <span class="text-xs">{{ t('console.running') }}</span>
         </div>
       </div>
       <div class="flex items-center space-x-3">
-        <span v-if="isCopied" class="text-xs text-gray-400">{{ isCopied ? '已复制' : '复制失败' }}</span>
+        <span v-if="isCopied" class="text-xs text-gray-400">{{ t('console.copied') }}</span>
 
         <!-- 复制按钮 -->
         <button v-if="output && !isRunning"
                 @click="copyOutput"
                 class="text-gray-400 hover:text-white transition-colors duration-200 p-1 rounded hover:bg-gray-700 cursor-pointer"
-                title="复制输出内容">
+                :title="t('console.copyTitle')">
           <component :is="copyIcon" class="w-3 h-3"/>
         </button>
 
@@ -24,13 +24,13 @@
         <button v-if="output && !isRunning"
                 @click="emit('clear')"
                 class="text-gray-400 hover:text-white transition-colors duration-200 p-1 rounded hover:bg-gray-700 cursor-pointer"
-                title="清空控制台">
+                :title="t('console.clearTitle')">
           <Trash2 class="w-3 h-3"/>
         </button>
 
         <div v-if="executionTime > 0" class="text-xs text-gray-400 flex items-center space-x-1">
           <Clock class="w-3 h-3"/>
-          <span>{{ executionTime }} 毫秒</span>
+          <span>{{ t('console.ms', { n: executionTime }) }}</span>
         </div>
       </div>
     </div>
@@ -38,7 +38,7 @@
     <div class="flex-1 overflow-auto" ref="outputContainer">
       <div v-if="isRunning && !output" class="p-4 flex items-center space-x-2 text-yellow-400">
         <Loader class="w-4 h-4 animate-spin"/>
-        <span>执行代码中...</span>
+        <span>{{ t('console.executing') }}</span>
       </div>
 
       <div v-else-if="output" class="p-4">
@@ -47,14 +47,14 @@
         <!-- 正在运行时显示光标 -->
         <div v-if="isRunning" class="flex items-center mt-2 text-yellow-400">
           <Loader class="w-4 h-4 animate-spin">█</Loader>
-          <span class="ml-2 text-xs">程序正在运行...</span>
+          <span class="ml-2 text-xs">{{ t('console.programRunning') }}</span>
         </div>
       </div>
 
       <div v-else class="p-4 text-gray-500 flex flex-col items-center justify-center h-full space-y-2 select-none">
         <Terminal class="w-8 h-8"/>
-        <p class="text-sm">没有输出</p>
-        <p class="text-xs">可以尝试运行一些代码</p>
+        <p class="text-sm">{{ t('console.noOutput') }}</p>
+        <p class="text-xs">{{ t('console.noOutputHint') }}</p>
       </div>
     </div>
   </div>
@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Check, Clock, Copy, Loader, Terminal, Trash2 } from 'lucide-vue-next'
 import { ansiToHtml } from '../utils/ansi'
 
@@ -76,6 +77,7 @@ const emit = defineEmits<{
   clear: []
 }>()
 
+const {t} = useI18n()
 const isCopied = ref(false)
 const outputContainer = ref<HTMLElement>()
 

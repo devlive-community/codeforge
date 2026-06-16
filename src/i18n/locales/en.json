@@ -275,6 +275,19 @@
     "toggleSidebar": "Toggle sidebar",
     "toggleTerminal": "Toggle terminal"
   },
+  "console": {
+    "title": "Console",
+    "running": "Running",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "copyTitle": "Copy output",
+    "clearTitle": "Clear console",
+    "ms": "{n} ms",
+    "executing": "Running code...",
+    "programRunning": "Program is running...",
+    "noOutput": "No output",
+    "noOutputHint": "Try running some code"
+  },
   "sidebar": {
     "explorer": "Explorer",
     "openFolder": "Open folder",

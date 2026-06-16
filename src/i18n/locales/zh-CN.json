@@ -275,6 +275,19 @@
     "toggleSidebar": "切换侧栏",
     "toggleTerminal": "切换终端"
   },
+  "console": {
+    "title": "控制台",
+    "running": "执行中",
+    "copied": "已复制",
+    "copyFailed": "复制失败",
+    "copyTitle": "复制输出内容",
+    "clearTitle": "清空控制台",
+    "ms": "{n} 毫秒",
+    "executing": "执行代码中...",
+    "programRunning": "程序正在运行...",
+    "noOutput": "没有输出",
+    "noOutputHint": "可以尝试运行一些代码"
+  },
   "sidebar": {
     "explorer": "资源管理器",
     "openFolder": "打开文件夹",
