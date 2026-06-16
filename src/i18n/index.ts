@@ -210,6 +210,30 @@ const messages = {
       empty: '无匹配结果',
       replacedSummary: '已替换 {count} 处，涉及 {files} 个文件',
       replaceFailed: '替换失败'
+    },
+    chat: {
+      title: 'AI 助手',
+      clear: '清空对话',
+      close: '关闭',
+      linked: '已关联运行 #{id}，对话随该次运行保存',
+      temp: '临时会话：运行代码后对话才会保存',
+      analyzeError: '分析报错',
+      explain: '解释代码',
+      findBug: '找 Bug',
+      optimize: '优化',
+      genCommit: '生成提交信息',
+      emptyHint: '向 AI 提问，或用上方快捷动作处理当前代码',
+      thinking: '思考中…',
+      stop: '停止生成',
+      inputPlaceholder: '输入问题，Enter 发送（Shift+Enter 换行）',
+      copy: '复制',
+      insert: '应用到编辑器',
+      copied: '已复制代码',
+      inserted: '已应用到编辑器',
+      needKey: '请先在 设置 → AI 中填写 API Key',
+      emptyResponse: '(空响应)',
+      noCode: '当前编辑器没有代码',
+      noDiff: '没有检测到改动'
     }
   },
   en: {
@@ -412,6 +436,30 @@ const messages = {
       empty: 'No matching results',
       replacedSummary: 'Replaced {count} occurrence(s) across {files} file(s)',
       replaceFailed: 'Replace failed'
+    },
+    chat: {
+      title: 'AI Assistant',
+      clear: 'Clear chat',
+      close: 'Close',
+      linked: 'Linked to run #{id}; chat is saved with this run',
+      temp: 'Temporary session: chat is saved only after running code',
+      analyzeError: 'Analyze error',
+      explain: 'Explain code',
+      findBug: 'Find bugs',
+      optimize: 'Optimize',
+      genCommit: 'Generate commit message',
+      emptyHint: 'Ask the AI, or use the quick actions above on the current code',
+      thinking: 'Thinking…',
+      stop: 'Stop generating',
+      inputPlaceholder: 'Type a question, Enter to send (Shift+Enter for newline)',
+      copy: 'Copy',
+      insert: 'Insert into editor',
+      copied: 'Code copied',
+      inserted: 'Inserted into editor',
+      needKey: 'Fill in the API Key in Settings → AI first',
+      emptyResponse: '(empty response)',
+      noCode: 'No code in the current editor',
+      noDiff: 'No changes detected'
     }
   }
 }
