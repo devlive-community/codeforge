@@ -7,11 +7,11 @@
         <input ref="inputRef"
                v-model="query"
                class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
-               placeholder="在文件夹内搜索…"
+               :placeholder="t('search.placeholder')"
                @input="onInput"
                @keydown.esc.prevent="emit('close')"/>
         <span class="text-xs text-gray-400 flex-shrink-0">
-          {{ loading ? '搜索中…' : results.length ? `${results.length} 处 / ${groups.length} 文件` : '' }}
+          {{ loading ? t('search.searching') : results.length ? t('search.countSummary', { count: results.length, files: groups.length }) : '' }}
         </span>
       </div>
 
@@ -20,30 +20,30 @@
         <Replace class="w-4 h-4 text-gray-400 flex-shrink-0"/>
         <input v-model="replacement"
                class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
-               placeholder="替换为…（大小写不敏感）"
+               :placeholder="t('search.replacePlaceholder')"
                @keydown.esc.prevent="emit('close')"/>
         <button class="text-xs px-2 py-1 rounded bg-blue-500 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white flex-shrink-0"
                 :disabled="replacing || results.length === 0"
-                :title="results.length ? `替换全部 ${results.length} 处` : '先搜索出结果'"
+                :title="results.length ? t('search.replaceAllTitle', { count: results.length }) : t('search.searchFirst')"
                 @click="confirming = true">
-          {{ replacing ? '替换中…' : '全部替换' }}
+          {{ replacing ? t('search.replacing') : t('search.replaceAll') }}
         </button>
       </div>
 
       <!-- 全部替换确认 -->
       <div v-if="confirming" class="px-3 py-2 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 flex-shrink-0 text-xs">
         <p class="text-amber-700 dark:text-amber-300 mb-2">
-          将把 {{ results.length }} 处「{{ query.trim() }}」替换为「{{ replacement }}」，涉及 {{ affectedCount }} 个文件。<br/>
-          直接写入磁盘且不可撤销，确定继续？
+          {{ t('search.confirmLine', { count: results.length, query: query.trim(), rep: replacement, files: affectedCount }) }}<br/>
+          {{ t('search.confirmWarn') }}
         </p>
         <div class="flex justify-end gap-2">
-          <button class="px-2 py-1 rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="confirming = false">取消</button>
-          <button class="px-2 py-1 rounded bg-red-500 hover:bg-red-600 text-white cursor-pointer" @click="replaceAll">确认替换</button>
+          <button class="px-2 py-1 rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="confirming = false">{{ t('search.cancel') }}</button>
+          <button class="px-2 py-1 rounded bg-red-500 hover:bg-red-600 text-white cursor-pointer" @click="replaceAll">{{ t('search.confirmReplace') }}</button>
         </div>
       </div>
 
       <div class="flex-1 overflow-y-auto">
-        <div v-if="!loading && query && results.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">无匹配结果</div>
+        <div v-if="!loading && query && results.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">{{ t('search.empty') }}</div>
 
         <div v-for="g in groups" :key="g.path">
           <div class="sticky top-0 bg-gray-50 dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 flex items-center gap-1">
@@ -70,6 +70,7 @@ import {computed, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {FileText, Replace, Search} from 'lucide-vue-next'
 import {useToast} from '../plugins/toast'
+import {useI18n} from 'vue-i18n'
 
 interface Match
 {
@@ -86,6 +87,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const {t} = useI18n()
 
 const query = ref('')
 const replacement = ref('')
@@ -113,12 +115,12 @@ const replaceAll = async () => {
       query: q,
       replacement: replacement.value
     })
-    toast.success(`已替换 ${summary.replacements} 处，涉及 ${summary.files_changed} 个文件`)
+    toast.success(t('search.replacedSummary', { count: summary.replacements, files: summary.files_changed }))
     emit('replaced', affected)
     await search()
   }
   catch (error) {
-    toast.error('替换失败: ' + error)
+    toast.error(t('search.replaceFailed') + ': ' + error)
   }
   finally {
     replacing.value = false

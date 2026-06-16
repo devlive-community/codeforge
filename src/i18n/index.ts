@@ -190,6 +190,23 @@ const messages = {
       quickOpenLoading: '加载文件列表…',
       quickOpenEmpty: '无匹配文件',
       recent: '最近'
+    },
+    search: {
+      placeholder: '在文件夹内搜索…',
+      searching: '搜索中…',
+      countSummary: '{count} 处 / {files} 文件',
+      replacePlaceholder: '替换为…（大小写不敏感）',
+      replaceAllTitle: '替换全部 {count} 处',
+      searchFirst: '先搜索出结果',
+      replacing: '替换中…',
+      replaceAll: '全部替换',
+      confirmLine: '将把 {count} 处「{query}」替换为「{rep}」，涉及 {files} 个文件。',
+      confirmWarn: '直接写入磁盘且不可撤销，确定继续？',
+      cancel: '取消',
+      confirmReplace: '确认替换',
+      empty: '无匹配结果',
+      replacedSummary: '已替换 {count} 处，涉及 {files} 个文件',
+      replaceFailed: '替换失败'
     }
   },
   en: {
@@ -372,6 +389,23 @@ const messages = {
       quickOpenLoading: 'Loading files…',
       quickOpenEmpty: 'No matching files',
       recent: 'Recent'
+    },
+    search: {
+      placeholder: 'Search in folder…',
+      searching: 'Searching…',
+      countSummary: '{count} matches / {files} files',
+      replacePlaceholder: 'Replace with… (case-insensitive)',
+      replaceAllTitle: 'Replace all {count} matches',
+      searchFirst: 'Search first',
+      replacing: 'Replacing…',
+      replaceAll: 'Replace all',
+      confirmLine: 'Replace {count} occurrence(s) of "{query}" with "{rep}" across {files} file(s).',
+      confirmWarn: 'Writes to disk directly and cannot be undone. Continue?',
+      cancel: 'Cancel',
+      confirmReplace: 'Replace',
+      empty: 'No matching results',
+      replacedSummary: 'Replaced {count} occurrence(s) across {files} file(s)',
+      replaceFailed: 'Replace failed'
     }
   }
 }
