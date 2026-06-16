@@ -3,6 +3,9 @@ import {ContainerIcon, FileIcon, PickaxeIcon, Settings2} from 'lucide-vue-next'
 import {usePluginConfig} from './usePluginConfig'
 import {useCodeMirrorEditor} from './useCodeMirrorEditor'
 import {useTheme} from './useTheme'
+import {i18n} from '../i18n'
+
+const t = (key: string) => i18n.global.t(key)
 
 export function useLanguageSettings(emit: any)
 {
@@ -10,30 +13,30 @@ export function useLanguageSettings(emit: any)
     const activeTab = ref('general')
     const pluginEnabledStates = ref<Record<string, boolean>>({})
 
-    const tabsData = [
+    const tabsData = computed(() => [
         {
             key: 'general',
-            label: '通用配置',
+            label: t('settings.language.tabGeneral'),
             icon: Settings2
         },
         {
             key: 'environment',
-            label: '环境配置',
+            label: t('settings.language.tabEnvironment'),
             icon: ContainerIcon
         },
         {
             key: 'template',
-            label: '模板配置',
+            label: t('settings.language.tabTemplate'),
             icon: FileIcon
         },
         {
             key: 'advanced',
-            label: '高级配置',
+            label: t('settings.language.tabAdvanced'),
             icon: PickaxeIcon
         }
-    ]
+    ])
 
-    const consoleTypes = [{label: '控制台', value: 'console'}, {label: 'Web', value: 'web'}, {label: 'JSON', value: 'json'}, {label: 'Markdown', value: 'markdown'}, {label: 'XML', value: 'xml'}, {label: 'YAML', value: 'yaml'}, {label: 'SQL 表格', value: 'sqltable'}, {label: '数据表/图表', value: 'table'}, {label: 'Excel 表/图表', value: 'xlsx'}]
+    const consoleTypes = computed(() => [{label: t('settings.language.ctConsole'), value: 'console'}, {label: 'Web', value: 'web'}, {label: 'JSON', value: 'json'}, {label: 'Markdown', value: 'markdown'}, {label: 'XML', value: 'xml'}, {label: 'YAML', value: 'yaml'}, {label: t('settings.language.ctSqlTable'), value: 'sqltable'}, {label: t('settings.language.ctTable'), value: 'table'}, {label: t('settings.language.ctXlsx'), value: 'xlsx'}])
 
     const {
         activePlugin,

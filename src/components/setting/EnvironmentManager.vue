@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-4">
     <!-- 当前版本和路径选择 -->
-    <Label label="语言环境目录">
+    <Label :label="t('settings.env.dir')">
       <div class="flex gap-2">
-        <Input :model-value="executeHome" class="w-full" placeholder="选择语言环境目录路径" :disabled="true"/>
+        <Input :model-value="executeHome" class="w-full" :placeholder="t('settings.env.dirPlaceholder')" :disabled="true"/>
         <Button type="primary"
                 :icon-only="true"
                 :icon="Folder"
@@ -17,7 +17,7 @@
       <div class="flex items-center space-x-2">
         <CheckCircle class="w-5 h-5 text-blue-600 dark:text-blue-400"/>
         <div>
-          <span class="text-sm font-medium text-blue-900 dark:text-blue-100">当前版本: </span>
+          <span class="text-sm font-medium text-blue-900 dark:text-blue-100">{{ t('settings.env.currentVersion') }}</span>
           <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">{{ environmentInfo.current_version }}</span>
         </div>
       </div>
@@ -30,7 +30,7 @@
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <span>加载中...</span>
+        <span>{{ t('settings.env.loading') }}</span>
       </div>
     </div>
 
@@ -90,7 +90,7 @@
                   <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ version.version }}</span>
                   <span v-if="environmentInfo.current_version === version.version"
                         class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
-                    当前
+                    {{ t('settings.env.current') }}
                   </span>
                 </div>
                 <div class="flex items-center space-x-2">
@@ -98,21 +98,21 @@
                           type="primary"
                           size="sm"
                           @click="handleSwitchVersion(version.version)">
-                    切换
+                    {{ t('settings.env.switch') }}
                   </Button>
                   <Button v-if="environmentInfo.current_version !== version.version"
                           type="danger"
                           size="sm"
                           :icon="Trash2"
                           @click="handleUninstall(version.version)">
-                    卸载
+                    {{ t('settings.env.uninstall') }}
                   </Button>
                 </div>
               </div>
             </div>
           </div>
           <div v-else class="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
-            暂无已安装版本
+            {{ t('settings.env.noInstalled') }}
           </div>
         </template>
 
@@ -129,7 +129,7 @@
                     <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ version.version }}</span>
                     <span v-if="version.is_installed"
                           class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">
-                      已安装
+                      {{ t('settings.env.installed') }}
                     </span>
                   </div>
                   <div class="flex items-center space-x-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -143,7 +143,7 @@
                         :icon="Download"
                         :disabled="isDownloading"
                         @click="handleDownload(version.version)">
-                  下载
+                  {{ t('settings.env.download') }}
                 </Button>
               </div>
             </div>
@@ -156,6 +156,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertCircle, CheckCircle, Download, Folder, Trash2 } from 'lucide-vue-next'
 import { useEnvironmentManager } from '../../composables/useEnvironmentManager'
 import Label from '../../ui/Label.vue'
@@ -173,6 +174,8 @@ const emit = defineEmits<{
   'select-directory': []
 }>()
 
+const { t } = useI18n()
+
 const {
   environmentInfo,
   downloadProgress,
@@ -186,8 +189,8 @@ const {
 
 const activeVersionTab = ref('installed')
 const versionTabs = computed(() => [
-  { key: 'installed', label: '已安装版本' },
-  { key: 'available', label: '可用版本', disabled: !!environmentInfo.value?.error }
+  { key: 'installed', label: t('settings.env.installedTab') },
+  { key: 'available', label: t('settings.env.availableTab'), disabled: !!environmentInfo.value?.error }
 ])
 
 // 下载状态文本
@@ -198,15 +201,15 @@ const downloadStatusText = computed(() => {
 
   switch (downloadProgress.value.status) {
     case 'downloading':
-      return `正在下载 ${downloadProgress.value.version}`
+      return t('settings.env.downloading', { v: downloadProgress.value.version })
     case 'extracting':
-      return `正在解压 ${downloadProgress.value.version}`
+      return t('settings.env.extracting', { v: downloadProgress.value.version })
     case 'installing':
-      return `正在安装 ${downloadProgress.value.version}`
+      return t('settings.env.installing', { v: downloadProgress.value.version })
     case 'completed':
-      return `安装完成 ${downloadProgress.value.version}`
+      return t('settings.env.completed', { v: downloadProgress.value.version })
     case 'failed':
-      return `安装失败 ${downloadProgress.value.version}`
+      return t('settings.env.failed', { v: downloadProgress.value.version })
     default:
       return ''
   }

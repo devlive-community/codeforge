@@ -16,23 +16,23 @@
                  clearable
                  size="sm"
                  class="flex-1"
-                 placeholder="筛选语言"/>
+                 :placeholder="t('settings.language.filter')"/>
           <Button @click="showAddCustomLanguage = true"
                   size="sm"
                   :icon="Plus"
                   :icon-only="true"
-                  title="添加自定义语言"/>
+                  :title="t('settings.language.addCustom')"/>
         </div>
 
         <!-- 无搜索结果提示 -->
         <div v-if="languageFilter.trim() && filteredPluginData.length === 0"
              class="mt-3 px-3 py-4 text-center rounded-lg bg-gray-50 dark:bg-gray-800">
           <Search class="w-6 h-6 mx-auto text-gray-400"/>
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">未找到匹配的语言</p>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ t('settings.language.noMatch') }}</p>
           <p class="mt-1 text-xs text-gray-400">
-            没有你需要的语言？
+            {{ t('settings.language.noLangQ') }}
             <button class="text-blue-500 hover:text-blue-600 hover:underline cursor-pointer" @click="openIssues">
-              提交 Issue 反馈
+              {{ t('settings.language.submitIssue') }}
             </button>
           </p>
         </div>
@@ -59,7 +59,7 @@
       <template #[activePlugin]="{ tab }">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
           <img v-if="tab.svgUrl" :src="tab.svgUrl" class="w-6 h-6" :alt="tab.label"/>
-          <span>{{ `语言 [ ${tab.label} ] 配置` }}</span>
+          <span>{{ t('settings.language.configTitle', { label: tab.label }) }}</span>
         </h3>
 
         <Tabs v-model="activeTab"
@@ -69,34 +69,34 @@
               :nav-class="['w-full', 'justify-center']">
           <template #general>
             <div class="space-y-4">
-              <Label label="启用插件">
+              <Label :label="t('settings.language.enablePlugin')">
                 <Switch v-model="pluginConfig.enabled"/>
               </Label>
 
-              <Label label="编译前执行的命令">
-                <Input v-model="pluginConfig.before_compile" class="w-full" placeholder="编译前执行的命令"/>
+              <Label :label="t('settings.language.beforeCompile')">
+                <Input v-model="pluginConfig.before_compile" class="w-full" :placeholder="t('settings.language.beforeCompile')"/>
               </Label>
 
-              <Label label="执行的命令">
-                <Input v-model="pluginConfig.run_command" class="w-full" placeholder="执行的命令"/>
+              <Label :label="t('settings.language.runCommand')">
+                <Input v-model="pluginConfig.run_command" class="w-full" :placeholder="t('settings.language.runCommand')"/>
                 <div class="flex flex-col mx-2 mt-2 space-y-1.5">
                   <div class="flex text-sm font-medium text-gray-700 dark:text-gray-300 ml-1 space-x-4">
                     <div class="font-bold">$filename</div>
-                    <div>执行的源文件或临时生成的文件</div>
+                    <div>{{ t('settings.language.filenameDesc') }}</div>
                   </div>
                   <div class="flex text-sm font-medium text-gray-700 dark:text-gray-300 ml-1 space-x-4">
                     <div class="font-bold">$classname</div>
-                    <div>执行的类名,如果没有则为空</div>
+                    <div>{{ t('settings.language.classnameDesc') }}</div>
                   </div>
                 </div>
               </Label>
 
-              <Label label="编译完成后执行的命令">
-                <Input v-model="pluginConfig.after_compile" class="w-full" placeholder="编译完成后执行的命令"/>
+              <Label :label="t('settings.language.afterCompile')">
+                <Input v-model="pluginConfig.after_compile" class="w-full" :placeholder="t('settings.language.afterCompile')"/>
               </Label>
 
-              <Label label="文件后缀名">
-                <Input v-model="pluginConfig.extension" class="w-full" placeholder="输入文件后缀名"/>
+              <Label :label="t('settings.language.extension')">
+                <Input v-model="pluginConfig.extension" class="w-full" :placeholder="t('settings.language.extensionPlaceholder')"/>
               </Label>
             </div>
           </template>
@@ -116,19 +116,19 @@
                           :extensions="currentExtensions"
                           class="flex-1 border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden"/>
               <div v-else class="flex-1 flex items-center justify-center h-64 border border-gray-300 dark:border-gray-600 rounded-md">
-                <div class="text-gray-500">加载编辑器中...</div>
+                <div class="text-gray-500">{{ t('settings.language.loadingEditor') }}</div>
               </div>
             </div>
           </template>
 
           <template #advanced>
             <div class="space-y-4">
-              <Label label="超时时间(秒)">
-                <Number v-model="pluginConfig.timeout" class="w-1/4" placeholder="超时时间(秒)，默认 30 秒"/>
+              <Label :label="t('settings.language.timeout')">
+                <Number v-model="pluginConfig.timeout" class="w-1/4" :placeholder="t('settings.language.timeoutPlaceholder')"/>
               </Label>
 
-              <Label label="输出类型">
-                <Select v-model="pluginConfig.console_type" placeholder="请选择输出类型" class="w-1/3" :options="consoleTypes"></Select>
+              <Label :label="t('settings.language.consoleType')">
+                <Select v-model="pluginConfig.console_type" :placeholder="t('settings.language.consoleTypePlaceholder')" class="w-1/3" :options="consoleTypes"></Select>
               </Label>
             </div>
           </template>
@@ -136,38 +136,38 @@
       </template>
     </Tabs>
 
-    <Modal v-model:show="showAddCustomLanguage" :close-on-backdrop="false" :close-on-esc="false" title="添加自定义语言">
+    <Modal v-model:show="showAddCustomLanguage" :close-on-backdrop="false" :close-on-esc="false" :title="t('settings.language.addModalTitle')">
       <div class="space-y-4">
-        <Label label="语言标识">
-          <Input v-model="newLanguage.language" class="w-full" placeholder="例如: dart, perl"/>
+        <Label :label="t('settings.language.langId')">
+          <Input v-model="newLanguage.language" class="w-full" :placeholder="t('settings.language.langIdPlaceholder')"/>
         </Label>
-        <Label label="语言名称">
-          <Input v-model="newLanguageName" class="w-full" placeholder="例如: Dart, Perl"/>
+        <Label :label="t('settings.language.langName')">
+          <Input v-model="newLanguageName" class="w-full" :placeholder="t('settings.language.langNamePlaceholder')"/>
         </Label>
-        <Label label="文件扩展名">
-          <Input v-model="newLanguage.extension" class="w-full" placeholder="例如: dart, pl, sh"/>
+        <Label :label="t('settings.language.extension')">
+          <Input v-model="newLanguage.extension" class="w-full" :placeholder="t('settings.language.extPlaceholder')"/>
         </Label>
-        <Label label="语言图标">
+        <Label :label="t('settings.language.langIcon')">
           <div class="flex items-center space-x-2">
-            <Button @click="selectIconFile" variant="outline" size="sm">选择图标文件</Button>
+            <Button @click="selectIconFile" variant="outline" size="sm">{{ t('settings.language.selectIcon') }}</Button>
             <span v-if="selectedIconFile" class="text-sm text-gray-600 dark:text-gray-400">{{ selectedIconFile.name }}</span>
           </div>
         </Label>
         <div class="flex justify-end space-x-2">
-          <Button @click="showAddCustomLanguage = false" type="secondary" size="sm">取消</Button>
-          <Button @click="addCustomLanguage" size="sm">添加</Button>
+          <Button @click="showAddCustomLanguage = false" type="secondary" size="sm">{{ t('settings.language.cancel') }}</Button>
+          <Button @click="addCustomLanguage" size="sm">{{ t('settings.language.add') }}</Button>
         </div>
       </div>
     </Modal>
 
-    <Modal v-model:show="showDeleteConfirm" title="确认删除" size="sm">
+    <Modal v-model:show="showDeleteConfirm" :title="t('settings.language.confirmDeleteTitle')" size="sm">
       <div class="space-y-4">
         <p class="text-gray-700 dark:text-gray-300">
-          确定要删除自定义语言 <strong>{{ languageToDelete }}</strong> 吗？
+          {{ t('settings.language.confirmDeletePre') }}<strong>{{ languageToDelete }}</strong>{{ t('settings.language.confirmDeletePost') }}
         </p>
         <div class="flex justify-end space-x-2">
-          <Button @click="showDeleteConfirm = false" type="secondary" size="sm">取消</Button>
-          <Button @click="deleteCustomLanguage" size="sm" class="bg-red-500 hover:bg-red-600 text-white">删除</Button>
+          <Button @click="showDeleteConfirm = false" type="secondary" size="sm">{{ t('settings.language.cancel') }}</Button>
+          <Button @click="deleteCustomLanguage" size="sm" class="bg-red-500 hover:bg-red-600 text-white">{{ t('settings.language.delete') }}</Button>
         </div>
       </div>
     </Modal>
@@ -194,12 +194,14 @@ import Select from "../../ui/Select.vue";
 import Switch from '../../ui/Switch.vue'
 import EnvironmentManager from './EnvironmentManager.vue'
 import { useToast } from '../../plugins/toast'
+import { useI18n } from 'vue-i18n'
 
 const emit = defineEmits<{
   'settings-changed': [config: PluginConfig]
   'error': [message: string]
 }>()
 
+const { t } = useI18n()
 const toast = useToast()
 const languageFilter = ref('')
 const showAddCustomLanguage = ref(false)
@@ -257,7 +259,7 @@ const openIssues = async () => {
     await openUrl('https://github.com/devlive-community/codeforge/issues')
   }
   catch (error) {
-    toast.error('打开链接失败: ' + error)
+    toast.error(t('settings.language.openLinkFailed') + error)
   }
 }
 
@@ -266,7 +268,7 @@ const selectIconFile = async () => {
     const selected = await openDialog({
       multiple: false,
       filters: [{
-        name: '图片文件',
+        name: t('settings.language.imageFileName'),
         extensions: ['svg', 'png', 'jpg', 'jpeg', 'gif', 'webp']
       }]
     })
@@ -279,7 +281,7 @@ const selectIconFile = async () => {
     }
   }
   catch (error) {
-    toast.error('选择文件失败: ' + error)
+    toast.error(t('settings.language.selectFileFailed') + error)
   }
 }
 
@@ -298,12 +300,12 @@ const deleteCustomLanguage = async () => {
 
   try {
     await invoke('remove_custom_plugin', { language })
-    toast.success('自定义语言已删除')
+    toast.success(t('settings.language.customDeleted'))
     await reloadLanguages()
     await loadCustomLanguages()
   }
   catch (error: any) {
-    toast.error('删除失败: ' + error)
+    toast.error(t('settings.language.deleteFailed') + error)
   }
 }
 
@@ -313,18 +315,18 @@ const loadCustomLanguages = async () => {
     customLanguages.value = plugins.map(p => p.language)
   }
   catch (error) {
-    console.error('加载自定义语言列表失败:', error)
+    console.error('load custom languages failed:', error)
   }
 }
 
 const addCustomLanguage = async () => {
   if (!newLanguage.value.language || !newLanguageName.value) {
-    toast.error('请填写语言标识和语言名称')
+    toast.error(t('settings.language.needIdName'))
     return
   }
 
   if (!newLanguage.value.extension) {
-    toast.error('请填写文件扩展名')
+    toast.error(t('settings.language.needExt'))
     return
   }
 
@@ -344,7 +346,7 @@ const addCustomLanguage = async () => {
     }
 
     await invoke('add_custom_plugin', { config: newLanguage.value })
-    toast.success('自定义语言添加成功')
+    toast.success(t('settings.language.addSuccess'))
     showAddCustomLanguage.value = false
 
     newLanguage.value = {
@@ -367,7 +369,7 @@ const addCustomLanguage = async () => {
     await loadCustomLanguages()
   }
   catch (error: any) {
-    toast.error('添加失败: ' + error)
+    toast.error(t('settings.language.addFailed') + error)
   }
 }
 
