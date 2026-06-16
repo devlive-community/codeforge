@@ -206,7 +206,18 @@
     "recent": "Recent",
     "outlinePlaceholder": "Go to symbol…",
     "outlineNoSymbols": "No symbols detected",
-    "outlineEmpty": "No matching symbols"
+    "outlineEmpty": "No matching symbols",
+    "commandPlaceholder": "Type a command…",
+    "commandEmpty": "No matching commands"
+  },
+  "tabs": {
+    "unsaved": "Unsaved",
+    "close": "Close",
+    "newTab": "New tab",
+    "closeOthers": "Close others",
+    "closeRight": "Close to the right",
+    "copyPath": "Copy path",
+    "untitled": "Untitled"
   },
   "search": {
     "placeholder": "Search in folder…",

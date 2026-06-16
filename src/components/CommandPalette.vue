@@ -7,7 +7,7 @@
         <input ref="inputRef"
                v-model="query"
                class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
-               placeholder="输入命令…"
+               :placeholder="t('dialog.commandPlaceholder')"
                @keydown.down.prevent="move(1)"
                @keydown.up.prevent="move(-1)"
                @keydown.enter.prevent="choose(filtered[activeIndex])"
@@ -15,7 +15,7 @@
       </div>
 
       <div ref="listRef" class="overflow-y-auto py-1">
-        <div v-if="filtered.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">无匹配命令</div>
+        <div v-if="filtered.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">{{ t('dialog.commandEmpty') }}</div>
 
         <button v-for="(cmd, i) in filtered"
                 :key="cmd.id"
@@ -36,7 +36,10 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {ChevronRight, Command} from 'lucide-vue-next'
+
+const {t} = useI18n()
 
 export interface PaletteCommand
 {

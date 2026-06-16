@@ -206,7 +206,18 @@
     "recent": "最近",
     "outlinePlaceholder": "跳转到符号…",
     "outlineNoSymbols": "未识别到符号",
-    "outlineEmpty": "无匹配符号"
+    "outlineEmpty": "无匹配符号",
+    "commandPlaceholder": "输入命令…",
+    "commandEmpty": "无匹配命令"
+  },
+  "tabs": {
+    "unsaved": "未保存",
+    "close": "关闭",
+    "newTab": "新建标签页",
+    "closeOthers": "关闭其他",
+    "closeRight": "关闭右侧",
+    "copyPath": "复制路径",
+    "untitled": "未命名"
   },
   "search": {
     "placeholder": "在文件夹内搜索…",
