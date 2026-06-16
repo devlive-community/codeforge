@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4 max-w-3xl">
+  <div class="space-y-4">
     <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('settings.i18n.desc') }}</p>
 
     <!-- 编辑视图 -->
