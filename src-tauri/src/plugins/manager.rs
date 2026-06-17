@@ -27,6 +27,7 @@ use crate::plugins::objective_c::ObjectiveCPlugin;
 use crate::plugins::objective_cpp::ObjectiveCppPlugin;
 use crate::plugins::perl::PerlPlugin;
 use crate::plugins::php::PHPPlugin;
+use crate::plugins::powershell::PowerShellPlugin;
 use crate::plugins::python2::Python2Plugin;
 use crate::plugins::python3::Python3Plugin;
 use crate::plugins::r::RPlugin;
@@ -66,6 +67,7 @@ impl PluginManager {
             ("go".to_string(), Box::new(GoPlugin)),
             ("java".to_string(), Box::new(JavaPlugin)),
             ("shell".to_string(), Box::new(ShellPlugin)),
+            ("powershell".to_string(), Box::new(PowerShellPlugin)),
             ("rust".to_string(), Box::new(RustPlugin)),
             ("swift".to_string(), Box::new(SwiftPlugin)),
             ("scala".to_string(), Box::new(ScalaPlugin)),

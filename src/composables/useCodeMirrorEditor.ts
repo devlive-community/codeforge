@@ -25,6 +25,7 @@ import {groovy} from '@codemirror/legacy-modes/mode/groovy'
 import {r} from "@codemirror/legacy-modes/mode/r"
 import {haskell} from "@codemirror/legacy-modes/mode/haskell"
 import {lua} from "@codemirror/legacy-modes/mode/lua"
+import {powerShell} from '@codemirror/legacy-modes/mode/powershell'
 import {
     abcdef,
     abyss,
@@ -345,6 +346,8 @@ export function useCodeMirrorEditor(props: Props)
             case 'shell':
             case 'applescript':
                 return StreamLanguage.define(shell)
+            case 'powershell':
+                return StreamLanguage.define(powerShell)
             case 'swift':
                 return StreamLanguage.define(swift)
             case 'scala':

@@ -427,6 +427,7 @@ pub mod objective_c;
 pub mod objective_cpp;
 pub mod perl;
 pub mod php;
+pub mod powershell;
 pub mod python2;
 pub mod python3;
 pub mod r;
