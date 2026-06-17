@@ -617,6 +617,22 @@ pub async fn git_push(root: String) -> Result<String, String> {
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 拉取并合并远程当前分支。
+#[tauri::command]
+pub async fn git_pull(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["pull"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 抓取远程更新（不合并）。
+#[tauri::command]
+pub async fn git_fetch(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["fetch", "--all", "--prune"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 #[derive(Serialize)]
 pub struct GitBranches {
     current: String,

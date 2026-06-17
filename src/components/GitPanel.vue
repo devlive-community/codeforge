@@ -17,6 +17,9 @@
         </span>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer disabled:opacity-40" :title="t('git.fetch')" :disabled="busy" @click="fetch">
+          <DownloadCloud class="w-4 h-4" :class="{ 'animate-pulse': pending === 'fetch' }"/>
+        </button>
         <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.refresh')" @click="refresh">
           <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': loading }"/>
         </button>
@@ -76,6 +79,9 @@
           <Button size="sm" type="secondary" custom-class="[transform:translateZ(0)]" :loading="pending === 'push'" :disabled="busy" @click="push">
             {{ t('git.push') }}{{ status.ahead ? ` (↑${status.ahead})` : '' }}
           </Button>
+          <Button size="sm" type="secondary" custom-class="[transform:translateZ(0)]" :loading="pending === 'pull'" :disabled="busy" @click="pull">
+            {{ t('git.pull') }}{{ status.behind ? ` (↓${status.behind})` : '' }}
+          </Button>
         </div>
       </div>
     </template>
@@ -85,7 +91,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {GitBranch, RefreshCw, Sparkles, X} from 'lucide-vue-next'
+import {DownloadCloud, GitBranch, RefreshCw, Sparkles, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
@@ -106,7 +112,7 @@ const branches = ref<string[]>([])
 const message = ref('')
 const loading = ref(false)
 // 正在进行的提交/推送动作，用于按钮加载状态；busy 据此派生
-const pending = ref<'commit' | 'push' | 'commitPush' | null>(null)
+const pending = ref<'commit' | 'push' | 'commitPush' | 'pull' | 'fetch' | null>(null)
 const busy = computed(() => pending.value !== null)
 const generating = ref(false)
 
@@ -217,6 +223,36 @@ const commitAndPush = async () => {
   }
   catch (error) {
     toast.error(t('git.commitPushFailed') + ': ' + error)
+  }
+  finally {
+    pending.value = null
+  }
+}
+
+const pull = async () => {
+  pending.value = 'pull'
+  try {
+    await invoke('git_pull', {root: props.rootDir})
+    toast.success(t('git.pulled'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.pullFailed') + ': ' + error)
+  }
+  finally {
+    pending.value = null
+  }
+}
+
+const fetch = async () => {
+  pending.value = 'fetch'
+  try {
+    await invoke('git_fetch', {root: props.rootDir})
+    toast.success(t('git.fetched'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.fetchFailed') + ': ' + error)
   }
   finally {
     pending.value = null
