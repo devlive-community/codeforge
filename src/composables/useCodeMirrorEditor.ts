@@ -31,6 +31,9 @@ import {tcl} from '@codemirror/legacy-modes/mode/tcl'
 import {crystal} from '@codemirror/legacy-modes/mode/crystal'
 import {erlang} from '@codemirror/legacy-modes/mode/erlang'
 import {d as dlang} from '@codemirror/legacy-modes/mode/d'
+import {commonLisp} from '@codemirror/legacy-modes/mode/commonlisp'
+import {scheme} from '@codemirror/legacy-modes/mode/scheme'
+import {pascal} from '@codemirror/legacy-modes/mode/pascal'
 import {
     abcdef,
     abyss,
@@ -371,6 +374,12 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(erlang)
             case 'd':
                 return StreamLanguage.define(dlang)
+            case 'commonlisp':
+                return StreamLanguage.define(commonLisp)
+            case 'scheme':
+                return StreamLanguage.define(scheme)
+            case 'pascal':
+                return StreamLanguage.define(pascal)
             case 'perl':
                 return StreamLanguage.define(perl)
             case 'julia':

@@ -3,6 +3,7 @@ use crate::plugins::applescript::AppleScriptPlugin;
 use crate::plugins::c::CPlugin;
 use crate::plugins::cangjie::CangjiePlugin;
 use crate::plugins::clojure::ClojurePlugin;
+use crate::plugins::commonlisp::CommonLispPlugin;
 use crate::plugins::cpp::CppPlugin;
 use crate::plugins::crystal::CrystalPlugin;
 use crate::plugins::css::CssPlugin;
@@ -30,6 +31,7 @@ use crate::plugins::nodejs::NodeJSPlugin;
 use crate::plugins::objective_c::ObjectiveCPlugin;
 use crate::plugins::objective_cpp::ObjectiveCppPlugin;
 use crate::plugins::ocaml::OCamlPlugin;
+use crate::plugins::pascal::PascalPlugin;
 use crate::plugins::perl::PerlPlugin;
 use crate::plugins::php::PHPPlugin;
 use crate::plugins::powershell::PowerShellPlugin;
@@ -40,6 +42,7 @@ use crate::plugins::react::ReactPlugin;
 use crate::plugins::ruby::RubyPlugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
+use crate::plugins::scheme::SchemePlugin;
 use crate::plugins::shell::ShellPlugin;
 use crate::plugins::sql::SqlPlugin;
 use crate::plugins::svg::SvgPlugin;
@@ -113,6 +116,9 @@ impl PluginManager {
             ("crystal".to_string(), Box::new(CrystalPlugin)),
             ("erlang".to_string(), Box::new(ErlangPlugin)),
             ("d".to_string(), Box::new(DPlugin)),
+            ("commonlisp".to_string(), Box::new(CommonLispPlugin)),
+            ("scheme".to_string(), Box::new(SchemePlugin)),
+            ("pascal".to_string(), Box::new(PascalPlugin)),
             ("lua".to_string(), Box::new(LuaPlugin)),
             ("objective-c".to_string(), Box::new(ObjectiveCPlugin)),
             ("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin)),
