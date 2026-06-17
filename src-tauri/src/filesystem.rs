@@ -938,6 +938,47 @@ pub async fn git_reset(root: String, hash: String, mode: String) -> Result<Strin
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 某个文件的提交历史（分页）。
+#[tauri::command]
+pub async fn git_log_file(
+    root: String,
+    rel_path: String,
+    limit: u32,
+    skip: u32,
+) -> Result<Vec<GitCommit>, String> {
+    tokio::task::spawn_blocking(move || {
+        let n = format!("-n{}", limit);
+        let sk = format!("--skip={}", skip);
+        let args = vec![
+            "log",
+            n.as_str(),
+            sk.as_str(),
+            "--date=format:%Y-%m-%d %H:%M",
+            "--pretty=format:%H\x1f%h\x1f%an\x1f%ad\x1f%s",
+            "--follow",
+            "--",
+            rel_path.as_str(),
+        ];
+        let out = run_git(&root, &args)?;
+        let mut commits = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 5 {
+                commits.push(GitCommit {
+                    hash: p[0].to_string(),
+                    short: p[1].to_string(),
+                    author: p[2].to_string(),
+                    date: p[3].to_string(),
+                    subject: p[4].to_string(),
+                });
+            }
+        }
+        Ok(commits)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 某次提交的详情补丁（git show，含 stat 与 diff）。
 #[tauri::command]
 pub async fn git_show(root: String, hash: String) -> Result<String, String> {

@@ -368,6 +368,7 @@
     "branchOpFailed": "分支操作失败",
     "amend": "修正上次提交",
     "blame": "Git Blame（逐行追溯）",
+    "fileHistory": "文件历史",
     "blameTitle": "Git Blame",
     "blameFailed": "加载 Blame 失败",
     "revert": "还原此提交",

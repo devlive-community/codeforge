@@ -396,6 +396,9 @@
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="openBlame">
             {{ t('git.blame') }}
           </button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="openFileHistory">
+            {{ t('git.fileHistory') }}
+          </button>
         </template>
       </div>
     </div>
@@ -406,6 +409,13 @@
                :rel-path="blameInfo.rel"
                :file-name="blameInfo.name"
                @close="blameInfo = null"/>
+
+    <!-- 文件提交历史 -->
+    <GitLog v-if="fileHistory"
+            :root-dir="fileHistory.root"
+            :rel-path="fileHistory.rel"
+            :file-name="fileHistory.name"
+            @close="fileHistory = null"/>
 
     <!-- LSP 代码操作选择菜单 -->
     <div v-if="codeActionMenu.visible" class="fixed inset-0 z-50" @click="codeActionMenu.visible = false" @contextmenu.prevent="codeActionMenu.visible = false">
@@ -470,6 +480,7 @@ import CommandPalette, {type PaletteCommand} from './components/CommandPalette.v
 import DiffView from './components/DiffView.vue'
 import PreviewPanel from './components/PreviewPanel.vue'
 import BlameView from './components/BlameView.vue'
+import GitLog from './components/GitLog.vue'
 import GitPanel from './components/GitPanel.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
@@ -1145,6 +1156,19 @@ const openBlame = () => {
   }
   const rel = path.slice(root.length).replace(/^[\\/]/, '')
   blameInfo.value = {root, rel, name: rel.split(/[\\/]/).pop() || rel}
+}
+
+// 文件提交历史
+const fileHistory = ref<{ root: string; rel: string; name: string } | null>(null)
+const openFileHistory = () => {
+  editorCtx.visible = false
+  const root = rootDir.value
+  const path = currentFilePath.value
+  if (!root || !path) {
+    return
+  }
+  const rel = path.slice(root.length).replace(/^[\\/]/, '')
+  fileHistory.value = {root, rel, name: rel.split(/[\\/]/).pop() || rel}
 }
 const onEditorContext = (e: MouseEvent) => {
   const target = e.target as HTMLElement | null

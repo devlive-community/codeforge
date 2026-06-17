@@ -368,6 +368,7 @@
     "branchOpFailed": "Branch operation failed",
     "amend": "Amend last commit",
     "blame": "Git Blame",
+    "fileHistory": "File history",
     "blameTitle": "Git Blame",
     "blameFailed": "Failed to load blame",
     "revert": "Revert this commit",

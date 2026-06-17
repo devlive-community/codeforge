@@ -7,6 +7,7 @@
         <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
           <History class="w-4 h-4 text-gray-400"/>
           <span>{{ t('git.history') }}</span>
+          <span v-if="fileName" class="text-xs text-gray-400 truncate">· {{ fileName }}</span>
         </div>
         <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="emit('close')">
           <X class="w-4 h-4"/>
@@ -91,7 +92,8 @@ import {useI18n} from 'vue-i18n'
 
 interface GitCommit { hash: string; short: string; author: string; date: string; subject: string }
 
-const props = defineProps<{ rootDir: string }>()
+// relPath 存在时，只显示该文件的提交历史
+const props = defineProps<{ rootDir: string; relPath?: string; fileName?: string }>()
 const emit = defineEmits<{ close: []; changed: [] }>()
 
 const toast = useToast()
@@ -124,7 +126,9 @@ const loadMore = async () => {
   }
   loading.value = true
   try {
-    const batch = await invoke<GitCommit[]>('git_log', {root: props.rootDir, limit: PAGE, skip: commits.value.length})
+    const batch = props.relPath
+      ? await invoke<GitCommit[]>('git_log_file', {root: props.rootDir, relPath: props.relPath, limit: PAGE, skip: commits.value.length})
+      : await invoke<GitCommit[]>('git_log', {root: props.rootDir, limit: PAGE, skip: commits.value.length})
     commits.value = [...commits.value, ...batch]
     if (batch.length < PAGE) {
       done.value = true
