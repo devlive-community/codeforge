@@ -425,6 +425,7 @@ pub mod markdown;
 pub mod nodejs;
 pub mod objective_c;
 pub mod objective_cpp;
+pub mod ocaml;
 pub mod perl;
 pub mod php;
 pub mod powershell;

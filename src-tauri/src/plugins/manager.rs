@@ -25,6 +25,7 @@ use crate::plugins::markdown::MarkdownPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
 use crate::plugins::objective_c::ObjectiveCPlugin;
 use crate::plugins::objective_cpp::ObjectiveCppPlugin;
+use crate::plugins::ocaml::OCamlPlugin;
 use crate::plugins::perl::PerlPlugin;
 use crate::plugins::php::PHPPlugin;
 use crate::plugins::powershell::PowerShellPlugin;
@@ -101,6 +102,7 @@ impl PluginManager {
             ("r".to_string(), Box::new(RPlugin)),
             ("cangjie".to_string(), Box::new(CangjiePlugin)),
             ("haskell".to_string(), Box::new(HaskellPlugin)),
+            ("ocaml".to_string(), Box::new(OCamlPlugin)),
             ("lua".to_string(), Box::new(LuaPlugin)),
             ("objective-c".to_string(), Box::new(ObjectiveCPlugin)),
             ("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin)),

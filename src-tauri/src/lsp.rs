@@ -58,6 +58,7 @@ fn server_cmd(language: &str) -> Option<(&'static str, Vec<&'static str>)> {
         "shell" => Some(("bash-language-server", vec!["start"])),
         "haskell" => Some(("haskell-language-server-wrapper", vec!["--lsp"])),
         "dart" => Some(("dart", vec!["language-server"])),
+        "ocaml" => Some(("ocamllsp", vec![])),
         _ => None,
     }
 }
@@ -153,6 +154,12 @@ fn server_defs() -> Vec<(&'static str, &'static str, &'static str, &'static str)
             "ghcup install hls",
         ),
         ("dart", "Dart", "dart", "brew install dart"),
+        (
+            "ocaml",
+            "OCaml (ocaml-lsp)",
+            "ocamllsp",
+            "opam install ocaml-lsp-server",
+        ),
     ]
 }
 
