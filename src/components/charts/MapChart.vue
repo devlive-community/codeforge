@@ -11,6 +11,7 @@
 
 <script setup lang="ts">
 import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
 import * as echarts from 'echarts/core'
 import {MapChart as EMap} from 'echarts/charts'
 import {TooltipComponent, VisualMapComponent} from 'echarts/components'
@@ -59,12 +60,9 @@ const loadGeo = async (key: string): Promise<GeoJson | null> => {
       geo = (await import('./geo/world.json')).default as any
     }
     else {
-      // CSP 为 null，主窗口可直接 fetch；按 adcode 取省/市边界
-      const resp = await fetch(`https://geo.datav.aliyun.com/areas_v3/bound/${key}_full.json`)
-      if (!resp.ok) {
-        throw new Error(`HTTP ${resp.status}`)
-      }
-      geo = await resp.json()
+      // 省/市级：走后端命令，落盘缓存到 ~/.codeforge/cache/geo，首次联网后离线复用
+      const raw = await invoke<string>('fetch_area_geojson', {adcode: key})
+      geo = JSON.parse(raw)
     }
     echarts.registerMap(key, geo as any)
     mapCache.set(key, geo)

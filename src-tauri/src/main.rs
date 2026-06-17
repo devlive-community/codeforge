@@ -17,6 +17,7 @@ mod example;
 mod execution;
 mod filesystem;
 mod font;
+mod geo;
 mod kv;
 mod logger;
 mod lsp;
@@ -78,6 +79,7 @@ use crate::utils::logger::{
 use config::{get_app_config, get_config_path, init_config, update_app_config};
 use example::load_example;
 use font::open_font_picker;
+use geo::fetch_area_geojson;
 use log::info;
 use plugins::PluginManager;
 use update::{check_for_updates, start_update};
@@ -189,6 +191,7 @@ fn main() {
             start_update,
             load_example,
             open_font_picker,
+            fetch_area_geojson,
             // 文件系统相关命令
             read_directory_tree,
             read_file_text,
