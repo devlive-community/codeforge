@@ -91,6 +91,7 @@
   <img src="public/icons/java.svg" width="48" title="Java" />
   <img src="public/icons/kotlin.svg" width="48" title="Kotlin" />
   <img src="public/icons/scala.svg" width="48" title="Scala" />
+  <img src="public/icons/fsharp.svg" width="48" title="F#" />
   <img src="public/icons/groovy.svg" width="48" title="Groovy" />
   <img src="public/icons/clojure.svg" width="48" title="Clojure" />
   <img src="public/icons/c.svg" width="48" title="C" />
@@ -129,7 +130,7 @@
 
 <div align="center">
 
-`Python` · `Node.js` · `TypeScript` · `JavaScript` · `React` · `Vue` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Dart` · `Ruby` · `Perl` · `PHP` · `R` · `Julia` · `Lua` · `Haskell` · `OCaml` · `Tcl` · `Cangjie` · `Shell` · `PowerShell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `Less` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Excel` · `Text`
+`Python` · `Node.js` · `TypeScript` · `JavaScript` · `React` · `Vue` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `F#` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Dart` · `Ruby` · `Perl` · `PHP` · `R` · `Julia` · `Lua` · `Haskell` · `OCaml` · `Tcl` · `Cangjie` · `Shell` · `PowerShell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `Less` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Excel` · `Text`
 
 </div>
 

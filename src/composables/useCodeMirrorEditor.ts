@@ -26,7 +26,7 @@ import {r} from "@codemirror/legacy-modes/mode/r"
 import {haskell} from "@codemirror/legacy-modes/mode/haskell"
 import {lua} from "@codemirror/legacy-modes/mode/lua"
 import {powerShell} from '@codemirror/legacy-modes/mode/powershell'
-import {oCaml} from '@codemirror/legacy-modes/mode/mllike'
+import {fSharp, oCaml} from '@codemirror/legacy-modes/mode/mllike'
 import {tcl} from '@codemirror/legacy-modes/mode/tcl'
 import {
     abcdef,
@@ -388,6 +388,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(haskell)
             case 'ocaml':
                 return StreamLanguage.define(oCaml)
+            case 'fsharp':
+                return StreamLanguage.define(fSharp)
             case 'tcl':
                 return StreamLanguage.define(tcl)
             case 'lua':

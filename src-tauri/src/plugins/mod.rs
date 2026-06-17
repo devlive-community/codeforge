@@ -407,6 +407,7 @@ pub mod css;
 pub mod csv;
 pub mod custom;
 pub mod dart;
+pub mod fsharp;
 pub mod go;
 pub mod groovy;
 pub mod haskell;

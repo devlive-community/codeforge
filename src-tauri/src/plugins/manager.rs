@@ -8,6 +8,7 @@ use crate::plugins::css::CssPlugin;
 use crate::plugins::csv::CsvPlugin;
 use crate::plugins::custom::CustomPlugin;
 use crate::plugins::dart::DartPlugin;
+use crate::plugins::fsharp::FSharpPlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::groovy::GroovyPlugin;
 use crate::plugins::haskell::HaskellPlugin;
@@ -73,6 +74,7 @@ impl PluginManager {
             ("rust".to_string(), Box::new(RustPlugin)),
             ("swift".to_string(), Box::new(SwiftPlugin)),
             ("scala".to_string(), Box::new(ScalaPlugin)),
+            ("fsharp".to_string(), Box::new(FSharpPlugin)),
             ("kotlin".to_string(), Box::new(KotlinPlugin)),
             ("clojure".to_string(), Box::new(ClojurePlugin)),
             ("c".to_string(), Box::new(CPlugin)),
