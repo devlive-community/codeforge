@@ -20,6 +20,7 @@ import {dart, kotlin, objectiveC, objectiveCpp, scala} from '@codemirror/legacy-
 import {clojure} from '@codemirror/legacy-modes/mode/clojure'
 import {ruby} from '@codemirror/legacy-modes/mode/ruby'
 import {perl} from '@codemirror/legacy-modes/mode/perl'
+import {julia} from '@codemirror/legacy-modes/mode/julia'
 import {groovy} from '@codemirror/legacy-modes/mode/groovy'
 import {r} from "@codemirror/legacy-modes/mode/r"
 import {haskell} from "@codemirror/legacy-modes/mode/haskell"
@@ -357,6 +358,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(ruby)
             case 'perl':
                 return StreamLanguage.define(perl)
+            case 'julia':
+                return StreamLanguage.define(julia)
             case 'typescript':
             case 'typescript-browser':
             case 'typescript-nodejs':

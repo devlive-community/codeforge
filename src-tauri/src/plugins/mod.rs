@@ -416,6 +416,7 @@ pub mod javascript_browser;
 pub mod javascript_jquery;
 pub mod javascript_nodejs;
 pub mod json;
+pub mod julia;
 pub mod kotlin;
 pub mod less;
 pub mod lua;

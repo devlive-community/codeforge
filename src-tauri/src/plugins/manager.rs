@@ -17,6 +17,7 @@ use crate::plugins::javascript_browser::JavaScriptBrowserPlugin;
 use crate::plugins::javascript_jquery::JavaScriptJQueryPlugin;
 use crate::plugins::javascript_nodejs::JavaScriptNodeJsPlugin;
 use crate::plugins::json::JsonPlugin;
+use crate::plugins::julia::JuliaPlugin;
 use crate::plugins::kotlin::KotlinPlugin;
 use crate::plugins::less::LessPlugin;
 use crate::plugins::lua::LuaPlugin;
@@ -73,6 +74,7 @@ impl PluginManager {
             ("ruby".to_string(), Box::new(RubyPlugin)),
             ("dart".to_string(), Box::new(DartPlugin)),
             ("perl".to_string(), Box::new(PerlPlugin)),
+            ("julia".to_string(), Box::new(JuliaPlugin)),
             ("applescript".to_string(), Box::new(AppleScriptPlugin)),
             ("typescript".to_string(), Box::new(TypeScriptPlugin)),
             ("react".to_string(), Box::new(ReactPlugin)),
