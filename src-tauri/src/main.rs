@@ -62,8 +62,9 @@ use crate::filesystem::{
     git_branch_delete, git_branches, git_checkout, git_commit, git_diff, git_discard, git_fetch,
     git_file_head, git_log, git_merge, git_pull, git_push, git_reset, git_revert, git_show,
     git_stage, git_stash_drop, git_stash_list, git_stash_pop, git_stash_push, git_status,
-    git_unstage, list_files, read_directory_tree, read_file_lines, read_file_text, rename_path,
-    replace_in_files, reveal_path, search_in_files, watch_directory, write_file_text,
+    git_tag_create, git_tag_delete, git_tags, git_unstage, list_files, read_directory_tree,
+    read_file_lines, read_file_text, rename_path, replace_in_files, reveal_path, search_in_files,
+    watch_directory, write_file_text,
 };
 use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
 use crate::lsp::{
@@ -229,6 +230,9 @@ fn main() {
             git_show,
             git_revert,
             git_reset,
+            git_tags,
+            git_tag_create,
+            git_tag_delete,
             git_stash_list,
             git_stash_push,
             git_stash_pop,

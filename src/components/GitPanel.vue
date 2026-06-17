@@ -51,6 +51,9 @@
         </div>
       </template>
       <div class="flex items-center gap-2 flex-shrink-0">
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.tagTitle')" @click="showTags = true">
+          <Tag class="w-4 h-4"/>
+        </button>
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.stashTitle')" @click="showStash = true">
           <Archive class="w-4 h-4"/>
         </button>
@@ -147,6 +150,9 @@
   <!-- 储藏 -->
   <GitStash v-if="showStash" :root-dir="rootDir" @close="showStash = false" @changed="refresh"/>
 
+  <!-- 标签 -->
+  <GitTags v-if="showTags" :root-dir="rootDir" @close="showTags = false"/>
+
   <!-- 提交历史 -->
   <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false" @changed="refresh"/>
 
@@ -163,12 +169,13 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {Archive, DownloadCloud, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, RefreshCw, Sparkles, Trash2, Undo2, X} from 'lucide-vue-next'
+import {Archive, DownloadCloud, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, RefreshCw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
 import GitLog from './GitLog.vue'
 import GitStash from './GitStash.vue'
+import GitTags from './GitTags.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
@@ -198,9 +205,10 @@ const diffFile = ref<{ name: string; original: string; modified: string } | null
 // 丢弃改动确认
 const showDiscard = ref(false)
 const discardTarget = ref<GitFile | null>(null)
-// 提交历史 / 储藏
+// 提交历史 / 储藏 / 标签
 const showLog = ref(false)
 const showStash = ref(false)
+const showTags = ref(false)
 // 分支管理弹层
 const branchMenu = ref(false)
 const newBranchName = ref('')

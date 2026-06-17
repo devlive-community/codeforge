@@ -817,6 +817,43 @@ pub async fn git_log(root: String, limit: u32, skip: u32) -> Result<Vec<GitCommi
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 列出标签（按创建时间倒序）。
+#[tauri::command]
+pub async fn git_tags(root: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["tag", "--sort=-creatordate"])?;
+        Ok(out
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 创建标签。hash 为空则打在 HEAD。
+#[tauri::command]
+pub async fn git_tag_create(root: String, name: String, hash: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["tag", name.as_str()];
+        if !hash.trim().is_empty() {
+            args.push(hash.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 删除标签。
+#[tauri::command]
+pub async fn git_tag_delete(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["tag", "-d", &name]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 还原某次提交（生成一条反向提交，历史保留）。
 #[tauri::command]
 pub async fn git_revert(root: String, hash: String) -> Result<String, String> {

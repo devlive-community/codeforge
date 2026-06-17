@@ -29,6 +29,7 @@
             </div>
             <div class="mt-1 hidden group-hover:flex items-center gap-3 text-[11px]">
               <button class="text-blue-500 hover:underline cursor-pointer" @click.stop="doRevert(c)">{{ t('git.revert') }}</button>
+              <button class="text-amber-600 dark:text-amber-400 hover:underline cursor-pointer" @click.stop="openTag(c)">{{ t('git.tag') }}</button>
               <button class="text-red-500 hover:underline cursor-pointer" @click.stop="resetTarget = c">{{ t('git.reset') }}</button>
             </div>
           </div>
@@ -45,6 +46,22 @@
         </section>
       </div>
     </div>
+
+    <!-- 在某提交打标签 -->
+    <Modal v-if="tagTarget" :show="true" :title="t('git.tagThis')" size="sm" @update:show="tagTarget = null">
+      <div class="space-y-3">
+        <p class="text-sm text-gray-700 dark:text-gray-300">
+          <code class="text-amber-600 dark:text-amber-400">{{ tagTarget.short }}</code> · {{ tagTarget.subject }}
+        </p>
+        <input v-model="tagName"
+               class="w-full text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"
+               :placeholder="t('git.tagNamePlaceholder')"
+               @keydown.enter="doTag"/>
+        <div class="flex justify-end">
+          <Button size="sm" :disabled="!tagName.trim()" @click="doTag">{{ t('git.tagCreate') }}</Button>
+        </div>
+      </div>
+    </Modal>
 
     <!-- 重置确认 -->
     <Modal v-if="resetTarget" :show="true" :title="t('git.resetTitle')" size="sm" @update:show="resetTarget = null">
@@ -87,6 +104,8 @@ const done = ref(false)
 const selected = ref<GitCommit | null>(null)
 const patch = ref('')
 const resetTarget = ref<GitCommit | null>(null)
+const tagTarget = ref<GitCommit | null>(null)
+const tagName = ref('')
 
 const patchLines = computed(() => patch.value.split('\n'))
 
@@ -176,6 +195,26 @@ const doReset = async (mode: 'soft' | 'mixed' | 'hard') => {
   }
   catch (error) {
     toast.error(t('git.resetFailed') + ': ' + error)
+  }
+}
+
+const openTag = (c: GitCommit) => {
+  tagTarget.value = c
+  tagName.value = ''
+}
+
+const doTag = async () => {
+  const c = tagTarget.value
+  if (!c || !tagName.value.trim()) {
+    return
+  }
+  try {
+    await invoke('git_tag_create', {root: props.rootDir, name: tagName.value.trim(), hash: c.hash})
+    toast.success(t('git.tagCreated'))
+    tagTarget.value = null
+  }
+  catch (error) {
+    toast.error(t('git.tagFailed') + ': ' + error)
   }
 }
 
