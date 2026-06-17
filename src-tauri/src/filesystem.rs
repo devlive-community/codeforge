@@ -817,6 +817,67 @@ pub async fn git_log(root: String, limit: u32, skip: u32) -> Result<Vec<GitCommi
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+#[derive(Serialize)]
+pub struct GitRemote {
+    name: String,
+    url: String,
+}
+
+/// 列出远程（名称 + fetch URL）。
+#[tauri::command]
+pub async fn git_remotes(root: String) -> Result<Vec<GitRemote>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["remote", "-v"])?;
+        let mut list: Vec<GitRemote> = Vec::new();
+        for line in out.lines() {
+            // 形如 "origin\tgit@...(fetch)"，仅取 fetch 行
+            if !line.contains("(fetch)") {
+                continue;
+            }
+            let mut it = line.split_whitespace();
+            let name = it.next().unwrap_or("").to_string();
+            let url = it.next().unwrap_or("").to_string();
+            if !name.is_empty() {
+                list.push(GitRemote { name, url });
+            }
+        }
+        Ok(list)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 添加远程。
+#[tauri::command]
+pub async fn git_remote_add(root: String, name: String, url: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["remote", "add", &name, &url]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 删除远程。
+#[tauri::command]
+pub async fn git_remote_remove(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["remote", "remove", &name]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 把当前分支的上游设为 <remote>/<branch>。
+#[tauri::command]
+pub async fn git_set_upstream(
+    root: String,
+    remote: String,
+    branch: String,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let target = format!("{}/{}", remote, branch);
+        run_git(&root, &["branch", &format!("--set-upstream-to={}", target)])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 列出标签（按创建时间倒序）。
 #[tauri::command]
 pub async fn git_tags(root: String) -> Result<Vec<String>, String> {
