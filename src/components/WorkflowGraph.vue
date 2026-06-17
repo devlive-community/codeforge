@@ -28,6 +28,9 @@
 <script setup lang="ts">
 import {computed} from 'vue'
 import {Workflow, Zap} from 'lucide-vue-next'
+import {useI18n} from 'vue-i18n'
+
+const {t} = useI18n()
 
 const props = defineProps<{ workflow: any }>()
 
@@ -87,8 +90,8 @@ const graph = computed(() => {
   // 触发节点（最左列）
   if (triggers.value.length) {
     nodes.push({
-      id: '__trigger__', title: '触发 (on)', kind: 'trigger',
-      rows: triggers.value.map(t => ({text: t})),
+      id: '__trigger__', title: t('view.trigger'), kind: 'trigger',
+      rows: triggers.value.map(tr => ({text: tr})),
       x: 0, y: 0, height: HEADER_H + triggers.value.length * ROW_H, deps: [], level: -1
     })
   }
@@ -104,7 +107,7 @@ const graph = computed(() => {
       rows.push({tag: 'step', text: stepText(s)})
     }
     if (rows.length === 0) {
-      rows.push({text: '(无步骤)'})
+      rows.push({text: t('view.noSteps')})
     }
     nodes.push({
       id, title: job.name || id, kind: 'job', rows,

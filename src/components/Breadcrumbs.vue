@@ -3,18 +3,21 @@
     <template v-for="(seg, i) in segments" :key="i">
       <ChevronRight v-if="i > 0" class="w-3 h-3 mx-0.5 text-gray-300 dark:text-gray-600 flex-shrink-0"/>
       <button class="hover:text-blue-500 cursor-pointer flex-shrink-0"
-              :title="`在访达中显示：${seg.full}`"
+              :title="t('breadcrumb.revealIn', { path: seg.full })"
               @click="emit('reveal', seg.full)">
         {{ seg.name }}
       </button>
     </template>
-    <span v-if="dirty" class="ml-1 text-amber-500 flex-shrink-0" title="有未保存的修改">●</span>
+    <span v-if="dirty" class="ml-1 text-amber-500 flex-shrink-0" :title="t('breadcrumb.unsaved')">●</span>
   </span>
 </template>
 
 <script setup lang="ts">
 import {computed} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {ChevronRight} from 'lucide-vue-next'
+
+const {t} = useI18n()
 
 const props = defineProps<{
   path: string

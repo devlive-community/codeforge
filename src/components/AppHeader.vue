@@ -6,7 +6,7 @@
               searchable
               :options="supportedLanguages as any"
               :disabled="isRunning"
-              placeholder="选择语言"
+              :placeholder="t('header.selectLanguage')"
               value-key="value"
               label-key="name"
               @change="handleLanguageChange">
@@ -17,30 +17,30 @@
               @click="handleRunCode"
               :disabled="!envInstalled"
               :icon="Play">
-        <span>运行代码</span>
+        <span>{{ t('header.run') }}</span>
       </Button>
 
       <Button v-else
               @click="handleStopCode"
               type="danger"
               :icon="Square">
-        <span>停止执行</span>
+        <span>{{ t('header.stop') }}</span>
       </Button>
 
-      <Button type="info" :icon="FileCode" @click="loadExample">加载示例</Button>
+      <Button type="info" :icon="FileCode" @click="loadExample">{{ t('header.loadExample') }}</Button>
 
-      <Tooltip text="执行历史">
+      <Tooltip :text="t('header.history')">
         <Button type="secondary" :icon="History" :icon-only="true" @click="emit('show-history')"/>
       </Tooltip>
 
       <!-- 打开/保存文件 -->
-      <Tooltip text="打开文件">
+      <Tooltip :text="t('header.openFile')">
         <Button type="secondary" :icon="FolderOpen" :icon-only="true" @click="emit('open-file')"/>
       </Tooltip>
-      <Tooltip text="保存文件">
+      <Tooltip :text="t('header.saveFile')">
         <Button type="secondary" :icon="Save" :icon-only="true" @click="emit('save-file')"/>
       </Tooltip>
-      <Tooltip text="AI 助手">
+      <Tooltip :text="t('header.ai')">
         <Button type="secondary" :icon="Sparkles" :icon-only="true" @click="emit('show-ai')"/>
       </Tooltip>
     </div>
@@ -48,7 +48,7 @@
     <div class="flex items-center space-x-3">
       <!-- 侧栏开关 + 布局切换 -->
       <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
-        <Tooltip :text="sidebarVisible ? '隐藏侧栏' : '显示侧栏'">
+        <Tooltip :text="sidebarVisible ? t('header.hideSidebar') : t('header.showSidebar')">
           <button class="p-1.5 rounded transition-colors cursor-pointer"
                   :class="sidebarVisible ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'"
                   @click="emit('toggle-sidebar')">
@@ -68,7 +68,7 @@
       </div>
 
       <Button type="warning" :icon="CheckCircle" v-if="hasUpdate">
-        有新版本
+        {{ t('header.hasUpdate') }}
       </Button>
     </div>
   </div>
@@ -76,6 +76,7 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {CheckCircle, FileCode, FolderOpen, History, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Sparkles, Square} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
@@ -107,11 +108,13 @@ const emit = defineEmits<{
   'toggle-sidebar': []
 }>()
 
-const layoutOptions: { value: LayoutMode; label: string; icon: any }[] = [
-  {value: 'horizontal', label: '左右布局', icon: PanelRight},
-  {value: 'vertical', label: '上下布局', icon: PanelBottom},
-  {value: 'editor', label: '仅编辑器', icon: Maximize2}
-]
+const {t} = useI18n()
+
+const layoutOptions = computed<{ value: LayoutMode; label: string; icon: any }[]>(() => [
+  {value: 'horizontal', label: t('header.layoutHorizontal'), icon: PanelRight},
+  {value: 'vertical', label: t('header.layoutVertical'), icon: PanelBottom},
+  {value: 'editor', label: t('header.layoutEditor'), icon: Maximize2}
+])
 
 const handleLayoutChange = (mode: LayoutMode) => {
   emit('layout-change', mode)

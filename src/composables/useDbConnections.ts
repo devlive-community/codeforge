@@ -1,5 +1,7 @@
 import {ref} from 'vue'
-import {kvGet, kvGetJSON, kvSet, kvSetJSON} from './useKvStore'
+import {invoke} from '@tauri-apps/api/core'
+import {kvGet, kvGetJSON, kvSet, kvRemove} from './useKvStore'
+import {i18n} from '../i18n'
 
 export interface DataSource
 {
@@ -18,42 +20,72 @@ export interface DbConnection extends DataSource
     name: string
 }
 
-const CONN_KEY = 'sql-connections'
+const LEGACY_CONN_KEY = 'sql-connections' // 旧版：连接存于 KV 的一个 JSON 数组（已迁移到独立表）
 const REF_KEY = 'sql-source-ref'
 
 const genId = () => `db-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
-// 模块级共享：连接列表 + 当前数据源引用（token：memory / conn:<id> / file:<path>）
-// 注意：不能在模块顶层读 KV——模块在 loadKvStore() 之前就被 import，缓存还是空的。
-// 改为首次调用 useDbConnections() 时（组件 setup 阶段，已在 loadKvStore 之后）再载入。
+// 模块级共享：连接列表（来自独立表 db_connections）+ 当前数据源引用（token）
 const connections = ref<DbConnection[]>([])
 const activeRef = ref<string>('memory')
-let loaded = false
+let loadedConnections = false
+let loadedRef = false
+
+// 启动时调用（须在 loadKvStore 之后）：从独立表载入连接；首次发现旧 KV 数据则迁移过来
+export const loadDbConnections = async () => {
+    loadedConnections = true
+    try {
+        const list = await invoke<DbConnection[]>('db_connections_list')
+        if (list.length === 0) {
+            const legacy = kvGetJSON<DbConnection[]>(LEGACY_CONN_KEY, [])
+            if (legacy.length) {
+                for (const c of legacy) {
+                    try {
+                        await invoke('db_connection_save', {c})
+                    }
+                    catch (e) {
+                        console.error('迁移连接失败:', e)
+                    }
+                }
+                kvRemove(LEGACY_CONN_KEY)
+                connections.value = legacy
+                return
+            }
+        }
+        connections.value = list
+    }
+    catch (e) {
+        console.error('载入数据库连接失败:', e)
+    }
+}
 
 export function useDbConnections()
 {
-    if (!loaded) {
-        loaded = true
-        connections.value = kvGetJSON<DbConnection[]>(CONN_KEY, [])
+    if (!loadedRef) {
+        loadedRef = true
         activeRef.value = kvGet(REF_KEY) || 'memory'
     }
-
-    const persist = () => kvSetJSON(CONN_KEY, connections.value)
+    // 兜底：若启动时未显式加载（如仅在某组件中首次用到），自动异步载入一次
+    if (!loadedConnections) {
+        loadDbConnections()
+    }
 
     const add = (c: Omit<DbConnection, 'id'>) => {
-        connections.value.push({...c, id: genId()})
-        persist()
+        const conn = {...c, id: genId()} as DbConnection
+        connections.value.push(conn)
+        invoke('db_connection_save', {c: conn}).catch(e => console.error('保存连接失败:', e))
     }
     const update = (id: string, patch: Partial<DbConnection>) => {
         const i = connections.value.findIndex(x => x.id === id)
         if (i >= 0) {
-            connections.value[i] = {...connections.value[i], ...patch}
-            persist()
+            const merged = {...connections.value[i], ...patch}
+            connections.value[i] = merged
+            invoke('db_connection_save', {c: merged}).catch(e => console.error('保存连接失败:', e))
         }
     }
     const remove = (id: string) => {
         connections.value = connections.value.filter(x => x.id !== id)
-        persist()
+        invoke('db_connection_delete', {id}).catch(e => console.error('删除连接失败:', e))
         if (activeRef.value === `conn:${id}`) {
             setActiveRef('memory')
         }
@@ -84,13 +116,13 @@ export function useDbConnections()
     const activeLabel = (): string => {
         const t = activeRef.value
         if (t.startsWith('conn:')) {
-            return connections.value.find(c => c.id === t.slice(5))?.name || '(已删除)'
+            return connections.value.find(c => c.id === t.slice(5))?.name || i18n.global.t('sql.deleted')
         }
         if (t.startsWith('file:')) {
             const p = t.slice(5)
             return p.split(/[\\/]/).pop() || p
         }
-        return '内存数据库'
+        return i18n.global.t('sql.memoryDb')
     }
 
     return {connections, activeRef, add, update, remove, setActiveRef, resolveActiveSource, activeLabel}

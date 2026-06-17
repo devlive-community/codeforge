@@ -151,7 +151,7 @@ const loadCdnConfig = async () => {
   }
   catch (error) {
     console.error('加载 CDN 配置失败:', error)
-    toast.error('加载 CDN 配置失败: ' + error)
+    toast.error(t('settings.network.loadFailed') + error)
   }
 }
 
@@ -172,13 +172,13 @@ const saveCdnConfig = async () => {
     originalBaseUrl.value = cdnBaseUrl.value
     originalFallbackEnabled.value = fallbackEnabled.value
 
-    toast.success('CDN 配置已保存')
+    toast.success(t('settings.network.saved'))
     emit('settings-changed', 'cdn', config.environment_mirror)
   }
   catch (error) {
     console.error('保存 CDN 配置失败:', error)
-    toast.error('保存 CDN 配置失败: ' + error)
-    emit('error', '保存 CDN 配置失败')
+    toast.error(t('settings.network.saveFailed') + error)
+    emit('error', t('settings.network.saveFailed'))
   }
   finally {
     isSaving.value = false
@@ -195,7 +195,7 @@ const resetCdnConfig = async () => {
 // 测试连接
 const testCdnConnection = async () => {
   if (!cdnBaseUrl.value) {
-    toast.error('请先输入 CDN 基础 URL')
+    toast.error(t('settings.network.needBaseUrl'))
     return
   }
 
@@ -208,11 +208,11 @@ const testCdnConnection = async () => {
       mode: 'no-cors'
     })
 
-    toast.success('CDN 连接测试成功')
+    toast.success(t('settings.network.testSuccess'))
   }
   catch (error) {
     console.error('CDN 连接测试失败:', error)
-    toast.warning('无法直接测试 CDN 连接，但这可能是正常的（CORS 限制）。请尝试下载环境包以验证 CDN 是否正常工作。')
+    toast.warning(t('settings.network.testWarn'))
   }
   finally {
     isTesting.value = false

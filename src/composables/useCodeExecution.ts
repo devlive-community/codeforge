@@ -1,6 +1,9 @@
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { ExecutionResult } from '../types/app.ts'
+import { i18n } from '../i18n'
+
+const t = (key: string, params?: Record<string, unknown>) => i18n.global.t(key, params ?? {})
 
 export function useCodeExecution(toast: any)
 {
@@ -35,7 +38,7 @@ export function useCodeExecution(toast: any)
     const runCode = async (options: RunOptions) => {
         const {language, envInstalled, envLanguage, filePath, args, stdin, env, codeOverride} = options
         if (!envInstalled) {
-            toast.error(`${ envLanguage } 环境未安装`)
+            toast.error(t('toast.envNotInstalled', {lang: envLanguage}))
             return
         }
 
@@ -72,15 +75,15 @@ export function useCodeExecution(toast: any)
             }
 
             if (result.success) {
-                toast.success(`代码执行成功，用时 ${ result.execution_time } 毫秒`)
+                toast.success(t('toast.runSuccess', {ms: result.execution_time}))
             }
             else {
-                toast.error('代码执行失败，查看输出的错误信息')
+                toast.error(t('toast.runFailCheckOutput'))
             }
         }
         catch (error) {
-            output.value = `代码执行失败: ${ error }`
-            toast.error('代码执行失败，请检查日志')
+            output.value = t('toast.outRunFailed') + error
+            toast.error(t('toast.runFailCheckLog'))
             isRunning.value = false
         }
     }
@@ -96,15 +99,15 @@ export function useCodeExecution(toast: any)
             })
 
             if (result) {
-                toast.info('正在停止代码执行...')
+                toast.info(t('toast.stopping'))
             }
             else {
-                toast.warning('没有找到正在运行的任务')
+                toast.warning(t('toast.noRunningTask'))
             }
         }
         catch (error) {
             console.error('Error stopping execution:', error)
-            toast.error('停止执行失败')
+            toast.error(t('toast.stopFailed'))
         }
     }
 
@@ -112,7 +115,7 @@ export function useCodeExecution(toast: any)
         output.value = ''
         realTimeOutput.value = ''
         realTimeStderr.value = ''
-        toast.info('输出已清空')
+        toast.info(t('toast.outputCleared'))
     }
 
     // 处理实时输出
@@ -159,8 +162,8 @@ export function useCodeExecution(toast: any)
     const handleExecutionStopped = (data: any) => {
         if (data.task_id === currentTaskId.value) {
             isRunning.value = false
-            output.value += '\n\n🛑 代码执行已被用户停止'
-            toast.warning('代码执行已停止')
+            output.value += '\n\n🛑 ' + t('toast.outStopped')
+            toast.warning(t('toast.runStopped'))
         }
     }
 
@@ -168,8 +171,8 @@ export function useCodeExecution(toast: any)
     const handleExecutionTimeout = (data: any) => {
         if (data.task_id === currentTaskId.value) {
             isRunning.value = false
-            output.value += '\n\n⚠️ 代码执行超时（30秒）'
-            toast.error('代码执行超时')
+            output.value += '\n\n⚠️ ' + t('toast.outTimeout')
+            toast.error(t('toast.runTimeout'))
         }
     }
 
@@ -177,8 +180,8 @@ export function useCodeExecution(toast: any)
     const handleExecutionError = (data: any) => {
         if (data.task_id === currentTaskId.value) {
             isRunning.value = false
-            output.value += `\n\n❌ 执行错误: ${ data.error }`
-            toast.error('代码执行出错')
+            output.value += `\n\n❌ ${t('toast.outError')}${ data.error }`
+            toast.error(t('toast.runError'))
         }
     }
 

@@ -1,9 +1,9 @@
 <template>
   <div class="inline-block">
     <button ref="btnRef" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-            title="数据库结构" @click="toggle">
+            :title="t('sql.schemaTitle')" @click="toggle">
       <Database class="w-3.5 h-3.5"/>
-      <span>结构</span>
+      <span>{{ t('sql.schema') }}</span>
     </button>
 
     <Teleport to="body">
@@ -13,21 +13,21 @@
              :style="{left: pos.left + 'px', top: pos.top + 'px', maxHeight: pos.maxH + 'px'}">
           <div class="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between px-3 py-2">
-              <span class="font-medium text-gray-600 dark:text-gray-300 truncate">结构 · {{ activeLabel() }}</span>
-              <button class="p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0" title="刷新" @click="load">
+              <span class="font-medium text-gray-600 dark:text-gray-300 truncate">{{ t('sql.schema') }} · {{ activeLabel() }}</span>
+              <button class="p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0" :title="t('sql.refresh')" @click="load">
                 <RefreshCw class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''"/>
               </button>
             </div>
             <div class="px-2 pb-2">
-              <input v-model="filter" type="text" :placeholder="mode === 'databases' ? '搜索数据库…' : '搜索表 / 字段…'"
+              <input v-model="filter" type="text" :placeholder="mode === 'databases' ? t('sql.searchDb') : t('sql.searchTable')"
                      class="w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-400"/>
             </div>
           </div>
 
-          <div v-if="loading" class="px-3 py-4 text-center text-gray-400">加载中…</div>
+          <div v-if="loading" class="px-3 py-4 text-center text-gray-400">{{ t('sql.loading') }}</div>
           <div v-else-if="error" class="px-3 py-3 text-red-500 whitespace-pre-wrap">{{ error }}</div>
-          <div v-else-if="mode === 'databases' && databases.length === 0" class="px-3 py-4 text-center text-gray-400">无数据库</div>
-          <div v-else-if="mode === 'tables' && tables.length === 0" class="px-3 py-4 text-center text-gray-400">无表</div>
+          <div v-else-if="mode === 'databases' && databases.length === 0" class="px-3 py-4 text-center text-gray-400">{{ t('sql.noDatabase') }}</div>
+          <div v-else-if="mode === 'tables' && tables.length === 0" class="px-3 py-4 text-center text-gray-400">{{ t('sql.noTable') }}</div>
 
           <!-- 库 → 表 → 字段 -->
           <div v-else-if="mode === 'databases'" class="py-1">
@@ -39,54 +39,54 @@
                 <RefreshCw v-if="db.loading" class="w-3 h-3 text-gray-400 animate-spin"/>
               </div>
               <div v-if="db.expanded && db.tables" class="pl-4">
-                <template v-for="t in matchTables(db.tables)" :key="t.name">
-                  <div class="group flex items-center gap-1 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="toggleTable(db.name + '.' + t.name)">
-                    <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0" :class="isOpen(db.name + '.' + t.name) ? 'rotate-90' : ''"/>
+                <template v-for="tbl in matchTables(db.tables)" :key="tbl.name">
+                  <div class="group flex items-center gap-1 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="toggleTable(db.name + '.' + tbl.name)">
+                    <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0" :class="isOpen(db.name + '.' + tbl.name) ? 'rotate-90' : ''"/>
                     <Table2 class="w-3 h-3 text-blue-500 flex-shrink-0"/>
-                    <span class="flex-1 truncate text-gray-700 dark:text-gray-200" :title="t.name" @click.stop="emit('insert', t.name)">{{ t.name }}</span>
-                    <span class="text-[10px] text-gray-400">{{ t.columns.length }}</span>
-                    <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-violet-500 cursor-pointer" title="复制建表语句" @click.stop="copyDdl(t.name, db.name)">
+                    <span class="flex-1 truncate text-gray-700 dark:text-gray-200" :title="tbl.name" @click.stop="emit('insert', tbl.name)">{{ tbl.name }}</span>
+                    <span class="text-[10px] text-gray-400">{{ tbl.columns.length }}</span>
+                    <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-violet-500 cursor-pointer" :title="t('sql.copyDdl')" @click.stop="copyDdl(tbl.name, db.name)">
                       <Copy class="w-3 h-3"/>
                     </button>
-                    <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-emerald-500 cursor-pointer" title="导出 CSV" @click.stop="exportCsv(t.name, db.name)">
+                    <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-emerald-500 cursor-pointer" :title="t('sql.exportCsv')" @click.stop="exportCsv(tbl.name, db.name)">
                       <FileDown class="w-3 h-3"/>
                     </button>
-                    <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-blue-500 cursor-pointer" title="预览前 100 行" @click.stop="preview(t.name, db.name)">
+                    <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-blue-500 cursor-pointer" :title="t('sql.preview100')" @click.stop="preview(tbl.name, db.name)">
                       <Play class="w-3 h-3"/>
                     </button>
                   </div>
-                  <div v-if="isOpen(db.name + '.' + t.name)" class="pl-7 pr-2 pb-1">
-                    <div v-for="col in t.columns" :key="col.name" class="flex items-center justify-between gap-2 py-0.5 cursor-pointer hover:text-blue-500" :title="`插入列名：${col.name}`" @click="emit('insert', col.name)">
+                  <div v-if="isOpen(db.name + '.' + tbl.name)" class="pl-7 pr-2 pb-1">
+                    <div v-for="col in tbl.columns" :key="col.name" class="flex items-center justify-between gap-2 py-0.5 cursor-pointer hover:text-blue-500" :title="t('sql.insertColumn', { name: col.name })" @click="emit('insert', col.name)">
                       <span class="truncate text-gray-600 dark:text-gray-300">{{ col.name }}</span>
                       <span class="text-[10px] text-gray-400 flex-shrink-0">{{ col.type }}</span>
                     </div>
                   </div>
                 </template>
-                <div v-if="db.tables.length === 0" class="px-2 py-1 text-gray-400">无表</div>
+                <div v-if="db.tables.length === 0" class="px-2 py-1 text-gray-400">{{ t('sql.noTable') }}</div>
               </div>
             </div>
           </div>
 
           <!-- 表 → 字段 -->
           <div v-else class="py-1">
-            <template v-for="t in filteredTables" :key="t.name">
-              <div class="group flex items-center gap-1 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="toggleTable(t.name)">
-                <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0" :class="isOpen(t.name) ? 'rotate-90' : ''"/>
+            <template v-for="tbl in filteredTables" :key="tbl.name">
+              <div class="group flex items-center gap-1 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="toggleTable(tbl.name)">
+                <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0" :class="isOpen(tbl.name) ? 'rotate-90' : ''"/>
                 <Table2 class="w-3 h-3 text-blue-500 flex-shrink-0"/>
-                <span class="flex-1 truncate text-gray-700 dark:text-gray-200" :title="t.name" @click.stop="emit('insert', t.name)">{{ t.name }}</span>
-                <span class="text-[10px] text-gray-400">{{ t.columns.length }}</span>
-                <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-violet-500 cursor-pointer" title="复制建表语句" @click.stop="copyDdl(t.name)">
+                <span class="flex-1 truncate text-gray-700 dark:text-gray-200" :title="tbl.name" @click.stop="emit('insert', tbl.name)">{{ tbl.name }}</span>
+                <span class="text-[10px] text-gray-400">{{ tbl.columns.length }}</span>
+                <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-violet-500 cursor-pointer" :title="t('sql.copyDdl')" @click.stop="copyDdl(tbl.name)">
                   <Copy class="w-3 h-3"/>
                 </button>
-                <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-emerald-500 cursor-pointer" title="导出 CSV" @click.stop="exportCsv(t.name)">
+                <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-emerald-500 cursor-pointer" :title="t('sql.exportCsv')" @click.stop="exportCsv(tbl.name)">
                   <FileDown class="w-3 h-3"/>
                 </button>
-                <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-blue-500 cursor-pointer" title="预览前 100 行" @click.stop="preview(t.name)">
+                <button class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-blue-500 cursor-pointer" :title="t('sql.preview100')" @click.stop="preview(tbl.name)">
                   <Play class="w-3 h-3"/>
                 </button>
               </div>
-              <div v-if="isOpen(t.name)" class="pl-7 pr-2 pb-1">
-                <div v-for="col in t.columns" :key="col.name" class="flex items-center justify-between gap-2 py-0.5 cursor-pointer hover:text-blue-500" :title="`插入列名：${col.name}`" @click="emit('insert', col.name)">
+              <div v-if="isOpen(tbl.name)" class="pl-7 pr-2 pb-1">
+                <div v-for="col in tbl.columns" :key="col.name" class="flex items-center justify-between gap-2 py-0.5 cursor-pointer hover:text-blue-500" :title="t('sql.insertColumn', { name: col.name })" @click="emit('insert', col.name)">
                   <span class="truncate text-gray-600 dark:text-gray-300">{{ col.name }}</span>
                   <span class="text-[10px] text-gray-400 flex-shrink-0">{{ col.type }}</span>
                 </div>
@@ -103,12 +103,14 @@
 import {computed, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {ChevronRight, Copy, Database, FileDown, Play, RefreshCw, Table2} from 'lucide-vue-next'
+import {useI18n} from 'vue-i18n'
 import {useDbConnections} from '../composables/useDbConnections'
 import {useToast} from '../plugins/toast'
 import {downloadCsv} from '../utils/csv'
 
 const emit = defineEmits<{ insert: [text: string]; preview: [sql: string] }>()
 const toast = useToast()
+const {t} = useI18n()
 
 const {resolveActiveSource, activeRef, activeLabel} = useDbConnections()
 
@@ -271,14 +273,14 @@ const exportCsv = async (name: string, db?: string) => {
     }
     const rs = (res.result_sets || [])[0]
     if (!rs || rs.columns.length === 0) {
-      toast.error('无数据可导出')
+      toast.error(t('sql.noExportData'))
       return
     }
     downloadCsv(rs.columns, rs.rows, `${name}-${Date.now()}.csv`)
-    toast.success(`已导出 ${rs.rows.length} 行`)
+    toast.success(t('sql.exported', { n: rs.rows.length }))
   }
   catch (e: any) {
-    toast.error('导出失败：' + String(e?.message || e))
+    toast.error(t('sql.exportFailed') + String(e?.message || e))
   }
 }
 
@@ -286,7 +288,7 @@ const copyDdl = async (name: string, db?: string) => {
   try {
     const source = resolveActiveSource()
     if (source.kind === 'postgres' || source.kind === 'duckdb') {
-      toast.info(`${source.kind === 'duckdb' ? 'DuckDB' : 'PostgreSQL'} 暂不支持一键复制建表语句`)
+      toast.info(t('sql.ddlUnsupported', { db: source.kind === 'duckdb' ? 'DuckDB' : 'PostgreSQL' }))
       return
     }
     const qualified = db ? `${quote(source.kind, db)}.${quote(source.kind, name)}` : quote(source.kind, name)
@@ -297,14 +299,14 @@ const copyDdl = async (name: string, db?: string) => {
     // MySQL: 第 2 列为建表语句；ClickHouse/SQLite: 第 1 列
     const ddl = String((source.kind === 'mysql' ? rows[0]?.[1] : rows[0]?.[0]) ?? '')
     if (!ddl) {
-      toast.error('未获取到建表语句')
+      toast.error(t('sql.noDdl'))
       return
     }
     await navigator.clipboard.writeText(ddl.endsWith(';') ? ddl : ddl + ';')
-    toast.success(`已复制 ${name} 的建表语句`)
+    toast.success(t('sql.ddlCopied', { name }))
   }
   catch (e: any) {
-    toast.error('复制失败：' + String(e?.message || e))
+    toast.error(t('sql.copyFailed') + String(e?.message || e))
   }
 }
 

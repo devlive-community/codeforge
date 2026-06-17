@@ -3,40 +3,40 @@
     <!-- 需求输入 -->
     <div class="flex items-center px-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <Sparkles class="w-4 h-4 text-blue-500 flex-shrink-0"/>
-      <span v-if="isEdit" class="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 flex-shrink-0">改写选中</span>
+      <span v-if="isEdit" class="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 flex-shrink-0">{{ t('inlineGen.editBadge') }}</span>
       <input ref="inputRef"
              v-model="prompt"
              class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
-             :placeholder="isEdit ? '描述如何修改选中的代码…' : `用自然语言描述要生成的${language}代码…`"
+             :placeholder="isEdit ? t('inlineGen.editPlaceholder') : t('inlineGen.genPlaceholder', { lang: language })"
              :disabled="loading"
              @keydown.enter.prevent="generate"
              @keydown.esc.prevent="emit('close')"/>
       <button class="text-xs px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 cursor-pointer flex-shrink-0"
               :disabled="loading || !prompt.trim()"
               @click="generate">
-        {{ result === null ? '生成' : '重新生成' }}
+        {{ result === null ? t('inlineGen.generate') : t('inlineGen.regenerate') }}
       </button>
     </div>
 
-    <div v-if="loading" class="px-3 py-3 text-xs text-gray-400 flex-shrink-0">生成中…</div>
+    <div v-if="loading" class="px-3 py-3 text-xs text-gray-400 flex-shrink-0">{{ t('inlineGen.generating') }}</div>
 
     <!-- 生成结果：可编辑，确认后才插入 -->
     <template v-else-if="result !== null">
       <div class="px-3 py-1 text-[11px] text-gray-400 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-        生成结果（可编辑后插入）
+        {{ t('inlineGen.resultHint') }}
       </div>
       <textarea v-model="result"
                 class="flex-1 min-h-[120px] w-full font-mono text-xs leading-relaxed px-3 py-2 bg-transparent resize-none focus:outline-none"
                 spellcheck="false"
                 @keydown.esc.prevent="emit('close')"></textarea>
       <div class="flex items-center justify-end gap-2 px-3 py-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <button class="text-xs px-3 py-1 rounded text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="emit('close')">取消</button>
-        <button class="text-xs px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" @click="confirm">插入到编辑器</button>
+        <button class="text-xs px-3 py-1 rounded text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="emit('close')">{{ t('inlineGen.cancel') }}</button>
+        <button class="text-xs px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" @click="confirm">{{ t('inlineGen.insert') }}</button>
       </div>
     </template>
 
     <div v-else class="px-3 py-1.5 text-[11px] text-gray-400 flex-shrink-0">
-      Enter 生成结果，确认后再插入到光标处；Esc 取消
+      {{ t('inlineGen.footerHint') }}
     </div>
   </div>
 </template>
@@ -45,6 +45,7 @@
 import {computed, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {Sparkles} from 'lucide-vue-next'
+import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
 import {useToast} from '../plugins/toast'
 
@@ -52,6 +53,7 @@ const props = defineProps<{ language: string; selection?: string }>()
 const emit = defineEmits<{ insert: [code: string]; close: [] }>()
 
 const toast = useToast()
+const {t} = useI18n()
 const {active, reload} = useAiConfig()
 
 const isEdit = computed(() => !!props.selection?.trim())
@@ -76,7 +78,7 @@ const generate = async () => {
 
   reload()
   if (!active.value.apiKey) {
-    toast.error('请先在 设置 → AI 中填写 API Key')
+    toast.error(t('chat.needKey'))
     return
   }
 
@@ -100,7 +102,7 @@ const generate = async () => {
     result.value = stripFences(reply)
   }
   catch (error) {
-    toast.error('生成失败: ' + error)
+    toast.error(t('inlineGen.genFailed') + error)
   }
   finally {
     loading.value = false

@@ -9,12 +9,12 @@
                type="text"
                inputmode="numeric"
                class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
-               :placeholder="`跳转到行（1 - ${maxLine}）`"
+               :placeholder="t('dialog.gotoLinePlaceholder', { max: maxLine })"
                @keydown.enter.prevent="submit"
                @keydown.esc.prevent="emit('close')"/>
       </div>
       <div class="px-3 py-1.5 text-xs text-gray-400">
-        共 {{ maxLine }} 行 · 回车跳转
+        {{ t('dialog.gotoLineHint', { n: maxLine }) }}
       </div>
     </div>
   </div>
@@ -22,8 +22,10 @@
 
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {CornerDownRight} from 'lucide-vue-next'
 
+const {t} = useI18n()
 const props = defineProps<{ maxLine: number }>()
 const emit = defineEmits<{ go: [line: number]; close: [] }>()
 

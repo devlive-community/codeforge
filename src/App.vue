@@ -23,27 +23,27 @@
     <div class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="showRunInput = !showRunInput">
         <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
-        运行输入（参数 / stdin / 环境变量）
+        {{ t('app.runInputToggle') }}
         <span v-if="!showRunInput && (runArgs || runStdin || runEnv)" class="ml-2 text-blue-500">●</span>
       </button>
       <div v-if="showRunInput" class="px-4 pb-2 space-y-2">
         <div class="flex items-start space-x-3">
           <div class="flex flex-col w-56 flex-shrink-0">
-            <label class="text-[11px] text-gray-400 mb-0.5">运行参数</label>
-            <input v-model="runArgs" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" placeholder="空格分隔，如 --port 8080"/>
+            <label class="text-[11px] text-gray-400 mb-0.5">{{ t('app.runArgs') }}</label>
+            <input v-model="runArgs" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400" :placeholder="t('app.runArgsPlaceholder')"/>
           </div>
           <div class="flex flex-col flex-1 min-w-0">
-            <label class="text-[11px] text-gray-400 mb-0.5">标准输入 (stdin)</label>
-            <textarea v-model="runStdin" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" placeholder="运行时喂给程序的输入"></textarea>
+            <label class="text-[11px] text-gray-400 mb-0.5">{{ t('app.stdin') }}</label>
+            <textarea v-model="runStdin" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 font-mono resize-none focus:outline-none focus:border-blue-400" :placeholder="t('app.stdinPlaceholder')"></textarea>
           </div>
         </div>
         <div class="flex flex-col">
-          <label class="text-[11px] text-gray-400 mb-0.5">环境变量</label>
-          <input v-model="runEnv" class="text-xs border border-gray-300 rounded px-2 py-1 font-mono focus:outline-none focus:border-blue-400" placeholder="KEY=值，多个用 ; 分隔，如 DEBUG=1;PORT=8080"/>
+          <label class="text-[11px] text-gray-400 mb-0.5">{{ t('app.envVars') }}</label>
+          <input v-model="runEnv" class="text-xs border border-gray-300 rounded px-2 py-1 font-mono focus:outline-none focus:border-blue-400" :placeholder="t('app.envVarsPlaceholder')"/>
         </div>
         <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
           <input v-model="watchMode" type="checkbox" class="cursor-pointer"/>
-          监听模式：保存后自动运行
+          {{ t('app.watchMode') }}
         </label>
       </div>
     </div>
@@ -78,7 +78,7 @@
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3 min-w-0 flex-1">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
-                  <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+                  <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} {{ t('app.codeEditor') }}</h2>
                   <template v-if="currentFilePath">
                     <span class="text-gray-400 text-xs flex-shrink-0">·</span>
                     <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -87,7 +87,7 @@
                   </template>
                   <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center whitespace-nowrap flex-shrink-0">
                     · {{ currentFileName }}
-                    <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
+                    <span v-if="isDirty" class="ml-1 text-amber-500" :title="t('app.unsaved')">●</span>
                   </span>
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
@@ -96,13 +96,13 @@
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
                   <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
-                    <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
+                    <Sparkles class="w-3 h-3 animate-pulse"/> {{ t('app.aiPredicting') }}
                   </span>
-                  <span v-else-if="ghostActive" class="text-blue-500">Tab 接受 · Esc 取消</span>
-                  <span>行 {{ cursorInfo.line }}, 列 {{ cursorInfo.col }}</span>
-                  <span v-if="cursorInfo.selLen">已选 <strong>{{ cursorInfo.selLen }}</strong></span>
-                  <span><strong>{{ (code || '').length }}</strong> 字符</span>
-                  <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
+                  <span v-else-if="ghostActive" class="text-blue-500">{{ t('app.ghostHint') }}</span>
+                  <span>{{ t('app.cursorPos', { line: cursorInfo.line, col: cursorInfo.col }) }}</span>
+                  <span v-if="cursorInfo.selLen">{{ t('app.selected') }} <strong>{{ cursorInfo.selLen }}</strong></span>
+                  <span><strong>{{ (code || '').length }}</strong> {{ t('app.chars') }}</span>
+                  <span><strong>{{ (code || '').split('\n').length }}</strong> {{ t('app.lines') }}</span>
                 </div>
               </div>
               <div class="flex-1 overflow-hidden relative">
@@ -122,8 +122,8 @@
             <div class="h-full min-h-0 flex flex-col overflow-hidden" :class="effectiveDirection === 'vertical' ? 'border-t border-gray-200' : 'border-l border-gray-200'">
               <!-- 仅编辑器模式下提供收起控制台的入口 -->
               <div v-if="layoutMode === 'editor'" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-                <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">控制台</h2>
-                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" title="收起控制台" @click="showConsole = false">
+                <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ t('console.title') }}</h2>
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" :title="t('app.collapseConsole')" @click="showConsole = false">
                   <X class="w-4 h-4"/>
                 </button>
               </div>
@@ -216,7 +216,7 @@
         <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3 min-w-0 flex-1">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
-            <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} 代码编辑器</h2>
+            <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} {{ t('app.codeEditor') }}</h2>
             <template v-if="currentFilePath">
               <span class="text-gray-400 text-xs flex-shrink-0">·</span>
               <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -225,7 +225,7 @@
             </template>
             <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center whitespace-nowrap flex-shrink-0">
               · {{ currentFileName }}
-              <span v-if="isDirty" class="ml-1 text-amber-500" title="有未保存的修改">●</span>
+              <span v-if="isDirty" class="ml-1 text-amber-500" :title="t('app.unsaved')">●</span>
             </span>
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
             <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
@@ -234,13 +234,13 @@
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
             <span v-if="predicting" class="flex items-center gap-1 text-blue-500">
-              <Sparkles class="w-3 h-3 animate-pulse"/> AI 预测中…
+              <Sparkles class="w-3 h-3 animate-pulse"/> {{ t('app.aiPredicting') }}
             </span>
-            <span v-else-if="ghostActive" class="text-blue-500">Tab 接受 · Esc 取消</span>
-            <span>行 {{ cursorInfo.line }}, 列 {{ cursorInfo.col }}</span>
-            <span v-if="cursorInfo.selLen">已选 <strong>{{ cursorInfo.selLen }}</strong></span>
-            <span><strong>{{ (code || '').length }}</strong> 字符</span>
-            <span><strong>{{ (code || '').split('\n').length }}</strong> 行</span>
+            <span v-else-if="ghostActive" class="text-blue-500">{{ t('app.ghostHint') }}</span>
+            <span>{{ t('app.cursorPos', { line: cursorInfo.line, col: cursorInfo.col }) }}</span>
+            <span v-if="cursorInfo.selLen">{{ t('app.selected') }} <strong>{{ cursorInfo.selLen }}</strong></span>
+            <span><strong>{{ (code || '').length }}</strong> {{ t('app.chars') }}</span>
+            <span><strong>{{ (code || '').split('\n').length }}</strong> {{ t('app.lines') }}</span>
           </div>
         </div>
         <div class="flex-1 overflow-hidden relative">
@@ -285,15 +285,15 @@
                       @open-ai="openAiForExecution"/>
 
     <!-- 运行未保存文件询问 -->
-    <Modal v-model:show="showRunPrompt" title="运行未保存的文件" size="sm">
+    <Modal v-model:show="showRunPrompt" :title="t('app.runUnsavedTitle')" size="sm">
       <div class="space-y-4">
         <p class="text-sm text-gray-700 dark:text-gray-300">
-          当前文件 <strong>{{ currentFileName }}</strong> 有未保存的修改，如何运行？
+          {{ t('app.runUnsavedPre') }}<strong>{{ currentFileName }}</strong>{{ t('app.runUnsavedPost') }}
         </p>
         <div class="flex justify-end space-x-2">
-          <Button type="secondary" size="sm" @click="showRunPrompt = false">取消</Button>
-          <Button type="info" size="sm" @click="promptRunCopy">运行副本(不保存)</Button>
-          <Button size="sm" @click="promptSaveAndRun">保存并运行</Button>
+          <Button type="secondary" size="sm" @click="showRunPrompt = false">{{ t('app.cancel') }}</Button>
+          <Button type="info" size="sm" @click="promptRunCopy">{{ t('app.runCopy') }}</Button>
+          <Button size="sm" @click="promptSaveAndRun">{{ t('app.saveAndRun') }}</Button>
         </div>
       </div>
     </Modal>
@@ -343,9 +343,9 @@
     <DiffView v-if="applyPreview"
               :original="code"
               :modified="applyPreview.modified"
-              title="应用 AI 代码预览"
-              subtitle="当前（红） → AI 建议（绿），确认后替换编辑器内容"
-              confirm-label="应用"
+              :title="t('app.aiPreviewTitle')"
+              :subtitle="t('app.aiPreviewSubtitle')"
+              :confirm-label="t('app.apply')"
               @confirm="confirmApplyAi"
               @close="applyPreview = null"/>
 
@@ -374,20 +374,20 @@
            :style="{ top: `${editorCtx.y}px`, left: `${editorCtx.x}px` }"
            @click.stop>
         <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(runGotoDefinition)">
-          <span>跳转到定义</span><span class="text-gray-400 text-xs ml-6">F12</span>
+          <span>{{ t('app.gotoDef') }}</span><span class="text-gray-400 text-xs ml-6">F12</span>
         </button>
         <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(renameSymbol)">
-          <span>重命名符号</span><span class="text-gray-400 text-xs ml-6">F2</span>
+          <span>{{ t('app.renameSymbol') }}</span><span class="text-gray-400 text-xs ml-6">F2</span>
         </button>
         <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(triggerCodeActions)">
-          <span>代码操作 / 快速修复</span><span class="text-gray-400 text-xs ml-6">⌘.</span>
+          <span>{{ t('app.codeActionMenu') }}</span><span class="text-gray-400 text-xs ml-6">⌘.</span>
         </button>
         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
         <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatDocument)">
-          <span>格式化文档</span><span class="text-gray-400 text-xs ml-6">⇧⌥F</span>
+          <span>{{ t('app.formatDoc') }}</span><span class="text-gray-400 text-xs ml-6">⇧⌥F</span>
         </button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatSelection)">
-          格式化选中
+          {{ t('app.formatSelection') }}
         </button>
       </div>
     </div>
@@ -413,6 +413,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction} from './editor/lspExtension'
@@ -482,6 +483,7 @@ import {useEditorConfig} from './composables/useEditorConfig'
 import Update from './components/Update.vue'
 
 const toast = useToast()
+const {t} = useI18n()
 const showHistory = ref(false)
 
 const {
@@ -522,7 +524,7 @@ const {build: buildLanguageRegistry, detectLanguage, getCandidates} = useLanguag
 // 本地文件管理（打开/保存/另存为）
 const getDefaultFileName = () => {
   const ext = getCurrentPluginConfig()?.extension || currentLanguage.value || 'txt'
-  return `未命名.${ext}`
+  return `${t('app.untitled')}.${ext}`
 }
 
 // 文件状态（提升到此层，供文件管理与多标签工作区共享）
@@ -557,7 +559,7 @@ const handleFileOpened = (filePath: string) => {
     applyLanguage(detected)
     // 同扩展名对应多个引擎时，提示可手动切换
     if (getCandidates(filePath).length > 1) {
-      toast.info(`该类型可用多个运行引擎，已选「${getLanguageDisplayName(detected)}」，可在下拉手动切换`)
+      toast.info(t('app.multiEngine', { name: getLanguageDisplayName(detected) }))
     }
   }
 }
@@ -598,10 +600,10 @@ const handleCloseTab = (id: string) => closeTab(id, {language: currentLanguage.v
 const handleCopyPath = async (path: string) => {
   try {
     await navigator.clipboard.writeText(path)
-    toast.success('已复制路径')
+    toast.success(t('app.pathCopied'))
   }
   catch (error) {
-    toast.error('复制失败: ' + error)
+    toast.error(t('app.copyFailed') + error)
   }
 }
 
@@ -743,7 +745,7 @@ const smartOpen = async (filePath: string) => {
 
     const meta = await invoke<{ size_bytes: number, line_count: number, is_text: boolean }>('get_text_file_meta', {path: filePath})
     if (!meta.is_text) {
-      toast.error('不是文本文件，无法打开')
+      toast.error(t('app.notTextFile'))
       return
     }
 
@@ -766,7 +768,7 @@ const smartOpen = async (filePath: string) => {
     await openPath(filePath)
   }
   catch (error) {
-    toast.error('打开失败: ' + error)
+    toast.error(t('app.openFailed') + error)
   }
 }
 
@@ -821,7 +823,7 @@ const openAiWithPrompt = (prompt: string) => {
 const explainCode = () => {
   const snippet = selectedOrAll()
   if (!snippet.trim()) {
-    toast.info('没有可解释的代码')
+    toast.info(t('app.noCodeExplain'))
     return
   }
   openAiWithPrompt(`请解释下面这段 ${currentLanguage.value} 代码的作用与关键逻辑，用中文简洁说明：\n\n\`\`\`${currentLanguage.value}\n${snippet}\n\`\`\``)
@@ -830,7 +832,7 @@ const explainCode = () => {
 const generateTests = () => {
   const snippet = selectedOrAll()
   if (!snippet.trim()) {
-    toast.info('没有可生成测试的代码')
+    toast.info(t('app.noCodeTest'))
     return
   }
   openAiWithPrompt(`请为下面这段 ${currentLanguage.value} 代码生成单元测试，覆盖主要分支与边界情况，使用该语言常用的测试框架，只输出测试代码：\n\n\`\`\`${currentLanguage.value}\n${snippet}\n\`\`\``)
@@ -840,14 +842,14 @@ const generateTests = () => {
 const formatWithAi = async () => {
   reloadAiCfg()
   if (!aiActive.value.apiKey) {
-    toast.warning('请先在「设置 → AI」中配置 API Key')
+    toast.warning(t('app.needApiKey'))
     return
   }
   const src = code.value
   if (!src.trim()) {
     return
   }
-  toast.info('正在请求 AI 整理代码…')
+  toast.info(t('app.aiFormatting'))
   try {
     const res = await invoke<string>('ai_chat', {
       provider: aiActive.value.provider,
@@ -859,13 +861,13 @@ const formatWithAi = async () => {
     })
     const formatted = cleanCompletion(res)
     if (!formatted || formatted === src) {
-      toast.info('代码无需调整')
+      toast.info(t('app.noAdjust'))
       return
     }
     applyAiCode(formatted)
   }
   catch (error) {
-    toast.error('格式化失败: ' + error)
+    toast.error(t('app.formatFailed') + error)
   }
 }
 
@@ -886,16 +888,16 @@ const toggleAiCompletion = () => {
   kvSet('ai-completion', String(aiCompletion.value))
   if (!aiCompletion.value) {
     clearGhostIn(editorView.value)
-    toast.info('AI 代码预测已关闭')
+    toast.info(t('app.aiPredictOff'))
     return
   }
   // 开启时若未配置 API Key，明确提示（否则预测会静默不工作）
   reloadAiCfg()
   if (!aiActive.value.apiKey) {
-    toast.warning('AI 代码预测已开启，但尚未配置 API Key，请在「设置 → AI」中填写')
+    toast.warning(t('app.aiPredictOnNoKey'))
   }
   else {
-    toast.info('AI 代码预测已开启，停顿打字即可看到灰色补全，Tab 接受')
+    toast.info(t('app.aiPredictOn'))
   }
 }
 
@@ -986,7 +988,7 @@ const confirmApplyAi = () => {
   if (applyPreview.value) {
     code.value = applyPreview.value.modified
     applyPreview.value = null
-    toast.success('已应用 AI 代码')
+    toast.success(t('app.aiCodeApplied'))
   }
 }
 
@@ -1028,7 +1030,7 @@ const insertGeneratedCode = (text: string) => {
 const showSearch = ref(false)
 const openSearch = () => {
   if (!rootDir.value) {
-    toast.info('请先打开文件夹')
+    toast.info(t('app.openFolderFirst'))
     return
   }
   showSearch.value = true
@@ -1072,7 +1074,7 @@ const onIconError = (e: Event) => {
 
 // 面包屑点击：在系统文件管理器中显示该路径
 const revealInFinder = (path: string) => {
-  invoke('reveal_path', {path}).catch((error) => toast.error('打开失败: ' + error))
+  invoke('reveal_path', {path}).catch((error) => toast.error(t('app.openFailed') + error))
 }
 
 // 集成终端：首次打开后保持挂载（保留会话），仅切换显示
@@ -1149,7 +1151,7 @@ const onLspCodeActions = (e: Event) => {
   const detail = (e as CustomEvent).detail as {actions: any[]; x: number; y: number}
   const actions = detail?.actions ?? []
   if (!actions.length) {
-    toast.info('当前位置没有可用的代码操作')
+    toast.info(t('app.noCodeAction'))
     return
   }
   codeActionMenu.actions = actions
@@ -1165,11 +1167,11 @@ const pickCodeAction = async (action: any) => {
   try {
     const {otherFiles} = await applyCodeAction(editorView.value, action)
     if (otherFiles > 0) {
-      toast.info(`该操作还涉及 ${otherFiles} 个其它文件的修改，暂未自动应用`)
+      toast.info(t('app.actionOtherFiles', { n: otherFiles }))
     }
   }
   catch (err) {
-    toast.error('应用代码操作失败: ' + err)
+    toast.error(t('app.applyActionFailed') + err)
   }
 }
 
@@ -1209,7 +1211,7 @@ const reloadAffectedFiles = async (paths: string[]) => {
 const showQuickOpen = ref(false)
 const openQuickOpen = () => {
   if (!rootDir.value) {
-    toast.info('请先打开文件夹')
+    toast.info(t('app.openFolderFirst'))
     return
   }
   showQuickOpen.value = true
@@ -1226,7 +1228,7 @@ const showDiff = ref(false)
 const showPreview = ref(false)
 const openDiff = () => {
   if (!currentFilePath.value) {
-    toast.info('差异对比需要先打开已保存的文件')
+    toast.info(t('app.diffNeedSaved'))
     return
   }
   showDiff.value = true
@@ -1239,7 +1241,7 @@ const togglePreview = () => {
 const showGit = ref(false)
 const openGit = () => {
   if (!rootDir.value) {
-    toast.info('请先打开文件夹')
+    toast.info(t('app.openFolderFirst'))
     return
   }
   showGit.value = true
@@ -1503,12 +1505,12 @@ const loadSqlPage = async (offset: number, record: boolean) => {
     sqlPage.offset = offset
     sqlPage.hasMore = ((res.result_sets || [])[0]?.rows || []).length === SQL_PAGE_SIZE
     if (res.error) {
-      toast.error('SQL 执行失败')
+      toast.error(t('app.sqlFailed'))
     }
   }
   catch (error) {
     output.value = JSON.stringify({result_sets: [], messages: [], error: String(error)})
-    toast.error('SQL 执行失败: ' + error)
+    toast.error(t('app.sqlFailedColon') + error)
   }
   finally {
     isRunning.value = false
@@ -1520,7 +1522,7 @@ const sqlNextPage = () => sqlPage.hasMore && loadSqlPage(sqlPage.offset + SQL_PA
 const runSql = async (sqlOverride?: string) => {
   const sql = sqlOverride ?? code.value
   if (!sql.trim()) {
-    toast.info('没有可执行的 SQL')
+    toast.info(t('app.noSql'))
     return
   }
   const source = resolveActiveSource()
@@ -1546,12 +1548,12 @@ const runSql = async (sqlOverride?: string) => {
     isSuccess.value = !res.error
     lastExecutionTime.value = res.elapsed_ms || 0
     if (res.error) {
-      toast.error('SQL 执行失败')
+      toast.error(t('app.sqlFailed'))
     }
   }
   catch (error) {
     output.value = JSON.stringify({result_sets: [], messages: [], error: String(error)})
-    toast.error('SQL 执行失败: ' + error)
+    toast.error(t('app.sqlFailedColon') + error)
   }
   finally {
     isRunning.value = false
@@ -1588,7 +1590,7 @@ const runSelection = () => {
   }
   const {from, to} = view.state.selection.main
   if (from === to) {
-    toast.info('请先选中要运行的代码')
+    toast.info(t('app.selectCodeFirst'))
     return
   }
   const selected = view.state.sliceDoc(from, to)
@@ -1675,7 +1677,7 @@ const restoreHistoryItem = (item: ExecutionResult) => {
   code.value = item.code || ''
   resetFile()
   clearOutput()
-  toast.success('已恢复历史代码')
+  toast.success(t('app.historyRestored'))
 }
 
 // 从执行历史一键重跑：恢复语言与代码后直接运行
@@ -1766,39 +1768,39 @@ const applyTheme = async (t: AppTheme) => {
 // 命令面板命令列表（含快捷键提示）
 const hintOf = (id: string) => formatCombo(getBinding(id))
 const paletteCommands = computed<PaletteCommand[]>(() => [
-  {id: 'run', label: '运行代码', icon: Play, hint: hintOf('run'), run: () => handleRunCode()},
-  {id: 'runSelection', label: '运行选中片段', icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
-  {id: 'watchMode', label: watchMode.value ? '关闭监听模式（保存自动运行）' : '开启监听模式（保存自动运行）', icon: Eye, run: () => { watchMode.value = !watchMode.value }},
-  {id: 'aiCompletion', label: aiCompletion.value ? '关闭 AI 代码预测' : '开启 AI 代码预测（Tab 补全）', icon: Sparkles, run: () => toggleAiCompletion()},
-  {id: 'open', label: '打开文件', icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
-  {id: 'openFolder', label: '打开文件夹', icon: FolderOpen, run: () => openFolder()},
-  {id: 'save', label: '保存文件', icon: Save, hint: hintOf('save'), run: () => saveFile()},
-  {id: 'saveAs', label: '另存为', icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
-  {id: 'newTab', label: '新建标签', icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
-  {id: 'closeTab', label: '关闭标签', icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
-  {id: 'quickOpen', label: '快速打开文件', icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
-  {id: 'gotoLine', label: '跳转到行', icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
-  {id: 'outline', label: '符号大纲', icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},
-  {id: 'snippets', label: '管理代码片段', icon: Code2, run: () => { showSnippets.value = true }},
-  {id: 'terminal', label: '切换终端', icon: TerminalIcon, hint: hintOf('toggleTerminal'), run: () => toggleTerminal()},
-  {id: 'searchInFiles', label: '在文件夹内搜索', icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
-  {id: 'generate', label: 'AI 生成代码', icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
-  {id: 'showAi', label: 'AI 助手', icon: Sparkles, run: () => handleShowAi()},
-  {id: 'explainCode', label: 'AI 解释代码（选中或全文）', icon: Sparkles, run: () => explainCode()},
-  {id: 'generateTests', label: 'AI 生成测试（选中或全文）', icon: Sparkles, run: () => generateTests()},
-  {id: 'formatWithAi', label: 'AI 格式化代码', icon: Sparkles, run: () => formatWithAi()},
-  {id: 'history', label: '执行历史', icon: History, run: () => { showHistory.value = true }},
-  {id: 'diff', label: '差异对比（当前 vs 已保存）', icon: GitCompare, run: () => openDiff()},
-  {id: 'preview', label: '实时预览（Markdown / HTML）', icon: Eye, run: () => togglePreview()},
-  {id: 'git', label: 'Git 源代码管理', icon: GitBranch, run: () => openGit()},
-  {id: 'toggleSidebar', label: '切换侧栏', icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
-  {id: 'layoutHorizontal', label: '布局：左右', group: '布局', icon: PanelRight, run: () => handleLayoutChange('horizontal')},
-  {id: 'layoutVertical', label: '布局：上下', group: '布局', icon: PanelBottom, run: () => handleLayoutChange('vertical')},
-  {id: 'layoutEditor', label: '布局：仅编辑器', group: '布局', icon: Maximize2, run: () => handleLayoutChange('editor')},
-  {id: 'themeSystem', label: '主题：跟随系统', group: '主题', icon: Monitor, run: () => applyTheme('system')},
-  {id: 'themeLight', label: '主题：浅色', group: '主题', icon: Sun, run: () => applyTheme('light')},
-  {id: 'themeDark', label: '主题：深色', group: '主题', icon: Moon, run: () => applyTheme('dark')},
-  {id: 'settings', label: '打开设置', icon: SettingsIcon, run: () => { showSettings.value = true }}
+  {id: 'run', label: t('command.run'), icon: Play, hint: hintOf('run'), run: () => handleRunCode()},
+  {id: 'runSelection', label: t('command.runSelection'), icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
+  {id: 'watchMode', label: watchMode.value ? t('command.watchModeOff') : t('command.watchModeOn'), icon: Eye, run: () => { watchMode.value = !watchMode.value }},
+  {id: 'aiCompletion', label: aiCompletion.value ? t('command.aiCompletionOff') : t('command.aiCompletionOn'), icon: Sparkles, run: () => toggleAiCompletion()},
+  {id: 'open', label: t('command.open'), icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
+  {id: 'openFolder', label: t('command.openFolder'), icon: FolderOpen, run: () => openFolder()},
+  {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => saveFile()},
+  {id: 'saveAs', label: t('command.saveAs'), icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
+  {id: 'newTab', label: t('command.newTab'), icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
+  {id: 'closeTab', label: t('command.closeTab'), icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
+  {id: 'quickOpen', label: t('command.quickOpen'), icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
+  {id: 'gotoLine', label: t('command.gotoLine'), icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
+  {id: 'outline', label: t('command.outline'), icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},
+  {id: 'snippets', label: t('command.snippets'), icon: Code2, run: () => { showSnippets.value = true }},
+  {id: 'terminal', label: t('command.terminal'), icon: TerminalIcon, hint: hintOf('toggleTerminal'), run: () => toggleTerminal()},
+  {id: 'searchInFiles', label: t('command.searchInFiles'), icon: Search, hint: hintOf('searchInFiles'), run: () => openSearch()},
+  {id: 'generate', label: t('command.generate'), icon: Sparkles, hint: hintOf('generate'), run: () => openGenerate()},
+  {id: 'showAi', label: t('command.showAi'), icon: Sparkles, run: () => handleShowAi()},
+  {id: 'explainCode', label: t('command.explainCode'), icon: Sparkles, run: () => explainCode()},
+  {id: 'generateTests', label: t('command.generateTests'), icon: Sparkles, run: () => generateTests()},
+  {id: 'formatWithAi', label: t('command.formatWithAi'), icon: Sparkles, run: () => formatWithAi()},
+  {id: 'history', label: t('command.history'), icon: History, run: () => { showHistory.value = true }},
+  {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
+  {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
+  {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
+  {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
+  {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
+  {id: 'layoutVertical', label: t('command.layoutVertical'), group: t('command.groupLayout'), icon: PanelBottom, run: () => handleLayoutChange('vertical')},
+  {id: 'layoutEditor', label: t('command.layoutEditor'), group: t('command.groupLayout'), icon: Maximize2, run: () => handleLayoutChange('editor')},
+  {id: 'themeSystem', label: t('command.themeSystem'), group: t('command.groupTheme'), icon: Monitor, run: () => applyTheme('system')},
+  {id: 'themeLight', label: t('command.themeLight'), group: t('command.groupTheme'), icon: Sun, run: () => applyTheme('light')},
+  {id: 'themeDark', label: t('command.themeDark'), group: t('command.groupTheme'), icon: Moon, run: () => applyTheme('dark')},
+  {id: 'settings', label: t('command.settings'), icon: SettingsIcon, run: () => { showSettings.value = true }}
 ])
 
 const onGlobalKeydown = (e: KeyboardEvent) => {

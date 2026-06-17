@@ -3,10 +3,10 @@
     <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
         <Eye class="w-4 h-4 text-gray-400"/>
-        <span>实时预览</span>
+        <span>{{ t('preview.title') }}</span>
         <span class="text-xs text-gray-400">· {{ kindLabel }}</span>
       </div>
-      <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" title="关闭预览" @click="emit('close')">
+      <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('preview.close')" @click="emit('close')">
         <X class="w-4 h-4"/>
       </button>
     </div>
@@ -23,7 +23,7 @@
            v-html="rendered"/>
       <!-- 不支持的类型 -->
       <div v-else class="px-6 py-10 text-center text-sm text-gray-400">
-        当前文件类型不支持预览（仅支持 Markdown 与 HTML）
+        {{ t('preview.unsupported') }}
       </div>
     </div>
   </div>
@@ -31,9 +31,12 @@
 
 <script setup lang="ts">
 import {computed} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {Eye, X} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
+
+const {t} = useI18n()
 
 const props = defineProps<{
   content: string
@@ -58,7 +61,7 @@ const kind = computed<'markdown' | 'html' | 'none'>(() => {
   return 'none'
 })
 
-const kindLabel = computed(() => ({markdown: 'Markdown', html: 'HTML', none: '不支持'}[kind.value]))
+const kindLabel = computed(() => ({markdown: 'Markdown', html: 'HTML', none: t('preview.unsupportedLabel')}[kind.value]))
 
 const rendered = computed(() => (kind.value === 'markdown' ? DOMPurify.sanitize(md.render(props.content || '')) : ''))
 </script>

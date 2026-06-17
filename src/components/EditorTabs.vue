@@ -20,17 +20,17 @@
       <img :src="iconUrl(tab.language)" class="w-4 h-4 flex-shrink-0" :alt="tab.language"
            @error="(e) => { const t = e.target as HTMLImageElement; if (!t.src.endsWith('/icons/text.svg')) t.src = '/icons/text.svg' }"/>
       <span class="text-xs truncate">{{ title(tab) }}</span>
-      <span v-if="isDirty(tab)" class="text-amber-500 text-xs flex-shrink-0" title="未保存">●</span>
+      <span v-if="isDirty(tab)" class="text-amber-500 text-xs flex-shrink-0" :title="t('tabs.unsaved')">●</span>
       <button class="ml-1 rounded p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
               :class="{ 'opacity-100': tab.id === activeId }"
-              title="关闭"
+              :title="t('tabs.close')"
               @click.stop="emit('close', tab.id)">
         <X class="w-3 h-3"/>
       </button>
     </div>
 
     <button class="flex items-center justify-center px-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0"
-            title="新建标签页"
+            :title="t('tabs.newTab')"
             @click="emit('new')">
       <Plus class="w-4 h-4"/>
     </button>
@@ -41,12 +41,12 @@
     <div class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[140px]"
          :style="{ top: `${menu.y}px`, left: `${menu.x}px` }"
          @click.stop>
-      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close', menu.tabId!))">关闭</button>
-      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close-others', menu.tabId!))">关闭其他</button>
-      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close-right', menu.tabId!))">关闭右侧</button>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close', menu.tabId!))">{{ t('tabs.close') }}</button>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close-others', menu.tabId!))">{{ t('tabs.closeOthers') }}</button>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close-right', menu.tabId!))">{{ t('tabs.closeRight') }}</button>
       <template v-if="menuTabPath">
         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('copy-path', menuTabPath!))">复制路径</button>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('copy-path', menuTabPath!))">{{ t('tabs.copyPath') }}</button>
       </template>
     </div>
   </div>
@@ -54,8 +54,11 @@
 
 <script setup lang="ts">
 import {computed, reactive, ref} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {Plus, X} from 'lucide-vue-next'
 import type {WorkspaceTab} from '../composables/useWorkspace'
+
+const {t} = useI18n()
 
 const props = defineProps<{
   tabs: WorkspaceTab[]
@@ -74,9 +77,9 @@ const emit = defineEmits<{
 
 const title = (tab: WorkspaceTab) => {
   if (!tab.filePath) {
-    return '未命名'
+    return t('tabs.untitled')
   }
-  return tab.filePath.split(/[\\/]/).pop() || '未命名'
+  return tab.filePath.split(/[\\/]/).pop() || t('tabs.untitled')
 }
 
 const isDirty = (tab: WorkspaceTab) => tab.filePath !== null && tab.code !== tab.savedContent

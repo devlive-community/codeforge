@@ -4,18 +4,18 @@
     <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
         <FileText class="w-3.5 h-3.5"/>
-        <span>Markdown 预览</span>
-        <span v-if="isRunning" class="text-blue-500">运行中…</span>
-        <span v-else-if="executionTime" class="text-gray-400">{{ executionTime }} ms</span>
+        <span>{{ t('view.mdTitle') }}</span>
+        <span v-if="isRunning" class="text-blue-500">{{ t('view.running') }}</span>
+        <span v-else-if="executionTime" class="text-gray-400">{{ t('view.ms', { n: executionTime }) }}</span>
       </div>
-      <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
+      <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('view.clear')" @click="emit('clear')">
         <Trash2 class="w-3.5 h-3.5"/>
       </button>
     </div>
 
     <!-- 渲染内容 -->
     <div class="flex-1 overflow-auto">
-      <div v-if="!stable.trim()" class="text-gray-400 px-4 py-6 text-center text-sm">运行后在此查看 Markdown 预览</div>
+      <div v-if="!stable.trim()" class="text-gray-400 px-4 py-6 text-center text-sm">{{ t('view.emptyMd') }}</div>
       <div v-else class="markdown-body px-6 py-5 text-sm text-gray-800 dark:text-gray-200" v-html="rendered"/>
     </div>
   </div>
@@ -23,6 +23,7 @@
 
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {debounce} from 'lodash-es'
 import {FileText, Trash2} from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
@@ -34,6 +35,7 @@ const props = defineProps<{
   executionTime?: number
 }>()
 const emit = defineEmits<{ clear: [] }>()
+const {t} = useI18n()
 
 // 允许 Markdown 中的 HTML，渲染后用 DOMPurify 净化（去除 script 等危险内容）防 XSS
 const md = new MarkdownIt({html: true, linkify: true, breaks: true})

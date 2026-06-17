@@ -4,6 +4,9 @@ import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 import { join } from '@tauri-apps/api/path'
 import { useToast } from '../plugins/toast'
+import { i18n } from '../i18n'
+
+const t = (key: string) => i18n.global.t(key)
 
 export function useLogDirectory(emit: any)
 {
@@ -21,7 +24,7 @@ export function useLogDirectory(emit: any)
         }
         catch (error) {
             console.error('Failed to get current log directory:', error)
-            toast.error('获取日志目录失败 - 错误信息: ' + error)
+            toast.error(t('toast.getLogDirFailed') + error)
             emit('error', '获取日志目录失败')
         }
     }
@@ -59,7 +62,7 @@ export function useLogDirectory(emit: any)
             await invoke('set_log_directory', { path: newLogDir.value })
             currentLogDir.value = newLogDir.value
             await loadLogFiles()
-            toast.success('日志目录已更新')
+            toast.success(t('toast.logDirUpdated'))
             emit('settings-changed', 'logDirectory', newLogDir.value)
         }
         catch (error) {
@@ -85,7 +88,7 @@ export function useLogDirectory(emit: any)
             await invoke('reset_log_directory')
             await loadLogDirectory()
             await loadLogFiles()
-            toast.success('日志目录已重置为默认')
+            toast.success(t('toast.logDirReset'))
             emit('settings-changed', 'logDirectory', 'reset')
         }
         catch (error) {
@@ -103,7 +106,7 @@ export function useLogDirectory(emit: any)
         }
         catch (error) {
             console.error('Failed to open log file:', error)
-            toast.error('打开日志文件失败 - 错误信息: ' + error)
+            toast.error(t('toast.openLogFailed') + error)
             emit('error', '打开日志文件失败')
         }
     }

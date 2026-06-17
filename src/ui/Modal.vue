@@ -42,7 +42,7 @@
             <button v-if="closable"
                     class="text-gray-400 hover:cursor-pointer dark:hover:text-gray-200 transition-all duration-200 hover:scale-110 rounded-full p-1 hover:bg-gray-300 dark:hover:bg-gray-700"
                     @click="handleClose"
-                    :aria-label="closeButtonLabel">
+                    :aria-label="closeButtonLabel || t('ui.close')">
               <component :is="closeIcon" class="w-5 h-5"/>
             </button>
           </div>
@@ -65,6 +65,9 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 import { X } from 'lucide-vue-next'
 
 interface Props
@@ -111,7 +114,6 @@ const props = withDefaults(defineProps<Props>(), {
   closeOnBackdrop: true,
   closeOnEsc: true,
   closeIcon: () => X,
-  closeButtonLabel: '关闭',
   size: '2xl',
   backdrop: 'blur',
   rounded: true,

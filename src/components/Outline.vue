@@ -7,7 +7,7 @@
         <input ref="inputRef"
                v-model="query"
                class="flex-1 px-2 py-2.5 text-sm bg-transparent focus:outline-none"
-               placeholder="跳转到符号…"
+               :placeholder="t('dialog.outlinePlaceholder')"
                @keydown.down.prevent="move(1)"
                @keydown.up.prevent="move(-1)"
                @keydown.enter.prevent="choose(filtered[activeIndex])"
@@ -16,8 +16,8 @@
       </div>
 
       <div ref="listRef" class="overflow-y-auto py-1">
-        <div v-if="symbols.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">未识别到符号</div>
-        <div v-else-if="filtered.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">无匹配符号</div>
+        <div v-if="symbols.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">{{ t('dialog.outlineNoSymbols') }}</div>
+        <div v-else-if="filtered.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">{{ t('dialog.outlineEmpty') }}</div>
 
         <button v-for="(s, i) in filtered"
                 :key="s.line + ':' + s.name"
@@ -37,7 +37,10 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {ListTree} from 'lucide-vue-next'
+
+const {t} = useI18n()
 
 interface Symbol { name: string; kind: string; line: number }
 

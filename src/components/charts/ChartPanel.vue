@@ -5,37 +5,37 @@
       <!-- 图表类型（固定在顶部）-->
       <div class="flex-shrink-0 px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center justify-between mb-1">
-          <span class="text-[11px] text-gray-400">图表类型</span>
+          <span class="text-[11px] text-gray-400">{{ t('chart.type') }}</span>
           <div class="flex items-center gap-1">
-            <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="保存为预设" @click="savingPreset = !savingPreset">
-              <Star class="w-3 h-3"/>存预设
+            <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('chart.savePresetTitle')" @click="savingPreset = !savingPreset">
+              <Star class="w-3 h-3"/>{{ t('chart.savePreset') }}
             </button>
-            <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 cursor-pointer" title="用自然语言配图" @click="toggleAi">
-              <Sparkles class="w-3 h-3"/>AI 配图
+            <button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 cursor-pointer" :title="t('chart.aiConfigTitle')" @click="toggleAi">
+              <Sparkles class="w-3 h-3"/>{{ t('chart.aiConfig') }}
             </button>
           </div>
         </div>
         <Select v-model="chartType" :options="chartTypes" searchable :button-classes="['!py-1', '!px-2.5', 'text-xs', '!rounded-md']"/>
         <!-- 保存预设输入 -->
         <div v-if="savingPreset" class="mt-1.5 flex items-center gap-1">
-          <input v-model="presetName" type="text" placeholder="预设名称" autofocus
+          <input v-model="presetName" type="text" :placeholder="t('chart.presetNamePlaceholder')" autofocus
                  class="flex-1 min-w-0 px-2 py-0.5 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-400"
                  @keydown.enter="confirmSavePreset" @keydown.esc="savingPreset = false"/>
-          <button class="px-2 py-0.5 text-[11px] rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 cursor-pointer" :disabled="!presetName.trim()" @click="confirmSavePreset">保存</button>
-          <button class="px-1.5 py-0.5 text-[11px] rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="savingPreset = false">取消</button>
+          <button class="px-2 py-0.5 text-[11px] rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 cursor-pointer" :disabled="!presetName.trim()" @click="confirmSavePreset">{{ t('chart.save') }}</button>
+          <button class="px-1.5 py-0.5 text-[11px] rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="savingPreset = false">{{ t('chart.cancel') }}</button>
         </div>
         <!-- 预设列表 -->
         <div v-if="presets.length" class="mt-1.5 flex flex-wrap gap-1">
           <span v-for="p in presets" :key="p.name"
                 class="group inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40"
-                :title="`套用预设：${p.name}`" @click="applyPreset(p.name)">
+                :title="t('chart.applyPreset', { name: p.name })" @click="applyPreset(p.name)">
             {{ p.name }}
             <X class="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 hover:text-red-500" @click.stop="deletePreset(p.name)"/>
           </span>
         </div>
         <div v-if="aiOpen" class="mt-2 p-2 rounded border border-violet-200 dark:border-violet-800 bg-violet-50/40 dark:bg-violet-900/10">
           <textarea v-model="aiPrompt" rows="2" :disabled="aiLoading"
-                    placeholder="例如：按状态统计数量，用饼图"
+                    :placeholder="t('chart.aiPlaceholder')"
                     class="w-full px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 resize-none focus:outline-none focus:border-violet-400"
                     @keydown.meta.enter="aiGenerate" @keydown.ctrl.enter="aiGenerate"/>
           <div v-if="aiError" class="mt-1 text-[10px] text-red-500 whitespace-pre-wrap">{{ aiError }}</div>
@@ -44,7 +44,7 @@
                     :disabled="aiLoading || !aiPrompt.trim()" @click="aiGenerate">
               <RefreshCw v-if="aiLoading" class="w-3 h-3 animate-spin"/>
               <Sparkles v-else class="w-3 h-3"/>
-              {{ aiLoading ? '生成中…' : '生成' }}
+              {{ aiLoading ? t('chart.generating') : t('chart.generate') }}
             </button>
           </div>
         </div>
@@ -52,18 +52,18 @@
 
       <!-- 可用字段（独立滚动）-->
       <div class="flex-1 min-h-0 overflow-y-auto px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div class="text-[11px] text-gray-400 mb-1.5">字段（单击选择 / 双击快速添加 / 可拖拽）</div>
+        <div class="text-[11px] text-gray-400 mb-1.5">{{ t('chart.fields') }}</div>
         <div class="flex flex-wrap gap-1.5">
           <div v-for="f in fields" :key="f.name" draggable="true"
                class="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs cursor-pointer active:cursor-grabbing select-none bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-               title="单击选择位置 / 双击快速添加 / 拖拽到下方"
+               :title="t('chart.fieldTitle')"
                @dragstart="onDragStart($event, f.name)"
                @click="openFieldMenu(f, $event)"
                @dblclick="dblAdd(f)">
             <component :is="f.numeric ? Hash : Type" class="w-3 h-3" :class="f.numeric ? 'text-emerald-500' : 'text-amber-500'"/>
             {{ f.name }}
           </div>
-          <div v-if="fields.length === 0" class="text-xs text-gray-400">无可用列</div>
+          <div v-if="fields.length === 0" class="text-xs text-gray-400">{{ t('chart.noColumns') }}</div>
         </div>
       </div>
 
@@ -72,16 +72,16 @@
       <!-- 维度 -->
       <div v-if="meta.layout === 'dims' && meta.dimsZone" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
            @dragover.prevent="dragOver = 'dim'" @dragleave="dragOver = ''" @drop.prevent="onDrop('dim')">
-        <div class="text-[11px] text-gray-400 mb-1.5">维度{{ meta.needDims === 0 ? '（可选）' : '（首个为分类轴，其余分组）' }}</div>
+        <div class="text-[11px] text-gray-400 mb-1.5">{{ meta.needDims === 0 ? t('chart.dimsOptional') : t('chart.dimsAxis') }}</div>
         <div class="min-h-[28px] rounded border border-dashed p-1 flex flex-wrap gap-1 transition-colors"
              :class="dragOver === 'dim' ? 'border-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600'">
           <span v-for="(d, i) in dimensions" :key="d" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs"
                 :class="i === 0 ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'">
-            <span v-if="i === 0 && meta.needDims > 0" class="text-[9px] opacity-70">轴</span>
+            <span v-if="i === 0 && meta.needDims > 0" class="text-[9px] opacity-70">{{ t('chart.axis') }}</span>
             {{ d }}
             <X class="w-3 h-3 cursor-pointer hover:text-red-500" @click="removeDim(d)"/>
           </span>
-          <span v-if="dimensions.length === 0" class="text-[11px] text-gray-400 px-1 py-0.5">拖入分类列（可多个）</span>
+          <span v-if="dimensions.length === 0" class="text-[11px] text-gray-400 px-1 py-0.5">{{ t('chart.dropDims') }}</span>
         </div>
       </div>
 
@@ -89,7 +89,7 @@
       <div v-if="meta.layout === 'dims'" class="px-3 py-2 border-b border-gray-200 dark:border-gray-700"
            @dragover.prevent="dragOver = 'metric'" @dragleave="dragOver = ''" @drop.prevent="onDrop('metric')">
         <div class="text-[11px] text-gray-400 mb-1.5 flex items-center justify-between">
-          <span>指标（数值轴）</span>
+          <span>{{ t('chart.metricAxis') }}</span>
           <Select v-if="meta.usesAgg" v-model="agg" :options="aggOptions" :button-classes="['!py-0.5', '!px-1.5', 'text-[11px]', '!rounded']" class="w-20"/>
         </div>
         <div class="min-h-[28px] rounded border border-dashed p-1 flex flex-wrap gap-1 transition-colors"
@@ -98,7 +98,7 @@
             {{ m }}
             <X class="w-3 h-3 cursor-pointer hover:text-red-500" @click="removeMetric(m)"/>
           </span>
-          <span v-if="metrics.length === 0" class="text-[11px] text-gray-400 px-1 py-0.5">拖入数值列</span>
+          <span v-if="metrics.length === 0" class="text-[11px] text-gray-400 px-1 py-0.5">{{ t('chart.dropMetric') }}</span>
         </div>
       </div>
 
@@ -120,27 +120,27 @@
       </template>
 
       <!-- 字段映射说明 -->
-      <p v-if="meta.note" class="px-3 py-2 text-[10px] text-gray-400 leading-snug border-b border-gray-200 dark:border-gray-700">{{ meta.note }}</p>
+      <p v-if="meta.note" class="px-3 py-2 text-[10px] text-gray-400 leading-snug border-b border-gray-200 dark:border-gray-700">{{ t(`chart.note.${chartType}`) }}</p>
 
       <!-- 显示选项 -->
       <div v-if="hasOptions" class="px-3 py-2 space-y-2">
         <div v-if="meta.sortable" class="flex items-center justify-between">
-          <span class="text-[11px] text-gray-400">排序</span>
+          <span class="text-[11px] text-gray-400">{{ t('chart.sort') }}</span>
           <Select v-model="sortOrder" :options="sortOptions" :button-classes="['!py-0.5', '!px-1.5', 'text-[11px]', '!rounded']" class="w-24"/>
         </div>
         <div v-if="meta.sortable" class="flex items-center justify-between">
-          <span class="text-[11px] text-gray-400">显示前 N 项</span>
-          <input v-model.number="topN" type="number" min="0" placeholder="全部"
+          <span class="text-[11px] text-gray-400">{{ t('chart.topN') }}</span>
+          <input v-model.number="topN" type="number" min="0" :placeholder="t('chart.all')"
                  class="w-16 px-1.5 py-0.5 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"/>
         </div>
         <div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400 pt-0.5">
-          <label v-if="supportsLabel" class="flex items-center gap-1.5 cursor-pointer"><input v-model="showLabel" type="checkbox" class="accent-blue-500"/>数值标签</label>
-          <label v-if="chartType === 'bar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="horizontal" type="checkbox" class="accent-blue-500"/>横向</label>
-          <label v-if="isLineLike" class="flex items-center gap-1.5 cursor-pointer"><input v-model="smooth" type="checkbox" class="accent-blue-500"/>平滑</label>
-          <label v-if="(chartType === 'bar' || isLineLike || chartType === 'polarBar') && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="stacked" type="checkbox" class="accent-blue-500"/>堆叠</label>
-          <label v-if="chartType === 'pie'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="ring" type="checkbox" class="accent-blue-500"/>环形</label>
-          <label v-if="chartType === 'radar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="radarFill" type="checkbox" class="accent-blue-500"/>填充</label>
-          <label v-if="chartType === 'combo' && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="dualAxis" type="checkbox" class="accent-blue-500"/>双 Y 轴</label>
+          <label v-if="supportsLabel" class="flex items-center gap-1.5 cursor-pointer"><input v-model="showLabel" type="checkbox" class="accent-blue-500"/>{{ t('chart.labelValue') }}</label>
+          <label v-if="chartType === 'bar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="horizontal" type="checkbox" class="accent-blue-500"/>{{ t('chart.horizontal') }}</label>
+          <label v-if="isLineLike" class="flex items-center gap-1.5 cursor-pointer"><input v-model="smooth" type="checkbox" class="accent-blue-500"/>{{ t('chart.smooth') }}</label>
+          <label v-if="(chartType === 'bar' || isLineLike || chartType === 'polarBar') && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="stacked" type="checkbox" class="accent-blue-500"/>{{ t('chart.stacked') }}</label>
+          <label v-if="chartType === 'pie'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="ring" type="checkbox" class="accent-blue-500"/>{{ t('chart.ring') }}</label>
+          <label v-if="chartType === 'radar'" class="flex items-center gap-1.5 cursor-pointer"><input v-model="radarFill" type="checkbox" class="accent-blue-500"/>{{ t('chart.fill') }}</label>
+          <label v-if="chartType === 'combo' && shaped.series.length > 1" class="flex items-center gap-1.5 cursor-pointer"><input v-model="dualAxis" type="checkbox" class="accent-blue-500"/>{{ t('chart.dualY') }}</label>
         </div>
       </div>
       </div>
@@ -150,7 +150,7 @@
     <div ref="chartHost" class="relative flex-1 min-w-0 min-h-0 overflow-hidden p-3">
       <div v-if="ready" class="absolute top-2 right-2 z-20">
         <button class="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white/70 dark:bg-gray-800/70 hover:bg-gray-100 dark:hover:bg-gray-700 backdrop-blur cursor-pointer"
-                title="导出 / 复制" @click="menuOpen = !menuOpen">
+                :title="t('chart.exportCopy')" @click="menuOpen = !menuOpen">
           <Download class="w-3.5 h-3.5"/>
         </button>
         <template v-if="menuOpen">
@@ -164,7 +164,7 @@
       </div>
       <div v-if="!ready" class="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
         <BarChart3 class="w-8 h-8"/>
-        <p class="text-xs">{{ meta.empty }}</p>
+        <p class="text-xs">{{ t(`chart.empty.${chartType}`) }}</p>
       </div>
       <BarChart v-else-if="chartType === 'bar'" :categories="shaped.categories" :series="shaped.series"
                 :horizontal="horizontal" :stacked="stacked" :show-label="showLabel"/>
@@ -206,13 +206,13 @@
              :style="{left: fieldMenu.left + 'px', top: fieldMenu.top + 'px'}">
           <div class="px-3 py-1 text-[11px] text-gray-400 border-b border-gray-200 dark:border-gray-700 truncate">{{ fieldMenu.name }}</div>
           <template v-if="meta.layout === 'scatter'">
-            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('x')">设为 X 指标</button>
-            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('y')">设为 Y 指标</button>
-            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('group')">设为分组</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('x')">{{ t('chart.setX') }}</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('y')">{{ t('chart.setY') }}</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-600 dark:text-gray-300" @click="pickTarget('group')">{{ t('chart.setGroup') }}</button>
           </template>
           <template v-else>
-            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-blue-600 dark:text-blue-300" @click="pickTarget('dim')">加为维度</button>
-            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-emerald-600 dark:text-emerald-300" @click="pickTarget('metric')">加为指标</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-blue-600 dark:text-blue-300" @click="pickTarget('dim')">{{ t('chart.addDim') }}</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-emerald-600 dark:text-emerald-300" @click="pickTarget('metric')">{{ t('chart.addMetric') }}</button>
           </template>
         </div>
       </template>
@@ -222,6 +222,7 @@
 
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {debounce} from 'lodash-es'
 import * as echarts from 'echarts/core'
 import {SVGRenderer} from 'echarts/renderers'
@@ -267,51 +268,52 @@ const props = defineProps<{
   rows: any[][]
 }>()
 
+const {t} = useI18n()
+
 // 图表元数据：新增图表只需在此加一条 + 对应渲染/塑形
+// label/empty/note 的文案统一存于 i18n 的 chart.types/empty/note.<value>，此处仅保留结构信息
 interface ChartMeta {
-  label: string
   layout: 'dims' | 'scatter' // 配置布局
   needDims: number // 最少维度（dims 布局）
   needMetrics: number // 最少指标
   dimsZone?: boolean // 是否显示维度区（默认 true）
   usesAgg?: boolean // 是否使用聚合方式（默认 true）
   sortable?: boolean // 是否显示 排序/TopN
-  note?: string // 字段映射说明
-  empty: string // 空状态提示
+  note?: boolean // 是否有字段映射说明（文案见 chart.note.<value>）
 }
 
 const CHART_META: Record<string, ChartMeta> = {
-  bar: {label: '柱状图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, empty: '拖入「维度」和「指标」生成图表'},
-  line: {label: '折线图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, empty: '拖入「维度」和「指标」生成图表'},
-  combo: {label: '组合图(柱+线)', layout: 'dims', needDims: 1, needMetrics: 2, dimsZone: true, usesAgg: true, sortable: true, note: '首个指标作柱、其余作线；可开「双 Y 轴」', empty: '拖入「维度」和≥2 个「指标」生成组合图'},
-  area: {label: '面积图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, empty: '拖入「维度」和「指标」生成图表'},
-  pie: {label: '饼图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作分类、首个指标作数值', empty: '拖入「维度」和「指标」生成图表'},
-  scatter: {label: '散点图', layout: 'scatter', needDims: 0, needMetrics: 0, empty: '拖入「X 指标」和「Y 指标」生成图表'},
-  radar: {label: '雷达图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, empty: '拖入「维度」和「指标」生成图表'},
-  funnel: {label: '漏斗图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作分类、首个指标作数值', empty: '拖入「维度」和「指标」生成图表'},
-  heatmap: {label: '热力图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '前两个维度作 X/Y 轴、首个指标作热力值', empty: '拖入两个维度和一个指标生成图表'},
-  gauge: {label: '仪表盘', layout: 'dims', needDims: 0, needMetrics: 1, dimsZone: false, usesAgg: true, note: '仪表盘取首个指标聚合为单值', empty: '拖入一个指标生成仪表盘'},
-  sankey: {label: '桑基图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '相邻维度按数据流连接、指标作流量', empty: '拖入≥2 个维度和一个指标生成桑基图'},
-  sunburst: {label: '旭日图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作数值', empty: '拖入维度(层级)和一个指标生成旭日图'},
-  treemap: {label: '矩形树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级嵌套、首个指标作面积', empty: '拖入维度(层级)和一个指标生成矩形树图'},
-  tree: {label: '树图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度按层级展开、首个指标作叶子值', empty: '拖入维度(层级)和一个指标生成树图'},
-  boxplot: {label: '箱线图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: false, note: '首个维度分组、首个指标取原始分布', empty: '拖入一个维度和一个指标生成箱线图'},
-  candlestick: {label: 'K 线图', layout: 'dims', needDims: 1, needMetrics: 4, dimsZone: true, usesAgg: false, note: '维度作类目轴、指标依次为 开/收/低/高', empty: '拖入一个维度和「开/收/低/高」四个指标'},
-  parallel: {label: '平行坐标', layout: 'dims', needDims: 0, needMetrics: 2, dimsZone: true, usesAgg: false, note: '多个指标作平行轴、首个维度可选分组', empty: '拖入≥2 个指标生成平行坐标'},
-  themeriver: {label: '主题河流', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为时间、维度2为类别、指标作值', empty: '拖入两个维度(时间,类别)和一个指标生成主题河流'},
-  calendar: {label: '日历图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作日期、首个指标作值', empty: '拖入一个日期维度和一个指标生成日历图'},
-  rose: {label: '玫瑰图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '取首个维度作扇区、首个指标作半径', empty: '拖入「维度」和「指标」生成玫瑰图'},
-  effectScatter: {label: '涟漪散点图', layout: 'scatter', needDims: 0, needMetrics: 0, empty: '拖入「X 指标」和「Y 指标」生成涟漪散点图'},
-  graph: {label: '关系图', layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: '维度1为源、维度2为目标、指标作连线权重', empty: '拖入两个维度(源,目标)和一个指标生成关系图'},
-  polarBar: {label: '极坐标柱状图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '维度作角度轴、指标作半径', empty: '拖入「维度」和「指标」生成极坐标柱状图'},
-  pictorialBar: {label: '象形柱图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '维度作类目轴、指标作高度(图形重复填充)', empty: '拖入「维度」和「指标」生成象形柱图'},
-  wordcloud: {label: '词云', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: '首个维度作词、首个指标作权重', empty: '拖入「维度」和「指标」生成词云'},
-  liquidFill: {label: '水球图', layout: 'dims', needDims: 0, needMetrics: 1, dimsZone: false, usesAgg: true, note: '首个指标聚合值 ÷ 该列最大值作填充比例', empty: '拖入一个指标生成水球图'},
-  mapChina: {label: '中国地图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作省份名(如「北京市」)、首个指标作值', empty: '拖入一个省份维度和一个指标生成中国地图'},
-  mapWorld: {label: '世界地图', layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: '首个维度作国家名(英文)、首个指标作值', empty: '拖入一个国家维度和一个指标生成世界地图'}
+  bar: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true},
+  line: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true},
+  combo: {layout: 'dims', needDims: 1, needMetrics: 2, dimsZone: true, usesAgg: true, sortable: true, note: true},
+  area: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true},
+  pie: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: true},
+  scatter: {layout: 'scatter', needDims: 0, needMetrics: 0},
+  radar: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true},
+  funnel: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: true},
+  heatmap: {layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: true},
+  gauge: {layout: 'dims', needDims: 0, needMetrics: 1, dimsZone: false, usesAgg: true, note: true},
+  sankey: {layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: true},
+  sunburst: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: true},
+  treemap: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: true},
+  tree: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: true},
+  boxplot: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: false, note: true},
+  candlestick: {layout: 'dims', needDims: 1, needMetrics: 4, dimsZone: true, usesAgg: false, note: true},
+  parallel: {layout: 'dims', needDims: 0, needMetrics: 2, dimsZone: true, usesAgg: false, note: true},
+  themeriver: {layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: true},
+  calendar: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: true},
+  rose: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: true},
+  effectScatter: {layout: 'scatter', needDims: 0, needMetrics: 0},
+  graph: {layout: 'dims', needDims: 2, needMetrics: 1, dimsZone: true, usesAgg: true, note: true},
+  polarBar: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: true},
+  pictorialBar: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: true},
+  wordcloud: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, sortable: true, note: true},
+  liquidFill: {layout: 'dims', needDims: 0, needMetrics: 1, dimsZone: false, usesAgg: true, note: true},
+  mapChina: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: true},
+  mapWorld: {layout: 'dims', needDims: 1, needMetrics: 1, dimsZone: true, usesAgg: true, note: true}
 }
 
-const chartTypes = Object.entries(CHART_META).map(([value, m]) => ({value, label: m.label}))
+const chartTypes = computed(() => Object.keys(CHART_META).map(value => ({value, label: t(`chart.types.${value}`)})))
 const chartType = ref('bar')
 const meta = computed(() => CHART_META[chartType.value])
 const isLineLike = computed(() => chartType.value === 'line' || chartType.value === 'area')
@@ -320,14 +322,16 @@ const supportsLabel = computed(() => ['bar', 'line', 'area', 'combo', 'pie', 'ro
 const hasOptions = computed(() => meta.value.sortable || supportsLabel.value
   || ['bar', 'line', 'area', 'pie', 'radar'].includes(chartType.value))
 
-const aggOptions = (Object.keys(AGG_LABELS) as AggKind[]).map(k => ({value: k, label: AGG_LABELS[k]}))
+const aggOptions = computed(() => (Object.keys(AGG_LABELS) as AggKind[]).map(k => ({value: k, label: t(`chart.agg.${k}`)})))
 const agg = ref<AggKind>('sum')
+// 聚合方式显示名（用于 仪表盘/水球图 标题）
+const aggLabel = (k: AggKind) => t(`chart.agg.${k}`)
 
-const sortOptions = [
-  {value: 'none', label: '原始顺序'},
-  {value: 'desc', label: '降序'},
-  {value: 'asc', label: '升序'}
-]
+const sortOptions = computed(() => [
+  {value: 'none', label: t('chart.sortNone')},
+  {value: 'desc', label: t('chart.sortDesc')},
+  {value: 'asc', label: t('chart.sortAsc')}
+])
 const sortOrder = ref<'none' | 'asc' | 'desc'>('none')
 const topN = ref<number>(0)
 
@@ -337,11 +341,11 @@ const metrics = ref<string[]>([])
 const xField = ref('')
 const yField = ref('')
 const groupField = ref('')
-const scatterZones = [
-  {key: 'x' as const, label: 'X 指标（数值）', hint: '拖入数值列', model: xField},
-  {key: 'y' as const, label: 'Y 指标（数值）', hint: '拖入数值列', model: yField},
-  {key: 'group' as const, label: '分组（可选）', hint: '拖入分类列', model: groupField}
-]
+const scatterZones = computed(() => [
+  {key: 'x' as const, label: t('chart.scatterX'), hint: t('chart.dropNumeric'), model: xField},
+  {key: 'y' as const, label: t('chart.scatterY'), hint: t('chart.dropNumeric'), model: yField},
+  {key: 'group' as const, label: t('chart.scatterGroup'), hint: t('chart.dropCategory'), model: groupField}
+])
 const horizontal = ref(false)
 const stacked = ref(false)
 const smooth = ref(false)
@@ -501,10 +505,10 @@ const copyImage = async () => {
   try {
     const blob = await (await fetch(url)).blob()
     await navigator.clipboard.write([new ClipboardItem({'image/png': blob})])
-    toast.success('图片已复制到剪贴板')
+    toast.success(t('chart.imageCopied'))
   }
   catch {
-    toast.error('复制失败，当前环境可能不支持')
+    toast.error(t('chart.copyFailed'))
   }
 }
 
@@ -536,12 +540,12 @@ const exportSvg = () => {
 const exportCsv = () => downloadCsv(props.columns, props.rows, `data-${Date.now()}.csv`)
 
 const menuOpen = ref(false)
-const exportItems = [
-  {label: '导出 PNG', icon: Download, fn: exportPng},
-  {label: '导出 SVG', icon: ImageIcon, fn: exportSvg},
-  {label: '复制图片', icon: Copy, fn: copyImage},
-  {label: '导出数据 CSV', icon: FileDown, fn: exportCsv}
-]
+const exportItems = computed(() => [
+  {label: t('chart.exportPng'), icon: Download, fn: exportPng},
+  {label: t('chart.exportSvg'), icon: ImageIcon, fn: exportSvg},
+  {label: t('chart.copyImage'), icon: Copy, fn: copyImage},
+  {label: t('chart.exportCsv'), icon: FileDown, fn: exportCsv}
+])
 const runExport = (fn: () => void) => {
   fn()
   menuOpen.value = false
@@ -564,7 +568,7 @@ const aiGenerate = async () => {
     return
   }
   if (!aiActive.value.apiKey?.trim()) {
-    aiError.value = '未配置 AI API Key（设置 → AI）'
+    aiError.value = t('chart.noApiKey')
     return
   }
   aiLoading.value = true
@@ -608,7 +612,7 @@ const aiGenerate = async () => {
     aiPrompt.value = ''
   }
   catch (e: any) {
-    aiError.value = 'AI 返回无法解析或出错：' + String(e?.message || e)
+    aiError.value = t('chart.aiParseFail') + String(e?.message || e)
   }
   finally {
     aiLoading.value = false
@@ -619,7 +623,7 @@ const aiGenerate = async () => {
 watch(() => props.columns, (cols) => {
   dimensions.value = dimensions.value.filter(d => cols.includes(d))
   metrics.value = metrics.value.filter(m => cols.includes(m))
-  for (const z of scatterZones) {
+  for (const z of scatterZones.value) {
     if (z.model.value && !cols.includes(z.model.value)) {
       z.model.value = ''
     }
@@ -655,7 +659,7 @@ const onDropScatter = (zone: 'x' | 'y' | 'group') => {
   if (!name || !props.columns.includes(name)) {
     return
   }
-  const z = scatterZones.find(s => s.key === zone)!
+  const z = scatterZones.value.find(s => s.key === zone)!
   z.model.value = name
   dragField = ''
 }
@@ -800,7 +804,7 @@ const liquid = computed(() => {
   const m = metrics.value[0]
   const value = aggregateColumn(table.value, m, agg.value)
   const colMax = aggregateColumn(table.value, m, 'max')
-  return {value: colMax > 0 ? value / colMax : 0, name: `${AGG_LABELS[agg.value]}(${m})`}
+  return {value: colMax > 0 ? value / colMax : 0, name: `${aggLabel(agg.value)}(${m})`}
 })
 
 // 仪表盘：首个指标聚合为单值，量程取略大于该值的“整”数
@@ -817,7 +821,7 @@ const gauge = computed(() => {
   }
   const m = metrics.value[0]
   const value = aggregateColumn(table.value, m, agg.value)
-  return {value, max: niceMax(value), name: `${AGG_LABELS[agg.value]}(${m})`}
+  return {value, max: niceMax(value), name: `${aggLabel(agg.value)}(${m})`}
 })
 
 const shaped = computed(() => {

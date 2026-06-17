@@ -4,6 +4,7 @@
 
 <script setup lang="ts">
 import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import * as echarts from 'echarts/core'
 import {TreeChart as ETree} from 'echarts/charts'
 import {TooltipComponent} from 'echarts/components'
@@ -20,11 +21,12 @@ const props = defineProps<{
 }>()
 
 const {isDark} = useTheme()
+const {t} = useI18n()
 const el = ref<HTMLElement>()
 let chart: echarts.ECharts | null = null
 
 // echarts tree 需要单一根节点，这里包一层
-const rootData = computed<TreeNode>(() => ({name: props.rootName || '全部', children: props.data}))
+const rootData = computed<TreeNode>(() => ({name: props.rootName || t('chart.rootAll'), children: props.data}))
 
 const buildOption = (): echarts.EChartsCoreOption => {
   const text = isDark.value ? '#d1d5db' : '#374151'

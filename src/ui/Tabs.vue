@@ -41,14 +41,14 @@
               {{ tab.badge }}
             </span>
 
-            <button v-if="tab.closable && closable" @click.stop="closeTab(tab, index)" :class="closeButtonClasses" :aria-label="`关闭 ${tab.label || tab.name}`">
+            <button v-if="tab.closable && closable" @click.stop="closeTab(tab, index)" :class="closeButtonClasses" :aria-label="`${t('ui.close')} ${tab.label || tab.name}`">
               <X class="w-3 h-3"/>
             </button>
           </slot>
         </button>
 
         <!-- 添加按钮 -->
-        <button v-if="addable" @click="$emit('add')" :class="addButtonClasses" aria-label="添加标签页">
+        <button v-if="addable" @click="$emit('add')" :class="addButtonClasses" :aria-label="t('ui.addTab')">
           <Plus class="w-4 h-4"/>
         </button>
       </div>
@@ -73,7 +73,7 @@
           <!-- 回退到 tab.content -->
           <component v-if="tab.content" :is="tab.content"/>
           <div v-else-if="tab.html" v-html="tab.html"></div>
-          <div v-else>{{ tab.text || '暂无内容' }}</div>
+          <div v-else>{{ tab.text || t('ui.empty') }}</div>
         </slot>
       </div>
     </div>
@@ -84,6 +84,9 @@
 import type { Component } from 'vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { Plus, X } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 // Tab 接口定义
 export interface Tab

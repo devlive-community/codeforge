@@ -5,24 +5,24 @@
       <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
         <Sheet class="w-3.5 h-3.5 flex-shrink-0"/>
         <span>Excel</span>
-        <span v-if="isRunning || loading" class="text-blue-500">读取中…</span>
+        <span v-if="isRunning || loading" class="text-blue-500">{{ t('view.xlsxReading') }}</span>
         <span v-else-if="error" class="text-red-500 truncate">{{ error }}</span>
-        <span v-else-if="table.rows.length" class="text-gray-400">{{ table.columns.length }} 列 · {{ table.rows.length }} 行</span>
+        <span v-else-if="table.rows.length" class="text-gray-400">{{ t('view.colsRows', { cols: table.columns.length, rows: table.rows.length }) }}</span>
       </div>
       <div class="flex items-center gap-1">
         <div class="flex items-center rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <button class="p-1 transition-colors" :class="viewMode === 'table' ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'" title="表格" @click="viewMode = 'table'">
+          <button class="p-1 transition-colors" :class="viewMode === 'table' ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'" :title="t('view.table')" @click="viewMode = 'table'">
             <Table2 class="w-3.5 h-3.5"/>
           </button>
           <button class="p-1 transition-colors" :class="viewMode === 'chart' ? 'bg-blue-500 text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
-                  :disabled="!table.columns.length" :title="table.columns.length ? '图表' : '无数据可绘图'" @click="viewMode = 'chart'">
+                  :disabled="!table.columns.length" :title="table.columns.length ? t('view.chart') : t('view.noChartData')" @click="viewMode = 'chart'">
             <BarChart3 class="w-3.5 h-3.5" :class="!table.columns.length ? 'opacity-40' : ''"/>
           </button>
         </div>
-        <button v-if="table.columns.length" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="导出 CSV" @click="exportCsv">
+        <button v-if="table.columns.length" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('view.exportCsv')" @click="exportCsv">
           <FileDown class="w-3.5 h-3.5"/>
         </button>
-        <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" title="清空" @click="emit('clear')">
+        <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('view.clear')" @click="emit('clear')">
           <Trash2 class="w-3.5 h-3.5"/>
         </button>
       </div>
@@ -41,7 +41,7 @@
     </div>
     <!-- 表格（虚拟滚动） -->
     <div v-else-if="!table.columns.length" class="flex-1 overflow-auto p-2 text-xs">
-      <div class="text-gray-400 px-2 py-4 text-center">{{ error ? error : '运行 .xlsx / .xls 后在此查看数据' }}</div>
+      <div class="text-gray-400 px-2 py-4 text-center">{{ error ? error : t('view.emptyXlsx') }}</div>
     </div>
     <VirtualTable v-else class="flex-1" :columns="table.columns" :rows="table.rows"/>
   </div>
@@ -49,6 +49,7 @@
 
 <script setup lang="ts">
 import {ref, shallowRef, watch} from 'vue'
+import {useI18n} from 'vue-i18n'
 import {BarChart3, FileDown, Sheet, Table2, Trash2} from 'lucide-vue-next'
 import type * as XLSXType from 'xlsx'
 import ChartPanel from './charts/ChartPanel.vue'
@@ -61,6 +62,7 @@ const props = defineProps<{
   executionTime?: number
 }>()
 const emit = defineEmits<{ clear: [] }>()
+const {t} = useI18n()
 
 const viewMode = ref<'table' | 'chart'>('table')
 const loading = ref(false)
@@ -101,7 +103,7 @@ const buildTable = (name: string) => {
     table.value = {columns: [], rows: []}
     return
   }
-  const columns = (aoa[0] || []).map((c: any, i: number) => (c === null || c === '' ? `列${i + 1}` : String(c)))
+  const columns = (aoa[0] || []).map((c: any, i: number) => (c === null || c === '' ? t('view.colN', {n: i + 1}) : String(c)))
   const rows = aoa.slice(1).map(r => columns.map((_c, i) => fmtCell(r[i])))
   table.value = {columns, rows}
 }
@@ -127,7 +129,7 @@ const loadFile = async (path: string) => {
     buildTable(activeSheet.value)
   }
   catch (e: any) {
-    error.value = '读取失败：' + String(e?.message || e)
+    error.value = t('view.xlsxReadFail') + String(e?.message || e)
     workbook.value = null
     sheets.value = []
     table.value = {columns: [], rows: []}

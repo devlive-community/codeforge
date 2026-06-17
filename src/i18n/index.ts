@@ -1,195 +1,141 @@
-// 国际化（vue-i18n）。默认简体中文，界面零变化；英文为增量翻译，可在通用设置切换。
-// 文案按面逐步迁移，已迁移：通用设置页。
+// 国际化（vue-i18n）。
+// 内置语言包以 JSON 文件初始化（locales/*.json），用户自定义语言包存于本地数据库(KV)，
+// 启动时合并；可在「设置 → 语言包」中新增/编辑/删除，方便扩展。
+import {ref} from 'vue'
 import {createI18n} from 'vue-i18n'
-import {kvGet, kvSet} from '../composables/useKvStore'
+import {kvGet, kvSet, kvGetJSON, kvSetJSON} from '../composables/useKvStore'
+import zhCN from './locales/zh-CN.json'
+import en from './locales/en.json'
 
-export const SUPPORTED_LOCALES = [
-  {value: 'zh-CN', label: '简体中文'},
-  {value: 'en', label: 'English'}
-]
-const LOCALE_KEY = 'app-locale'
-
-const messages = {
-  'zh-CN': {
-    settings: {
-      title: '设置',
-      uiLanguage: '界面语言',
-      nav: {
-        general: '通用',
-        editor: '编辑器',
-        shortcut: '快捷键',
-        ai: 'AI',
-        database: '数据库',
-        language: '语言',
-        lsp: '语言服务',
-        network: '网络',
-        cache: '缓存',
-        logs: '日志'
-      },
-      general: {
-        appearance: '外观',
-        theme: '主题',
-        runAndFile: '运行与文件',
-        runUnsaved: '运行未保存文件时',
-        selectStrategy: '选择运行策略',
-        maxFileSize: '打开文件大小上限 (MB)',
-        maxFileSizeHint: '超过该大小将以只读方式查看',
-        github: 'GitHub 配置',
-        githubToken: 'GitHub Token (可选)',
-        githubInfoTitle: 'GitHub Token 说明',
-        githubInfo1: '用于提高 GitHub API 请求速率限制（从 60次/小时 提升到 5000次/小时）',
-        githubInfo2Pre: '在 ',
-        githubInfo2Link: 'GitHub Settings',
-        githubInfo2Post: ' 创建 Personal Access Token',
-        githubInfo3: 'Token 不需要任何权限（public access 即可）',
-        githubInfo4: '留空则使用未认证模式访问 GitHub API',
-        saveGithub: '保存 GitHub 配置',
-        savingGithub: '保存中...',
-        clearToken: '清除 Token'
-      },
-      editor: {
-        indentWithTab: '是否使用 Tab 缩进',
-        showLineNumbers: '是否显示行号',
-        showFunctionHelp: '是否显示函数帮助信息',
-        spaceDotOmission: '是否显示空格省略',
-        tabSize: '缩进空格数',
-        font: '编辑器字体',
-        fontSize: '字体大小',
-        theme: '编辑器主题',
-        selectTheme: '选择编辑器主题'
-      },
-      ai: {
-        title: 'AI 助手',
-        provider: '服务商',
-        apiKey: 'API Key',
-        apiKeyHint: '填写所选服务商的 API Key',
-        model: '模型',
-        baseUrl: '接口地址（可选）',
-        info1: '请求经本地后端转发，避免浏览器跨域问题',
-        info2: 'API Key 仅保存在本机',
-        info3: '留空接口地址则使用服务商默认地址'
-      },
-      network: {
-        title: 'CDN 镜像配置',
-        enable: '启用 CDN 镜像加速',
-        enabled: '已启用',
-        disabled: '未启用',
-        baseUrl: 'CDN 基础 URL',
-        fallback: 'CDN 下载失败时自动回退到 GitHub 官方源',
-        infoTitle: 'CDN 镜像说明',
-        info1: 'CDN 镜像用于加速环境安装包的下载',
-        info2: '启用自动回退后，CDN 下载失败会自动使用 GitHub 官方源',
-        info3: '关闭自动回退后，CDN 下载失败将直接报错，不会尝试其他源',
-        save: '保存配置',
-        saving: '保存中...',
-        reset: '重置为默认',
-        test: '测试连接',
-        testing: '测试中...'
-      },
-      theme: {system: '跟随系统', light: '浅色', dark: '深色'},
-      runStrategy: {autoSave: '自动保存后运行', ask: '每次询问', tempCopy: '运行副本(不保存)'}
-    }
-  },
-  en: {
-    settings: {
-      title: 'Settings',
-      uiLanguage: 'Language',
-      nav: {
-        general: 'General',
-        editor: 'Editor',
-        shortcut: 'Shortcuts',
-        ai: 'AI',
-        database: 'Database',
-        language: 'Languages',
-        lsp: 'Language Server',
-        network: 'Network',
-        cache: 'Cache',
-        logs: 'Logs'
-      },
-      general: {
-        appearance: 'Appearance',
-        theme: 'Theme',
-        runAndFile: 'Run & Files',
-        runUnsaved: 'When running an unsaved file',
-        selectStrategy: 'Select run strategy',
-        maxFileSize: 'Max file size to open (MB)',
-        maxFileSizeHint: 'Larger files open in read-only view',
-        github: 'GitHub',
-        githubToken: 'GitHub Token (optional)',
-        githubInfoTitle: 'About GitHub Token',
-        githubInfo1: 'Raises GitHub API rate limit (from 60/hr to 5000/hr)',
-        githubInfo2Pre: 'Create a Personal Access Token in ',
-        githubInfo2Link: 'GitHub Settings',
-        githubInfo2Post: '',
-        githubInfo3: 'The token needs no scopes (public access is enough)',
-        githubInfo4: 'Leave empty to access the GitHub API unauthenticated',
-        saveGithub: 'Save GitHub config',
-        savingGithub: 'Saving...',
-        clearToken: 'Clear token'
-      },
-      editor: {
-        indentWithTab: 'Use Tab for indentation',
-        showLineNumbers: 'Show line numbers',
-        showFunctionHelp: 'Show function help',
-        spaceDotOmission: 'Show whitespace dots',
-        tabSize: 'Indent size',
-        font: 'Editor font',
-        fontSize: 'Font size',
-        theme: 'Editor theme',
-        selectTheme: 'Select editor theme'
-      },
-      ai: {
-        title: 'AI Assistant',
-        provider: 'Provider',
-        apiKey: 'API Key',
-        apiKeyHint: 'Enter the API Key for the selected provider',
-        model: 'Model',
-        baseUrl: 'API endpoint (optional)',
-        info1: 'Requests are proxied by the local backend to avoid CORS issues',
-        info2: 'The API Key is stored only on this machine',
-        info3: 'Leave the endpoint empty to use the provider default'
-      },
-      network: {
-        title: 'CDN Mirror',
-        enable: 'Enable CDN mirror acceleration',
-        enabled: 'Enabled',
-        disabled: 'Disabled',
-        baseUrl: 'CDN base URL',
-        fallback: 'Fall back to official GitHub source when CDN download fails',
-        infoTitle: 'About CDN mirror',
-        info1: 'CDN mirror speeds up downloading environment install packages',
-        info2: 'With fallback on, a failed CDN download automatically uses the official GitHub source',
-        info3: 'With fallback off, a failed CDN download errors out without trying other sources',
-        save: 'Save',
-        saving: 'Saving...',
-        reset: 'Reset to default',
-        test: 'Test connection',
-        testing: 'Testing...'
-      },
-      theme: {system: 'Follow system', light: 'Light', dark: 'Dark'},
-      runStrategy: {autoSave: 'Auto-save then run', ask: 'Ask every time', tempCopy: 'Run a copy (no save)'}
-    }
-  }
+export interface LocaleDef {
+  name: string
+  messages: Record<string, any>
 }
+
+// 内置语言包（初始化数据源）
+const BUILTIN: Record<string, LocaleDef> = {
+  'zh-CN': {name: '简体中文', messages: zhCN},
+  en: {name: 'English', messages: en}
+}
+
+const LOCALE_KEY = 'app-locale'
+const CUSTOM_KEY = 'i18n-custom-locales' // DB(KV)：{ [code]: { name, messages } }
 
 export const i18n = createI18n({
   legacy: false,
   locale: 'zh-CN',
   fallbackLocale: 'zh-CN',
-  messages
+  messages: {'zh-CN': zhCN, en} as any
 })
 
-export const setLocale = (locale: string) => {
-  i18n.global.locale.value = locale as 'zh-CN' | 'en'
-  kvSet(LOCALE_KEY, locale)
+// 可用语言列表（内置 + 自定义），响应式，供界面语言下拉与管理页使用
+export const availableLocales = ref<{ value: string; label: string; builtin: boolean }[]>([])
+
+const readCustom = (): Record<string, LocaleDef> => kvGetJSON<Record<string, LocaleDef>>(CUSTOM_KEY, {})
+const writeCustom = (data: Record<string, LocaleDef>) => kvSetJSON(CUSTOM_KEY, data)
+
+// 深合并：override 优先，缺失的键用 base 填充（对象递归，数组/基本类型直接覆盖）
+const deepMerge = (base: any, override: any): any => {
+  if (!base || typeof base !== 'object' || Array.isArray(base)) {
+    return override ?? base
+  }
+  if (!override || typeof override !== 'object' || Array.isArray(override)) {
+    return override ?? base
+  }
+  const out: Record<string, any> = {...base}
+  for (const k of Object.keys(override)) {
+    out[k] = k in base ? deepMerge(base[k], override[k]) : override[k]
+  }
+  return out
 }
 
-export const getLocale = (): string => i18n.global.locale.value
+// 某语言的最终生效文案：内置 JSON 作底，数据库自定义覆盖（DB 优先，缺失用 JSON 填充）
+const effectiveMessages = (code: string, custom?: Record<string, LocaleDef>): Record<string, any> => {
+  const c = custom ?? readCustom()
+  const base = BUILTIN[code]?.messages ?? {}
+  return c[code] ? deepMerge(base, c[code].messages) : base
+}
 
-// 启动时从 KV 恢复（须在 loadKvStore 之后调用）
-export const loadSavedLocale = () => {
+const rebuildAvailable = (custom: Record<string, LocaleDef>) => {
+  const list: { value: string; label: string; builtin: boolean }[] = []
+  for (const [code, def] of Object.entries(BUILTIN)) {
+    list.push({value: code, label: custom[code]?.name || def.name, builtin: true})
+  }
+  for (const [code, def] of Object.entries(custom)) {
+    if (!BUILTIN[code]) {
+      list.push({value: code, label: def.name || code, builtin: false})
+    }
+  }
+  availableLocales.value = list
+}
+
+// 启动时调用（须在 loadKvStore 之后）：合并 DB 自定义语言包并恢复上次语言
+export const loadLocales = () => {
+  const custom = readCustom()
+  // 数据库优先、JSON 填充：内置语言把自定义合并到 JSON 底；纯自定义语言直接用其文案
+  for (const code of Object.keys(custom)) {
+    i18n.global.setLocaleMessage(code, effectiveMessages(code, custom) as any)
+  }
+  rebuildAvailable(custom)
   const saved = kvGet(LOCALE_KEY)
-  if (saved && SUPPORTED_LOCALES.some(s => s.value === saved)) {
-    i18n.global.locale.value = saved as 'zh-CN' | 'en'
+  if (saved && availableLocales.value.some(l => l.value === saved)) {
+    i18n.global.locale.value = saved as any
   }
 }
+
+export const setLocale = (locale: string) => {
+  i18n.global.locale.value = locale as any
+  kvSet(LOCALE_KEY, locale)
+}
+export const getLocale = (): string => i18n.global.locale.value as string
+
+// —— 语言包管理（供「设置 → 语言包」）——
+
+export const isBuiltinLocale = (code: string) => !!BUILTIN[code]
+
+// 取某语言当前最终生效文案（JSON 底 + 数据库覆盖）；用于编辑器预填，便于看到全部键
+export const getLocaleMessages = (code: string): Record<string, any> => effectiveMessages(code)
+
+// 取内置默认文案（用于以某内置语言为模板新建）
+export const getBuiltinMessages = (code: string): Record<string, any> => BUILTIN[code]?.messages ?? BUILTIN['zh-CN'].messages
+
+// 新增/编辑：写入 DB、应用到 i18n、刷新列表
+export const saveLocale = (code: string, name: string, messages: Record<string, any>) => {
+  const custom = readCustom()
+  custom[code] = {name, messages}
+  writeCustom(custom)
+  // 运行时仍以 JSON 为底合并（即便用户删了某些键，也会用 JSON 填充）
+  i18n.global.setLocaleMessage(code, effectiveMessages(code, custom) as any)
+  rebuildAvailable(custom)
+}
+
+// 删除自定义语言包（内置不可删）；删的是当前语言则切回 zh-CN
+export const deleteLocale = (code: string) => {
+  if (BUILTIN[code]) {
+    return
+  }
+  const custom = readCustom()
+  delete custom[code]
+  writeCustom(custom)
+  rebuildAvailable(custom)
+  if (getLocale() === code) {
+    setLocale('zh-CN')
+  }
+}
+
+// 恢复内置默认（移除对内置语言的自定义覆盖）
+export const resetBuiltin = (code: string) => {
+  if (!BUILTIN[code]) {
+    return
+  }
+  const custom = readCustom()
+  if (custom[code]) {
+    delete custom[code]
+    writeCustom(custom)
+  }
+  i18n.global.setLocaleMessage(code, BUILTIN[code].messages as any)
+  rebuildAvailable(custom)
+}
+
+// 模块初始化时先用内置填充列表（KV 尚未加载时的兜底；loadLocales 后会再刷新）
+rebuildAvailable({})

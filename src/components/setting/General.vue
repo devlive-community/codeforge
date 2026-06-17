@@ -91,7 +91,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '../../plugins/toast'
 import { useTheme, type AppTheme } from '../../composables/useTheme'
-import { SUPPORTED_LOCALES, setLocale, getLocale } from '../../i18n'
+import { availableLocales, setLocale, getLocale } from '../../i18n'
 
 const emit = defineEmits<{
   'settings-changed': [type: string, value: any]
@@ -102,9 +102,9 @@ const {t} = useI18n()
 const toast = useToast()
 const {setTheme} = useTheme()
 
-// 界面语言
+// 界面语言（含用户新增的自定义语言包）
 const locale = ref(getLocale())
-const localeOptions = SUPPORTED_LOCALES
+const localeOptions = availableLocales
 const onLocaleChange = () => setLocale(locale.value)
 
 // 外观主题
@@ -134,7 +134,7 @@ const onThemeChange = async () => {
     await invoke('update_app_config', {config})
   }
   catch (error) {
-    toast.error('保存主题失败: ' + error)
+    toast.error(t('settings.general.saveThemeFailed') + error)
   }
 }
 
@@ -178,7 +178,7 @@ const saveBehaviorConfig = async () => {
   }
   catch (error) {
     console.error('保存运行配置失败:', error)
-    toast.error('保存配置失败: ' + error)
+    toast.error(t('settings.general.saveConfigFailed') + error)
   }
 }
 
@@ -211,13 +211,13 @@ const saveGithubConfig = async () => {
 
     originalGithubToken.value = githubToken.value
 
-    toast.success('GitHub 配置已保存')
+    toast.success(t('settings.general.githubSaved'))
     emit('settings-changed', 'github', config.github)
   }
   catch (error) {
     console.error('保存 GitHub 配置失败:', error)
-    toast.error('保存 GitHub 配置失败: ' + error)
-    emit('error', '保存 GitHub 配置失败')
+    toast.error(t('settings.general.saveGithubFailed') + error)
+    emit('error', t('settings.general.saveGithubFailed'))
   }
   finally {
     isSavingGithub.value = false

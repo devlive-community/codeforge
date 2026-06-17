@@ -19,7 +19,7 @@
                 :class="r.childId ? 'text-blue-300' : 'text-gray-200'">{{ r.display }}</span>
           <button v-if="r.childId"
                   class="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded border border-blue-500/40 text-blue-300 hover:bg-blue-500/20 cursor-pointer"
-                  :title="expanded.has(r.childId) ? '收起' : '展开'"
+                  :title="expanded.has(r.childId) ? t('view.collapse') : t('view.expand')"
                   @click="toggle(r.childId)">
             <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="{ '-rotate-90': !expanded.has(r.childId) }"/>
           </button>
@@ -32,6 +32,9 @@
 <script setup lang="ts">
 import {computed, reactive, watch} from 'vue'
 import {ChevronDown} from 'lucide-vue-next'
+import {useI18n} from 'vue-i18n'
+
+const {t} = useI18n()
 
 const props = defineProps<{ value: any; rootTitle?: string }>()
 

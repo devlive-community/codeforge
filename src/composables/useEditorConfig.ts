@@ -3,6 +3,9 @@ import {debounce} from 'lodash-es'
 import {invoke} from '@tauri-apps/api/core'
 import {useToast} from '../plugins/toast'
 import {EditorConfig} from '../types/app.ts'
+import {i18n} from '../i18n'
+
+const t = (key: string, params?: Record<string, unknown>) => i18n.global.t(key, params ?? {})
 
 interface ThemeOption
 {
@@ -77,7 +80,7 @@ export function useEditorConfig(emit?: any)
         }
         catch (error) {
             console.error('加载编辑器配置失败:', error)
-            toast.error('获取编辑器配置失败 - 错误信息: ' + error)
+            toast.error(t('toast.getEditorConfigFailed') + error)
             throw error
         }
     }
@@ -93,7 +96,7 @@ export function useEditorConfig(emit?: any)
             globalConfig.value.editor = {...updatedEditor}
             await invoke('update_app_config', {config: globalConfig.value})
 
-            toast.success('编辑器配置已保存')
+            toast.success(t('toast.editorConfigSaved'))
 
             // 发送事件（如果提供了 emit）
             if (emit) {
@@ -104,10 +107,10 @@ export function useEditorConfig(emit?: any)
         }
         catch (error) {
             console.error('保存编辑器配置失败:', error)
-            toast.error('保存编辑器配置失败 - 错误信息: ' + error)
+            toast.error(t('toast.saveEditorConfigFailed') + error)
 
             if (emit) {
-                emit('error', '保存编辑器配置失败')
+                emit('error', t('toast.saveEditorConfigFailed'))
             }
 
             throw error
@@ -173,12 +176,12 @@ export function useEditorConfig(emit?: any)
     // 验证配置
     const validateConfig = (config: EditorConfig): boolean => {
         if (config.tab_size && (config.tab_size < 1 || config.tab_size > 8)) {
-            toast.error('缩进空格数必须在 1-8 之间')
+            toast.error(t('toast.tabSizeRange'))
             return false
         }
 
         if (config.theme && !getThemeByValue(config.theme)) {
-            toast.error('选择的主题不存在')
+            toast.error(t('toast.themeNotExist'))
             return false
         }
 

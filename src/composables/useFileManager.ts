@@ -1,6 +1,9 @@
 import {computed, type Ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {open as openFileDialog, save as saveFileDialog} from '@tauri-apps/plugin-dialog'
+import {i18n} from '../i18n'
+
+const t = (key: string, params?: Record<string, unknown>) => i18n.global.t(key, params ?? {})
 
 interface FileManagerOptions
 {
@@ -52,10 +55,10 @@ export function useFileManager(options: FileManagerOptions)
             currentFilePath.value = filePath
             savedContent.value = content
             onOpened?.(filePath, content)
-            toast.success(`已打开 ${currentFileName.value}`)
+            toast.success(t('toast.opened', {name: currentFileName.value}))
         }
         catch (error) {
-            toast.error('打开文件失败: ' + error)
+            toast.error(t('toast.openFileFailed') + error)
         }
     }
 
@@ -91,10 +94,10 @@ export function useFileManager(options: FileManagerOptions)
                 return
             }
             await writeToPath(path)
-            toast.success(`已保存到 ${currentFileName.value}`)
+            toast.success(t('toast.savedTo', {name: currentFileName.value}))
         }
         catch (error) {
-            toast.error('保存文件失败: ' + error)
+            toast.error(t('toast.saveFileFailed') + error)
         }
     }
 
@@ -106,10 +109,10 @@ export function useFileManager(options: FileManagerOptions)
         }
         try {
             await writeToPath(currentFilePath.value)
-            toast.success(`已保存 ${currentFileName.value}`)
+            toast.success(t('toast.saved', {name: currentFileName.value}))
         }
         catch (error) {
-            toast.error('保存文件失败: ' + error)
+            toast.error(t('toast.saveFileFailed') + error)
         }
     }
 

@@ -2,6 +2,9 @@ import {ref, type Ref, onMounted, onUnmounted} from 'vue'
 import {invoke, convertFileSrc} from '@tauri-apps/api/core'
 import {listen} from '@tauri-apps/api/event'
 import {EnvInfo, Language, LanguageInfo} from '../types/app.ts'
+import {i18n} from '../i18n'
+
+const t = (key: string, params?: Record<string, unknown>) => i18n.global.t(key, params ?? {})
 
 export function useLanguageManager(
     code: Ref<string>,
@@ -142,7 +145,7 @@ export function useLanguageManager(
             globalConfig.value = await invoke<any>('get_app_config')
         }
         catch (error) {
-            toast.error('获取配置失败 - 错误信息: ' + error)
+            toast.error(t('toast.getConfigFailed') + error)
         }
     }
 
@@ -184,7 +187,7 @@ export function useLanguageManager(
 
         refreshEnvInfo()
 
-        toast.info(`已切换到 ${getLanguageDisplayName(newLanguage)}`)
+        toast.info(t('toast.switchedTo', {name: getLanguageDisplayName(newLanguage)}))
     }
 
     // 仅切换语言（刷新环境信息），不改动编辑器内容——用于打开文件时按扩展名切语言
