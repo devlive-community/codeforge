@@ -9,6 +9,7 @@ use crate::plugins::css::CssPlugin;
 use crate::plugins::csv::CsvPlugin;
 use crate::plugins::custom::CustomPlugin;
 use crate::plugins::dart::DartPlugin;
+use crate::plugins::erlang::ErlangPlugin;
 use crate::plugins::fsharp::FSharpPlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::groovy::GroovyPlugin;
@@ -109,6 +110,7 @@ impl PluginManager {
             ("ocaml".to_string(), Box::new(OCamlPlugin)),
             ("tcl".to_string(), Box::new(TclPlugin)),
             ("crystal".to_string(), Box::new(CrystalPlugin)),
+            ("erlang".to_string(), Box::new(ErlangPlugin)),
             ("lua".to_string(), Box::new(LuaPlugin)),
             ("objective-c".to_string(), Box::new(ObjectiveCPlugin)),
             ("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin)),

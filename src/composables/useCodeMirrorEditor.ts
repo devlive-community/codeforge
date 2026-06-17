@@ -29,6 +29,7 @@ import {powerShell} from '@codemirror/legacy-modes/mode/powershell'
 import {fSharp, oCaml} from '@codemirror/legacy-modes/mode/mllike'
 import {tcl} from '@codemirror/legacy-modes/mode/tcl'
 import {crystal} from '@codemirror/legacy-modes/mode/crystal'
+import {erlang} from '@codemirror/legacy-modes/mode/erlang'
 import {
     abcdef,
     abyss,
@@ -365,6 +366,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(ruby)
             case 'crystal':
                 return StreamLanguage.define(crystal)
+            case 'erlang':
+                return StreamLanguage.define(erlang)
             case 'perl':
                 return StreamLanguage.define(perl)
             case 'julia':
