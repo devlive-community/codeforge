@@ -808,6 +808,8 @@
     "rootAll": "All",
     "boxName": "Box",
     "outlierName": "Outlier",
+    "mapBack": "Back",
+    "mapLoadFailed": "Failed to load map data (drilldown fetches province/city boundaries online)",
     "types": {
       "bar": "Bar", "line": "Line", "combo": "Combo (bar+line)", "area": "Area", "pie": "Pie",
       "scatter": "Scatter", "radar": "Radar", "funnel": "Funnel", "heatmap": "Heatmap", "gauge": "Gauge",

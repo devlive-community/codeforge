@@ -808,6 +808,8 @@
     "rootAll": "全部",
     "boxName": "箱线",
     "outlierName": "离群",
+    "mapBack": "返回上级",
+    "mapLoadFailed": "地图数据加载失败（下钻需联网获取省/市边界）",
     "types": {
       "bar": "柱状图", "line": "折线图", "combo": "组合图(柱+线)", "area": "面积图", "pie": "饼图",
       "scatter": "散点图", "radar": "雷达图", "funnel": "漏斗图", "heatmap": "热力图", "gauge": "仪表盘",
