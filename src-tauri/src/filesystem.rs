@@ -648,6 +648,65 @@ pub async fn git_fetch(root: String) -> Result<String, String> {
 }
 
 #[derive(Serialize)]
+pub struct GitStashEntry {
+    /// 形如 stash@{0}
+    reference: String,
+    message: String,
+}
+
+/// 列出 stash 列表。
+#[tauri::command]
+pub async fn git_stash_list(root: String) -> Result<Vec<GitStashEntry>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["stash", "list", "--pretty=format:%gd\x1f%s"])?;
+        let mut list = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 2 {
+                list.push(GitStashEntry {
+                    reference: p[0].to_string(),
+                    message: p[1].to_string(),
+                });
+            }
+        }
+        Ok(list)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 暂存当前改动（含未跟踪文件）。message 为空则用默认信息。
+#[tauri::command]
+pub async fn git_stash_push(root: String, message: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["stash", "push", "--include-untracked"];
+        if !message.trim().is_empty() {
+            args.push("-m");
+            args.push(message.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 应用并移除某个 stash（pop）。
+#[tauri::command]
+pub async fn git_stash_pop(root: String, reference: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["stash", "pop", &reference]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 丢弃某个 stash（drop）。
+#[tauri::command]
+pub async fn git_stash_drop(root: String, reference: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["stash", "drop", &reference]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
 pub struct GitBranches {
     current: String,
     branches: Vec<String>,
