@@ -817,6 +817,29 @@ pub async fn git_log(root: String, limit: u32, skip: u32) -> Result<Vec<GitCommi
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 还原某次提交（生成一条反向提交，历史保留）。
+#[tauri::command]
+pub async fn git_revert(root: String, hash: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["revert", "--no-edit", &hash]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 重置到某提交。mode 为 soft / mixed / hard，默认 mixed。
+#[tauri::command]
+pub async fn git_reset(root: String, hash: String, mode: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let flag = match mode.as_str() {
+            "soft" => "--soft",
+            "hard" => "--hard",
+            _ => "--mixed",
+        };
+        run_git(&root, &["reset", flag, &hash])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 某次提交的详情补丁（git show，含 stat 与 diff）。
 #[tauri::command]
 pub async fn git_show(root: String, hash: String) -> Result<String, String> {

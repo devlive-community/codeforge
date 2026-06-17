@@ -148,7 +148,7 @@
   <GitStash v-if="showStash" :root-dir="rootDir" @close="showStash = false" @changed="refresh"/>
 
   <!-- 提交历史 -->
-  <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false"/>
+  <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false" @changed="refresh"/>
 
   <!-- 单文件改动对比：HEAD vs 工作区 -->
   <DiffView v-if="diffFile"
