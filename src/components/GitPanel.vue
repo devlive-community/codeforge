@@ -109,6 +109,10 @@
             <Sparkles class="w-4 h-4" :class="{ 'animate-pulse': generating }"/>
           </button>
         </div>
+        <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+          <input v-model="amend" type="checkbox" class="cursor-pointer"/>
+          {{ t('git.amend') }}
+        </label>
         <div class="flex items-center gap-2">
           <Button size="sm" custom-class="[transform:translateZ(0)]" :loading="pending === 'commit'" :disabled="busy || !canCommit" @click="commit">
             {{ t('git.commit') }}{{ staged.length ? ` (${staged.length})` : '' }}
@@ -187,6 +191,8 @@ const loading = ref(false)
 const pending = ref<'commit' | 'push' | 'commitPush' | 'pull' | 'fetch' | null>(null)
 const busy = computed(() => pending.value !== null)
 const generating = ref(false)
+// 修正上次提交
+const amend = ref(false)
 // 单文件改动对比（HEAD vs 工作区）
 const diffFile = ref<{ name: string; original: string; modified: string } | null>(null)
 // 丢弃改动确认
@@ -207,7 +213,8 @@ const hasUnstaged = (f: GitFile) => f.worktree !== ' ' || f.index === '?'
 const staged = computed(() => status.value.files.filter(isStaged))
 const unstaged = computed(() => status.value.files.filter(hasUnstaged))
 
-const canCommit = computed(() => staged.value.length > 0 && message.value.trim().length > 0 && !busy.value)
+// 普通提交需暂存+信息；amend 时允许仅改信息或保留原信息
+const canCommit = computed(() => !busy.value && (amend.value || (staged.value.length > 0 && message.value.trim().length > 0)))
 
 const refresh = async () => {
   loading.value = true
@@ -252,8 +259,9 @@ const unstageAll = () => unstage(staged.value.map(f => f.path))
 
 // 仅执行 git 调用，不管 pending（供组合动作复用）
 const doCommit = async () => {
-  await invoke('git_commit', {root: props.rootDir, message: message.value.trim()})
+  await invoke('git_commit', {root: props.rootDir, message: message.value.trim(), amend: amend.value})
   message.value = ''
+  amend.value = false
 }
 const doPush = async () => {
   await invoke('git_push', {root: props.rootDir})

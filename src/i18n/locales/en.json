@@ -366,6 +366,7 @@
     "branchDeleted": "Branch deleted",
     "merged": "Merged",
     "branchOpFailed": "Branch operation failed",
+    "amend": "Amend last commit",
     "statusFailed": "Failed to read Git status",
     "stageFailed": "Stage failed",
     "unstageFailed": "Unstage failed",

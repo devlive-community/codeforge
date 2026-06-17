@@ -366,6 +366,7 @@
     "branchDeleted": "已删除分支",
     "merged": "已合并",
     "branchOpFailed": "分支操作失败",
+    "amend": "修正上次提交",
     "statusFailed": "读取 Git 状态失败",
     "stageFailed": "暂存失败",
     "unstageFailed": "取消暂存失败",
