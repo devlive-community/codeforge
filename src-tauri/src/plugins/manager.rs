@@ -8,6 +8,7 @@ use crate::plugins::crystal::CrystalPlugin;
 use crate::plugins::css::CssPlugin;
 use crate::plugins::csv::CsvPlugin;
 use crate::plugins::custom::CustomPlugin;
+use crate::plugins::d::DPlugin;
 use crate::plugins::dart::DartPlugin;
 use crate::plugins::erlang::ErlangPlugin;
 use crate::plugins::fsharp::FSharpPlugin;
@@ -111,6 +112,7 @@ impl PluginManager {
             ("tcl".to_string(), Box::new(TclPlugin)),
             ("crystal".to_string(), Box::new(CrystalPlugin)),
             ("erlang".to_string(), Box::new(ErlangPlugin)),
+            ("d".to_string(), Box::new(DPlugin)),
             ("lua".to_string(), Box::new(LuaPlugin)),
             ("objective-c".to_string(), Box::new(ObjectiveCPlugin)),
             ("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin)),

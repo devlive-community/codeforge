@@ -407,6 +407,7 @@ pub mod crystal;
 pub mod css;
 pub mod csv;
 pub mod custom;
+pub mod d;
 pub mod dart;
 pub mod erlang;
 pub mod fsharp;
