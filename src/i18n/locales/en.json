@@ -442,6 +442,9 @@
     "xlsxReadFail": "Read failed: ",
     "xlsxReading": "Reading…",
     "emptyXlsx": "Run .xlsx / .xls to view data here",
+    "colN": "Col {n}",
+    "items": "items",
+    "keys": "keys",
     "zeroRows": "(0 rows)",
     "expand": "Expand",
     "collapse": "Collapse",
@@ -943,5 +946,13 @@
     "logsCleanedDays": "Cleaned logs older than {n} days",
     "keepDaysOption": "Keep {n} days",
     "logsCleanFailed": "Failed to clean logs, error: "
+  },
+  "ui": {
+    "close": "Close",
+    "addTab": "Add tab",
+    "empty": "No content",
+    "selectPlaceholder": "Please select...",
+    "searchPlaceholder": "Search options...",
+    "noOptions": "No options available"
   }
 }

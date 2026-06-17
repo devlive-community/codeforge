@@ -442,6 +442,9 @@
     "xlsxReadFail": "读取失败：",
     "xlsxReading": "读取中…",
     "emptyXlsx": "运行 .xlsx / .xls 后在此查看数据",
+    "colN": "列{n}",
+    "items": "项",
+    "keys": "键",
     "zeroRows": "（0 行）",
     "expand": "展开",
     "collapse": "收起",
@@ -943,5 +946,13 @@
     "logsCleanedDays": "已清理 {n} 天前的日志",
     "keepDaysOption": "保留 {n} 天",
     "logsCleanFailed": "清理日志失败, 错误信息: "
+  },
+  "ui": {
+    "close": "关闭",
+    "addTab": "添加标签页",
+    "empty": "暂无内容",
+    "selectPlaceholder": "请选择...",
+    "searchPlaceholder": "搜索选项...",
+    "noOptions": "无可用选项"
   }
 }

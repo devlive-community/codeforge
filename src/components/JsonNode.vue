@@ -18,7 +18,7 @@
         <template v-if="isContainer">
           <span class="text-gray-500">{{ openBracket }}</span>
           <template v-if="!open">
-            <span class="cursor-pointer text-gray-400" @click="open = true"> {{ entries.length }} {{ isArray ? '项' : '键' }} </span>
+            <span class="cursor-pointer text-gray-400" @click="open = true"> {{ entries.length }} {{ isArray ? t('view.items') : t('view.keys') }} </span>
             <span class="text-gray-500">{{ closeBracket }}</span>
           </template>
           <span v-else-if="entries.length === 0" class="text-gray-500">{{ closeBracket }}</span>
@@ -44,6 +44,9 @@
 
 <script setup lang="ts">
 import {computed, ref} from 'vue'
+import {useI18n} from 'vue-i18n'
+
+const {t} = useI18n()
 
 const props = defineProps<{
   value: any

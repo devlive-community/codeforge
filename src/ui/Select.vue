@@ -30,7 +30,7 @@
         <!-- 如果是SVG URL -->
         <img v-else-if="selectedOption && getSvgUrl(selectedOption)" :src="getSvgUrl(selectedOption)" class="w-6 h-6" alt="icon"/>
 
-        <span>{{ selectedLabel || placeholder }}</span>
+        <span>{{ selectedLabel || placeholder || t('ui.selectPlaceholder') }}</span>
       </div>
       <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
         <ChevronUpIcon class="h-5 w-5 text-gray-400 transition-transform duration-200"
@@ -65,7 +65,7 @@
             <input v-model="searchQuery"
                    type="text"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                   :placeholder="searchPlaceholder"
+                   :placeholder="searchPlaceholder || t('ui.searchPlaceholder')"
                    @click.stop
                    @keydown.stop
                    ref="searchInput"/>
@@ -110,7 +110,7 @@
 
             <!-- 无选项提示 -->
             <div v-else class="px-3 py-2 text-gray-500 text-sm">
-              {{ noOptionsText }}
+              {{ noOptionsText || t('ui.noOptions') }}
             </div>
           </div>
         </div>
@@ -122,6 +122,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CheckIcon, ChevronUpIcon } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 // Props 定义
 interface Option
@@ -151,11 +154,8 @@ interface Props
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: '请选择...',
   disabled: false,
   searchable: false,
-  searchPlaceholder: '搜索选项...',
-  noOptionsText: '无可用选项',
   valueKey: 'value',
   labelKey: 'label',
   buttonClasses: () => [],

@@ -103,7 +103,7 @@ const buildTable = (name: string) => {
     table.value = {columns: [], rows: []}
     return
   }
-  const columns = (aoa[0] || []).map((c: any, i: number) => (c === null || c === '' ? `列${i + 1}` : String(c)))
+  const columns = (aoa[0] || []).map((c: any, i: number) => (c === null || c === '' ? t('view.colN', {n: i + 1}) : String(c)))
   const rows = aoa.slice(1).map(r => columns.map((_c, i) => fmtCell(r[i])))
   table.value = {columns, rows}
 }
