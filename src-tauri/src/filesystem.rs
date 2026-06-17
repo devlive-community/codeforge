@@ -835,6 +835,89 @@ pub async fn git_show(root: String, hash: String) -> Result<String, String> {
 }
 
 #[derive(Serialize)]
+pub struct GitBlameLine {
+    short: String,
+    author: String,
+    date: String,
+    content: String,
+}
+
+/// 对某文件做 git blame，返回逐行的提交短哈希/作者/日期/内容。
+#[tauri::command]
+pub async fn git_blame(root: String, rel_path: String) -> Result<Vec<GitBlameLine>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["blame", "--line-porcelain", "--", &rel_path])?;
+        let mut lines = Vec::new();
+        let mut hash = String::new();
+        let mut author = String::new();
+        let mut date = String::new();
+        for raw in out.lines() {
+            if let Some(content) = raw.strip_prefix('\t') {
+                // 一行内容收尾：推入当前累积的提交信息
+                lines.push(GitBlameLine {
+                    short: hash.chars().take(8).collect(),
+                    author: author.clone(),
+                    date: date.clone(),
+                    content: content.to_string(),
+                });
+            } else if let Some(a) = raw.strip_prefix("author ") {
+                author = a.to_string();
+            } else if let Some(ts) = raw.strip_prefix("author-time ") {
+                // epoch 秒 → 仅取日期
+                if let Ok(secs) = ts.trim().parse::<i64>() {
+                    date = format_epoch_date(secs);
+                }
+            } else if raw.len() >= 40 && raw.as_bytes()[0].is_ascii_hexdigit() {
+                // 形如 "<40hash> <orig> <final> [<n>]"，取首个 token 作哈希
+                hash = raw.split(' ').next().unwrap_or("").to_string();
+            }
+        }
+        Ok(lines)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// epoch 秒转 YYYY-MM-DD（UTC，无需第三方库）。
+fn format_epoch_date(secs: i64) -> String {
+    let days = secs.div_euclid(86400);
+    // 1970-01-01 起的天数转公历日期
+    let mut y = 1970i64;
+    let mut d = days;
+    loop {
+        let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+        let dy = if leap { 366 } else { 365 };
+        if d >= dy {
+            d -= dy;
+            y += 1;
+        } else {
+            break;
+        }
+    }
+    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let mdays = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    let mut m = 0usize;
+    while m < 12 && d >= mdays[m] {
+        d -= mdays[m];
+        m += 1;
+    }
+    format!("{:04}-{:02}-{:02}", y, m + 1, d + 1)
+}
+
+#[derive(Serialize)]
 pub struct GitHeadFile {
     /// 该文件是否存在于 HEAD（不存在则为新增/未跟踪文件）
     exists: bool,

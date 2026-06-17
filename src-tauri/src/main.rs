@@ -58,7 +58,7 @@ use crate::execution::{
     stop_execution,
 };
 use crate::filesystem::{
-    create_directory, create_file, delete_path, get_text_file_meta, git_branch_create,
+    create_directory, create_file, delete_path, get_text_file_meta, git_blame, git_branch_create,
     git_branch_delete, git_branches, git_checkout, git_commit, git_diff, git_discard, git_fetch,
     git_file_head, git_log, git_merge, git_pull, git_push, git_show, git_stage, git_stash_drop,
     git_stash_list, git_stash_pop, git_stash_push, git_status, git_unstage, list_files,
@@ -223,6 +223,7 @@ fn main() {
             git_branch_create,
             git_branch_delete,
             git_merge,
+            git_blame,
             git_file_head,
             git_log,
             git_show,

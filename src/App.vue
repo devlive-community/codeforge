@@ -373,24 +373,39 @@
       <div class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[170px]"
            :style="{ top: `${editorCtx.y}px`, left: `${editorCtx.x}px` }"
            @click.stop>
-        <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(runGotoDefinition)">
-          <span>{{ t('app.gotoDef') }}</span><span class="text-gray-400 text-xs ml-6">F12</span>
-        </button>
-        <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(renameSymbol)">
-          <span>{{ t('app.renameSymbol') }}</span><span class="text-gray-400 text-xs ml-6">F2</span>
-        </button>
-        <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(triggerCodeActions)">
-          <span>{{ t('app.codeActionMenu') }}</span><span class="text-gray-400 text-xs ml-6">⌘.</span>
-        </button>
-        <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-        <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatDocument)">
-          <span>{{ t('app.formatDoc') }}</span><span class="text-gray-400 text-xs ml-6">⇧⌥F</span>
-        </button>
-        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatSelection)">
-          {{ t('app.formatSelection') }}
-        </button>
+        <template v-if="editorCtx.lsp">
+          <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(runGotoDefinition)">
+            <span>{{ t('app.gotoDef') }}</span><span class="text-gray-400 text-xs ml-6">F12</span>
+          </button>
+          <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(renameSymbol)">
+            <span>{{ t('app.renameSymbol') }}</span><span class="text-gray-400 text-xs ml-6">F2</span>
+          </button>
+          <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(triggerCodeActions)">
+            <span>{{ t('app.codeActionMenu') }}</span><span class="text-gray-400 text-xs ml-6">⌘.</span>
+          </button>
+          <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+          <button class="flex w-full items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatDocument)">
+            <span>{{ t('app.formatDoc') }}</span><span class="text-gray-400 text-xs ml-6">⇧⌥F</span>
+          </button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="runEditorCommand(formatSelection)">
+            {{ t('app.formatSelection') }}
+          </button>
+        </template>
+        <template v-if="canBlame">
+          <div v-if="editorCtx.lsp" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="openBlame">
+            {{ t('git.blame') }}
+          </button>
+        </template>
       </div>
     </div>
+
+    <!-- Git Blame 逐行追溯 -->
+    <BlameView v-if="blameInfo"
+               :root-dir="blameInfo.root"
+               :rel-path="blameInfo.rel"
+               :file-name="blameInfo.name"
+               @close="blameInfo = null"/>
 
     <!-- LSP 代码操作选择菜单 -->
     <div v-if="codeActionMenu.visible" class="fixed inset-0 z-50" @click="codeActionMenu.visible = false" @contextmenu.prevent="codeActionMenu.visible = false">
@@ -454,6 +469,7 @@ import QuickOpen from './components/QuickOpen.vue'
 import CommandPalette, {type PaletteCommand} from './components/CommandPalette.vue'
 import DiffView from './components/DiffView.vue'
 import PreviewPanel from './components/PreviewPanel.vue'
+import BlameView from './components/BlameView.vue'
 import GitPanel from './components/GitPanel.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
@@ -1112,22 +1128,40 @@ const onLspOpenLocation = async (e: Event) => {
 const showDiagnostics = ref(false)
 
 // ===== 编辑器 LSP 右键菜单（跳转定义 / 重命名 / 格式化）=====
-const editorCtx = reactive({visible: false, x: 0, y: 0})
+const editorCtx = reactive({visible: false, x: 0, y: 0, lsp: false})
 const closeEditorCtx = () => {
   editorCtx.visible = false
 }
-const onEditorContext = (e: MouseEvent) => {
-  const target = e.target as HTMLElement | null
-  // 仅在编辑器内容区、且当前语言支持 LSP 时弹出
-  if (!target?.closest('.cm-content') || !lspSupportsLanguage(currentLanguage.value) || !editorView.value) {
+
+// Git Blame：当前文件在已打开文件夹内时可用
+const blameInfo = ref<{ root: string; rel: string; name: string } | null>(null)
+const canBlame = computed(() => !!rootDir.value && !!currentFilePath.value && currentFilePath.value.startsWith(rootDir.value))
+const openBlame = () => {
+  editorCtx.visible = false
+  const root = rootDir.value
+  const path = currentFilePath.value
+  if (!root || !path) {
     return
   }
+  const rel = path.slice(root.length).replace(/^[\\/]/, '')
+  blameInfo.value = {root, rel, name: rel.split(/[\\/]/).pop() || rel}
+}
+const onEditorContext = (e: MouseEvent) => {
+  const target = e.target as HTMLElement | null
+  const lsp = lspSupportsLanguage(currentLanguage.value) && !!editorView.value
+  // 在编辑器内容区，且支持 LSP 或可 Blame 时弹出
+  if (!target?.closest('.cm-content') || (!lsp && !canBlame.value)) {
+    return
+  }
+  editorCtx.lsp = lsp
   e.preventDefault()
   // 将光标移到右键处，使命令作用于点击位置
   const view = editorView.value
-  const pos = view.posAtCoords({x: e.clientX, y: e.clientY})
-  if (pos != null) {
-    view.dispatch({selection: {anchor: pos}})
+  if (view) {
+    const pos = view.posAtCoords({x: e.clientX, y: e.clientY})
+    if (pos != null) {
+      view.dispatch({selection: {anchor: pos}})
+    }
   }
   // 夹取到视口内，避免贴边裁切（菜单约 180×180）
   editorCtx.x = Math.min(e.clientX, window.innerWidth - 190)
