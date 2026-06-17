@@ -85,6 +85,7 @@
   <img src="public/icons/javascript-browser.svg" width="48" title="JavaScript (Browser)" />
   <img src="public/icons/javascript-jquery.svg" width="48" title="JavaScript (jQuery)" />
   <img src="public/icons/react.svg" width="48" title="React (JSX)" />
+  <img src="public/icons/vue.svg" width="48" title="Vue" />
   <img src="public/icons/go.svg" width="48" title="Go" />
   <img src="public/icons/rust.svg" width="48" title="Rust" />
   <img src="public/icons/java.svg" width="48" title="Java" />
@@ -125,7 +126,7 @@
 
 <div align="center">
 
-`Python` · `Node.js` · `TypeScript` · `JavaScript` · `React` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Dart` · `Ruby` · `Perl` · `PHP` · `R` · `Julia` · `Lua` · `Haskell` · `Cangjie` · `Shell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `Less` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Excel` · `Text`
+`Python` · `Node.js` · `TypeScript` · `JavaScript` · `React` · `Vue` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Dart` · `Ruby` · `Perl` · `PHP` · `R` · `Julia` · `Lua` · `Haskell` · `Cangjie` · `Shell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `Less` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Excel` · `Text`
 
 </div>
 

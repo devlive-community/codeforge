@@ -328,6 +328,7 @@ export function useCodeMirrorEditor(props: Props)
             case 'javascript-jquery':
             case 'javascript-browser':
             case 'javascript-nodejs':
+            case 'vue':
                 return javascript()
             case 'react':
                 return javascript({jsx: true})

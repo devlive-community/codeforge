@@ -43,6 +43,7 @@ use crate::plugins::tsv::TsvPlugin;
 use crate::plugins::typescript::TypeScriptPlugin;
 use crate::plugins::typescript_browser::TypeScriptBrowserPlugin;
 use crate::plugins::typescript_nodejs::TypeScriptNodeJsPlugin;
+use crate::plugins::vue::VuePlugin;
 use crate::plugins::xlsx::XlsxPlugin;
 use crate::plugins::xml::XmlPlugin;
 use crate::plugins::yaml::YamlPlugin;
@@ -78,6 +79,7 @@ impl PluginManager {
             ("applescript".to_string(), Box::new(AppleScriptPlugin)),
             ("typescript".to_string(), Box::new(TypeScriptPlugin)),
             ("react".to_string(), Box::new(ReactPlugin)),
+            ("vue".to_string(), Box::new(VuePlugin)),
             ("cpp".to_string(), Box::new(CppPlugin)),
             ("groovy".to_string(), Box::new(GroovyPlugin)),
             ("html".to_string(), Box::new(HtmlPlugin)),
