@@ -15,7 +15,41 @@
           <span v-if="status.ahead">↑{{ status.ahead }}</span>
           <span v-if="status.behind">↓{{ status.behind }}</span>
         </span>
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer flex-shrink-0" :title="t('git.branchMenu')" @click="branchMenu = !branchMenu">
+          <GitBranchPlus class="w-3.5 h-3.5"/>
+        </button>
       </div>
+
+      <!-- 分支管理弹层 -->
+      <template v-if="branchMenu">
+        <div class="fixed inset-0 z-40" @click="branchMenu = false"/>
+        <div class="absolute left-3 top-12 z-50 w-64 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2 text-sm">
+          <div class="flex gap-1 mb-2">
+            <input v-model="newBranchName"
+                   class="flex-1 min-w-0 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-900 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+                   :placeholder="t('git.newBranchPlaceholder')"
+                   @keydown.enter="createBranch"/>
+            <button class="px-2 py-1 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-40 cursor-pointer flex-shrink-0"
+                    :disabled="!newBranchName.trim()" @click="createBranch">{{ t('git.create') }}</button>
+          </div>
+          <div class="max-h-60 overflow-y-auto">
+            <div v-for="b in branches" :key="b"
+                 class="group flex items-center gap-1 px-1.5 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+              <span class="flex-1 truncate cursor-pointer"
+                    :class="b === status.branch ? 'font-semibold text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'"
+                    @click="switchBranch(b)">{{ b }}</span>
+              <template v-if="b !== status.branch">
+                <button class="p-0.5 text-gray-400 hover:text-emerald-500 opacity-0 group-hover:opacity-100 cursor-pointer" :title="t('git.mergeInto')" @click="mergeBranch(b)">
+                  <GitMerge class="w-3.5 h-3.5"/>
+                </button>
+                <button class="p-0.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 cursor-pointer" :title="t('git.deleteBranch')" @click="deleteBranch(b)">
+                  <Trash2 class="w-3.5 h-3.5"/>
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
+      </template>
       <div class="flex items-center gap-2 flex-shrink-0">
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.stashTitle')" @click="showStash = true">
           <Archive class="w-4 h-4"/>
@@ -125,7 +159,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {Archive, DownloadCloud, GitBranch, GitCompare, History, RefreshCw, Sparkles, Undo2, X} from 'lucide-vue-next'
+import {Archive, DownloadCloud, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, RefreshCw, Sparkles, Trash2, Undo2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -161,6 +195,9 @@ const discardTarget = ref<GitFile | null>(null)
 // 提交历史 / 储藏
 const showLog = ref(false)
 const showStash = ref(false)
+// 分支管理弹层
+const branchMenu = ref(false)
+const newBranchName = ref('')
 
 // 文件视为已暂存：index 列非空且非未跟踪
 const isStaged = (f: GitFile) => f.index !== ' ' && f.index !== '?'
@@ -317,6 +354,63 @@ const onBranchChange = async (e: Event) => {
   }
   catch (error) {
     toast.error(t('git.switchFailed') + ': ' + error)
+    await refresh()
+  }
+}
+
+const switchBranch = async (branch: string) => {
+  branchMenu.value = false
+  if (branch === status.value.branch) {
+    return
+  }
+  try {
+    await invoke('git_checkout', {root: props.rootDir, branch})
+    toast.success(t('git.switched', { branch }))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.switchFailed') + ': ' + error)
+    await refresh()
+  }
+}
+
+const createBranch = async () => {
+  const name = newBranchName.value.trim()
+  if (!name) {
+    return
+  }
+  try {
+    await invoke('git_branch_create', {root: props.rootDir, name})
+    newBranchName.value = ''
+    branchMenu.value = false
+    toast.success(t('git.branchCreated'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.branchOpFailed') + ': ' + error)
+  }
+}
+
+const deleteBranch = async (name: string) => {
+  try {
+    await invoke('git_branch_delete', {root: props.rootDir, name})
+    toast.success(t('git.branchDeleted'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.branchOpFailed') + ': ' + error)
+  }
+}
+
+const mergeBranch = async (branch: string) => {
+  branchMenu.value = false
+  try {
+    await invoke('git_merge', {root: props.rootDir, branch})
+    toast.success(t('git.merged'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.branchOpFailed') + ': ' + error)
     await refresh()
   }
 }

@@ -739,6 +739,30 @@ pub async fn git_checkout(root: String, branch: String) -> Result<String, String
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 新建并切换到分支。
+#[tauri::command]
+pub async fn git_branch_create(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["checkout", "-b", &name]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 删除分支（安全删除，未合并会失败）。
+#[tauri::command]
+pub async fn git_branch_delete(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["branch", "-d", &name]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 把指定分支合并到当前分支。
+#[tauri::command]
+pub async fn git_merge(root: String, branch: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["merge", "--no-edit", &branch]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 #[derive(Serialize)]
 pub struct GitCommit {
     hash: String,
