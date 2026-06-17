@@ -40,6 +40,7 @@ use crate::plugins::shell::ShellPlugin;
 use crate::plugins::sql::SqlPlugin;
 use crate::plugins::svg::SvgPlugin;
 use crate::plugins::swift::SwiftPlugin;
+use crate::plugins::tcl::TclPlugin;
 use crate::plugins::text::TextPlugin;
 use crate::plugins::tsv::TsvPlugin;
 use crate::plugins::typescript::TypeScriptPlugin;
@@ -103,6 +104,7 @@ impl PluginManager {
             ("cangjie".to_string(), Box::new(CangjiePlugin)),
             ("haskell".to_string(), Box::new(HaskellPlugin)),
             ("ocaml".to_string(), Box::new(OCamlPlugin)),
+            ("tcl".to_string(), Box::new(TclPlugin)),
             ("lua".to_string(), Box::new(LuaPlugin)),
             ("objective-c".to_string(), Box::new(ObjectiveCPlugin)),
             ("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin)),

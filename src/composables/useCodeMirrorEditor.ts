@@ -27,6 +27,7 @@ import {haskell} from "@codemirror/legacy-modes/mode/haskell"
 import {lua} from "@codemirror/legacy-modes/mode/lua"
 import {powerShell} from '@codemirror/legacy-modes/mode/powershell'
 import {oCaml} from '@codemirror/legacy-modes/mode/mllike'
+import {tcl} from '@codemirror/legacy-modes/mode/tcl'
 import {
     abcdef,
     abyss,
@@ -387,6 +388,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(haskell)
             case 'ocaml':
                 return StreamLanguage.define(oCaml)
+            case 'tcl':
+                return StreamLanguage.define(tcl)
             case 'lua':
                 return StreamLanguage.define(lua)
             case 'objective-c':

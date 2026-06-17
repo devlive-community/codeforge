@@ -440,6 +440,7 @@ pub mod shell;
 pub mod sql;
 pub mod svg;
 pub mod swift;
+pub mod tcl;
 pub mod text;
 pub mod tsv;
 pub mod typescript;
