@@ -681,6 +681,66 @@ pub async fn git_checkout(root: String, branch: String) -> Result<String, String
 }
 
 #[derive(Serialize)]
+pub struct GitCommit {
+    hash: String,
+    short: String,
+    author: String,
+    date: String,
+    subject: String,
+}
+
+/// 提交历史（分页）：limit 条，跳过 skip 条。
+#[tauri::command]
+pub async fn git_log(root: String, limit: u32, skip: u32) -> Result<Vec<GitCommit>, String> {
+    tokio::task::spawn_blocking(move || {
+        let n = format!("-n{}", limit);
+        let sk = format!("--skip={}", skip);
+        // 字段以 \x1f 分隔、每提交一行；%s 为单行主题
+        let args = vec![
+            "log",
+            n.as_str(),
+            sk.as_str(),
+            "--date=format:%Y-%m-%d %H:%M",
+            "--pretty=format:%H\x1f%h\x1f%an\x1f%ad\x1f%s",
+        ];
+        let out = run_git(&root, &args)?;
+        let mut commits = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 5 {
+                commits.push(GitCommit {
+                    hash: p[0].to_string(),
+                    short: p[1].to_string(),
+                    author: p[2].to_string(),
+                    date: p[3].to_string(),
+                    subject: p[4].to_string(),
+                });
+            }
+        }
+        Ok(commits)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 某次提交的详情补丁（git show，含 stat 与 diff）。
+#[tauri::command]
+pub async fn git_show(root: String, hash: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut out = run_git(&root, &["show", "--stat", "-p", &hash])?;
+        // 超大提交截断，避免渲染卡顿
+        const MAX_SHOW_LEN: usize = 200_000;
+        if out.len() > MAX_SHOW_LEN {
+            out.truncate(MAX_SHOW_LEN);
+            out.push_str("\n…(内容过长已截断)");
+        }
+        Ok(out)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
 pub struct GitHeadFile {
     /// 该文件是否存在于 HEAD（不存在则为新增/未跟踪文件）
     exists: bool,
