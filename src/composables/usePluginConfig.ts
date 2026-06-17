@@ -5,6 +5,9 @@ import { debounce } from 'lodash-es'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { useToast } from '../plugins/toast'
 import type PluginConfig from '../types/plugin'
+import { i18n } from '../i18n'
+
+const t = (key: string, params?: Record<string, unknown>) => i18n.global.t(key, params ?? {})
 
 interface Language
 {
@@ -73,7 +76,7 @@ export function usePluginConfig(emit?: any)
         }
         catch (error) {
             console.error('获取支持的语言失败:', error)
-            toast.error('获取支持的语言失败 - 错误信息: ' + error)
+            toast.error(t('toast.getLanguagesFailed') + error)
             tabsPluginData.value = []
         }
     }
@@ -89,7 +92,7 @@ export function usePluginConfig(emit?: any)
         }
         catch (error) {
             console.error('获取配置失败:', error)
-            toast.error('获取配置失败 - 错误信息: ' + error)
+            toast.error(t('toast.getConfigFailed') + error)
         }
     }
 
@@ -193,7 +196,7 @@ export function usePluginConfig(emit?: any)
                 (tab: any) => tab.key === updatedPlugin.language
             )?.label || updatedPlugin.language
 
-            toast.success(`${ pluginLabel } 配置已保存`)
+            toast.success(t('toast.pluginConfigSaved', {name: pluginLabel}))
 
             if (emit) {
                 emit('settings-changed', updatedPlugin)
@@ -203,7 +206,7 @@ export function usePluginConfig(emit?: any)
         }
         catch (error) {
             console.error('保存配置失败:', error)
-            toast.error('保存配置失败 - 错误信息: ' + error)
+            toast.error(t('toast.saveConfigFailed') + error)
 
             if (emit) {
                 emit('error', '保存配置失败')
@@ -261,17 +264,17 @@ export function usePluginConfig(emit?: any)
     // 验证插件配置
     const validatePluginConfig = (config: PluginConfig): boolean => {
         if (!config.language) {
-            toast.error('语言不能为空')
+            toast.error(t('toast.langRequired'))
             return false
         }
 
         if (!config.run_command) {
-            toast.error('执行命令不能为空')
+            toast.error(t('toast.runCmdRequired'))
             return false
         }
 
         if (config.timeout && (config.timeout < 1 || config.timeout > 300)) {
-            toast.error('超时时间必须在 1-300 秒之间')
+            toast.error(t('toast.timeoutRange'))
             return false
         }
 

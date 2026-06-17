@@ -1,6 +1,9 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '../plugins/toast'
+import { i18n } from '../i18n'
+
+const t = (key: string, params?: Record<string, unknown>) => i18n.global.t(key, params ?? {})
 
 export function useLogCleanup(emit: any, loadLogFiles: () => Promise<void>)
 {
@@ -8,24 +11,24 @@ export function useLogCleanup(emit: any, loadLogFiles: () => Promise<void>)
 
     const keepDays = ref(30)
 
-    const keepDaysOptions = [
-        { label: '保留 1 天', value: 1 },
-        { label: '保留 7 天', value: 7 },
-        { label: '保留 14 天', value: 14 },
-        { label: '保留 30 天', value: 30 },
-        { label: '保留 90 天', value: 90 }
-    ]
+    const keepDaysOptions = computed(() => [
+        { label: t('toast.keepDaysOption', { n: 1 }), value: 1 },
+        { label: t('toast.keepDaysOption', { n: 7 }), value: 7 },
+        { label: t('toast.keepDaysOption', { n: 14 }), value: 14 },
+        { label: t('toast.keepDaysOption', { n: 30 }), value: 30 },
+        { label: t('toast.keepDaysOption', { n: 90 }), value: 90 }
+    ])
 
     const clearLogs = async () => {
         try {
             await invoke('clear_logs', { keepDays: parseInt(keepDays.value.toString()) })
             await loadLogFiles()
-            toast.success(`已清理 ${ keepDays.value } 天前的日志`)
+            toast.success(t('toast.logsCleanedDays', { n: keepDays.value }))
             emit('settings-changed', 'logCleanup', keepDays.value)
         }
         catch (error) {
             console.error('Failed to clear old logs:', error)
-            const errorMessage = '清理日志失败, 错误信息: ' + error
+            const errorMessage = t('toast.logsCleanFailed') + error
             toast.error(errorMessage)
             emit('error', errorMessage)
         }

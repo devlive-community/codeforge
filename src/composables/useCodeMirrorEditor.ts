@@ -1,6 +1,9 @@
 import {nextTick, ref, shallowRef, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {useTheme} from './useTheme'
+import {i18n} from '../i18n'
+
+const tr = (key: string) => i18n.global.t(key)
 import {python} from '@codemirror/lang-python'
 import {javascript} from '@codemirror/lang-javascript'
 import {go} from '@codemirror/lang-go'
@@ -508,7 +511,7 @@ export function useCodeMirrorEditor(props: Props)
         }
         catch (error) {
             console.error('获取配置失败:', error)
-            toast.error('获取配置失败 - 错误信息: ' + error)
+            toast.error(tr('toast.getConfigFailed') + error)
             editorConfig.value = defaultConfig
             await updateExtensions()
         }
