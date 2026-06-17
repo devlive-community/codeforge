@@ -24,6 +24,7 @@ use crate::plugins::markdown::MarkdownPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
 use crate::plugins::objective_c::ObjectiveCPlugin;
 use crate::plugins::objective_cpp::ObjectiveCppPlugin;
+use crate::plugins::perl::PerlPlugin;
 use crate::plugins::php::PHPPlugin;
 use crate::plugins::python2::Python2Plugin;
 use crate::plugins::python3::Python3Plugin;
@@ -71,6 +72,7 @@ impl PluginManager {
             ("c".to_string(), Box::new(CPlugin)),
             ("ruby".to_string(), Box::new(RubyPlugin)),
             ("dart".to_string(), Box::new(DartPlugin)),
+            ("perl".to_string(), Box::new(PerlPlugin)),
             ("applescript".to_string(), Box::new(AppleScriptPlugin)),
             ("typescript".to_string(), Box::new(TypeScriptPlugin)),
             ("react".to_string(), Box::new(ReactPlugin)),
