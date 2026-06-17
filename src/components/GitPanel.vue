@@ -78,6 +78,16 @@
     <template v-if="status.is_repo">
       <!-- 文件列表 -->
       <div class="flex-1 overflow-y-auto">
+        <div v-if="conflicts.length" class="py-1">
+          <div class="px-4 py-1 text-xs font-semibold text-red-500 flex items-center gap-1">
+            <AlertTriangle class="w-3.5 h-3.5"/>{{ t('git.conflicts') }} ({{ conflicts.length }})
+          </div>
+          <div v-for="f in conflicts" :key="'c' + f.path" class="group flex items-center px-4 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <span class="flex-1 min-w-0 text-sm text-gray-800 dark:text-gray-200 truncate cursor-pointer" @click="openFile(f.path)">{{ f.path }}</span>
+            <button class="text-xs text-blue-500 hover:underline cursor-pointer flex-shrink-0" @click="resolve(f.path)">{{ t('git.resolve') }}</button>
+          </div>
+        </div>
+
         <div v-if="staged.length" class="py-1">
           <div class="px-4 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 flex items-center justify-between">
             <span>{{ t('git.staged') }} ({{ staged.length }})</span>
@@ -175,7 +185,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {Archive, Cloud, DownloadCloud, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, RefreshCw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Cloud, DownloadCloud, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, RefreshCw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -221,13 +231,16 @@ const showRemotes = ref(false)
 const branchMenu = ref(false)
 const newBranchName = ref('')
 
+// 未合并（冲突）：任一侧为 U，或两侧同为 A/D（AA/DD）
+const isConflict = (f: GitFile) => f.index === 'U' || f.worktree === 'U' || (f.index === f.worktree && (f.index === 'A' || f.index === 'D'))
 // 文件视为已暂存：index 列非空且非未跟踪
 const isStaged = (f: GitFile) => f.index !== ' ' && f.index !== '?'
 // 同一文件可能同时存在暂存与未暂存改动；这里按是否有未暂存改动归入“更改”
 const hasUnstaged = (f: GitFile) => f.worktree !== ' ' || f.index === '?'
 
-const staged = computed(() => status.value.files.filter(isStaged))
-const unstaged = computed(() => status.value.files.filter(hasUnstaged))
+const conflicts = computed(() => status.value.files.filter(isConflict))
+const staged = computed(() => status.value.files.filter(f => isStaged(f) && !isConflict(f)))
+const unstaged = computed(() => status.value.files.filter(f => hasUnstaged(f) && !isConflict(f)))
 
 // 普通提交需暂存+信息；amend 时允许仅改信息或保留原信息
 const canCommit = computed(() => !busy.value && (amend.value || (staged.value.length > 0 && message.value.trim().length > 0)))
@@ -268,6 +281,17 @@ const unstage = async (paths: string[]) => {
   }
   catch (error) {
     toast.error(t('git.unstageFailed') + ': ' + error)
+  }
+}
+// 标记冲突已解决：git add 该文件
+const resolve = async (path: string) => {
+  try {
+    await invoke('git_stage', {root: props.rootDir, paths: [abs(path)]})
+    toast.success(t('git.resolved'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.stageFailed') + ': ' + error)
   }
 }
 const stageAll = () => stage(unstaged.value.map(f => f.path))
