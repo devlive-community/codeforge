@@ -28,6 +28,7 @@ import {lua} from "@codemirror/legacy-modes/mode/lua"
 import {powerShell} from '@codemirror/legacy-modes/mode/powershell'
 import {fSharp, oCaml} from '@codemirror/legacy-modes/mode/mllike'
 import {tcl} from '@codemirror/legacy-modes/mode/tcl'
+import {crystal} from '@codemirror/legacy-modes/mode/crystal'
 import {
     abcdef,
     abyss,
@@ -362,6 +363,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(clojure)
             case 'ruby':
                 return StreamLanguage.define(ruby)
+            case 'crystal':
+                return StreamLanguage.define(crystal)
             case 'perl':
                 return StreamLanguage.define(perl)
             case 'julia':

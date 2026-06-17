@@ -403,6 +403,7 @@ pub mod c;
 pub mod cangjie;
 pub mod clojure;
 pub mod cpp;
+pub mod crystal;
 pub mod css;
 pub mod csv;
 pub mod custom;

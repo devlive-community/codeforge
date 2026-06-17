@@ -4,6 +4,7 @@ use crate::plugins::c::CPlugin;
 use crate::plugins::cangjie::CangjiePlugin;
 use crate::plugins::clojure::ClojurePlugin;
 use crate::plugins::cpp::CppPlugin;
+use crate::plugins::crystal::CrystalPlugin;
 use crate::plugins::css::CssPlugin;
 use crate::plugins::csv::CsvPlugin;
 use crate::plugins::custom::CustomPlugin;
@@ -107,6 +108,7 @@ impl PluginManager {
             ("haskell".to_string(), Box::new(HaskellPlugin)),
             ("ocaml".to_string(), Box::new(OCamlPlugin)),
             ("tcl".to_string(), Box::new(TclPlugin)),
+            ("crystal".to_string(), Box::new(CrystalPlugin)),
             ("lua".to_string(), Box::new(LuaPlugin)),
             ("objective-c".to_string(), Box::new(ObjectiveCPlugin)),
             ("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin)),
