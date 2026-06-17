@@ -588,6 +588,20 @@ pub async fn git_stage(root: String, paths: Vec<String>) -> Result<(), String> {
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 丢弃已跟踪文件的改动：暂存区与工作区一并恢复到 HEAD（不可恢复）。
+/// 未跟踪文件不在此处理（由前端删除）。
+#[tauri::command]
+pub async fn git_discard(root: String, paths: Vec<String>) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["restore", "--source=HEAD", "--staged", "--worktree", "--"];
+        let refs: Vec<&str> = paths.iter().map(|s| s.as_str()).collect();
+        args.extend_from_slice(&refs);
+        run_git(&root, &args).map(|_| ())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 取消暂存指定文件。
 #[tauri::command]
 pub async fn git_unstage(root: String, paths: Vec<String>) -> Result<(), String> {

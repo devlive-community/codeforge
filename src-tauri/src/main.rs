@@ -59,9 +59,9 @@ use crate::execution::{
 };
 use crate::filesystem::{
     create_directory, create_file, delete_path, get_text_file_meta, git_branches, git_checkout,
-    git_commit, git_diff, git_fetch, git_file_head, git_pull, git_push, git_stage, git_status,
-    git_unstage, list_files, read_directory_tree, read_file_lines, read_file_text, rename_path,
-    replace_in_files, reveal_path, search_in_files, watch_directory, write_file_text,
+    git_commit, git_diff, git_discard, git_fetch, git_file_head, git_pull, git_push, git_stage,
+    git_status, git_unstage, list_files, read_directory_tree, read_file_lines, read_file_text,
+    rename_path, replace_in_files, reveal_path, search_in_files, watch_directory, write_file_text,
 };
 use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
 use crate::lsp::{
@@ -211,6 +211,7 @@ fn main() {
             git_status,
             git_stage,
             git_unstage,
+            git_discard,
             git_commit,
             git_push,
             git_pull,

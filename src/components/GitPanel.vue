@@ -37,7 +37,7 @@
             <span>{{ t('git.staged') }} ({{ staged.length }})</span>
             <button class="text-blue-500 hover:underline cursor-pointer" @click="unstageAll">{{ t('git.unstageAll') }}</button>
           </div>
-          <FileRow v-for="f in staged" :key="'s' + f.path" :file="f" staged @toggle="unstage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)"/>
+          <FileRow v-for="f in staged" :key="'s' + f.path" :file="f" staged @toggle="unstage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)" @discard="requestDiscard(f)"/>
         </div>
 
         <div v-if="unstaged.length" class="py-1">
@@ -45,7 +45,7 @@
             <span>{{ t('git.changes') }} ({{ unstaged.length }})</span>
             <button class="text-blue-500 hover:underline cursor-pointer" @click="stageAll">{{ t('git.stageAll') }}</button>
           </div>
-          <FileRow v-for="f in unstaged" :key="'u' + f.path" :file="f" @toggle="stage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)"/>
+          <FileRow v-for="f in unstaged" :key="'u' + f.path" :file="f" @toggle="stage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)" @discard="requestDiscard(f)"/>
         </div>
 
         <div v-if="!staged.length && !unstaged.length" class="px-4 py-10 text-center text-sm text-gray-400">
@@ -87,6 +87,19 @@
     </template>
   </div>
 
+  <!-- 丢弃改动确认 -->
+  <Modal v-model:show="showDiscard" :title="t('git.discardTitle')" size="sm">
+    <div class="space-y-4">
+      <p class="text-sm text-gray-700 dark:text-gray-300">
+        {{ t('git.discardConfirm', { file: discardTarget?.path }) }}
+      </p>
+      <div class="flex justify-end gap-2">
+        <Button size="sm" type="secondary" @click="showDiscard = false">{{ t('git.cancel') }}</Button>
+        <Button size="sm" type="danger" @click="confirmDiscard">{{ t('git.discard') }}</Button>
+      </div>
+    </div>
+  </Modal>
+
   <!-- 单文件改动对比：HEAD vs 工作区 -->
   <DiffView v-if="diffFile"
             :original="diffFile.original"
@@ -100,8 +113,9 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {DownloadCloud, GitBranch, GitCompare, RefreshCw, Sparkles, X} from 'lucide-vue-next'
+import {DownloadCloud, GitBranch, GitCompare, RefreshCw, Sparkles, Undo2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
+import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
@@ -127,6 +141,9 @@ const busy = computed(() => pending.value !== null)
 const generating = ref(false)
 // 单文件改动对比（HEAD vs 工作区）
 const diffFile = ref<{ name: string; original: string; modified: string } | null>(null)
+// 丢弃改动确认
+const showDiscard = ref(false)
+const discardTarget = ref<GitFile | null>(null)
 
 // 文件视为已暂存：index 列非空且非未跟踪
 const isStaged = (f: GitFile) => f.index !== ' ' && f.index !== '?'
@@ -308,6 +325,33 @@ const viewDiff = async (rel: string) => {
   }
 }
 
+const requestDiscard = (f: GitFile) => {
+  discardTarget.value = f
+  showDiscard.value = true
+}
+
+const confirmDiscard = async () => {
+  const f = discardTarget.value
+  showDiscard.value = false
+  if (!f) {
+    return
+  }
+  try {
+    if (f.index === '?') {
+      // 未跟踪文件：丢弃即删除
+      await invoke('delete_path', {path: abs(f.path)})
+    }
+    else {
+      await invoke('git_discard', {root: props.rootDir, paths: [abs(f.path)]})
+    }
+    toast.success(t('git.discarded'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.discardFailed') + ': ' + error)
+  }
+}
+
 // 清洗 AI 返回：去掉代码块/引号，取首个非空行
 const cleanupMessage = (raw: string): string => {
   let s = raw.trim()
@@ -379,6 +423,11 @@ const FileRow = (rowProps: { file: GitFile; staged?: boolean }, {emit: rowEmit }
       title: t('git.viewDiff'),
       onClick: () => rowEmit('diff')
     }, h(GitCompare, {class: 'w-3.5 h-3.5'})),
+    h('button', {
+      class: 'ml-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 cursor-pointer',
+      title: t('git.discard'),
+      onClick: () => rowEmit('discard')
+    }, h(Undo2, {class: 'w-3.5 h-3.5'})),
     h('button', {
       class: 'ml-1.5 text-xs text-blue-500 hover:underline opacity-0 group-hover:opacity-100 cursor-pointer',
       onClick: () => rowEmit('toggle')
