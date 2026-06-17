@@ -47,6 +47,8 @@ tar = "0.4"
 xz2 = "0.1"
 zstd = "0.13"
 notify = "6"
+native-tls = "0.2.18"
+postgres-native-tls = "0.5"
 
 # DuckDB 走 bundled 编译，其 vendored C++(fmt) 在部分新版 MSVC 上编译失败，
 # 故仅在非 Windows 平台启用；Windows 不提供 DuckDB 数据源。

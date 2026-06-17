@@ -178,7 +178,21 @@
       "cancel": "Cancel",
       "fileDialogName": "Database file",
       "connectFailed": "Connection failed: ",
-      "connectSuccess": "Connection successful"
+      "connectSuccess": "Connection successful",
+      "ssl": "Enable SSL/TLS encryption",
+      "sslHint": "Use TLS for the direct connection (cert checks relaxed for dev)",
+      "sshTunnel": "SSH tunnel",
+      "sshHost": "Bastion host",
+      "sshHostPlaceholder": "e.g. bastion.example.com",
+      "sshPort": "SSH port",
+      "sshUser": "SSH username",
+      "sshPassword": "SSH password",
+      "sshPasswordPlaceholder": "Password (needs sshpass) or leave empty to use a key",
+      "sshKeyFile": "Private key file",
+      "sshKeyFilePlaceholder": "e.g. ~/.ssh/id_rsa (takes priority over password)",
+      "pickKeyFile": "Choose key",
+      "keyFileDialogName": "SSH private key",
+      "sshHint": "Local port-forward to the target DB via a bastion; key auth preferred, password auth needs sshpass installed"
     },
     "lsp": {
       "title": "Language Server (LSP)",

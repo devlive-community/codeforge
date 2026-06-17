@@ -8,6 +8,7 @@ mod duckdb;
 mod mysql;
 mod postgres;
 mod sqlite;
+mod tunnel;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -37,8 +38,9 @@ impl SqlRunResult {
     }
 }
 
-/// 数据源描述：内存 / SQLite 文件 / MySQL（后续可扩展更多字段）
+/// 数据源描述：内存 / SQLite 文件 / 网络型数据库（含可选 SSL 与 SSH 隧道）
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DataSource {
     pub kind: String,
     #[serde(default)]
@@ -53,6 +55,67 @@ pub struct DataSource {
     pub password: Option<String>,
     #[serde(default)]
     pub database: Option<String>,
+    // 直连 DB 时启用 TLS（pg/mysql 走加密连接，clickhouse 改 https）
+    #[serde(default)]
+    pub ssl: Option<bool>,
+    // SSH 隧道：经跳板机本地端口转发到目标 DB
+    #[serde(default)]
+    pub ssh_enabled: Option<bool>,
+    #[serde(default)]
+    pub ssh_host: Option<String>,
+    #[serde(default)]
+    pub ssh_port: Option<u16>,
+    #[serde(default)]
+    pub ssh_user: Option<String>,
+    #[serde(default)]
+    pub ssh_password: Option<String>,
+    #[serde(default)]
+    pub ssh_key_file: Option<String>,
+}
+
+/// 解析后的连接端点：直连时即原 host/port；启用 SSH 时为本地转发端口，
+/// 并持有隧道句柄（随 Endpoint 释放而关闭 ssh 进程）。
+pub(crate) struct Endpoint {
+    pub host: String,
+    pub port: u16,
+    _tunnel: Option<tunnel::SshTunnel>,
+}
+
+/// 按数据源解析实际连接端点：启用 SSH 隧道则开隧道并返回本地端口。
+pub(crate) fn resolve_endpoint(source: &DataSource, default_port: u16) -> Result<Endpoint, String> {
+    let host = source
+        .host
+        .clone()
+        .unwrap_or_else(|| "127.0.0.1".to_string());
+    let port = source.port.unwrap_or(default_port);
+
+    if source.ssh_enabled.unwrap_or(false) {
+        let ssh_host = source.ssh_host.clone().unwrap_or_default();
+        let ssh_user = source.ssh_user.clone().unwrap_or_default();
+        if ssh_host.is_empty() || ssh_user.is_empty() {
+            return Err("SSH 隧道需填写跳板机主机与用户名".to_string());
+        }
+        let cfg = tunnel::SshConfig {
+            host: ssh_host,
+            port: source.ssh_port.unwrap_or(22),
+            user: ssh_user,
+            password: source.ssh_password.clone(),
+            key_file: source.ssh_key_file.clone(),
+        };
+        let t = tunnel::SshTunnel::open(&cfg, &host, port)?;
+        let local_port = t.local_port;
+        Ok(Endpoint {
+            host: "127.0.0.1".to_string(),
+            port: local_port,
+            _tunnel: Some(t),
+        })
+    } else {
+        Ok(Endpoint {
+            host,
+            port,
+            _tunnel: None,
+        })
+    }
 }
 
 /// 数据库执行器接口：新增数据库类型只需实现本 trait 并在 executors() 注册。

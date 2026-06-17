@@ -1,4 +1,4 @@
-use super::{DataSource, DbExecutor, SqlResultSet, SqlRunResult, split_sql};
+use super::{DataSource, DbExecutor, SqlResultSet, SqlRunResult, resolve_endpoint, split_sql};
 use serde_json::Value as JsonValue;
 
 pub(crate) struct ClickhouseExecutor;
@@ -11,15 +11,29 @@ impl DbExecutor for ClickhouseExecutor {
     fn run(&self, sql: &str, source: &DataSource) -> SqlRunResult {
         let mut result = SqlRunResult::new();
 
-        let host = source.host.as_deref().unwrap_or("127.0.0.1");
-        let port = source.port.unwrap_or(8123);
+        // 解析端点：启用 SSH 时隧道转发到本地端口（隧道随 endpoint 在本函数结束时关闭）
+        let endpoint = match resolve_endpoint(source, 8123) {
+            Ok(e) => e,
+            Err(e) => {
+                result.error = Some(e);
+                return result;
+            }
+        };
+
         let database = source.database.as_deref().unwrap_or("default");
         let user = source.user.as_deref().unwrap_or("default");
-        // 走 HTTP 接口，SELECT 以 JSONCompact 返回，DDL/写入返回空体
+        // SSL 直连用 https；走 SSH 隧道时已由 ssh 加密，本地仍用 http
+        let scheme = if source.ssl.unwrap_or(false) && !source.ssh_enabled.unwrap_or(false) {
+            "https"
+        } else {
+            "http"
+        };
+        // 走 HTTP(S) 接口，SELECT 以 JSONCompact 返回，DDL/写入返回空体
         let url = format!(
-            "http://{}:{}/?default_format=JSONCompact&database={}",
-            host,
-            port,
+            "{}://{}:{}/?default_format=JSONCompact&database={}",
+            scheme,
+            endpoint.host,
+            endpoint.port,
             urlencode(database)
         );
 

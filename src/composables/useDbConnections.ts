@@ -12,6 +12,15 @@ export interface DataSource
     user?: string
     password?: string
     database?: string
+    // 加密连接：直连 TLS
+    ssl?: boolean
+    // SSH 隧道
+    sshEnabled?: boolean
+    sshHost?: string
+    sshPort?: number
+    sshUser?: string
+    sshPassword?: string
+    sshKeyFile?: string
 }
 
 export interface DbConnection extends DataSource

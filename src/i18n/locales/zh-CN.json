@@ -178,7 +178,21 @@
       "cancel": "取消",
       "fileDialogName": "数据库文件",
       "connectFailed": "连接失败：",
-      "connectSuccess": "连接成功"
+      "connectSuccess": "连接成功",
+      "ssl": "启用 SSL/TLS 加密连接",
+      "sslHint": "直连数据库时启用 TLS（开发环境放宽证书校验）",
+      "sshTunnel": "SSH 隧道",
+      "sshHost": "跳板机主机",
+      "sshHostPlaceholder": "如 bastion.example.com",
+      "sshPort": "SSH 端口",
+      "sshUser": "SSH 用户名",
+      "sshPassword": "SSH 密码",
+      "sshPasswordPlaceholder": "密码（需本机 sshpass）或留空用私钥",
+      "sshKeyFile": "私钥文件",
+      "sshKeyFilePlaceholder": "如 ~/.ssh/id_rsa（优先于密码）",
+      "pickKeyFile": "选择私钥",
+      "keyFileDialogName": "SSH 私钥",
+      "sshHint": "经跳板机本地端口转发到目标数据库；优先用私钥认证，密码认证需本机安装 sshpass"
     },
     "lsp": {
       "title": "语言服务（LSP）",

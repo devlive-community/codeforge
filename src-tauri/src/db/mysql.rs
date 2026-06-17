@@ -1,4 +1,4 @@
-use super::{DataSource, DbExecutor, SqlResultSet, SqlRunResult, split_sql};
+use super::{DataSource, DbExecutor, SqlResultSet, SqlRunResult, resolve_endpoint, split_sql};
 use serde_json::Value as JsonValue;
 
 pub(crate) struct MysqlExecutor;
@@ -39,19 +39,32 @@ impl DbExecutor for MysqlExecutor {
         use mysql::prelude::Queryable;
         let mut result = SqlRunResult::new();
 
-        let opts = mysql::OptsBuilder::new()
-            .ip_or_hostname(
-                source
-                    .host
-                    .clone()
-                    .or_else(|| Some("127.0.0.1".to_string())),
-            )
-            .tcp_port(source.port.unwrap_or(3306))
+        // 解析端点：启用 SSH 时隧道转发到本地端口（隧道随 endpoint 在本函数结束时关闭）
+        let endpoint = match resolve_endpoint(source, 3306) {
+            Ok(e) => e,
+            Err(e) => {
+                result.error = Some(e);
+                return result;
+            }
+        };
+
+        let mut builder = mysql::OptsBuilder::new()
+            .ip_or_hostname(Some(endpoint.host.clone()))
+            .tcp_port(endpoint.port)
             .user(source.user.clone())
             .pass(source.password.clone())
             .db_name(source.database.clone());
 
-        let mut conn = match mysql::Conn::new(opts) {
+        // 启用 SSL：rustls 加密连接（开发场景放宽证书校验）
+        if source.ssl.unwrap_or(false) {
+            builder = builder.ssl_opts(Some(
+                mysql::SslOpts::default()
+                    .with_danger_accept_invalid_certs(true)
+                    .with_danger_skip_domain_validation(true),
+            ));
+        }
+
+        let mut conn = match mysql::Conn::new(builder) {
             Ok(c) => c,
             Err(e) => {
                 result.error = Some(format!("连接 MySQL 失败: {}", e));
