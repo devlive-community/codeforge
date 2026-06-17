@@ -16,7 +16,7 @@ import {xml} from '@codemirror/lang-xml'
 import {php} from '@codemirror/lang-php'
 import {shell} from '@codemirror/legacy-modes/mode/shell'
 import {swift} from '@codemirror/legacy-modes/mode/swift'
-import {kotlin, objectiveC, objectiveCpp, scala} from '@codemirror/legacy-modes/mode/clike'
+import {dart, kotlin, objectiveC, objectiveCpp, scala} from '@codemirror/legacy-modes/mode/clike'
 import {clojure} from '@codemirror/legacy-modes/mode/clojure'
 import {ruby} from '@codemirror/legacy-modes/mode/ruby'
 import {groovy} from '@codemirror/legacy-modes/mode/groovy'
@@ -348,6 +348,8 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(scala)
             case 'kotlin':
                 return StreamLanguage.define(kotlin)
+            case 'dart':
+                return StreamLanguage.define(dart)
             case 'clojure':
                 return StreamLanguage.define(clojure)
             case 'ruby':

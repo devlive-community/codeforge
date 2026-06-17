@@ -230,7 +230,8 @@ const LANGUAGE_ID: Record<string, string> = {
   scala: 'scala',
   yaml: 'yaml',
   shell: 'shellscript',
-  haskell: 'haskell'
+  haskell: 'haskell',
+  dart: 'dart'
 }
 
 // 草稿(未保存)时用的文件扩展名，构造 untitled 文档 URI
@@ -240,7 +241,7 @@ const LANGUAGE_EXT: Record<string, string> = {
   lua: 'lua', php: 'php', ruby: 'rb', html: 'html', css: 'css', less: 'less', json: 'json',
   javascriptreact: 'jsx',
   java: 'java', kotlin: 'kt', swift: 'swift', scala: 'scala', yaml: 'yaml',
-  shellscript: 'sh', haskell: 'hs'
+  shellscript: 'sh', haskell: 'hs', dart: 'dart'
 }
 
 export const lspSupportsLanguage = (language?: string): boolean =>

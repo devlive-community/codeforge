@@ -7,6 +7,7 @@ use crate::plugins::cpp::CppPlugin;
 use crate::plugins::css::CssPlugin;
 use crate::plugins::csv::CsvPlugin;
 use crate::plugins::custom::CustomPlugin;
+use crate::plugins::dart::DartPlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::groovy::GroovyPlugin;
 use crate::plugins::haskell::HaskellPlugin;
@@ -69,6 +70,7 @@ impl PluginManager {
             ("clojure".to_string(), Box::new(ClojurePlugin)),
             ("c".to_string(), Box::new(CPlugin)),
             ("ruby".to_string(), Box::new(RubyPlugin)),
+            ("dart".to_string(), Box::new(DartPlugin)),
             ("applescript".to_string(), Box::new(AppleScriptPlugin)),
             ("typescript".to_string(), Box::new(TypeScriptPlugin)),
             ("react".to_string(), Box::new(ReactPlugin)),
