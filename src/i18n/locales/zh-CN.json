@@ -396,7 +396,7 @@
     "remoteTitle": "远程仓库",
     "remoteEmpty": "暂无远程",
     "remoteNamePlaceholder": "名称（如 origin）",
-    "remoteUrlPlaceholder": "URL（git@… 或 https://…）",
+    "remoteUrlPlaceholder": "URL（git{'@'}… 或 https://…）",
     "remoteAdd": "添加",
     "remoteRemove": "删除",
     "setUpstream": "设为上游",

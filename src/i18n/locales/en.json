@@ -396,7 +396,7 @@
     "remoteTitle": "Remotes",
     "remoteEmpty": "No remotes",
     "remoteNamePlaceholder": "Name (e.g. origin)",
-    "remoteUrlPlaceholder": "URL (git@… or https://…)",
+    "remoteUrlPlaceholder": "URL (git{'@'}… or https://…)",
     "remoteAdd": "Add",
     "remoteRemove": "Remove",
     "setUpstream": "Set upstream",
