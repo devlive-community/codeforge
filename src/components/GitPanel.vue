@@ -37,7 +37,7 @@
             <span>{{ t('git.staged') }} ({{ staged.length }})</span>
             <button class="text-blue-500 hover:underline cursor-pointer" @click="unstageAll">{{ t('git.unstageAll') }}</button>
           </div>
-          <FileRow v-for="f in staged" :key="'s' + f.path" :file="f" staged @toggle="unstage([f.path])" @open="openFile(f.path)"/>
+          <FileRow v-for="f in staged" :key="'s' + f.path" :file="f" staged @toggle="unstage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)"/>
         </div>
 
         <div v-if="unstaged.length" class="py-1">
@@ -45,7 +45,7 @@
             <span>{{ t('git.changes') }} ({{ unstaged.length }})</span>
             <button class="text-blue-500 hover:underline cursor-pointer" @click="stageAll">{{ t('git.stageAll') }}</button>
           </div>
-          <FileRow v-for="f in unstaged" :key="'u' + f.path" :file="f" @toggle="stage([f.path])" @open="openFile(f.path)"/>
+          <FileRow v-for="f in unstaged" :key="'u' + f.path" :file="f" @toggle="stage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)"/>
         </div>
 
         <div v-if="!staged.length && !unstaged.length" class="px-4 py-10 text-center text-sm text-gray-400">
@@ -86,13 +86,23 @@
       </div>
     </template>
   </div>
+
+  <!-- 单文件改动对比：HEAD vs 工作区 -->
+  <DiffView v-if="diffFile"
+            :original="diffFile.original"
+            :modified="diffFile.modified"
+            :file-name="diffFile.name"
+            :title="t('git.diffTitle')"
+            :subtitle="t('git.diffSubtitle')"
+            @close="diffFile = null"/>
 </template>
 
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {DownloadCloud, GitBranch, RefreshCw, Sparkles, X} from 'lucide-vue-next'
+import {DownloadCloud, GitBranch, GitCompare, RefreshCw, Sparkles, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
+import DiffView from './DiffView.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
@@ -115,6 +125,8 @@ const loading = ref(false)
 const pending = ref<'commit' | 'push' | 'commitPush' | 'pull' | 'fetch' | null>(null)
 const busy = computed(() => pending.value !== null)
 const generating = ref(false)
+// 单文件改动对比（HEAD vs 工作区）
+const diffFile = ref<{ name: string; original: string; modified: string } | null>(null)
 
 // 文件视为已暂存：index 列非空且非未跟踪
 const isStaged = (f: GitFile) => f.index !== ' ' && f.index !== '?'
@@ -277,6 +289,25 @@ const onBranchChange = async (e: Event) => {
 
 const openFile = (rel: string) => emit('open', abs(rel))
 
+// 查看某文件相对 HEAD 的改动：取 HEAD 内容与工作区内容交给 DiffView
+const viewDiff = async (rel: string) => {
+  try {
+    const head = await invoke<{ exists: boolean; content: string }>('git_file_head', {root: props.rootDir, relPath: rel})
+    let work = ''
+    try {
+      work = await invoke<string>('read_file_text', {path: abs(rel)})
+    }
+    catch {
+      // 文件已删除或为二进制：工作区内容按空处理
+      work = ''
+    }
+    diffFile.value = {name: rel, original: head.exists ? head.content : '', modified: work}
+  }
+  catch (error) {
+    toast.error(t('git.diffFailed') + ': ' + error)
+  }
+}
+
 // 清洗 AI 返回：去掉代码块/引号，取首个非空行
 const cleanupMessage = (raw: string): string => {
   let s = raw.trim()
@@ -344,7 +375,12 @@ const FileRow = (rowProps: { file: GitFile; staged?: boolean }, {emit: rowEmit }
     ]),
     h('span', {class: `text-xs font-bold w-4 text-center ${color}`}, code || 'M'),
     h('button', {
-      class: 'ml-2 text-xs text-blue-500 hover:underline opacity-0 group-hover:opacity-100 cursor-pointer',
+      class: 'ml-2 text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 cursor-pointer',
+      title: t('git.viewDiff'),
+      onClick: () => rowEmit('diff')
+    }, h(GitCompare, {class: 'w-3.5 h-3.5'})),
+    h('button', {
+      class: 'ml-1.5 text-xs text-blue-500 hover:underline opacity-0 group-hover:opacity-100 cursor-pointer',
       onClick: () => rowEmit('toggle')
     }, rowProps.staged ? '−' : '+')
   ])
