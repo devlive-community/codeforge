@@ -1156,15 +1156,22 @@ const runTask = async (command: string) => {
 
 // B3：发送选区（无选区则当前行）到集成终端，用于 REPL 式交互
 const sendToTerminal = async () => {
+  const fromMenu = editorCtx.visible
   closeEditorCtx()
   const view = editorView.value
   if (!view) {
     return
   }
   const sel = view.state.selection.main
-  const text = sel.empty
-    ? view.state.doc.lineAt(sel.head).text
-    : view.state.sliceDoc(sel.from, sel.to)
+  let text = sel.empty ? '' : view.state.sliceDoc(sel.from, sel.to)
+  // 右键菜单已把选区折叠为光标，用弹出时捕获的选区文本
+  if (!text && fromMenu) {
+    text = ctxSelText
+  }
+  // 仍无选区则回退到当前行
+  if (!text.trim()) {
+    text = view.state.doc.lineAt(sel.head).text
+  }
   if (!text.trim()) {
     return
   }
@@ -1194,6 +1201,8 @@ const showDiagnostics = ref(false)
 
 // ===== 编辑器 LSP 右键菜单（跳转定义 / 重命名 / 格式化）=====
 const editorCtx = reactive({visible: false, x: 0, y: 0, lsp: false})
+// 右键弹出菜单时捕获的选区文本（菜单会折叠选区，发送到终端时回退使用）
+let ctxSelText = ''
 const closeEditorCtx = () => {
   editorCtx.visible = false
 }
@@ -1233,9 +1242,11 @@ const onEditorContext = (e: MouseEvent) => {
   }
   editorCtx.lsp = lsp
   e.preventDefault()
-  // 将光标移到右键处，使命令作用于点击位置
+  // 将光标移到右键处，使命令作用于点击位置（会折叠选区，故先捕获选区文本供「发送到终端」用）
   const view = editorView.value
   if (view) {
+    const cur = view.state.selection.main
+    ctxSelText = cur.empty ? '' : view.state.sliceDoc(cur.from, cur.to)
     const pos = view.posAtCoords({x: e.clientX, y: e.clientY})
     if (pos != null) {
       view.dispatch({selection: {anchor: pos}})
