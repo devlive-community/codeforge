@@ -127,7 +127,7 @@
             <span>{{ t('git.staged') }} ({{ staged.length }})</span>
             <button class="text-blue-500 hover:underline cursor-pointer" @click="unstageAll">{{ t('git.unstageAll') }}</button>
           </div>
-          <FileRow v-for="f in staged" :key="'s' + f.path" :file="f" staged @toggle="unstage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)" @discard="requestDiscard(f)"/>
+          <FileRow v-for="f in staged" :key="'s' + f.path" :file="f" staged @toggle="unstage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)" @discard="requestDiscard(f)" @hunks="openHunks(f.path, true)"/>
         </div>
 
         <div v-if="unstaged.length" class="py-1">
@@ -135,7 +135,7 @@
             <span>{{ t('git.changes') }} ({{ unstaged.length }})</span>
             <button class="text-blue-500 hover:underline cursor-pointer" @click="stageAll">{{ t('git.stageAll') }}</button>
           </div>
-          <FileRow v-for="f in unstaged" :key="'u' + f.path" :file="f" @toggle="stage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)" @discard="requestDiscard(f)"/>
+          <FileRow v-for="f in unstaged" :key="'u' + f.path" :file="f" @toggle="stage([f.path])" @open="openFile(f.path)" @diff="viewDiff(f.path)" @discard="requestDiscard(f)" @hunks="openHunks(f.path, false)"/>
         </div>
 
         <div v-if="!staged.length && !unstaged.length" class="px-4 py-10 text-center text-sm text-gray-400">
@@ -264,6 +264,9 @@
   <!-- 仓库身份 -->
   <GitConfig v-if="showConfig" :root-dir="rootDir" @close="showConfig = false"/>
 
+  <!-- 分块暂存 -->
+  <HunkStageView v-if="hunkFile" :root-dir="rootDir" :rel-path="hunkFile.path" :staged="hunkFile.staged" @close="hunkFile = null" @changed="refresh"/>
+
   <!-- 提交历史 -->
   <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false" @changed="refresh"/>
 
@@ -286,7 +289,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Sparkles, Tag, Trash2, Undo2, UserCog, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, Undo2, UserCog, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -297,6 +300,7 @@ import GitStash from './GitStash.vue'
 import GitTags from './GitTags.vue'
 import GitRemotes from './GitRemotes.vue'
 import GitConfig from './GitConfig.vue'
+import HunkStageView from './HunkStageView.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
@@ -341,6 +345,10 @@ const showStash = ref(false)
 const showTags = ref(false)
 const showRemotes = ref(false)
 const showConfig = ref(false)
+const hunkFile = ref<{ path: string; staged: boolean } | null>(null)
+const openHunks = (path: string, staged: boolean) => {
+  hunkFile.value = {path, staged}
+}
 // 分支管理弹层
 const branchMenu = ref(false)
 const newBranchName = ref('')
@@ -805,6 +813,11 @@ const FileRow = (rowProps: { file: GitFile; staged?: boolean }, {emit: rowEmit }
       title: t('git.viewDiff'),
       onClick: () => rowEmit('diff')
     }, h(GitCompareIcon, {class: 'w-3.5 h-3.5'})),
+    code === 'M' ? h('button', {
+      class: 'ml-1.5 text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 cursor-pointer',
+      title: t('git.hunks'),
+      onClick: () => rowEmit('hunks')
+    }, h(Rows3, {class: 'w-3.5 h-3.5'})) : null,
     h('button', {
       class: 'ml-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 cursor-pointer',
       title: t('git.discard'),

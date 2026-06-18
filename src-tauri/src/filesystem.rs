@@ -537,6 +537,72 @@ fn run_git(root: &str, args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+/// 与 run_git 类似，但通过标准输入传入数据（用于 git apply 接收补丁）。
+fn run_git_stdin(root: &str, args: &[&str], input: &str) -> Result<String, String> {
+    use std::io::Write;
+    use std::process::Stdio;
+    let mut full: Vec<&str> = vec!["-C", root];
+    full.extend_from_slice(args);
+    let mut child = std::process::Command::new("git")
+        .args(&full)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("执行 git 失败: {}", e))?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(input.as_bytes())
+            .map_err(|e| format!("写入 git 输入失败: {}", e))?;
+    }
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("等待 git 失败: {}", e))?;
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(err.trim().to_string());
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+/// 获取单个文件的 unified diff。staged=true 返回已暂存(index vs HEAD)，否则工作区(worktree vs index)。
+#[tauri::command]
+pub async fn git_file_diff(root: String, rel_path: String, staged: bool) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args: Vec<&str> = vec!["diff"];
+        if staged {
+            args.push("--cached");
+        }
+        args.push("--");
+        args.push(rel_path.as_str());
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 应用单个 hunk 补丁。cached=true 作用于暂存区，reverse=true 反向应用（用于取消暂存/丢弃）。
+#[tauri::command]
+pub async fn git_apply_patch(
+    root: String,
+    patch: String,
+    cached: bool,
+    reverse: bool,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args: Vec<&str> = vec!["apply"];
+        if cached {
+            args.push("--cached");
+        }
+        if reverse {
+            args.push("--reverse");
+        }
+        run_git_stdin(&root, &args, &patch)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 #[derive(Serialize)]
 pub struct GitFileStatus {
     /// 相对仓库根的路径
