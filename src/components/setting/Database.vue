@@ -65,6 +65,39 @@
           </div>
         </Label>
 
+        <!-- 加密与隧道（仅网络型数据源）-->
+        <div v-if="!isFileKind(form.kind)" class="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer select-none">
+            <Switch v-model="form.ssl" size="sm"/>
+            {{ t('settings.database.ssl') }}
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer select-none">
+            <Switch v-model="form.sshEnabled" size="sm"/>
+            {{ t('settings.database.sshTunnel') }}
+          </label>
+          <div v-if="form.sshEnabled" class="grid grid-cols-2 gap-x-4 gap-y-3 pl-1">
+            <Label :label="t('settings.database.sshHost')">
+              <Input v-model="form.sshHost" :placeholder="t('settings.database.sshHostPlaceholder')"/>
+            </Label>
+            <Label :label="t('settings.database.sshPort')">
+              <Number v-model="form.sshPort" placeholder="22"/>
+            </Label>
+            <Label :label="t('settings.database.sshUser')">
+              <Input v-model="form.sshUser" :placeholder="t('settings.database.sshUser')"/>
+            </Label>
+            <Label :label="t('settings.database.sshPassword')">
+              <Input v-model="form.sshPassword" type="password" :placeholder="t('settings.database.sshPasswordPlaceholder')"/>
+            </Label>
+            <Label :label="t('settings.database.sshKeyFile')" custom-class="col-span-2">
+              <div class="flex gap-2">
+                <Input v-model="form.sshKeyFile" class="flex-1" :placeholder="t('settings.database.sshKeyFilePlaceholder')"/>
+                <Button size="sm" type="secondary" @click="pickKeyFile">{{ t('settings.database.pickKeyFile') }}</Button>
+              </div>
+            </Label>
+            <p class="col-span-2 text-xs text-gray-400">{{ t('settings.database.sshHint') }}</p>
+          </div>
+        </div>
+
         <div class="flex items-center gap-2 pt-1">
           <Button size="sm" :disabled="!canSave" @click="submit">{{ editingId ? t('settings.database.save') : t('settings.database.add') }}</Button>
           <Button size="sm" type="secondary" :disabled="!canTest" :loading="testing" @click="testConnection">{{ t('settings.database.test') }}</Button>
@@ -85,6 +118,7 @@ import Select from '../../ui/Select.vue'
 import Input from '../../ui/Input.vue'
 import Number from '../../ui/Number.vue'
 import Label from '../../ui/Label.vue'
+import Switch from '../../ui/Switch.vue'
 import {useI18n} from 'vue-i18n'
 import {useDbConnections, type DataSource, type DbConnection} from '../../composables/useDbConnections'
 import {useToast} from '../../plugins/toast'
@@ -109,8 +143,26 @@ const defaultPortOf = (kind: string) => (kind === 'postgres' ? 5432 : kind === '
 const isFileKind = (kind: string) => kind === 'sqlite' || kind === 'duckdb'
 
 const editingId = ref<string | null>(null)
-const form = reactive<{ kind: 'mysql' | 'postgres' | 'clickhouse' | 'sqlite' | 'duckdb'; name: string; host: string; port: number | null; user: string; password: string; database: string; file: string }>({
-  kind: 'mysql', name: '', host: '', port: null, user: '', password: '', database: '', file: ''
+const form = reactive<{
+  kind: 'mysql' | 'postgres' | 'clickhouse' | 'sqlite' | 'duckdb'
+  name: string; host: string; port: number | null; user: string; password: string; database: string; file: string
+  ssl: boolean
+  sshEnabled: boolean; sshHost: string; sshPort: number | null; sshUser: string; sshPassword: string; sshKeyFile: string
+}>({
+  kind: 'mysql', name: '', host: '', port: null, user: '', password: '', database: '', file: '',
+  ssl: false,
+  sshEnabled: false, sshHost: '', sshPort: null, sshUser: '', sshPassword: '', sshKeyFile: ''
+})
+
+// 网络型数据源的加密/隧道字段（文件型不含）
+const netExtras = (): Partial<DataSource> => ({
+  ssl: form.ssl,
+  sshEnabled: form.sshEnabled,
+  sshHost: form.sshHost.trim() || undefined,
+  sshPort: form.sshPort || 22,
+  sshUser: form.sshUser.trim() || undefined,
+  sshPassword: form.sshPassword || undefined,
+  sshKeyFile: form.sshKeyFile.trim() || undefined
 })
 
 const canSave = computed(() => {
@@ -131,7 +183,8 @@ const buildSource = (): DataSource => isFileKind(form.kind)
       port: form.port || defaultPortOf(form.kind),
       user: form.user.trim(),
       password: form.password,
-      database: form.database.trim() || undefined
+      database: form.database.trim() || undefined,
+      ...netExtras()
     }
 
 const testing = ref(false)
@@ -156,7 +209,10 @@ const testConnection = async () => {
 
 const resetForm = () => {
   editingId.value = null
-  Object.assign(form, {kind: 'mysql', name: '', host: '', port: null, user: '', password: '', database: '', file: ''})
+  Object.assign(form, {
+    kind: 'mysql', name: '', host: '', port: null, user: '', password: '', database: '', file: '',
+    ssl: false, sshEnabled: false, sshHost: '', sshPort: null, sshUser: '', sshPassword: '', sshKeyFile: ''
+  })
 }
 
 const startEdit = (c: DbConnection) => {
@@ -165,7 +221,10 @@ const startEdit = (c: DbConnection) => {
     kind: c.kind === 'sqlite' || c.kind === 'duckdb' || c.kind === 'postgres' || c.kind === 'clickhouse' ? c.kind : 'mysql',
     name: c.name,
     host: c.host || '', port: c.port ?? null, user: c.user || '', password: c.password || '',
-    database: c.database || '', file: c.file || ''
+    database: c.database || '', file: c.file || '',
+    ssl: !!c.ssl,
+    sshEnabled: !!c.sshEnabled, sshHost: c.sshHost || '', sshPort: c.sshPort ?? null,
+    sshUser: c.sshUser || '', sshPassword: c.sshPassword || '', sshKeyFile: c.sshKeyFile || ''
   })
 }
 
@@ -176,11 +235,19 @@ const pickFile = async () => {
   }
 }
 
+// SSH 私钥常无扩展名（如 id_rsa），故不限定过滤器
+const pickKeyFile = async () => {
+  const selected = await open({multiple: false})
+  if (typeof selected === 'string') {
+    form.sshKeyFile = selected
+  }
+}
+
 const submit = () => {
   if (!canSave.value) return
   const payload = isFileKind(form.kind)
       ? {kind: form.kind, name: form.name.trim(), file: form.file.trim()}
-      : {kind: form.kind, name: form.name.trim(), host: form.host.trim() || '127.0.0.1', port: form.port || defaultPortOf(form.kind), user: form.user.trim(), password: form.password, database: form.database.trim()}
+      : {kind: form.kind, name: form.name.trim(), host: form.host.trim() || '127.0.0.1', port: form.port || defaultPortOf(form.kind), user: form.user.trim(), password: form.password, database: form.database.trim(), ...netExtras()}
   if (editingId.value) {
     update(editingId.value, payload)
   }

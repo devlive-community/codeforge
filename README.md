@@ -85,25 +85,39 @@
   <img src="public/icons/javascript-browser.svg" width="48" title="JavaScript (Browser)" />
   <img src="public/icons/javascript-jquery.svg" width="48" title="JavaScript (jQuery)" />
   <img src="public/icons/react.svg" width="48" title="React (JSX)" />
+  <img src="public/icons/vue.svg" width="48" title="Vue" />
   <img src="public/icons/go.svg" width="48" title="Go" />
   <img src="public/icons/rust.svg" width="48" title="Rust" />
+  <img src="public/icons/d.svg" width="48" title="D" />
   <img src="public/icons/java.svg" width="48" title="Java" />
   <img src="public/icons/kotlin.svg" width="48" title="Kotlin" />
   <img src="public/icons/scala.svg" width="48" title="Scala" />
+  <img src="public/icons/fsharp.svg" width="48" title="F#" />
   <img src="public/icons/groovy.svg" width="48" title="Groovy" />
   <img src="public/icons/clojure.svg" width="48" title="Clojure" />
+  <img src="public/icons/commonlisp.svg" width="48" title="Common Lisp" />
+  <img src="public/icons/scheme.svg" width="48" title="Scheme" />
   <img src="public/icons/c.svg" width="48" title="C" />
   <img src="public/icons/cpp.svg" width="48" title="C++" />
   <img src="public/icons/objective-c.svg" width="48" title="Objective-C" />
   <img src="public/icons/objective-cpp.svg" width="48" title="Objective-C++" />
+  <img src="public/icons/pascal.svg" width="48" title="Pascal" />
   <img src="public/icons/swift.svg" width="48" title="Swift" />
+  <img src="public/icons/dart.svg" width="48" title="Dart" />
   <img src="public/icons/ruby.svg" width="48" title="Ruby" />
+  <img src="public/icons/crystal.svg" width="48" title="Crystal" />
+  <img src="public/icons/perl.svg" width="48" title="Perl" />
   <img src="public/icons/php.svg" width="48" title="PHP" />
   <img src="public/icons/r.svg" width="48" title="R" />
+  <img src="public/icons/julia.svg" width="48" title="Julia" />
   <img src="public/icons/lua.svg" width="48" title="Lua" />
   <img src="public/icons/haskell.svg" width="48" title="Haskell" />
+  <img src="public/icons/ocaml.svg" width="48" title="OCaml" />
+  <img src="public/icons/erlang.svg" width="48" title="Erlang" />
+  <img src="public/icons/tcl.svg" width="48" title="Tcl" />
   <img src="public/icons/cangjie.svg" width="48" title="Cangjie" />
   <img src="public/icons/shell.svg" width="48" title="Shell" />
+  <img src="public/icons/powershell.svg" width="48" title="PowerShell" />
   <img src="public/icons/applescript.svg" width="48" title="AppleScript" />
   <img src="public/icons/html.svg" width="48" title="HTML" />
   <img src="public/icons/css.svg" width="48" title="CSS" />
@@ -122,7 +136,7 @@
 
 <div align="center">
 
-`Python` · `Node.js` · `TypeScript` · `JavaScript` · `React` · `Go` · `Rust` · `Java` · `Kotlin` · `Scala` · `Groovy` · `Clojure` · `C` · `C++` · `Objective-C/C++` · `Swift` · `Ruby` · `PHP` · `R` · `Lua` · `Haskell` · `Cangjie` · `Shell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `Less` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Excel` · `Text`
+`Python` · `Node.js` · `TypeScript` · `JavaScript` · `React` · `Vue` · `Go` · `Rust` · `D` · `Java` · `Kotlin` · `Scala` · `F#` · `Groovy` · `Clojure` · `Common Lisp` · `Scheme` · `C` · `C++` · `Objective-C/C++` · `Pascal` · `Swift` · `Dart` · `Ruby` · `Crystal` · `Perl` · `PHP` · `R` · `Julia` · `Lua` · `Haskell` · `OCaml` · `Erlang` · `Tcl` · `Cangjie` · `Shell` · `PowerShell` · `AppleScript` · `SQL` · `HTML` · `CSS` · `Less` · `SVG` · `JSON` · `XML` · `YAML` · `Markdown` · `CSV` · `TSV` · `Excel` · `Text`
 
 </div>
 

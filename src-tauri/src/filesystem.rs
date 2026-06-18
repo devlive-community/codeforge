@@ -1,5 +1,5 @@
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
@@ -471,6 +471,57 @@ pub async fn git_diff(root: String) -> Result<String, String> {
 
 // ===== Git 源代码管理 =====
 
+/// 克隆远程仓库到 dir 下，返回克隆出的仓库目录路径。
+#[tauri::command]
+pub async fn git_clone(url: String, dir: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        run_git(&dir, &["clone", &url])?;
+        // 由 URL 推断仓库目录名（去掉结尾 / 与 .git）
+        let name = url
+            .trim()
+            .trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .unwrap_or("repo")
+            .trim_end_matches(".git");
+        Ok(format!("{}/{}", dir.trim_end_matches('/'), name))
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 在目录初始化 Git 仓库。
+#[tauri::command]
+pub async fn git_init(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["init"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 把一个匹配模式追加到 .gitignore（已存在则跳过）。
+#[tauri::command]
+pub async fn git_ignore_add(root: String, pattern: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let p = pattern.trim();
+        if p.is_empty() {
+            return Ok(());
+        }
+        let path = std::path::Path::new(&root).join(".gitignore");
+        let mut content = std::fs::read_to_string(&path).unwrap_or_default();
+        if content.lines().any(|l| l.trim() == p) {
+            return Ok(());
+        }
+        if !content.is_empty() && !content.ends_with('\n') {
+            content.push('\n');
+        }
+        content.push_str(p);
+        content.push('\n');
+        std::fs::write(&path, content).map_err(|e| format!("写入 .gitignore 失败: {}", e))
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 同步执行 git 子命令，返回标准输出；失败时返回 stderr。
 fn run_git(root: &str, args: &[&str]) -> Result<String, String> {
     let mut full: Vec<&str> = vec!["-C", root];
@@ -484,6 +535,72 @@ fn run_git(root: &str, args: &[&str]) -> Result<String, String> {
         return Err(err.trim().to_string());
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+/// 与 run_git 类似，但通过标准输入传入数据（用于 git apply 接收补丁）。
+fn run_git_stdin(root: &str, args: &[&str], input: &str) -> Result<String, String> {
+    use std::io::Write;
+    use std::process::Stdio;
+    let mut full: Vec<&str> = vec!["-C", root];
+    full.extend_from_slice(args);
+    let mut child = std::process::Command::new("git")
+        .args(&full)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("执行 git 失败: {}", e))?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(input.as_bytes())
+            .map_err(|e| format!("写入 git 输入失败: {}", e))?;
+    }
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("等待 git 失败: {}", e))?;
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(err.trim().to_string());
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+/// 获取单个文件的 unified diff。staged=true 返回已暂存(index vs HEAD)，否则工作区(worktree vs index)。
+#[tauri::command]
+pub async fn git_file_diff(root: String, rel_path: String, staged: bool) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args: Vec<&str> = vec!["diff"];
+        if staged {
+            args.push("--cached");
+        }
+        args.push("--");
+        args.push(rel_path.as_str());
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 应用单个 hunk 补丁。cached=true 作用于暂存区，reverse=true 反向应用（用于取消暂存/丢弃）。
+#[tauri::command]
+pub async fn git_apply_patch(
+    root: String,
+    patch: String,
+    cached: bool,
+    reverse: bool,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args: Vec<&str> = vec!["apply"];
+        if cached {
+            args.push("--cached");
+        }
+        if reverse {
+            args.push("--reverse");
+        }
+        run_git_stdin(&root, &args, &patch)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
 #[derive(Serialize)]
@@ -588,6 +705,30 @@ pub async fn git_stage(root: String, paths: Vec<String>) -> Result<(), String> {
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 把某文件恢复到指定提交时的版本（checkout <ref> -- <file>，写入工作区）。
+#[tauri::command]
+pub async fn git_restore_file(root: String, rel_path: String, hash: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        run_git(&root, &["checkout", &hash, "--", &rel_path]).map(|_| ())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 丢弃已跟踪文件的改动：暂存区与工作区一并恢复到 HEAD（不可恢复）。
+/// 未跟踪文件不在此处理（由前端删除）。
+#[tauri::command]
+pub async fn git_discard(root: String, paths: Vec<String>) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["restore", "--source=HEAD", "--staged", "--worktree", "--"];
+        let refs: Vec<&str> = paths.iter().map(|s| s.as_str()).collect();
+        args.extend_from_slice(&refs);
+        run_git(&root, &args).map(|_| ())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 取消暂存指定文件。
 #[tauri::command]
 pub async fn git_unstage(root: String, paths: Vec<String>) -> Result<(), String> {
@@ -602,17 +743,191 @@ pub async fn git_unstage(root: String, paths: Vec<String>) -> Result<(), String>
 }
 
 /// 提交已暂存的改动。
+/// amend=true 修正上次提交（message 为空则保留原信息）；all=true 自动暂存已跟踪改动（-a）；signoff=true 追加 Signed-off-by（-s）。
 #[tauri::command]
-pub async fn git_commit(root: String, message: String) -> Result<String, String> {
-    tokio::task::spawn_blocking(move || run_git(&root, &["commit", "-m", &message]))
-        .await
-        .map_err(|e| format!("git 任务失败: {}", e))?
+pub async fn git_commit(
+    root: String,
+    message: String,
+    amend: bool,
+    all: bool,
+    signoff: bool,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args: Vec<&str> = vec!["commit"];
+        if amend {
+            args.push("--amend");
+        }
+        if all {
+            args.push("-a");
+        }
+        if signoff {
+            args.push("-s");
+        }
+        if amend && message.trim().is_empty() {
+            args.push("--no-edit");
+        } else {
+            args.push("-m");
+            args.push(&message);
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
 /// 推送当前分支。
 #[tauri::command]
 pub async fn git_push(root: String) -> Result<String, String> {
     tokio::task::spawn_blocking(move || run_git(&root, &["push"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 预览将被 git clean 删除的未跟踪文件/目录（dry-run）。
+#[tauri::command]
+pub async fn git_clean_preview(root: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["clean", "-nd"])?;
+        Ok(out
+            .lines()
+            .filter_map(|l| l.strip_prefix("Would remove ").map(|s| s.to_string()))
+            .collect())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 清理未跟踪文件与目录（git clean -fd，不可恢复）。
+#[tauri::command]
+pub async fn git_clean(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["clean", "-fd"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 拉取并合并远程当前分支。
+#[tauri::command]
+pub async fn git_pull(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["pull"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 带变基拉取（pull --rebase）。
+#[tauri::command]
+pub async fn git_pull_rebase(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["pull", "--rebase"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 安全强制推送（--force-with-lease）。
+#[tauri::command]
+pub async fn git_push_force(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["push", "--force-with-lease"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 推送所有标签。
+#[tauri::command]
+pub async fn git_push_tags(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["push", "--tags"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 删除远程分支。
+#[tauri::command]
+pub async fn git_delete_remote_branch(
+    root: String,
+    remote: String,
+    branch: String,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["push", &remote, "--delete", &branch]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 抓取远程更新（不合并）。
+#[tauri::command]
+pub async fn git_fetch(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["fetch", "--all", "--prune"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitStashEntry {
+    /// 形如 stash@{0}
+    reference: String,
+    message: String,
+}
+
+/// 列出 stash 列表。
+#[tauri::command]
+pub async fn git_stash_list(root: String) -> Result<Vec<GitStashEntry>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["stash", "list", "--pretty=format:%gd\x1f%s"])?;
+        let mut list = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 2 {
+                list.push(GitStashEntry {
+                    reference: p[0].to_string(),
+                    message: p[1].to_string(),
+                });
+            }
+        }
+        Ok(list)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 暂存当前改动（含未跟踪文件）。message 为空则用默认信息。
+#[tauri::command]
+pub async fn git_stash_push(root: String, message: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["stash", "push", "--include-untracked"];
+        if !message.trim().is_empty() {
+            args.push("-m");
+            args.push(message.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 应用某个 stash 但保留（apply）。
+#[tauri::command]
+pub async fn git_stash_apply(root: String, reference: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["stash", "apply", &reference]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 查看某个 stash 的补丁内容。
+#[tauri::command]
+pub async fn git_stash_show(root: String, reference: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["stash", "show", "-p", &reference]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 应用并移除某个 stash（pop）。
+#[tauri::command]
+pub async fn git_stash_pop(root: String, reference: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["stash", "pop", &reference]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 丢弃某个 stash（drop）。
+#[tauri::command]
+pub async fn git_stash_drop(root: String, reference: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["stash", "drop", &reference]))
         .await
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
@@ -648,6 +963,932 @@ pub async fn git_checkout(root: String, branch: String) -> Result<String, String
     tokio::task::spawn_blocking(move || run_git(&root, &["checkout", &branch]))
         .await
         .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 列出远程跟踪分支（如 origin/main），排除 HEAD 指针。
+#[tauri::command]
+pub async fn git_remote_branches(root: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["branch", "-r", "--format=%(refname:short)"])?;
+        Ok(out
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty() && !l.contains("->"))
+            .collect())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 检出远程分支并建立本地跟踪分支（checkout -t origin/x）。
+#[tauri::command]
+pub async fn git_checkout_track(root: String, remote_branch: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["checkout", "-t", &remote_branch]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 新建并切换到分支。
+#[tauri::command]
+pub async fn git_branch_create(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["checkout", "-b", &name]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 删除分支（安全删除，未合并会失败）。
+#[tauri::command]
+pub async fn git_branch_delete(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["branch", "-d", &name]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 重命名分支。
+#[tauri::command]
+pub async fn git_branch_rename(root: String, old: String, new: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["branch", "-m", &old, &new]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 把指定分支合并到当前分支。
+#[tauri::command]
+pub async fn git_merge(root: String, branch: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["merge", "--no-edit", &branch]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitCommit {
+    hash: String,
+    short: String,
+    author: String,
+    date: String,
+    subject: String,
+}
+
+/// 提交历史（分页）：limit 条，跳过 skip 条。revision 指定时查看该分支/引用的历史。
+#[tauri::command]
+pub async fn git_log(
+    root: String,
+    limit: u32,
+    skip: u32,
+    revision: Option<String>,
+) -> Result<Vec<GitCommit>, String> {
+    tokio::task::spawn_blocking(move || {
+        let n = format!("-n{}", limit);
+        let sk = format!("--skip={}", skip);
+        // 字段以 \x1f 分隔、每提交一行；%s 为单行主题
+        let mut args = vec![
+            "log",
+            n.as_str(),
+            sk.as_str(),
+            "--date=format:%Y-%m-%d %H:%M",
+            "--pretty=format:%H\x1f%h\x1f%an\x1f%ad\x1f%s",
+        ];
+        let rev = revision.unwrap_or_default();
+        if !rev.trim().is_empty() {
+            args.push(rev.as_str());
+        }
+        let out = run_git(&root, &args)?;
+        let mut commits = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 5 {
+                commits.push(GitCommit {
+                    hash: p[0].to_string(),
+                    short: p[1].to_string(),
+                    author: p[2].to_string(),
+                    date: p[3].to_string(),
+                    subject: p[4].to_string(),
+                });
+            }
+        }
+        Ok(commits)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitWorktree {
+    path: String,
+    head: String,
+    /// 分支短名；分离 HEAD 或裸仓库时为空
+    branch: String,
+    bare: bool,
+    detached: bool,
+    locked: bool,
+}
+
+/// 列出 worktree（解析 worktree list --porcelain）。
+#[tauri::command]
+pub async fn git_worktrees(root: String) -> Result<Vec<GitWorktree>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["worktree", "list", "--porcelain"])?;
+        let mut list: Vec<GitWorktree> = Vec::new();
+        let mut cur: Option<GitWorktree> = None;
+        for line in out.lines() {
+            if let Some(p) = line.strip_prefix("worktree ") {
+                if let Some(w) = cur.take() {
+                    list.push(w);
+                }
+                cur = Some(GitWorktree {
+                    path: p.to_string(),
+                    head: String::new(),
+                    branch: String::new(),
+                    bare: false,
+                    detached: false,
+                    locked: false,
+                });
+            } else if let Some(w) = cur.as_mut() {
+                if let Some(h) = line.strip_prefix("HEAD ") {
+                    w.head = h.chars().take(8).collect();
+                } else if let Some(b) = line.strip_prefix("branch ") {
+                    w.branch = b.strip_prefix("refs/heads/").unwrap_or(b).to_string();
+                } else if line == "bare" {
+                    w.bare = true;
+                } else if line == "detached" {
+                    w.detached = true;
+                } else if line.starts_with("locked") {
+                    w.locked = true;
+                }
+            }
+        }
+        if let Some(w) = cur.take() {
+            list.push(w);
+        }
+        Ok(list)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 新增 worktree。ref 为空则由 git 按路径名自动建分支。
+#[tauri::command]
+pub async fn git_worktree_add(
+    root: String,
+    path: String,
+    reference: String,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["worktree", "add", path.as_str()];
+        if !reference.trim().is_empty() {
+            args.push(reference.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 移除 worktree。
+#[tauri::command]
+pub async fn git_worktree_remove(root: String, path: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["worktree", "remove", &path]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 清理失效的 worktree 记录。
+#[tauri::command]
+pub async fn git_worktree_prune(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["worktree", "prune"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitSubmodule {
+    path: String,
+    hash: String,
+    /// ok / uninitialized / modified / conflict
+    state: String,
+    describe: String,
+}
+
+/// 列出子模块状态（解析 git submodule status）。
+#[tauri::command]
+pub async fn git_submodules(root: String) -> Result<Vec<GitSubmodule>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["submodule", "status"])?;
+        let mut list: Vec<GitSubmodule> = Vec::new();
+        for line in out.lines() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            // 形如 " <sha> <path> (<describe>)"，首字符表示状态
+            let prefix = line.chars().next().unwrap_or(' ');
+            let state = match prefix {
+                '-' => "uninitialized",
+                '+' => "modified",
+                'U' => "conflict",
+                _ => "ok",
+            }
+            .to_string();
+            let rest = line[1..].trim();
+            let mut it = rest.splitn(2, ' ');
+            let hash = it.next().unwrap_or("").to_string();
+            let tail = it.next().unwrap_or("");
+            let (path, describe) = match tail.find(" (") {
+                Some(idx) => (
+                    tail[..idx].trim().to_string(),
+                    tail[idx + 2..].trim_end_matches(')').to_string(),
+                ),
+                None => (tail.trim().to_string(), String::new()),
+            };
+            if !path.is_empty() {
+                list.push(GitSubmodule {
+                    path,
+                    hash,
+                    state,
+                    describe,
+                });
+            }
+        }
+        Ok(list)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 更新子模块（init + recursive）。path 为空则更新全部。
+#[tauri::command]
+pub async fn git_submodule_update(root: String, path: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["submodule", "update", "--init", "--recursive"];
+        if !path.trim().is_empty() {
+            args.push("--");
+            args.push(path.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 同步子模块 URL 配置（submodule sync --recursive）。
+#[tauri::command]
+pub async fn git_submodule_sync(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["submodule", "sync", "--recursive"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitGraphCommit {
+    hash: String,
+    short: String,
+    parents: Vec<String>,
+    refs: String,
+    author: String,
+    date: String,
+    subject: String,
+}
+
+/// 提交图数据：--all --topo-order，含父提交与引用名，供前端绘制分支图。
+#[tauri::command]
+pub async fn git_graph(root: String, limit: u32) -> Result<Vec<GitGraphCommit>, String> {
+    tokio::task::spawn_blocking(move || {
+        let n = format!("-n{}", limit);
+        let args = vec![
+            "log",
+            n.as_str(),
+            "--all",
+            "--topo-order",
+            "--date=format:%Y-%m-%d %H:%M",
+            "--pretty=format:%H\x1f%h\x1f%P\x1f%D\x1f%an\x1f%ad\x1f%s",
+        ];
+        let out = run_git(&root, &args)?;
+        let mut commits = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 7 {
+                let parents = p[2]
+                    .split_whitespace()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>();
+                commits.push(GitGraphCommit {
+                    hash: p[0].to_string(),
+                    short: p[1].to_string(),
+                    parents,
+                    refs: p[3].to_string(),
+                    author: p[4].to_string(),
+                    date: p[5].to_string(),
+                    subject: p[6].to_string(),
+                });
+            }
+        }
+        Ok(commits)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitRemote {
+    name: String,
+    url: String,
+}
+
+/// 列出远程（名称 + fetch URL）。
+#[tauri::command]
+pub async fn git_remotes(root: String) -> Result<Vec<GitRemote>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["remote", "-v"])?;
+        let mut list: Vec<GitRemote> = Vec::new();
+        for line in out.lines() {
+            // 形如 "origin\tgit@...(fetch)"，仅取 fetch 行
+            if !line.contains("(fetch)") {
+                continue;
+            }
+            let mut it = line.split_whitespace();
+            let name = it.next().unwrap_or("").to_string();
+            let url = it.next().unwrap_or("").to_string();
+            if !name.is_empty() {
+                list.push(GitRemote { name, url });
+            }
+        }
+        Ok(list)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 添加远程。
+#[tauri::command]
+pub async fn git_remote_add(root: String, name: String, url: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["remote", "add", &name, &url]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 删除远程。
+#[tauri::command]
+pub async fn git_remote_remove(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["remote", "remove", &name]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 探测进行中的 git 操作：merge / rebase / cherry-pick / revert / none。
+#[tauri::command]
+pub async fn git_op_state(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let git_dir = run_git(&root, &["rev-parse", "--git-dir"])?
+            .trim()
+            .to_string();
+        let p = std::path::Path::new(&git_dir);
+        let base = if p.is_absolute() {
+            std::path::PathBuf::from(&git_dir)
+        } else {
+            std::path::Path::new(&root).join(&git_dir)
+        };
+        let state = if base.join("rebase-merge").exists() || base.join("rebase-apply").exists() {
+            "rebase"
+        } else if base.join("MERGE_HEAD").exists() {
+            "merge"
+        } else if base.join("CHERRY_PICK_HEAD").exists() {
+            "cherry-pick"
+        } else if base.join("REVERT_HEAD").exists() {
+            "revert"
+        } else {
+            "none"
+        };
+        Ok(state.to_string())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 校验进行中操作名，避免拼接任意子命令。
+fn valid_op(op: &str) -> bool {
+    matches!(op, "merge" | "rebase" | "cherry-pick" | "revert")
+}
+
+/// 中止进行中的操作。
+#[tauri::command]
+pub async fn git_op_abort(root: String, op: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !valid_op(&op) {
+            return Err(format!("未知操作: {}", op));
+        }
+        run_git(&root, &[op.as_str(), "--abort"])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 继续进行中的操作（冲突解决后）。用 core.editor=true 避免弹编辑器。
+#[tauri::command]
+pub async fn git_op_continue(root: String, op: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !valid_op(&op) {
+            return Err(format!("未知操作: {}", op));
+        }
+        run_git(
+            &root,
+            &["-c", "core.editor=true", op.as_str(), "--continue"],
+        )
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 跳过当前提交（rebase / cherry-pick / revert，merge 无此操作）。
+#[tauri::command]
+pub async fn git_op_skip(root: String, op: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !matches!(op.as_str(), "rebase" | "cherry-pick" | "revert") {
+            return Err(format!("该操作不支持跳过: {}", op));
+        }
+        run_git(&root, &[op.as_str(), "--skip"])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitBisectState {
+    active: bool,
+    /// 当前待测 HEAD 短哈希
+    head: String,
+    /// 当前待测提交主题
+    subject: String,
+    /// git bisect 最近输出（剩余步数 / 首个坏提交等）
+    message: String,
+}
+
+/// 查询二分定位状态：是否进行中、当前待测提交。
+#[tauri::command]
+pub async fn git_bisect_state(root: String) -> Result<GitBisectState, String> {
+    tokio::task::spawn_blocking(move || {
+        let git_dir = run_git(&root, &["rev-parse", "--git-dir"])?
+            .trim()
+            .to_string();
+        let p = std::path::Path::new(&git_dir);
+        let base = if p.is_absolute() {
+            std::path::PathBuf::from(&git_dir)
+        } else {
+            std::path::Path::new(&root).join(&git_dir)
+        };
+        let active = base.join("BISECT_START").exists();
+        let mut head = String::new();
+        let mut subject = String::new();
+        if active {
+            if let Ok(out) = run_git(&root, &["log", "-1", "--pretty=format:%h\x1f%s", "HEAD"]) {
+                let parts: Vec<&str> = out.split('\u{1f}').collect();
+                if parts.len() >= 2 {
+                    head = parts[0].to_string();
+                    subject = parts[1].to_string();
+                }
+            }
+        }
+        Ok(GitBisectState {
+            active,
+            head,
+            subject,
+            message: String::new(),
+        })
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 二分定位子命令：start / good / bad / skip / reset。rev 可选，仅 good/bad 使用。
+#[tauri::command]
+pub async fn git_bisect(root: String, action: String, rev: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !matches!(action.as_str(), "start" | "good" | "bad" | "skip" | "reset") {
+            return Err(format!("未知二分操作: {}", action));
+        }
+        let mut args = vec!["bisect", action.as_str()];
+        if matches!(action.as_str(), "good" | "bad") && !rev.trim().is_empty() {
+            args.push(rev.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Deserialize)]
+pub struct RebaseTodo {
+    /// pick / squash / fixup / drop
+    action: String,
+    hash: String,
+}
+
+/// 交互式 rebase（非交互执行）：按 todos（须为旧→新顺序）改写 base 之上的提交。
+/// 通过 sequence.editor 注入 todo、core.editor=true 接受默认合并信息，避免弹编辑器。
+/// 仅在类 Unix 平台支持。
+#[tauri::command]
+pub async fn git_rebase_interactive(
+    root: String,
+    base: String,
+    todos: Vec<RebaseTodo>,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !cfg!(unix) {
+            return Err("当前平台暂不支持交互式 rebase".to_string());
+        }
+        if todos.is_empty() {
+            return Err("没有可处理的提交".to_string());
+        }
+        let mut lines = String::new();
+        for t in &todos {
+            if !matches!(t.action.as_str(), "pick" | "squash" | "fixup" | "drop") {
+                return Err(format!("未知 rebase 动作: {}", t.action));
+            }
+            lines.push_str(&t.action);
+            lines.push(' ');
+            lines.push_str(&t.hash);
+            lines.push('\n');
+        }
+
+        let stamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let tmp = std::env::temp_dir().join(format!(
+            "codeforge-rebase-{}-{}.txt",
+            std::process::id(),
+            stamp
+        ));
+        std::fs::write(&tmp, &lines).map_err(|e| format!("写入 rebase todo 失败: {}", e))?;
+        let tmp_str = tmp.to_string_lossy().to_string();
+
+        // git 会把待编辑文件路径追加到该命令后再经 shell 执行，故用 cp 覆盖之
+        let seq_editor = format!("sequence.editor=cp '{}'", tmp_str);
+        let result = std::process::Command::new("git")
+            .args([
+                "-C",
+                &root,
+                "-c",
+                seq_editor.as_str(),
+                "-c",
+                "core.editor=true",
+                "rebase",
+                "-i",
+                base.as_str(),
+            ])
+            .output();
+        let _ = std::fs::remove_file(&tmp);
+
+        let output = result.map_err(|e| format!("执行 git 失败: {}", e))?;
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            let out = String::from_utf8_lossy(&output.stdout);
+            return Err(format!("{}{}", out, err).trim().to_string());
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 拣选某提交到当前分支（cherry-pick）。
+#[tauri::command]
+pub async fn git_cherry_pick(root: String, hash: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["cherry-pick", &hash]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 把当前分支的上游设为 <remote>/<branch>。
+#[tauri::command]
+pub async fn git_set_upstream(
+    root: String,
+    remote: String,
+    branch: String,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let target = format!("{}/{}", remote, branch);
+        run_git(&root, &["branch", &format!("--set-upstream-to={}", target)])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 列出标签（按创建时间倒序）。
+#[tauri::command]
+pub async fn git_tags(root: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["tag", "--sort=-creatordate"])?;
+        Ok(out
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 读取仓库本地身份配置 (user.name / user.email)，返回 [name, email]，未设置则为空串。
+#[tauri::command]
+pub async fn git_get_identity(root: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let name = run_git(&root, &["config", "--local", "user.name"]).unwrap_or_default();
+        let email = run_git(&root, &["config", "--local", "user.email"]).unwrap_or_default();
+        Ok(vec![name.trim().to_string(), email.trim().to_string()])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 设置仓库本地身份配置。传入空串则忽略对应项。
+#[tauri::command]
+pub async fn git_set_identity(root: String, name: String, email: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !name.trim().is_empty() {
+            run_git(&root, &["config", "--local", "user.name", name.trim()])?;
+        }
+        if !email.trim().is_empty() {
+            run_git(&root, &["config", "--local", "user.email", email.trim()])?;
+        }
+        Ok(String::new())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 创建标签。hash 为空则打在 HEAD；message 非空则创建附注标签（-a -m）。
+#[tauri::command]
+pub async fn git_tag_create(
+    root: String,
+    name: String,
+    hash: String,
+    message: String,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args: Vec<&str> = vec!["tag"];
+        if !message.trim().is_empty() {
+            args.push("-a");
+            args.push(name.as_str());
+            args.push("-m");
+            args.push(message.as_str());
+        } else {
+            args.push(name.as_str());
+        }
+        if !hash.trim().is_empty() {
+            args.push(hash.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 删除标签。
+#[tauri::command]
+pub async fn git_tag_delete(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["tag", "-d", &name]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 还原某次提交（生成一条反向提交，历史保留）。
+#[tauri::command]
+pub async fn git_revert(root: String, hash: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["revert", "--no-edit", &hash]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 重置到某提交。mode 为 soft / mixed / hard，默认 mixed。
+#[tauri::command]
+pub async fn git_reset(root: String, hash: String, mode: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let flag = match mode.as_str() {
+            "soft" => "--soft",
+            "hard" => "--hard",
+            _ => "--mixed",
+        };
+        run_git(&root, &["reset", flag, &hash])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitCompareResult {
+    /// head 相对 base 领先 / 落后的提交数
+    ahead: u32,
+    behind: u32,
+    /// base...head 的差异补丁（含 stat）
+    patch: String,
+}
+
+/// 对比两个 ref：base...head 的领先/落后提交数与差异补丁。
+#[tauri::command]
+pub async fn git_compare(
+    root: String,
+    base: String,
+    head: String,
+) -> Result<GitCompareResult, String> {
+    tokio::task::spawn_blocking(move || {
+        let range = format!("{}...{}", base, head);
+        // rev-list --left-right --count 输出 "左 右"：左=base 独有(落后)，右=head 独有(领先)
+        let counts = run_git(&root, &["rev-list", "--left-right", "--count", &range])?;
+        let mut it = counts.split_whitespace();
+        let behind: u32 = it.next().unwrap_or("0").parse().unwrap_or(0);
+        let ahead: u32 = it.next().unwrap_or("0").parse().unwrap_or(0);
+        let mut patch = run_git(&root, &["diff", "--stat", "-p", &range])?;
+        const MAX: usize = 200_000;
+        if patch.len() > MAX {
+            patch.truncate(MAX);
+            patch.push_str("\n…(内容过长已截断)");
+        }
+        Ok(GitCompareResult {
+            ahead,
+            behind,
+            patch,
+        })
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 某个文件的提交历史（分页）。
+#[tauri::command]
+pub async fn git_log_file(
+    root: String,
+    rel_path: String,
+    limit: u32,
+    skip: u32,
+) -> Result<Vec<GitCommit>, String> {
+    tokio::task::spawn_blocking(move || {
+        let n = format!("-n{}", limit);
+        let sk = format!("--skip={}", skip);
+        let args = vec![
+            "log",
+            n.as_str(),
+            sk.as_str(),
+            "--date=format:%Y-%m-%d %H:%M",
+            "--pretty=format:%H\x1f%h\x1f%an\x1f%ad\x1f%s",
+            "--follow",
+            "--",
+            rel_path.as_str(),
+        ];
+        let out = run_git(&root, &args)?;
+        let mut commits = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 5 {
+                commits.push(GitCommit {
+                    hash: p[0].to_string(),
+                    short: p[1].to_string(),
+                    author: p[2].to_string(),
+                    date: p[3].to_string(),
+                    subject: p[4].to_string(),
+                });
+            }
+        }
+        Ok(commits)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitReflogEntry {
+    short: String,
+    selector: String,
+    subject: String,
+    date: String,
+}
+
+/// HEAD 引用日志（reflog），用于误操作恢复。
+#[tauri::command]
+pub async fn git_reflog(root: String, limit: u32) -> Result<Vec<GitReflogEntry>, String> {
+    tokio::task::spawn_blocking(move || {
+        let n = format!("-n{}", limit);
+        let args = vec![
+            "reflog",
+            n.as_str(),
+            "--date=format:%Y-%m-%d %H:%M",
+            "--pretty=format:%h\x1f%gd\x1f%gs\x1f%ad",
+        ];
+        let out = run_git(&root, &args)?;
+        let mut entries = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 4 {
+                entries.push(GitReflogEntry {
+                    short: p[0].to_string(),
+                    selector: p[1].to_string(),
+                    subject: p[2].to_string(),
+                    date: p[3].to_string(),
+                });
+            }
+        }
+        Ok(entries)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 某次提交的详情补丁（git show，含 stat 与 diff）。
+#[tauri::command]
+pub async fn git_show(root: String, hash: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut out = run_git(&root, &["show", "--stat", "-p", &hash])?;
+        // 超大提交截断，避免渲染卡顿
+        const MAX_SHOW_LEN: usize = 200_000;
+        if out.len() > MAX_SHOW_LEN {
+            out.truncate(MAX_SHOW_LEN);
+            out.push_str("\n…(内容过长已截断)");
+        }
+        Ok(out)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
+pub struct GitBlameLine {
+    short: String,
+    author: String,
+    date: String,
+    content: String,
+}
+
+/// 对某文件做 git blame，返回逐行的提交短哈希/作者/日期/内容。
+#[tauri::command]
+pub async fn git_blame(root: String, rel_path: String) -> Result<Vec<GitBlameLine>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["blame", "--line-porcelain", "--", &rel_path])?;
+        let mut lines = Vec::new();
+        let mut hash = String::new();
+        let mut author = String::new();
+        let mut date = String::new();
+        for raw in out.lines() {
+            if let Some(content) = raw.strip_prefix('\t') {
+                // 一行内容收尾：推入当前累积的提交信息
+                lines.push(GitBlameLine {
+                    short: hash.chars().take(8).collect(),
+                    author: author.clone(),
+                    date: date.clone(),
+                    content: content.to_string(),
+                });
+            } else if let Some(a) = raw.strip_prefix("author ") {
+                author = a.to_string();
+            } else if let Some(ts) = raw.strip_prefix("author-time ") {
+                // epoch 秒 → 仅取日期
+                if let Ok(secs) = ts.trim().parse::<i64>() {
+                    date = format_epoch_date(secs);
+                }
+            } else if raw.len() >= 40 && raw.as_bytes()[0].is_ascii_hexdigit() {
+                // 形如 "<40hash> <orig> <final> [<n>]"，取首个 token 作哈希
+                hash = raw.split(' ').next().unwrap_or("").to_string();
+            }
+        }
+        Ok(lines)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// epoch 秒转 YYYY-MM-DD（UTC，无需第三方库）。
+fn format_epoch_date(secs: i64) -> String {
+    let days = secs.div_euclid(86400);
+    // 1970-01-01 起的天数转公历日期
+    let mut y = 1970i64;
+    let mut d = days;
+    loop {
+        let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+        let dy = if leap { 366 } else { 365 };
+        if d >= dy {
+            d -= dy;
+            y += 1;
+        } else {
+            break;
+        }
+    }
+    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let mdays = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    let mut m = 0usize;
+    while m < 12 && d >= mdays[m] {
+        d -= mdays[m];
+        m += 1;
+    }
+    format!("{:04}-{:02}-{:02}", y, m + 1, d + 1)
 }
 
 #[derive(Serialize)]

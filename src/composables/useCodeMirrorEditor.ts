@@ -16,13 +16,24 @@ import {xml} from '@codemirror/lang-xml'
 import {php} from '@codemirror/lang-php'
 import {shell} from '@codemirror/legacy-modes/mode/shell'
 import {swift} from '@codemirror/legacy-modes/mode/swift'
-import {kotlin, objectiveC, objectiveCpp, scala} from '@codemirror/legacy-modes/mode/clike'
+import {dart, kotlin, objectiveC, objectiveCpp, scala} from '@codemirror/legacy-modes/mode/clike'
 import {clojure} from '@codemirror/legacy-modes/mode/clojure'
 import {ruby} from '@codemirror/legacy-modes/mode/ruby'
+import {perl} from '@codemirror/legacy-modes/mode/perl'
+import {julia} from '@codemirror/legacy-modes/mode/julia'
 import {groovy} from '@codemirror/legacy-modes/mode/groovy'
 import {r} from "@codemirror/legacy-modes/mode/r"
 import {haskell} from "@codemirror/legacy-modes/mode/haskell"
 import {lua} from "@codemirror/legacy-modes/mode/lua"
+import {powerShell} from '@codemirror/legacy-modes/mode/powershell'
+import {fSharp, oCaml} from '@codemirror/legacy-modes/mode/mllike'
+import {tcl} from '@codemirror/legacy-modes/mode/tcl'
+import {crystal} from '@codemirror/legacy-modes/mode/crystal'
+import {erlang} from '@codemirror/legacy-modes/mode/erlang'
+import {d as dlang} from '@codemirror/legacy-modes/mode/d'
+import {commonLisp} from '@codemirror/legacy-modes/mode/commonlisp'
+import {scheme} from '@codemirror/legacy-modes/mode/scheme'
+import {pascal} from '@codemirror/legacy-modes/mode/pascal'
 import {
     abcdef,
     abyss,
@@ -326,6 +337,7 @@ export function useCodeMirrorEditor(props: Props)
             case 'javascript-jquery':
             case 'javascript-browser':
             case 'javascript-nodejs':
+            case 'vue':
                 return javascript()
             case 'react':
                 return javascript({jsx: true})
@@ -342,16 +354,36 @@ export function useCodeMirrorEditor(props: Props)
             case 'shell':
             case 'applescript':
                 return StreamLanguage.define(shell)
+            case 'powershell':
+                return StreamLanguage.define(powerShell)
             case 'swift':
                 return StreamLanguage.define(swift)
             case 'scala':
                 return StreamLanguage.define(scala)
             case 'kotlin':
                 return StreamLanguage.define(kotlin)
+            case 'dart':
+                return StreamLanguage.define(dart)
             case 'clojure':
                 return StreamLanguage.define(clojure)
             case 'ruby':
                 return StreamLanguage.define(ruby)
+            case 'crystal':
+                return StreamLanguage.define(crystal)
+            case 'erlang':
+                return StreamLanguage.define(erlang)
+            case 'd':
+                return StreamLanguage.define(dlang)
+            case 'commonlisp':
+                return StreamLanguage.define(commonLisp)
+            case 'scheme':
+                return StreamLanguage.define(scheme)
+            case 'pascal':
+                return StreamLanguage.define(pascal)
+            case 'perl':
+                return StreamLanguage.define(perl)
+            case 'julia':
+                return StreamLanguage.define(julia)
             case 'typescript':
             case 'typescript-browser':
             case 'typescript-nodejs':
@@ -372,6 +404,12 @@ export function useCodeMirrorEditor(props: Props)
                 return StreamLanguage.define(r)
             case 'haskell':
                 return StreamLanguage.define(haskell)
+            case 'ocaml':
+                return StreamLanguage.define(oCaml)
+            case 'fsharp':
+                return StreamLanguage.define(fSharp)
+            case 'tcl':
+                return StreamLanguage.define(tcl)
             case 'lua':
                 return StreamLanguage.define(lua)
             case 'objective-c':

@@ -17,6 +17,7 @@ mod example;
 mod execution;
 mod filesystem;
 mod font;
+mod geo;
 mod kv;
 mod logger;
 mod lsp;
@@ -57,10 +58,21 @@ use crate::execution::{
     stop_execution,
 };
 use crate::filesystem::{
-    create_directory, create_file, delete_path, get_text_file_meta, git_branches, git_checkout,
-    git_commit, git_diff, git_file_head, git_push, git_stage, git_status, git_unstage, list_files,
-    read_directory_tree, read_file_lines, read_file_text, rename_path, replace_in_files,
-    reveal_path, search_in_files, watch_directory, write_file_text,
+    create_directory, create_file, delete_path, get_text_file_meta, git_apply_patch, git_bisect,
+    git_bisect_state, git_blame, git_branch_create, git_branch_delete, git_branch_rename,
+    git_branches, git_checkout, git_checkout_track, git_cherry_pick, git_clean, git_clean_preview,
+    git_clone, git_commit, git_compare, git_delete_remote_branch, git_diff, git_discard, git_fetch,
+    git_file_diff, git_file_head, git_get_identity, git_graph, git_ignore_add, git_init, git_log,
+    git_log_file, git_merge, git_op_abort, git_op_continue, git_op_skip, git_op_state, git_pull,
+    git_pull_rebase, git_push, git_push_force, git_push_tags, git_rebase_interactive, git_reflog,
+    git_remote_add, git_remote_branches, git_remote_remove, git_remotes, git_reset,
+    git_restore_file, git_revert, git_set_identity, git_set_upstream, git_show, git_stage,
+    git_stash_apply, git_stash_drop, git_stash_list, git_stash_pop, git_stash_push, git_stash_show,
+    git_status, git_submodule_sync, git_submodule_update, git_submodules, git_tag_create,
+    git_tag_delete, git_tags, git_unstage, git_worktree_add, git_worktree_prune,
+    git_worktree_remove, git_worktrees, list_files, read_directory_tree, read_file_lines,
+    read_file_text, rename_path, replace_in_files, reveal_path, search_in_files, watch_directory,
+    write_file_text,
 };
 use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
 use crate::lsp::{
@@ -78,6 +90,7 @@ use crate::utils::logger::{
 use config::{get_app_config, get_config_path, init_config, update_app_config};
 use example::load_example;
 use font::open_font_picker;
+use geo::fetch_area_geojson;
 use log::info;
 use plugins::PluginManager;
 use update::{check_for_updates, start_update};
@@ -189,6 +202,7 @@ fn main() {
             start_update,
             load_example,
             open_font_picker,
+            fetch_area_geojson,
             // 文件系统相关命令
             read_directory_tree,
             read_file_text,
@@ -205,14 +219,74 @@ fn main() {
             search_in_files,
             replace_in_files,
             git_diff,
+            git_file_diff,
+            git_apply_patch,
             git_status,
             git_stage,
             git_unstage,
+            git_discard,
             git_commit,
             git_push,
+            git_pull,
+            git_fetch,
+            git_pull_rebase,
+            git_push_force,
+            git_push_tags,
+            git_delete_remote_branch,
             git_branches,
             git_checkout,
+            git_branch_create,
+            git_branch_delete,
+            git_branch_rename,
+            git_remote_branches,
+            git_checkout_track,
+            git_merge,
+            git_blame,
             git_file_head,
+            git_log,
+            git_graph,
+            git_log_file,
+            git_show,
+            git_revert,
+            git_reset,
+            git_restore_file,
+            git_reflog,
+            git_cherry_pick,
+            git_compare,
+            git_op_state,
+            git_op_abort,
+            git_op_continue,
+            git_op_skip,
+            git_tags,
+            git_tag_create,
+            git_tag_delete,
+            git_get_identity,
+            git_set_identity,
+            git_remotes,
+            git_remote_add,
+            git_remote_remove,
+            git_set_upstream,
+            git_init,
+            git_ignore_add,
+            git_clone,
+            git_clean_preview,
+            git_clean,
+            git_stash_list,
+            git_stash_push,
+            git_stash_pop,
+            git_stash_drop,
+            git_stash_apply,
+            git_stash_show,
+            git_submodules,
+            git_submodule_update,
+            git_submodule_sync,
+            git_worktrees,
+            git_worktree_add,
+            git_worktree_remove,
+            git_worktree_prune,
+            git_bisect_state,
+            git_bisect,
+            git_rebase_interactive,
             // AI 助手
             ai_chat,
             ai_chat_stream,

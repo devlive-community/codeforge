@@ -21,7 +21,10 @@
       <div v-if="!rootDir" class="px-3 py-6">
         <div class="text-center">
           <p class="text-xs text-gray-400 mb-3">{{ t('sidebar.noFolder') }}</p>
-          <Button size="sm" @click="emit('open-folder')">{{ t('sidebar.openFolder') }}</Button>
+          <div class="flex flex-col items-center gap-2">
+            <Button size="sm" @click="emit('open-folder')">{{ t('sidebar.openFolder') }}</Button>
+            <button class="text-xs text-blue-500 hover:underline cursor-pointer" @click="cloneModal.show = true">{{ t('git.clone') }}</button>
+          </div>
         </div>
 
         <div v-if="recentFolders && recentFolders.length" class="mt-6">
@@ -60,9 +63,61 @@
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-600" @click="confirmDelete">{{ t('sidebar.delete') }}</button>
           <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="reveal">{{ t('sidebar.revealIn', { label: revealLabel }) }}</button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="copyPath">{{ t('git.copyPath') }}</button>
+
+          <!-- Git 操作 -->
+          <template v-if="gitRepo">
+            <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+            <template v-if="!ctx.node.is_dir">
+              <template v-if="ctxChanged">
+                <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitStage">{{ t('git.stageFile') }}</button>
+                <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitUnstage">{{ t('git.unstageFile') }}</button>
+                <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitDiff">{{ t('git.viewDiff') }}</button>
+                <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-600" @click="gitDiscard">{{ t('git.discard') }}</button>
+              </template>
+              <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitBlame">{{ t('git.blameTitle') }}</button>
+              <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitFileHistory">{{ t('git.fileHistory') }}</button>
+              <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitIgnore">{{ t('git.ignore') }}</button>
+            </template>
+            <button v-else class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitStageDir">{{ t('git.stageDir') }}</button>
+          </template>
+          <template v-else-if="ctx.node.is_dir && rootDir">
+            <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitInit">{{ t('git.init') }}</button>
+          </template>
         </template>
       </div>
     </div>
+
+    <!-- Git 改动对比 / Blame / 文件历史（侧栏内触发）-->
+    <DiffView v-if="gitView.diff"
+              :original="gitView.diff.original"
+              :modified="gitView.diff.modified"
+              :file-name="gitView.diff.name"
+              :title="t('git.diffTitle')"
+              :subtitle="t('git.diffSubtitle')"
+              @close="gitView.diff = null"/>
+    <BlameView v-if="gitView.blame"
+               :root-dir="rootDir || ''"
+               :rel-path="gitView.blame.rel"
+               :file-name="gitView.blame.name"
+               @close="gitView.blame = null"/>
+    <GitLog v-if="gitView.history"
+            :root-dir="rootDir || ''"
+            :rel-path="gitView.history.rel"
+            :file-name="gitView.history.name"
+            @close="gitView.history = null"/>
+
+    <!-- 丢弃改动确认 -->
+    <Modal v-model:show="discardGit.show" :title="t('git.discardTitle')" size="sm">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-700 dark:text-gray-300">{{ t('git.discardConfirm', { file: discardGit.node?.name }) }}</p>
+        <div class="flex justify-end gap-2">
+          <Button size="sm" type="secondary" @click="discardGit.show = false">{{ t('git.cancel') }}</Button>
+          <Button size="sm" type="danger" @click="confirmGitDiscard">{{ t('git.discard') }}</Button>
+        </div>
+      </div>
+    </Modal>
 
     <!-- 新建/重命名 输入框 -->
     <Modal v-model:show="nameModal.show" :title="nameModalTitle" size="sm">
@@ -71,6 +126,17 @@
         <div class="flex justify-end space-x-2">
           <Button type="secondary" size="sm" @click="nameModal.show = false">{{ t('sidebar.cancel') }}</Button>
           <Button size="sm" @click="submitName">{{ t('sidebar.confirm') }}</Button>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- 克隆仓库 -->
+    <Modal v-model:show="cloneModal.show" :title="t('git.cloneTitle')" size="sm">
+      <div class="space-y-4">
+        <Input v-model="cloneModal.url" class="w-full" :placeholder="t('git.cloneUrlPlaceholder')" @keyup.enter="doClone"/>
+        <div class="flex justify-end space-x-2">
+          <Button type="secondary" size="sm" @click="cloneModal.show = false">{{ t('sidebar.cancel') }}</Button>
+          <Button size="sm" :loading="cloneModal.busy" :disabled="!cloneModal.url.trim()" @click="doClone">{{ t('git.clonePick') }}</Button>
         </div>
       </div>
     </Modal>
@@ -93,12 +159,16 @@
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, provide, reactive, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
+import {open as openDialog} from '@tauri-apps/plugin-dialog'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
 import {Folder, FolderOpen, RefreshCw} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import Input from '../ui/Input.vue'
 import FileTreeNode from './FileTreeNode.vue'
+import DiffView from './DiffView.vue'
+import BlameView from './BlameView.vue'
+import GitLog from './GitLog.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 
@@ -114,6 +184,7 @@ const props = defineProps<{
   activePath?: string | null
   recentFolders?: string[]
   gitStatus?: Record<string, string>
+  gitRepo?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -122,6 +193,7 @@ const emit = defineEmits<{
   'open-file': [path: string]
   'renamed': [from: string, to: string]
   'deleted': [path: string]
+  'git-refresh': []
 }>()
 
 const folderName = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() || path
@@ -325,5 +397,192 @@ const reveal = async () => {
     toast.error(t('sidebar.openFailed') + ': ' + error)
   }
   closeCtx()
+}
+
+// ===== Git 操作（文件树右键）=====
+const relOf = (abs: string) => {
+  const root = props.rootDir || ''
+  return abs.startsWith(root) ? abs.slice(root.length).replace(/^[\\/]/, '') : abs
+}
+// 当前右键文件是否有改动（gitStatus 中存在条目）
+const ctxChanged = computed(() => !!(ctx.node && props.gitStatus?.[ctx.node.path]))
+// Git 浮层：改动对比 / Blame / 文件历史
+const gitView = reactive<{
+  diff: { original: string; modified: string; name: string } | null
+  blame: { rel: string; name: string } | null
+  history: { rel: string; name: string } | null
+}>({diff: null, blame: null, history: null})
+const discardGit = reactive<{ show: boolean, node: FileNode | null }>({show: false, node: null})
+
+const copyPath = async () => {
+  if (!ctx.node) {
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(ctx.node.path)
+    toast.success(t('git.pathCopied'))
+  }
+  catch {
+    /* ignore */
+  }
+  closeCtx()
+}
+
+const gitStage = async () => {
+  if (!ctx.node) {
+    return
+  }
+  try {
+    await invoke('git_stage', {root: props.rootDir, paths: [ctx.node.path]})
+    toast.success(t('git.staged'))
+    emit('git-refresh')
+  }
+  catch (error) {
+    toast.error(t('git.stageFailed') + ': ' + error)
+  }
+  closeCtx()
+}
+
+const gitStageDir = gitStage
+
+const gitUnstage = async () => {
+  if (!ctx.node) {
+    return
+  }
+  try {
+    await invoke('git_unstage', {root: props.rootDir, paths: [ctx.node.path]})
+    toast.success(t('git.unstaged'))
+    emit('git-refresh')
+  }
+  catch (error) {
+    toast.error(t('git.unstageFailed') + ': ' + error)
+  }
+  closeCtx()
+}
+
+const gitDiff = async () => {
+  const node = ctx.node
+  closeCtx()
+  if (!node) {
+    return
+  }
+  const rel = relOf(node.path)
+  try {
+    const head = await invoke<{ exists: boolean; content: string }>('git_file_head', {root: props.rootDir, relPath: rel})
+    let work = ''
+    try {
+      work = await invoke<string>('read_file_text', {path: node.path})
+    }
+    catch {
+      work = ''
+    }
+    gitView.diff = {original: head.exists ? head.content : '', modified: work, name: rel}
+  }
+  catch (error) {
+    toast.error(t('git.diffFailed') + ': ' + error)
+  }
+}
+
+const gitDiscard = () => {
+  discardGit.node = ctx.node
+  discardGit.show = true
+  closeCtx()
+}
+const confirmGitDiscard = async () => {
+  const node = discardGit.node
+  discardGit.show = false
+  if (!node) {
+    return
+  }
+  try {
+    // 'U'（未跟踪）丢弃即删除，其余恢复到 HEAD
+    if (props.gitStatus?.[node.path] === 'U') {
+      await invoke('delete_path', {path: node.path})
+      emit('deleted', node.path)
+    }
+    else {
+      await invoke('git_discard', {root: props.rootDir, paths: [node.path]})
+    }
+    toast.success(t('git.discarded'))
+    emit('git-refresh')
+    triggerRefresh()
+  }
+  catch (error) {
+    toast.error(t('git.discardFailed') + ': ' + error)
+  }
+}
+
+const gitBlame = () => {
+  if (!ctx.node) {
+    return
+  }
+  const rel = relOf(ctx.node.path)
+  gitView.blame = {rel, name: ctx.node.name}
+  closeCtx()
+}
+
+const gitFileHistory = () => {
+  if (!ctx.node) {
+    return
+  }
+  const rel = relOf(ctx.node.path)
+  gitView.history = {rel, name: ctx.node.name}
+  closeCtx()
+}
+
+const gitIgnore = async () => {
+  if (!ctx.node) {
+    return
+  }
+  try {
+    await invoke('git_ignore_add', {root: props.rootDir, pattern: relOf(ctx.node.path)})
+    toast.success(t('git.ignored'))
+    emit('git-refresh')
+  }
+  catch (error) {
+    toast.error(t('git.ignoreFailed') + ': ' + error)
+  }
+  closeCtx()
+}
+
+const gitInit = async () => {
+  try {
+    await invoke('git_init', {root: props.rootDir})
+    toast.success(t('git.initDone'))
+    emit('git-refresh')
+  }
+  catch (error) {
+    toast.error(t('git.initFailed') + ': ' + error)
+  }
+  closeCtx()
+}
+
+// ===== 克隆仓库 =====
+const cloneModal = reactive<{ show: boolean, url: string, busy: boolean }>({show: false, url: '', busy: false})
+const doClone = async () => {
+  const url = cloneModal.url.trim()
+  if (!url) {
+    return
+  }
+  // 选择克隆到的父目录
+  const dir = await openDialog({directory: true, multiple: false})
+  if (typeof dir !== 'string') {
+    return
+  }
+  cloneModal.busy = true
+  try {
+    const repoPath = await invoke<string>('git_clone', {url, dir})
+    toast.success(t('git.cloned'))
+    cloneModal.show = false
+    cloneModal.url = ''
+    // 打开克隆出的仓库目录
+    emit('open-recent', repoPath)
+  }
+  catch (error) {
+    toast.error(t('git.cloneFailed') + ': ' + error)
+  }
+  finally {
+    cloneModal.busy = false
+  }
 }
 </script>

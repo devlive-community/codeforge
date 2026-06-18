@@ -3,10 +3,16 @@ use crate::plugins::applescript::AppleScriptPlugin;
 use crate::plugins::c::CPlugin;
 use crate::plugins::cangjie::CangjiePlugin;
 use crate::plugins::clojure::ClojurePlugin;
+use crate::plugins::commonlisp::CommonLispPlugin;
 use crate::plugins::cpp::CppPlugin;
+use crate::plugins::crystal::CrystalPlugin;
 use crate::plugins::css::CssPlugin;
 use crate::plugins::csv::CsvPlugin;
 use crate::plugins::custom::CustomPlugin;
+use crate::plugins::d::DPlugin;
+use crate::plugins::dart::DartPlugin;
+use crate::plugins::erlang::ErlangPlugin;
+use crate::plugins::fsharp::FSharpPlugin;
 use crate::plugins::go::GoPlugin;
 use crate::plugins::groovy::GroovyPlugin;
 use crate::plugins::haskell::HaskellPlugin;
@@ -16,6 +22,7 @@ use crate::plugins::javascript_browser::JavaScriptBrowserPlugin;
 use crate::plugins::javascript_jquery::JavaScriptJQueryPlugin;
 use crate::plugins::javascript_nodejs::JavaScriptNodeJsPlugin;
 use crate::plugins::json::JsonPlugin;
+use crate::plugins::julia::JuliaPlugin;
 use crate::plugins::kotlin::KotlinPlugin;
 use crate::plugins::less::LessPlugin;
 use crate::plugins::lua::LuaPlugin;
@@ -23,7 +30,11 @@ use crate::plugins::markdown::MarkdownPlugin;
 use crate::plugins::nodejs::NodeJSPlugin;
 use crate::plugins::objective_c::ObjectiveCPlugin;
 use crate::plugins::objective_cpp::ObjectiveCppPlugin;
+use crate::plugins::ocaml::OCamlPlugin;
+use crate::plugins::pascal::PascalPlugin;
+use crate::plugins::perl::PerlPlugin;
 use crate::plugins::php::PHPPlugin;
+use crate::plugins::powershell::PowerShellPlugin;
 use crate::plugins::python2::Python2Plugin;
 use crate::plugins::python3::Python3Plugin;
 use crate::plugins::r::RPlugin;
@@ -31,15 +42,18 @@ use crate::plugins::react::ReactPlugin;
 use crate::plugins::ruby::RubyPlugin;
 use crate::plugins::rust::RustPlugin;
 use crate::plugins::scala::ScalaPlugin;
+use crate::plugins::scheme::SchemePlugin;
 use crate::plugins::shell::ShellPlugin;
 use crate::plugins::sql::SqlPlugin;
 use crate::plugins::svg::SvgPlugin;
 use crate::plugins::swift::SwiftPlugin;
+use crate::plugins::tcl::TclPlugin;
 use crate::plugins::text::TextPlugin;
 use crate::plugins::tsv::TsvPlugin;
 use crate::plugins::typescript::TypeScriptPlugin;
 use crate::plugins::typescript_browser::TypeScriptBrowserPlugin;
 use crate::plugins::typescript_nodejs::TypeScriptNodeJsPlugin;
+use crate::plugins::vue::VuePlugin;
 use crate::plugins::xlsx::XlsxPlugin;
 use crate::plugins::xml::XmlPlugin;
 use crate::plugins::yaml::YamlPlugin;
@@ -62,16 +76,22 @@ impl PluginManager {
             ("go".to_string(), Box::new(GoPlugin)),
             ("java".to_string(), Box::new(JavaPlugin)),
             ("shell".to_string(), Box::new(ShellPlugin)),
+            ("powershell".to_string(), Box::new(PowerShellPlugin)),
             ("rust".to_string(), Box::new(RustPlugin)),
             ("swift".to_string(), Box::new(SwiftPlugin)),
             ("scala".to_string(), Box::new(ScalaPlugin)),
+            ("fsharp".to_string(), Box::new(FSharpPlugin)),
             ("kotlin".to_string(), Box::new(KotlinPlugin)),
             ("clojure".to_string(), Box::new(ClojurePlugin)),
             ("c".to_string(), Box::new(CPlugin)),
             ("ruby".to_string(), Box::new(RubyPlugin)),
+            ("dart".to_string(), Box::new(DartPlugin)),
+            ("perl".to_string(), Box::new(PerlPlugin)),
+            ("julia".to_string(), Box::new(JuliaPlugin)),
             ("applescript".to_string(), Box::new(AppleScriptPlugin)),
             ("typescript".to_string(), Box::new(TypeScriptPlugin)),
             ("react".to_string(), Box::new(ReactPlugin)),
+            ("vue".to_string(), Box::new(VuePlugin)),
             ("cpp".to_string(), Box::new(CppPlugin)),
             ("groovy".to_string(), Box::new(GroovyPlugin)),
             ("html".to_string(), Box::new(HtmlPlugin)),
@@ -91,6 +111,14 @@ impl PluginManager {
             ("r".to_string(), Box::new(RPlugin)),
             ("cangjie".to_string(), Box::new(CangjiePlugin)),
             ("haskell".to_string(), Box::new(HaskellPlugin)),
+            ("ocaml".to_string(), Box::new(OCamlPlugin)),
+            ("tcl".to_string(), Box::new(TclPlugin)),
+            ("crystal".to_string(), Box::new(CrystalPlugin)),
+            ("erlang".to_string(), Box::new(ErlangPlugin)),
+            ("d".to_string(), Box::new(DPlugin)),
+            ("commonlisp".to_string(), Box::new(CommonLispPlugin)),
+            ("scheme".to_string(), Box::new(SchemePlugin)),
+            ("pascal".to_string(), Box::new(PascalPlugin)),
             ("lua".to_string(), Box::new(LuaPlugin)),
             ("objective-c".to_string(), Box::new(ObjectiveCPlugin)),
             ("objective-cpp".to_string(), Box::new(ObjectiveCppPlugin)),
