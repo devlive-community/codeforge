@@ -173,6 +173,19 @@
           <Button size="sm" type="secondary" custom-class="[transform:translateZ(0)]" :loading="pending === 'pull'" :disabled="busy" @click="pull">
             {{ t('git.pull') }}{{ status.behind ? ` (↓${status.behind})` : '' }}
           </Button>
+          <div class="relative">
+            <button class="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('git.more')" @click="moreMenu = !moreMenu">
+              <MoreHorizontal class="w-4 h-4"/>
+            </button>
+            <template v-if="moreMenu">
+              <div class="fixed inset-0 z-40" @click="moreMenu = false"/>
+              <div class="absolute right-0 bottom-full mb-1 z-50 w-52 py-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg text-sm">
+                <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :disabled="busy" @click="moreAction('pullRebase')">{{ t('git.pullRebase') }}</button>
+                <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :disabled="busy" @click="moreAction('pushTags')">{{ t('git.pushTags') }}</button>
+                <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-amber-600 dark:text-amber-400" :disabled="busy" @click="moreAction('forcePush')">{{ t('git.forcePush') }}</button>
+              </div>
+            </template>
+          </div>
         </div>
       </div>
     </template>
@@ -257,7 +270,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, Pencil, RefreshCw, RotateCcw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -304,6 +317,8 @@ const discardTarget = ref<GitFile | null>(null)
 const showLog = ref(false)
 const showReflog = ref(false)
 const showCompare = ref(false)
+// 更多推送/拉取选项
+const moreMenu = ref(false)
 const showStash = ref(false)
 const showTags = ref(false)
 const showRemotes = ref(false)
@@ -500,6 +515,28 @@ const pull = async () => {
   }
   catch (error) {
     toast.error(t('git.pullFailed') + ': ' + error)
+  }
+  finally {
+    pending.value = null
+  }
+}
+
+const moreAction = async (action: 'pullRebase' | 'pushTags' | 'forcePush') => {
+  moreMenu.value = false
+  const map = {
+    pullRebase: {cmd: 'git_pull_rebase', msg: 'pullRebased'},
+    pushTags: {cmd: 'git_push_tags', msg: 'tagsPushed'},
+    forcePush: {cmd: 'git_push_force', msg: 'forcePushed'}
+  } as const
+  const {cmd, msg} = map[action]
+  pending.value = 'push'
+  try {
+    await invoke(cmd, {root: props.rootDir})
+    toast.success(t('git.' + msg))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.pushFailed') + ': ' + error)
   }
   finally {
     pending.value = null

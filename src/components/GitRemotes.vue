@@ -19,6 +19,14 @@
           <input v-model="url" class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500" :placeholder="t('git.remoteUrlPlaceholder')"/>
           <Button size="sm" :loading="busy" :disabled="!name.trim() || !url.trim()" @click="add">{{ t('git.remoteAdd') }}</Button>
         </div>
+        <!-- 删除远程分支 -->
+        <div v-if="remotes.length" class="flex gap-2">
+          <select v-model="delRemote" class="w-32 flex-shrink-0 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1 focus:outline-none cursor-pointer">
+            <option v-for="r in remotes" :key="r.name" :value="r.name" class="dark:bg-gray-800">{{ r.name }}</option>
+          </select>
+          <input v-model="delBranch" class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500" :placeholder="t('git.remoteBranchPlaceholder')"/>
+          <Button size="sm" type="danger" :loading="busy" :disabled="!delRemote || !delBranch.trim()" @click="deleteBranch">{{ t('git.deleteRemoteBranch') }}</Button>
+        </div>
       </div>
 
       <!-- 远程列表 -->
@@ -57,10 +65,16 @@ const remotes = ref<Remote[]>([])
 const name = ref('')
 const url = ref('')
 const busy = ref(false)
+// 删除远程分支
+const delRemote = ref('')
+const delBranch = ref('')
 
 const load = async () => {
   try {
     remotes.value = await invoke<Remote[]>('git_remotes', {root: props.rootDir})
+    if (!delRemote.value && remotes.value.length) {
+      delRemote.value = remotes.value[0].name
+    }
   }
   catch (error) {
     toast.error(t('git.remoteFailed') + ': ' + error)
@@ -93,6 +107,24 @@ const remove = async (n: string) => {
     await invoke('git_remote_remove', {root: props.rootDir, name: n})
     toast.success(t('git.remoteRemoved'))
     await load()
+  }
+  catch (error) {
+    toast.error(t('git.remoteFailed') + ': ' + error)
+  }
+  finally {
+    busy.value = false
+  }
+}
+
+const deleteBranch = async () => {
+  if (!delRemote.value || !delBranch.value.trim()) {
+    return
+  }
+  busy.value = true
+  try {
+    await invoke('git_delete_remote_branch', {root: props.rootDir, remote: delRemote.value, branch: delBranch.value.trim()})
+    toast.success(t('git.remoteBranchDeleted'))
+    delBranch.value = ''
   }
   catch (error) {
     toast.error(t('git.remoteFailed') + ': ' + error)

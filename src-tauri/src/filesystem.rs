@@ -737,6 +737,42 @@ pub async fn git_pull(root: String) -> Result<String, String> {
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 带变基拉取（pull --rebase）。
+#[tauri::command]
+pub async fn git_pull_rebase(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["pull", "--rebase"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 安全强制推送（--force-with-lease）。
+#[tauri::command]
+pub async fn git_push_force(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["push", "--force-with-lease"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 推送所有标签。
+#[tauri::command]
+pub async fn git_push_tags(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["push", "--tags"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 删除远程分支。
+#[tauri::command]
+pub async fn git_delete_remote_branch(
+    root: String,
+    remote: String,
+    branch: String,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["push", &remote, "--delete", &branch]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 抓取远程更新（不合并）。
 #[tauri::command]
 pub async fn git_fetch(root: String) -> Result<String, String> {
