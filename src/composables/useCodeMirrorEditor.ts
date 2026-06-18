@@ -161,6 +161,77 @@ function buildTooltipTheme(dark: boolean) {
     }, {dark})
 }
 
+// 文件内查找/替换面板样式（覆盖 CodeMirror 默认原生控件，跟随明暗主题）
+function buildSearchPanelTheme(dark: boolean) {
+    const panelBg = dark ? '#1f2937' : '#ffffff'
+    const border = dark ? '#374151' : '#e5e7eb'
+    const text = dark ? '#e5e7eb' : '#1f2937'
+    const subt = dark ? '#9ca3af' : '#6b7280'
+    const inputBg = dark ? '#111827' : '#ffffff'
+    const inputBorder = dark ? '#4b5563' : '#d1d5db'
+    const btnBg = dark ? '#374151' : '#f3f4f6'
+    const btnHover = dark ? '#4b5563' : '#e5e7eb'
+    const accent = '#3b82f6'
+    return EditorView.theme({
+        '.cm-panels': {backgroundColor: panelBg, color: text},
+        '.cm-panels.cm-panels-top': {borderBottom: `1px solid ${border}`},
+        '.cm-panel.cm-search': {
+            padding: '8px 32px 8px 10px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '6px',
+            position: 'relative',
+            fontFamily: 'inherit'
+        },
+        '.cm-panel.cm-search label': {
+            fontSize: '12px',
+            color: subt,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px'
+        },
+        '.cm-panel.cm-search input[type=checkbox]': {accentColor: accent, cursor: 'pointer'},
+        '.cm-panel.cm-search input.cm-textfield': {
+            backgroundColor: inputBg,
+            color: text,
+            border: `1px solid ${inputBorder}`,
+            borderRadius: '6px',
+            padding: '3px 8px',
+            fontSize: '12px',
+            outline: 'none'
+        },
+        '.cm-panel.cm-search input.cm-textfield:focus': {
+            borderColor: accent,
+            boxShadow: `0 0 0 2px ${accent}33`
+        },
+        '.cm-panel.cm-search .cm-button': {
+            backgroundColor: btnBg,
+            backgroundImage: 'none',
+            color: text,
+            border: `1px solid ${border}`,
+            borderRadius: '6px',
+            padding: '3px 10px',
+            fontSize: '12px',
+            cursor: 'pointer'
+        },
+        '.cm-panel.cm-search .cm-button:hover': {backgroundColor: btnHover},
+        '.cm-panel.cm-search button[name=close]': {
+            position: 'absolute',
+            top: '6px',
+            right: '8px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            color: subt,
+            fontSize: '16px',
+            lineHeight: '1',
+            padding: '2px 4px',
+            cursor: 'pointer'
+        },
+        '.cm-panel.cm-search button[name=close]:hover': {color: text}
+    }, {dark})
+}
+
 export function useCodeMirrorEditor(props: Props)
 {
     const toast = useToast()
@@ -462,6 +533,7 @@ export function useCodeMirrorEditor(props: Props)
         result.push(search({top: true}))
         result.push(highlightSelectionMatches())
         result.push(keymap.of(searchKeymap))
+        result.push(buildSearchPanelTheme(isDark.value))
 
         // 代码片段 Tab 展开
         result.push(snippetKeymap)
