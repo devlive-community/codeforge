@@ -45,6 +45,7 @@
       "showLineNumbers": "Show line numbers",
       "showFunctionHelp": "Show function help",
       "spaceDotOmission": "Show whitespace dots",
+      "showMinimap": "Show minimap",
       "tabSize": "Indent size",
       "font": "Editor font",
       "fontSize": "Font size",

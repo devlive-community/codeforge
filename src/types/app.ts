@@ -57,6 +57,7 @@ export interface EditorConfig
     show_line_numbers?: boolean
     show_function_help?: boolean
     space_dot_omission?: boolean
+    show_minimap?: boolean
     layout?: LayoutMode
     last_direction?: SplitDirection
     max_open_file_size?: number

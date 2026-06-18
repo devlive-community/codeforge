@@ -89,6 +89,7 @@ import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
+import {showMinimap} from "@replit/codemirror-minimap";
 import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
@@ -603,6 +604,15 @@ export function useCodeMirrorEditor(props: Props)
             result.push(spaceOmissionTheme)
         }
 
+        // 代码缩略图（minimap），右侧显示，可在设置中开关
+        if (editorConfig.value?.show_minimap) {
+            result.push(showMinimap.of({
+                create: () => ({dom: document.createElement('div')}),
+                displayText: 'blocks',
+                showOverlay: 'always'
+            }))
+        }
+
         extensions.value = result
 
         // 如果组件还没准备好，等待下一个 tick 后设置为准备好
@@ -715,6 +725,10 @@ export function useCodeMirrorEditor(props: Props)
 
     watch(() => editorConfig.value?.space_dot_omission, async () => {
         console.log('是否显示空格省略:', editorConfig.value?.space_dot_omission)
+        await reRenderEditor()
+    })
+
+    watch(() => editorConfig.value?.show_minimap, async () => {
         await reRenderEditor()
     })
 

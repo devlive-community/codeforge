@@ -45,6 +45,7 @@
       "showLineNumbers": "是否显示行号",
       "showFunctionHelp": "是否显示函数帮助信息",
       "spaceDotOmission": "是否显示空格省略",
+      "showMinimap": "显示代码缩略图 (minimap)",
       "tabSize": "缩进空格数",
       "font": "编辑器字体",
       "fontSize": "字体大小",
