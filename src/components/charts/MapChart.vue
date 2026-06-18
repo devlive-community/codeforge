@@ -145,7 +145,8 @@ onMounted(() => {
     return
   }
   chart = echarts.init(el.value, undefined, {renderer: 'canvas'})
-  chart.on('click', onMapClick)
+  // 包一层避免把 async 处理器(返回 Promise)直接传给 echarts(其类型要求返回 boolean|void)
+  chart.on('click', (params: any) => { void onMapClick(params) })
   render()
   ro = new ResizeObserver(() => chart?.resize())
   ro.observe(el.value)
