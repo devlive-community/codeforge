@@ -20,6 +20,10 @@
       <Switch v-model="editorConfig.show_minimap"/>
     </Label>
 
+    <Label :label="t('settings.editor.showStickyScroll')">
+      <Switch v-model="editorConfig.show_sticky_scroll"/>
+    </Label>
+
     <Label :label="t('settings.editor.tabSize')">
       <Number v-model="editorConfig.tab_size" :min="1" :max="8" :placeholder="t('settings.editor.tabSize')"/>
     </Label>

@@ -90,6 +90,7 @@ import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
 import {showMinimap} from "@replit/codemirror-minimap";
+import {stickyScroll} from "../editor/stickyScroll";
 import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
@@ -229,6 +230,32 @@ function buildSearchPanelTheme(dark: boolean) {
             cursor: 'pointer'
         },
         '.cm-panel.cm-search button[name=close]:hover': {color: text}
+    }, {dark})
+}
+
+// 粘性滚动浮层样式：固定在编辑器顶部、贴合背景、底部分隔线、悬停高亮、可点击跳转
+function buildStickyTheme(dark: boolean) {
+    const border = dark ? '#374151' : '#e5e7eb'
+    const bg = dark ? '#0d1117' : '#ffffff'
+    const hover = dark ? '#1f2937' : '#f3f4f6'
+    return EditorView.theme({
+        '.cm-sticky-scroll': {
+            position: 'absolute',
+            zIndex: '6',
+            boxShadow: dark ? '0 4px 8px rgba(0,0,0,0.4)' : '0 4px 8px rgba(0,0,0,0.08)',
+            borderBottom: `1px solid ${border}`,
+            backgroundColor: bg,
+            overflow: 'hidden'
+        },
+        '.cm-sticky-line': {
+            padding: '0 4px 0 8px',
+            whiteSpace: 'pre',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            cursor: 'pointer',
+            fontFamily: 'inherit'
+        },
+        '.cm-sticky-line:hover': {backgroundColor: hover}
     }, {dark})
 }
 
@@ -630,6 +657,12 @@ export function useCodeMirrorEditor(props: Props)
             result.push(buildMinimapTheme(isDark.value))
         }
 
+        // 粘性滚动：把外层作用域头部固定在顶部，可在设置中开关
+        if (editorConfig.value?.show_sticky_scroll) {
+            result.push(stickyScroll(editorConfig.value?.tab_size ?? 4))
+            result.push(buildStickyTheme(isDark.value))
+        }
+
         extensions.value = result
 
         // 如果组件还没准备好，等待下一个 tick 后设置为准备好
@@ -746,6 +779,10 @@ export function useCodeMirrorEditor(props: Props)
     })
 
     watch(() => editorConfig.value?.show_minimap, async () => {
+        await reRenderEditor()
+    })
+
+    watch(() => editorConfig.value?.show_sticky_scroll, async () => {
         await reRenderEditor()
     })
 
