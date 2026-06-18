@@ -91,6 +91,9 @@
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.bisect')" @click="showBisect = true">
           <Crosshair class="w-4 h-4"/>
         </button>
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.rebase')" @click="showRebase = true">
+          <ListOrdered class="w-4 h-4"/>
+        </button>
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.compare')" @click="showCompare = true">
           <GitCompareArrows class="w-4 h-4"/>
         </button>
@@ -291,6 +294,9 @@
   <!-- 二分定位 -->
   <GitBisect v-if="showBisect" :root-dir="rootDir" @close="showBisect = false" @changed="refresh"/>
 
+  <!-- 交互式变基 -->
+  <GitRebase v-if="showRebase" :root-dir="rootDir" @close="showRebase = false" @changed="refresh"/>
+
   <!-- 提交历史 -->
   <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false" @changed="refresh"/>
 
@@ -313,7 +319,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -329,6 +335,7 @@ import GitGraph from './GitGraph.vue'
 import GitSubmodules from './GitSubmodules.vue'
 import GitWorktrees from './GitWorktrees.vue'
 import GitBisect from './GitBisect.vue'
+import GitRebase from './GitRebase.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
@@ -378,6 +385,7 @@ const showSubmodules = ref(false)
 const submoduleCount = ref(0)
 const showWorktrees = ref(false)
 const showBisect = ref(false)
+const showRebase = ref(false)
 const hunkFile = ref<{ path: string; staged: boolean } | null>(null)
 const openHunks = (path: string, staged: boolean) => {
   hunkFile.value = {path, staged}

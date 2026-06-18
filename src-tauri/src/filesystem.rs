@@ -1,5 +1,5 @@
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
@@ -1469,6 +1469,81 @@ pub async fn git_bisect(root: String, action: String, rev: String) -> Result<Str
             args.push(rev.as_str());
         }
         run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Deserialize)]
+pub struct RebaseTodo {
+    /// pick / squash / fixup / drop
+    action: String,
+    hash: String,
+}
+
+/// 交互式 rebase（非交互执行）：按 todos（须为旧→新顺序）改写 base 之上的提交。
+/// 通过 sequence.editor 注入 todo、core.editor=true 接受默认合并信息，避免弹编辑器。
+/// 仅在类 Unix 平台支持。
+#[tauri::command]
+pub async fn git_rebase_interactive(
+    root: String,
+    base: String,
+    todos: Vec<RebaseTodo>,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !cfg!(unix) {
+            return Err("当前平台暂不支持交互式 rebase".to_string());
+        }
+        if todos.is_empty() {
+            return Err("没有可处理的提交".to_string());
+        }
+        let mut lines = String::new();
+        for t in &todos {
+            if !matches!(t.action.as_str(), "pick" | "squash" | "fixup" | "drop") {
+                return Err(format!("未知 rebase 动作: {}", t.action));
+            }
+            lines.push_str(&t.action);
+            lines.push(' ');
+            lines.push_str(&t.hash);
+            lines.push('\n');
+        }
+
+        let stamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let tmp = std::env::temp_dir().join(format!(
+            "codeforge-rebase-{}-{}.txt",
+            std::process::id(),
+            stamp
+        ));
+        std::fs::write(&tmp, &lines).map_err(|e| format!("写入 rebase todo 失败: {}", e))?;
+        let tmp_str = tmp.to_string_lossy().to_string();
+
+        // git 会把待编辑文件路径追加到该命令后再经 shell 执行，故用 cp 覆盖之
+        let seq_editor = format!("sequence.editor=cp '{}'", tmp_str);
+        let result = std::process::Command::new("git")
+            .args([
+                "-C",
+                &root,
+                "-c",
+                seq_editor.as_str(),
+                "-c",
+                "core.editor=true",
+                "rebase",
+                "-i",
+                base.as_str(),
+            ])
+            .output();
+        let _ = std::fs::remove_file(&tmp);
+
+        let output = result.map_err(|e| format!("执行 git 失败: {}", e))?;
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            let out = String::from_utf8_lossy(&output.stdout);
+            return Err(format!("{}{}", out, err).trim().to_string());
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
     })
     .await
     .map_err(|e| format!("git 任务失败: {}", e))?
