@@ -14,7 +14,7 @@ repo:
   branch: dev
 
 banner:
-  content: 💗 <a href="https://github.com/devlive-community/codeforge" target="_blank">CodeForge <em>26.1.0</em> 已经发布, 如果喜欢我们的软件，请点击这里支持我们</a> ❤️
+  content: 💗 <a href="https://github.com/devlive-community/codeforge" target="_blank">CodeForge <em>26.2.0</em> 已经发布, 如果喜欢我们的软件，请点击这里支持我们</a> ❤️
 
 feature:
   lucide:
@@ -43,6 +43,7 @@ footer:
 
 nav:
   - 发布日志:
+      - /release/26.2.0.md
       - /release/26.1.0.md
       - /release/26.0.0.md
       - /release/25.0.5.md
