@@ -50,6 +50,16 @@
                 </button>
               </template>
             </div>
+            <template v-if="remoteBranches.length">
+              <div class="mt-1.5 mb-1 text-[11px] text-gray-400">{{ t('git.remoteBranches') }}</div>
+              <div v-for="rb in remoteBranches" :key="rb"
+                   class="group flex items-center gap-1 px-1.5 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                <span class="flex-1 truncate text-gray-500 dark:text-gray-400">{{ rb }}</span>
+                <button class="p-0.5 text-gray-400 hover:text-emerald-500 opacity-0 group-hover:opacity-100 cursor-pointer" :title="t('git.checkoutTrack')" @click="checkoutTrack(rb)">
+                  <GitBranchPlus class="w-3.5 h-3.5"/>
+                </button>
+              </div>
+            </template>
           </div>
         </div>
       </template>
@@ -298,6 +308,7 @@ const status = ref<GitStatusData>({is_repo: false, branch: '', ahead: 0, behind:
 // 进行中操作：none / merge / rebase / cherry-pick / revert
 const opState = ref('none')
 const branches = ref<string[]>([])
+const remoteBranches = ref<string[]>([])
 const message = ref('')
 const loading = ref(false)
 // 正在进行的提交/推送动作，用于按钮加载状态；busy 据此派生
@@ -352,6 +363,7 @@ const refresh = async () => {
     if (status.value.is_repo) {
       const b = await invoke<{ current: string; branches: string[] }>('git_branches', {root: props.rootDir})
       branches.value = b.branches
+      remoteBranches.value = await invoke<string[]>('git_remote_branches', {root: props.rootDir})
       opState.value = await invoke<string>('git_op_state', {root: props.rootDir})
     }
     else {
@@ -582,6 +594,19 @@ const switchBranch = async (branch: string) => {
   try {
     await invoke('git_checkout', {root: props.rootDir, branch})
     toast.success(t('git.switched', { branch }))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.switchFailed') + ': ' + error)
+    await refresh()
+  }
+}
+
+const checkoutTrack = async (remoteBranch: string) => {
+  branchMenu.value = false
+  try {
+    await invoke('git_checkout_track', {root: props.rootDir, remoteBranch})
+    toast.success(t('git.tracked'))
     await refresh()
   }
   catch (error) {

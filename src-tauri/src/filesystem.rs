@@ -899,6 +899,29 @@ pub async fn git_checkout(root: String, branch: String) -> Result<String, String
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 列出远程跟踪分支（如 origin/main），排除 HEAD 指针。
+#[tauri::command]
+pub async fn git_remote_branches(root: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["branch", "-r", "--format=%(refname:short)"])?;
+        Ok(out
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty() && !l.contains("->"))
+            .collect())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 检出远程分支并建立本地跟踪分支（checkout -t origin/x）。
+#[tauri::command]
+pub async fn git_checkout_track(root: String, remote_branch: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["checkout", "-t", &remote_branch]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 新建并切换到分支。
 #[tauri::command]
 pub async fn git_branch_create(root: String, name: String) -> Result<String, String> {
