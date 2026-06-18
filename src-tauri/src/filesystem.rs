@@ -1073,6 +1073,56 @@ pub async fn git_log(
 }
 
 #[derive(Serialize)]
+pub struct GitGraphCommit {
+    hash: String,
+    short: String,
+    parents: Vec<String>,
+    refs: String,
+    author: String,
+    date: String,
+    subject: String,
+}
+
+/// 提交图数据：--all --topo-order，含父提交与引用名，供前端绘制分支图。
+#[tauri::command]
+pub async fn git_graph(root: String, limit: u32) -> Result<Vec<GitGraphCommit>, String> {
+    tokio::task::spawn_blocking(move || {
+        let n = format!("-n{}", limit);
+        let args = vec![
+            "log",
+            n.as_str(),
+            "--all",
+            "--topo-order",
+            "--date=format:%Y-%m-%d %H:%M",
+            "--pretty=format:%H\x1f%h\x1f%P\x1f%D\x1f%an\x1f%ad\x1f%s",
+        ];
+        let out = run_git(&root, &args)?;
+        let mut commits = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 7 {
+                let parents = p[2]
+                    .split_whitespace()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>();
+                commits.push(GitGraphCommit {
+                    hash: p[0].to_string(),
+                    short: p[1].to_string(),
+                    parents,
+                    refs: p[3].to_string(),
+                    author: p[4].to_string(),
+                    date: p[5].to_string(),
+                    subject: p[6].to_string(),
+                });
+            }
+        }
+        Ok(commits)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
 pub struct GitRemote {
     name: String,
     url: String,

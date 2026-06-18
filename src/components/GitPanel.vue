@@ -79,6 +79,9 @@
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.history')" @click="showLog = true">
           <History class="w-4 h-4"/>
         </button>
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.graph')" @click="showGraph = true">
+          <Network class="w-4 h-4"/>
+        </button>
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.compare')" @click="showCompare = true">
           <GitCompareArrows class="w-4 h-4"/>
         </button>
@@ -267,6 +270,9 @@
   <!-- 分块暂存 -->
   <HunkStageView v-if="hunkFile" :root-dir="rootDir" :rel-path="hunkFile.path" :staged="hunkFile.staged" @close="hunkFile = null" @changed="refresh"/>
 
+  <!-- 分支图 -->
+  <GitGraph v-if="showGraph" :root-dir="rootDir" @close="showGraph = false"/>
+
   <!-- 提交历史 -->
   <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false" @changed="refresh"/>
 
@@ -289,7 +295,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, Undo2, UserCog, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, Undo2, UserCog, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -301,6 +307,7 @@ import GitTags from './GitTags.vue'
 import GitRemotes from './GitRemotes.vue'
 import GitConfig from './GitConfig.vue'
 import HunkStageView from './HunkStageView.vue'
+import GitGraph from './GitGraph.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
@@ -345,6 +352,7 @@ const showStash = ref(false)
 const showTags = ref(false)
 const showRemotes = ref(false)
 const showConfig = ref(false)
+const showGraph = ref(false)
 const hunkFile = ref<{ path: string; staged: boolean } | null>(null)
 const openHunks = (path: string, staged: boolean) => {
   hunkFile.value = {path, staged}
