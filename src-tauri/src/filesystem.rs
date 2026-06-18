@@ -471,6 +471,25 @@ pub async fn git_diff(root: String) -> Result<String, String> {
 
 // ===== Git 源代码管理 =====
 
+/// 克隆远程仓库到 dir 下，返回克隆出的仓库目录路径。
+#[tauri::command]
+pub async fn git_clone(url: String, dir: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        run_git(&dir, &["clone", &url])?;
+        // 由 URL 推断仓库目录名（去掉结尾 / 与 .git）
+        let name = url
+            .trim()
+            .trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .unwrap_or("repo")
+            .trim_end_matches(".git");
+        Ok(format!("{}/{}", dir.trim_end_matches('/'), name))
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 在目录初始化 Git 仓库。
 #[tauri::command]
 pub async fn git_init(root: String) -> Result<String, String> {

@@ -21,7 +21,10 @@
       <div v-if="!rootDir" class="px-3 py-6">
         <div class="text-center">
           <p class="text-xs text-gray-400 mb-3">{{ t('sidebar.noFolder') }}</p>
-          <Button size="sm" @click="emit('open-folder')">{{ t('sidebar.openFolder') }}</Button>
+          <div class="flex flex-col items-center gap-2">
+            <Button size="sm" @click="emit('open-folder')">{{ t('sidebar.openFolder') }}</Button>
+            <button class="text-xs text-blue-500 hover:underline cursor-pointer" @click="cloneModal.show = true">{{ t('git.clone') }}</button>
+          </div>
         </div>
 
         <div v-if="recentFolders && recentFolders.length" class="mt-6">
@@ -127,6 +130,17 @@
       </div>
     </Modal>
 
+    <!-- 克隆仓库 -->
+    <Modal v-model:show="cloneModal.show" :title="t('git.cloneTitle')" size="sm">
+      <div class="space-y-4">
+        <Input v-model="cloneModal.url" class="w-full" :placeholder="t('git.cloneUrlPlaceholder')" @keyup.enter="doClone"/>
+        <div class="flex justify-end space-x-2">
+          <Button type="secondary" size="sm" @click="cloneModal.show = false">{{ t('sidebar.cancel') }}</Button>
+          <Button size="sm" :loading="cloneModal.busy" :disabled="!cloneModal.url.trim()" @click="doClone">{{ t('git.clonePick') }}</Button>
+        </div>
+      </div>
+    </Modal>
+
     <!-- 删除确认 -->
     <Modal v-model:show="deleteModal.show" :title="t('sidebar.confirmDeleteTitle')" size="sm">
       <div class="space-y-4">
@@ -145,6 +159,7 @@
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, provide, reactive, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
+import {open as openDialog} from '@tauri-apps/plugin-dialog'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
 import {Folder, FolderOpen, RefreshCw} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
@@ -540,5 +555,34 @@ const gitInit = async () => {
     toast.error(t('git.initFailed') + ': ' + error)
   }
   closeCtx()
+}
+
+// ===== 克隆仓库 =====
+const cloneModal = reactive<{ show: boolean, url: string, busy: boolean }>({show: false, url: '', busy: false})
+const doClone = async () => {
+  const url = cloneModal.url.trim()
+  if (!url) {
+    return
+  }
+  // 选择克隆到的父目录
+  const dir = await openDialog({directory: true, multiple: false})
+  if (typeof dir !== 'string') {
+    return
+  }
+  cloneModal.busy = true
+  try {
+    const repoPath = await invoke<string>('git_clone', {url, dir})
+    toast.success(t('git.cloned'))
+    cloneModal.show = false
+    cloneModal.url = ''
+    // 打开克隆出的仓库目录
+    emit('open-recent', repoPath)
+  }
+  catch (error) {
+    toast.error(t('git.cloneFailed') + ': ' + error)
+  }
+  finally {
+    cloneModal.busy = false
+  }
 }
 </script>
