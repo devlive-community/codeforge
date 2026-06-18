@@ -471,6 +471,38 @@ pub async fn git_diff(root: String) -> Result<String, String> {
 
 // ===== Git 源代码管理 =====
 
+/// 在目录初始化 Git 仓库。
+#[tauri::command]
+pub async fn git_init(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["init"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 把一个匹配模式追加到 .gitignore（已存在则跳过）。
+#[tauri::command]
+pub async fn git_ignore_add(root: String, pattern: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let p = pattern.trim();
+        if p.is_empty() {
+            return Ok(());
+        }
+        let path = std::path::Path::new(&root).join(".gitignore");
+        let mut content = std::fs::read_to_string(&path).unwrap_or_default();
+        if content.lines().any(|l| l.trim() == p) {
+            return Ok(());
+        }
+        if !content.is_empty() && !content.ends_with('\n') {
+            content.push('\n');
+        }
+        content.push_str(p);
+        content.push('\n');
+        std::fs::write(&path, content).map_err(|e| format!("写入 .gitignore 失败: {}", e))
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 同步执行 git 子命令，返回标准输出；失败时返回 stderr。
 fn run_git(root: &str, args: &[&str]) -> Result<String, String> {
     let mut full: Vec<&str> = vec!["-C", root];

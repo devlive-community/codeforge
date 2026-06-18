@@ -74,8 +74,13 @@
               </template>
               <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitBlame">{{ t('git.blameTitle') }}</button>
               <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitFileHistory">{{ t('git.fileHistory') }}</button>
+              <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitIgnore">{{ t('git.ignore') }}</button>
             </template>
             <button v-else class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitStageDir">{{ t('git.stageDir') }}</button>
+          </template>
+          <template v-else-if="ctx.node.is_dir && rootDir">
+            <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitInit">{{ t('git.init') }}</button>
           </template>
         </template>
       </div>
@@ -507,6 +512,33 @@ const gitFileHistory = () => {
   }
   const rel = relOf(ctx.node.path)
   gitView.history = {rel, name: ctx.node.name}
+  closeCtx()
+}
+
+const gitIgnore = async () => {
+  if (!ctx.node) {
+    return
+  }
+  try {
+    await invoke('git_ignore_add', {root: props.rootDir, pattern: relOf(ctx.node.path)})
+    toast.success(t('git.ignored'))
+    emit('git-refresh')
+  }
+  catch (error) {
+    toast.error(t('git.ignoreFailed') + ': ' + error)
+  }
+  closeCtx()
+}
+
+const gitInit = async () => {
+  try {
+    await invoke('git_init', {root: props.rootDir})
+    toast.success(t('git.initDone'))
+    emit('git-refresh')
+  }
+  catch (error) {
+    toast.error(t('git.initFailed') + ': ' + error)
+  }
   closeCtx()
 }
 </script>
