@@ -983,6 +983,83 @@ pub async fn git_remote_remove(root: String, name: String) -> Result<String, Str
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 探测进行中的 git 操作：merge / rebase / cherry-pick / revert / none。
+#[tauri::command]
+pub async fn git_op_state(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let git_dir = run_git(&root, &["rev-parse", "--git-dir"])?
+            .trim()
+            .to_string();
+        let p = std::path::Path::new(&git_dir);
+        let base = if p.is_absolute() {
+            std::path::PathBuf::from(&git_dir)
+        } else {
+            std::path::Path::new(&root).join(&git_dir)
+        };
+        let state = if base.join("rebase-merge").exists() || base.join("rebase-apply").exists() {
+            "rebase"
+        } else if base.join("MERGE_HEAD").exists() {
+            "merge"
+        } else if base.join("CHERRY_PICK_HEAD").exists() {
+            "cherry-pick"
+        } else if base.join("REVERT_HEAD").exists() {
+            "revert"
+        } else {
+            "none"
+        };
+        Ok(state.to_string())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 校验进行中操作名，避免拼接任意子命令。
+fn valid_op(op: &str) -> bool {
+    matches!(op, "merge" | "rebase" | "cherry-pick" | "revert")
+}
+
+/// 中止进行中的操作。
+#[tauri::command]
+pub async fn git_op_abort(root: String, op: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !valid_op(&op) {
+            return Err(format!("未知操作: {}", op));
+        }
+        run_git(&root, &[op.as_str(), "--abort"])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 继续进行中的操作（冲突解决后）。用 core.editor=true 避免弹编辑器。
+#[tauri::command]
+pub async fn git_op_continue(root: String, op: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !valid_op(&op) {
+            return Err(format!("未知操作: {}", op));
+        }
+        run_git(
+            &root,
+            &["-c", "core.editor=true", op.as_str(), "--continue"],
+        )
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 跳过当前提交（rebase / cherry-pick / revert，merge 无此操作）。
+#[tauri::command]
+pub async fn git_op_skip(root: String, op: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !matches!(op.as_str(), "rebase" | "cherry-pick" | "revert") {
+            return Err(format!("该操作不支持跳过: {}", op));
+        }
+        run_git(&root, &[op.as_str(), "--skip"])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 拣选某提交到当前分支（cherry-pick）。
 #[tauri::command]
 pub async fn git_cherry_pick(root: String, hash: String) -> Result<String, String> {

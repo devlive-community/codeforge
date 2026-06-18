@@ -85,6 +85,15 @@
     </div>
 
     <template v-if="status.is_repo">
+      <!-- 进行中操作横幅（merge/rebase/cherry-pick/revert）-->
+      <div v-if="opState !== 'none'" class="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 flex-shrink-0">
+        <AlertTriangle class="w-4 h-4 text-amber-500 flex-shrink-0"/>
+        <span class="flex-1 min-w-0 text-xs text-amber-700 dark:text-amber-300">{{ t('git.opInProgress', { op: opState }) }}</span>
+        <button class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer flex-shrink-0" @click="opAction('continue')">{{ t('git.opContinue') }}</button>
+        <button v-if="opState !== 'merge'" class="text-xs text-blue-500 hover:underline cursor-pointer flex-shrink-0" @click="opAction('skip')">{{ t('git.opSkip') }}</button>
+        <button class="text-xs text-red-500 hover:underline cursor-pointer flex-shrink-0" @click="opAction('abort')">{{ t('git.opAbort') }}</button>
+      </div>
+
       <!-- 文件列表 -->
       <div class="flex-1 overflow-y-auto">
         <div v-if="conflicts.length" class="py-1">
@@ -266,6 +275,8 @@ const {t} = useI18n()
 const {active, reload: reloadAi} = useAiConfig()
 
 const status = ref<GitStatusData>({is_repo: false, branch: '', ahead: 0, behind: 0, files: []})
+// 进行中操作：none / merge / rebase / cherry-pick / revert
+const opState = ref('none')
 const branches = ref<string[]>([])
 const message = ref('')
 const loading = ref(false)
@@ -318,6 +329,10 @@ const refresh = async () => {
     if (status.value.is_repo) {
       const b = await invoke<{ current: string; branches: string[] }>('git_branches', {root: props.rootDir})
       branches.value = b.branches
+      opState.value = await invoke<string>('git_op_state', {root: props.rootDir})
+    }
+    else {
+      opState.value = 'none'
     }
     emit('refresh')
   }
@@ -425,6 +440,25 @@ const commitAndPush = async () => {
   }
   finally {
     pending.value = null
+  }
+}
+
+// 进行中操作的 继续/中止/跳过
+const opAction = async (action: 'continue' | 'abort' | 'skip') => {
+  const op = opState.value
+  if (op === 'none') {
+    return
+  }
+  const cmd = action === 'continue' ? 'git_op_continue' : action === 'abort' ? 'git_op_abort' : 'git_op_skip'
+  const msg = action === 'continue' ? 'opContinued' : action === 'abort' ? 'opAborted' : 'opSkipped'
+  try {
+    await invoke(cmd, {root: props.rootDir, op})
+    toast.success(t('git.' + msg))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.opFailed') + ': ' + error)
+    await refresh()
   }
 }
 
