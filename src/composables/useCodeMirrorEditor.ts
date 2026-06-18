@@ -232,6 +232,22 @@ function buildSearchPanelTheme(dark: boolean) {
     }, {dark})
 }
 
+// 代码缩略图样式微调：左侧分隔线、贴合编辑器背景、去掉厚重阴影、视口浮层更柔和
+function buildMinimapTheme(dark: boolean) {
+    const border = dark ? '#374151' : '#e5e7eb'
+    const bg = dark ? '#0d1117' : '#ffffff'
+    return EditorView.theme({
+        '.cm-minimap-gutter': {
+            borderLeft: `1px solid ${border}`,
+            backgroundColor: bg
+        },
+        '.cm-minimap-box-shadow': {boxShadow: 'none'},
+        '.cm-minimap-overlay-container .cm-minimap-overlay': {
+            backgroundColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
+        }
+    }, {dark})
+}
+
 export function useCodeMirrorEditor(props: Props)
 {
     const toast = useToast()
@@ -608,9 +624,10 @@ export function useCodeMirrorEditor(props: Props)
         if (editorConfig.value?.show_minimap) {
             result.push(showMinimap.of({
                 create: () => ({dom: document.createElement('div')}),
-                displayText: 'blocks',
+                displayText: 'characters',
                 showOverlay: 'always'
             }))
+            result.push(buildMinimapTheme(isDark.value))
         }
 
         extensions.value = result
