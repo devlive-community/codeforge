@@ -290,6 +290,7 @@
     "openFile": "Open file",
     "saveFile": "Save file",
     "ai": "AI Assistant",
+    "git": "Git source control",
     "showSidebar": "Show sidebar",
     "hideSidebar": "Hide sidebar",
     "layoutHorizontal": "Side-by-side",

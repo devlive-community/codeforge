@@ -15,6 +15,7 @@
                @save-file="handleSave"
                @show-history="showHistory = true"
                @show-ai="handleShowAi"
+               @show-git="openGit"
                @show-settings="showSettings = true"
                @load-example="loadExample">
     </AppHeader>

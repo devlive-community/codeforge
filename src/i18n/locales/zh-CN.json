@@ -290,6 +290,7 @@
     "openFile": "打开文件",
     "saveFile": "保存文件",
     "ai": "AI 助手",
+    "git": "Git 源代码管理",
     "showSidebar": "显示侧栏",
     "hideSidebar": "隐藏侧栏",
     "layoutHorizontal": "左右布局",
