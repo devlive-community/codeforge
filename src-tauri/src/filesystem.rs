@@ -1660,6 +1660,142 @@ pub async fn git_set_signing(root: String, enabled: bool, key: String) -> Result
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 常见客户端 git 钩子名（用于校验，避免路径穿越）。
+const GIT_HOOK_NAMES: [&str; 13] = [
+    "applypatch-msg",
+    "pre-applypatch",
+    "post-applypatch",
+    "pre-commit",
+    "pre-merge-commit",
+    "prepare-commit-msg",
+    "commit-msg",
+    "post-commit",
+    "pre-rebase",
+    "post-checkout",
+    "post-merge",
+    "pre-push",
+    "post-rewrite",
+];
+
+fn git_hooks_dir(root: &str) -> Result<std::path::PathBuf, String> {
+    let git_dir = run_git(root, &["rev-parse", "--git-dir"])?
+        .trim()
+        .to_string();
+    let p = std::path::Path::new(&git_dir);
+    let base = if p.is_absolute() {
+        std::path::PathBuf::from(&git_dir)
+    } else {
+        std::path::Path::new(root).join(&git_dir)
+    };
+    Ok(base.join("hooks"))
+}
+
+#[cfg(unix)]
+fn is_executable(path: &std::path::Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(path)
+        .map(|m| m.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+#[cfg(not(unix))]
+fn is_executable(path: &std::path::Path) -> bool {
+    path.exists()
+}
+
+#[derive(Serialize)]
+pub struct GitHook {
+    name: String,
+    /// 同名钩子文件已存在
+    active: bool,
+    /// 具备可执行权限（类 Unix）
+    executable: bool,
+}
+
+/// 列出常见客户端钩子及其状态。
+#[tauri::command]
+pub async fn git_hooks(root: String) -> Result<Vec<GitHook>, String> {
+    tokio::task::spawn_blocking(move || {
+        let dir = git_hooks_dir(&root)?;
+        let mut list = Vec::new();
+        for name in GIT_HOOK_NAMES {
+            let path = dir.join(name);
+            let active = path.is_file();
+            list.push(GitHook {
+                name: name.to_string(),
+                active,
+                executable: active && is_executable(&path),
+            });
+        }
+        Ok(list)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 读取某钩子内容（不存在返回空串）。
+#[tauri::command]
+pub async fn git_hook_read(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !GIT_HOOK_NAMES.contains(&name.as_str()) {
+            return Err(format!("未知钩子: {}", name));
+        }
+        let path = git_hooks_dir(&root)?.join(&name);
+        if path.is_file() {
+            std::fs::read_to_string(&path).map_err(|e| format!("读取钩子失败: {}", e))
+        } else {
+            Ok(String::new())
+        }
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 写入某钩子内容并按 executable 设置可执行权限（类 Unix）。
+#[tauri::command]
+pub async fn git_hook_save(
+    root: String,
+    name: String,
+    content: String,
+    executable: bool,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !GIT_HOOK_NAMES.contains(&name.as_str()) {
+            return Err(format!("未知钩子: {}", name));
+        }
+        let dir = git_hooks_dir(&root)?;
+        std::fs::create_dir_all(&dir).map_err(|e| format!("创建 hooks 目录失败: {}", e))?;
+        let path = dir.join(&name);
+        std::fs::write(&path, &content).map_err(|e| format!("写入钩子失败: {}", e))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = if executable { 0o755 } else { 0o644 };
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode));
+        }
+        Ok(String::new())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 删除某钩子文件。
+#[tauri::command]
+pub async fn git_hook_delete(root: String, name: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !GIT_HOOK_NAMES.contains(&name.as_str()) {
+            return Err(format!("未知钩子: {}", name));
+        }
+        let path = git_hooks_dir(&root)?.join(&name);
+        if path.is_file() {
+            std::fs::remove_file(&path).map_err(|e| format!("删除钩子失败: {}", e))?;
+        }
+        Ok(String::new())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 创建标签。hash 为空则打在 HEAD；message 非空则创建附注标签（-a -m）。
 #[tauri::command]
 pub async fn git_tag_create(
