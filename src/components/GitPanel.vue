@@ -38,6 +38,9 @@
               <span class="flex-1 truncate cursor-pointer"
                     :class="b === status.branch ? 'font-semibold text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'"
                     @click="switchBranch(b)">{{ b }}</span>
+              <button class="p-0.5 text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 cursor-pointer" :title="t('git.renameBranch')" @click="openRenameBranch(b)">
+                <Pencil class="w-3.5 h-3.5"/>
+              </button>
               <template v-if="b !== status.branch">
                 <button class="p-0.5 text-gray-400 hover:text-emerald-500 opacity-0 group-hover:opacity-100 cursor-pointer" :title="t('git.mergeInto')" @click="mergeBranch(b)">
                   <GitMerge class="w-3.5 h-3.5"/>
@@ -160,6 +163,19 @@
     </div>
   </Modal>
 
+  <!-- 重命名分支 -->
+  <Modal v-model:show="renameBranch.show" :title="t('git.renameBranchTitle')" size="sm">
+    <div class="space-y-4">
+      <input v-model="renameBranch.value"
+             class="w-full text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500"
+             @keydown.enter="confirmRenameBranch"/>
+      <div class="flex justify-end gap-2">
+        <Button size="sm" type="secondary" @click="renameBranch.show = false">{{ t('git.cancel') }}</Button>
+        <Button size="sm" :disabled="!renameBranch.value.trim()" @click="confirmRenameBranch">{{ t('git.renameBranch') }}</Button>
+      </div>
+    </div>
+  </Modal>
+
   <!-- 储藏 -->
   <GitStash v-if="showStash" :root-dir="rootDir" @close="showStash = false" @changed="refresh"/>
 
@@ -185,7 +201,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Cloud, DownloadCloud, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, RefreshCw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Cloud, DownloadCloud, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, Pencil, RefreshCw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -230,6 +246,7 @@ const showRemotes = ref(false)
 // 分支管理弹层
 const branchMenu = ref(false)
 const newBranchName = ref('')
+const renameBranch = ref<{ show: boolean; old: string; value: string }>({show: false, old: '', value: ''})
 
 // 未合并（冲突）：任一侧为 U，或两侧同为 A/D（AA/DD）
 const isConflict = (f: GitFile) => f.index === 'U' || f.worktree === 'U' || (f.index === f.worktree && (f.index === 'A' || f.index === 'D'))
@@ -443,6 +460,28 @@ const deleteBranch = async (name: string) => {
   try {
     await invoke('git_branch_delete', {root: props.rootDir, name})
     toast.success(t('git.branchDeleted'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.branchOpFailed') + ': ' + error)
+  }
+}
+
+const openRenameBranch = (b: string) => {
+  branchMenu.value = false
+  renameBranch.value = {show: true, old: b, value: b}
+}
+const confirmRenameBranch = async () => {
+  const {old, value} = renameBranch.value
+  const next = value.trim()
+  if (!next || next === old) {
+    renameBranch.value.show = false
+    return
+  }
+  try {
+    await invoke('git_branch_rename', {root: props.rootDir, old, new: next})
+    renameBranch.value.show = false
+    toast.success(t('git.branchRenamed'))
     await refresh()
   }
   catch (error) {

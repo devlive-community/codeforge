@@ -817,6 +817,14 @@ pub async fn git_branch_delete(root: String, name: String) -> Result<String, Str
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 重命名分支。
+#[tauri::command]
+pub async fn git_branch_rename(root: String, old: String, new: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["branch", "-m", &old, &new]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 把指定分支合并到当前分支。
 #[tauri::command]
 pub async fn git_merge(root: String, branch: String) -> Result<String, String> {
