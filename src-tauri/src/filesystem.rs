@@ -1073,6 +1073,94 @@ pub async fn git_log(
 }
 
 #[derive(Serialize)]
+pub struct GitWorktree {
+    path: String,
+    head: String,
+    /// 分支短名；分离 HEAD 或裸仓库时为空
+    branch: String,
+    bare: bool,
+    detached: bool,
+    locked: bool,
+}
+
+/// 列出 worktree（解析 worktree list --porcelain）。
+#[tauri::command]
+pub async fn git_worktrees(root: String) -> Result<Vec<GitWorktree>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["worktree", "list", "--porcelain"])?;
+        let mut list: Vec<GitWorktree> = Vec::new();
+        let mut cur: Option<GitWorktree> = None;
+        for line in out.lines() {
+            if let Some(p) = line.strip_prefix("worktree ") {
+                if let Some(w) = cur.take() {
+                    list.push(w);
+                }
+                cur = Some(GitWorktree {
+                    path: p.to_string(),
+                    head: String::new(),
+                    branch: String::new(),
+                    bare: false,
+                    detached: false,
+                    locked: false,
+                });
+            } else if let Some(w) = cur.as_mut() {
+                if let Some(h) = line.strip_prefix("HEAD ") {
+                    w.head = h.chars().take(8).collect();
+                } else if let Some(b) = line.strip_prefix("branch ") {
+                    w.branch = b.strip_prefix("refs/heads/").unwrap_or(b).to_string();
+                } else if line == "bare" {
+                    w.bare = true;
+                } else if line == "detached" {
+                    w.detached = true;
+                } else if line.starts_with("locked") {
+                    w.locked = true;
+                }
+            }
+        }
+        if let Some(w) = cur.take() {
+            list.push(w);
+        }
+        Ok(list)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 新增 worktree。ref 为空则由 git 按路径名自动建分支。
+#[tauri::command]
+pub async fn git_worktree_add(
+    root: String,
+    path: String,
+    reference: String,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["worktree", "add", path.as_str()];
+        if !reference.trim().is_empty() {
+            args.push(reference.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 移除 worktree。
+#[tauri::command]
+pub async fn git_worktree_remove(root: String, path: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["worktree", "remove", &path]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 清理失效的 worktree 记录。
+#[tauri::command]
+pub async fn git_worktree_prune(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["worktree", "prune"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
 pub struct GitSubmodule {
     path: String,
     hash: String,
