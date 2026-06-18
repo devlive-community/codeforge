@@ -8,6 +8,12 @@
           <History class="w-4 h-4 text-gray-400"/>
           <span>{{ t('git.history') }}</span>
           <span v-if="fileName" class="text-xs text-gray-400 truncate">· {{ fileName }}</span>
+          <select v-if="!relPath && branches.length" v-model="selectedRev"
+                  class="ml-1 bg-transparent text-xs border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 focus:outline-none cursor-pointer dark:bg-gray-900"
+                  @change="reloadAll">
+            <option value="" class="dark:bg-gray-800">{{ t('git.currentBranch') }}</option>
+            <option v-for="b in branches" :key="b" :value="b" class="dark:bg-gray-800">{{ b }}</option>
+          </select>
         </div>
         <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="emit('close')">
           <X class="w-4 h-4"/>
@@ -29,6 +35,7 @@
               <span class="ml-auto flex-shrink-0">{{ c.date }}</span>
             </div>
             <div class="mt-1 hidden group-hover:flex items-center gap-3 text-[11px]">
+              <button v-if="selectedRev" class="text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer" @click.stop="doCherryPick(c)">{{ t('git.cherryPick') }}</button>
               <button class="text-blue-500 hover:underline cursor-pointer" @click.stop="doRevert(c)">{{ t('git.revert') }}</button>
               <button class="text-amber-600 dark:text-amber-400 hover:underline cursor-pointer" @click.stop="openTag(c)">{{ t('git.tag') }}</button>
               <button class="text-red-500 hover:underline cursor-pointer" @click.stop="resetTarget = c">{{ t('git.reset') }}</button>
@@ -108,6 +115,9 @@ const patch = ref('')
 const resetTarget = ref<GitCommit | null>(null)
 const tagTarget = ref<GitCommit | null>(null)
 const tagName = ref('')
+// 分支切换（查看其它分支历史以便 cherry-pick）
+const branches = ref<string[]>([])
+const selectedRev = ref('')
 
 const patchLines = computed(() => patch.value.split('\n'))
 
@@ -128,7 +138,7 @@ const loadMore = async () => {
   try {
     const batch = props.relPath
       ? await invoke<GitCommit[]>('git_log_file', {root: props.rootDir, relPath: props.relPath, limit: PAGE, skip: commits.value.length})
-      : await invoke<GitCommit[]>('git_log', {root: props.rootDir, limit: PAGE, skip: commits.value.length})
+      : await invoke<GitCommit[]>('git_log', {root: props.rootDir, limit: PAGE, skip: commits.value.length, revision: selectedRev.value || null})
     commits.value = [...commits.value, ...batch]
     if (batch.length < PAGE) {
       done.value = true
@@ -202,6 +212,17 @@ const doReset = async (mode: 'soft' | 'mixed' | 'hard') => {
   }
 }
 
+const doCherryPick = async (c: GitCommit) => {
+  try {
+    await invoke('git_cherry_pick', {root: props.rootDir, hash: c.hash})
+    toast.success(t('git.cherryPicked'))
+    emit('changed')
+  }
+  catch (error) {
+    toast.error(t('git.cherryPickFailed') + ': ' + error)
+  }
+}
+
 const openTag = (c: GitCommit) => {
   tagTarget.value = c
   tagName.value = ''
@@ -223,6 +244,16 @@ const doTag = async () => {
 }
 
 onMounted(async () => {
+  // 文件历史不需要分支切换
+  if (!props.relPath) {
+    try {
+      const b = await invoke<{ current: string; branches: string[] }>('git_branches', {root: props.rootDir})
+      branches.value = b.branches
+    }
+    catch {
+      branches.value = []
+    }
+  }
   await loadMore()
   if (commits.value.length) {
     await select(commits.value[0])

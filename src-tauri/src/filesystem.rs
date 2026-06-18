@@ -894,20 +894,29 @@ pub struct GitCommit {
     subject: String,
 }
 
-/// 提交历史（分页）：limit 条，跳过 skip 条。
+/// 提交历史（分页）：limit 条，跳过 skip 条。revision 指定时查看该分支/引用的历史。
 #[tauri::command]
-pub async fn git_log(root: String, limit: u32, skip: u32) -> Result<Vec<GitCommit>, String> {
+pub async fn git_log(
+    root: String,
+    limit: u32,
+    skip: u32,
+    revision: Option<String>,
+) -> Result<Vec<GitCommit>, String> {
     tokio::task::spawn_blocking(move || {
         let n = format!("-n{}", limit);
         let sk = format!("--skip={}", skip);
         // 字段以 \x1f 分隔、每提交一行；%s 为单行主题
-        let args = vec![
+        let mut args = vec![
             "log",
             n.as_str(),
             sk.as_str(),
             "--date=format:%Y-%m-%d %H:%M",
             "--pretty=format:%H\x1f%h\x1f%an\x1f%ad\x1f%s",
         ];
+        let rev = revision.unwrap_or_default();
+        if !rev.trim().is_empty() {
+            args.push(rev.as_str());
+        }
         let out = run_git(&root, &args)?;
         let mut commits = Vec::new();
         for line in out.lines() {
@@ -970,6 +979,14 @@ pub async fn git_remote_add(root: String, name: String, url: String) -> Result<S
 #[tauri::command]
 pub async fn git_remote_remove(root: String, name: String) -> Result<String, String> {
     tokio::task::spawn_blocking(move || run_git(&root, &["remote", "remove", &name]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 拣选某提交到当前分支（cherry-pick）。
+#[tauri::command]
+pub async fn git_cherry_pick(root: String, hash: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["cherry-pick", &hash]))
         .await
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
