@@ -55,13 +55,15 @@
                  :active-path="currentFilePath"
                  :recent-folders="recentFolders"
                  :git-status="gitStatus"
+                 :git-repo="gitRepo"
                  class="flex-shrink-0"
                  :style="{ width: `${sidebarWidth}px` }"
                  @open-folder="openFolder"
                  @open-recent="openFolderPath"
                  @open-file="smartOpen"
                  @renamed="(from, to) => updateTabPath(from, to)"
-                 @deleted="(p) => detachTabPath(p)"/>
+                 @deleted="(p) => detachTabPath(p)"
+                 @git-refresh="refreshGitStatus"/>
         <!-- 拖拽改变侧栏宽度 -->
         <div class="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
              @mousedown="startSidebarResize"></div>
@@ -1307,6 +1309,7 @@ const openGit = () => {
 
 // 文件树徽标用：绝对路径 → 状态字母（M/A/D/U）
 const gitStatus = ref<Record<string, string>>({})
+const gitRepo = ref(false)
 const refreshGitStatus = async () => {
   if (!rootDir.value) {
     gitStatus.value = {}
@@ -1316,6 +1319,7 @@ const refreshGitStatus = async () => {
     const s = await invoke<{ is_repo: boolean, files: { path: string, index: string, worktree: string }[] }>(
         'git_status', {root: rootDir.value}
     )
+    gitRepo.value = s.is_repo
     const map: Record<string, string> = {}
     if (s.is_repo) {
       for (const f of s.files) {
@@ -1329,6 +1333,7 @@ const refreshGitStatus = async () => {
   }
   catch {
     gitStatus.value = {}
+    gitRepo.value = false
   }
   // HEAD 可能因提交/切换分支变化，刷新编辑器行内差异基线
   fetchBaseline()
