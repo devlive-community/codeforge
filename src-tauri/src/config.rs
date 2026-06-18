@@ -20,6 +20,7 @@ pub struct EditorConfig {
     pub show_line_numbers: Option<bool>,   // 是否显示行号
     pub show_function_help: Option<bool>,  // 是否显示函数帮助
     pub space_dot_omission: Option<bool>,  // 是否显示空格省略
+    pub show_minimap: Option<bool>,        // 是否显示代码缩略图
     pub layout: Option<String>,            // 编辑器/控制台布局: horizontal | vertical | editor
     pub last_direction: Option<String>,    // 仅编辑器模式下控制台弹出方向: horizontal | vertical
     pub max_open_file_size: Option<u32>,   // 打开文件大小上限(MB)，超过则拒绝打开
@@ -69,6 +70,7 @@ impl Default for AppConfig {
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
                 space_dot_omission: Some(false),
+                show_minimap: Some(false),
                 layout: Some("horizontal".to_string()),
                 last_direction: Some("horizontal".to_string()),
                 max_open_file_size: Some(5),
@@ -139,6 +141,7 @@ impl ConfigManager {
                                 show_line_numbers: Some(true),
                                 show_function_help: Some(false),
                                 space_dot_omission: Some(false),
+                                show_minimap: Some(false),
                                 layout: Some("horizontal".to_string()),
                                 last_direction: Some("horizontal".to_string()),
                                 max_open_file_size: Some(5),
@@ -262,6 +265,7 @@ impl ConfigManager {
                 show_line_numbers: Some(true),
                 show_function_help: Some(false),
                 space_dot_omission: Some(false),
+                show_minimap: Some(false),
                 layout: Some("horizontal".to_string()),
                 last_direction: Some("horizontal".to_string()),
                 max_open_file_size: Some(5),
