@@ -370,6 +370,8 @@
     "merged": "Merged",
     "branchOpFailed": "Branch operation failed",
     "amend": "Amend last commit",
+    "commitAll": "Auto-stage tracked changes before commit (-a)",
+    "signoff": "Add Sign-off (-s)",
     "blame": "Git Blame",
     "fileHistory": "File history",
     "blameTitle": "Git Blame",

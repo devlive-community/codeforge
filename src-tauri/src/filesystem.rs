@@ -666,19 +666,33 @@ pub async fn git_unstage(root: String, paths: Vec<String>) -> Result<(), String>
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
-/// 提交已暂存的改动。amend=true 时修正上次提交；此时 message 为空则保留原提交信息。
+/// 提交已暂存的改动。
+/// amend=true 修正上次提交（message 为空则保留原信息）；all=true 自动暂存已跟踪改动（-a）；signoff=true 追加 Signed-off-by（-s）。
 #[tauri::command]
-pub async fn git_commit(root: String, message: String, amend: bool) -> Result<String, String> {
+pub async fn git_commit(
+    root: String,
+    message: String,
+    amend: bool,
+    all: bool,
+    signoff: bool,
+) -> Result<String, String> {
     tokio::task::spawn_blocking(move || {
-        let args: Vec<&str> = if amend {
-            if message.trim().is_empty() {
-                vec!["commit", "--amend", "--no-edit"]
-            } else {
-                vec!["commit", "--amend", "-m", &message]
-            }
+        let mut args: Vec<&str> = vec!["commit"];
+        if amend {
+            args.push("--amend");
+        }
+        if all {
+            args.push("-a");
+        }
+        if signoff {
+            args.push("-s");
+        }
+        if amend && message.trim().is_empty() {
+            args.push("--no-edit");
         } else {
-            vec!["commit", "-m", &message]
-        };
+            args.push("-m");
+            args.push(&message);
+        }
         run_git(&root, &args)
     })
     .await
