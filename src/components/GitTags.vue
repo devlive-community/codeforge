@@ -13,12 +13,17 @@
       </div>
 
       <!-- 在 HEAD 打标签 -->
-      <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 flex gap-2">
-        <input v-model="name"
-               class="flex-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-               :placeholder="t('git.tagNamePlaceholder')"
-               @keydown.enter="create"/>
-        <Button size="sm" :loading="busy" :disabled="!name.trim()" @click="create">{{ t('git.tagHead') }}</Button>
+      <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 space-y-2">
+        <div class="flex gap-2">
+          <input v-model="name"
+                 class="flex-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+                 :placeholder="t('git.tagNamePlaceholder')"
+                 @keydown.enter="create"/>
+          <Button size="sm" :loading="busy" :disabled="!name.trim()" @click="create">{{ t('git.tagHead') }}</Button>
+        </div>
+        <input v-model="message"
+               class="w-full text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+               :placeholder="t('git.tagMessagePlaceholder')"/>
       </div>
 
       <!-- 标签列表 -->
@@ -28,6 +33,7 @@
              class="group flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-800">
           <TagIcon class="w-3.5 h-3.5 text-amber-500 flex-shrink-0"/>
           <span class="flex-1 truncate text-sm text-gray-800 dark:text-gray-100">{{ tg }}</span>
+          <button class="text-xs text-blue-500 hover:underline opacity-0 group-hover:opacity-100 cursor-pointer flex-shrink-0" :disabled="busy" @click="checkout(tg)">{{ t('git.tagCheckout') }}</button>
           <button class="text-xs text-red-500 hover:underline opacity-0 group-hover:opacity-100 cursor-pointer flex-shrink-0" :disabled="busy" @click="remove(tg)">{{ t('git.tagDelete') }}</button>
         </div>
       </div>
@@ -50,6 +56,7 @@ const toast = useToast()
 const {t} = useI18n()
 const tags = ref<string[]>([])
 const name = ref('')
+const message = ref('')
 const busy = ref(false)
 
 const load = async () => {
@@ -67,10 +74,26 @@ const create = async () => {
   }
   busy.value = true
   try {
-    await invoke('git_tag_create', {root: props.rootDir, name: name.value.trim(), hash: ''})
+    await invoke('git_tag_create', {root: props.rootDir, name: name.value.trim(), hash: '', message: message.value.trim()})
     name.value = ''
+    message.value = ''
     toast.success(t('git.tagCreated'))
     await load()
+  }
+  catch (error) {
+    toast.error(t('git.tagFailed') + ': ' + error)
+  }
+  finally {
+    busy.value = false
+  }
+}
+
+const checkout = async (tg: string) => {
+  busy.value = true
+  try {
+    await invoke('git_checkout', {root: props.rootDir, branch: tg})
+    toast.success(t('git.tagCheckedOut'))
+    emit('close')
   }
   catch (error) {
     toast.error(t('git.tagFailed') + ': ' + error)

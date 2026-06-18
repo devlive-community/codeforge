@@ -1167,11 +1167,24 @@ pub async fn git_tags(root: String) -> Result<Vec<String>, String> {
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
-/// 创建标签。hash 为空则打在 HEAD。
+/// 创建标签。hash 为空则打在 HEAD；message 非空则创建附注标签（-a -m）。
 #[tauri::command]
-pub async fn git_tag_create(root: String, name: String, hash: String) -> Result<String, String> {
+pub async fn git_tag_create(
+    root: String,
+    name: String,
+    hash: String,
+    message: String,
+) -> Result<String, String> {
     tokio::task::spawn_blocking(move || {
-        let mut args = vec!["tag", name.as_str()];
+        let mut args: Vec<&str> = vec!["tag"];
+        if !message.trim().is_empty() {
+            args.push("-a");
+            args.push(name.as_str());
+            args.push("-m");
+            args.push(message.as_str());
+        } else {
+            args.push(name.as_str());
+        }
         if !hash.trim().is_empty() {
             args.push(hash.as_str());
         }

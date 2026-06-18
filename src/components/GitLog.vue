@@ -249,7 +249,7 @@ const doTag = async () => {
     return
   }
   try {
-    await invoke('git_tag_create', {root: props.rootDir, name: tagName.value.trim(), hash: c.hash})
+    await invoke('git_tag_create', {root: props.rootDir, name: tagName.value.trim(), hash: c.hash, message: ''})
     toast.success(t('git.tagCreated'))
     tagTarget.value = null
   }
