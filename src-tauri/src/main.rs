@@ -60,14 +60,14 @@ use crate::execution::{
 use crate::filesystem::{
     create_directory, create_file, delete_path, get_text_file_meta, git_blame, git_branch_create,
     git_branch_delete, git_branch_rename, git_branches, git_checkout, git_cherry_pick, git_clean,
-    git_clean_preview, git_clone, git_commit, git_diff, git_discard, git_fetch, git_file_head,
-    git_ignore_add, git_init, git_log, git_log_file, git_merge, git_op_abort, git_op_continue,
-    git_op_skip, git_op_state, git_pull, git_push, git_reflog, git_remote_add, git_remote_remove,
-    git_remotes, git_reset, git_revert, git_set_upstream, git_show, git_stage, git_stash_apply,
-    git_stash_drop, git_stash_list, git_stash_pop, git_stash_push, git_stash_show, git_status,
-    git_tag_create, git_tag_delete, git_tags, git_unstage, list_files, read_directory_tree,
-    read_file_lines, read_file_text, rename_path, replace_in_files, reveal_path, search_in_files,
-    watch_directory, write_file_text,
+    git_clean_preview, git_clone, git_commit, git_compare, git_diff, git_discard, git_fetch,
+    git_file_head, git_ignore_add, git_init, git_log, git_log_file, git_merge, git_op_abort,
+    git_op_continue, git_op_skip, git_op_state, git_pull, git_push, git_reflog, git_remote_add,
+    git_remote_remove, git_remotes, git_reset, git_revert, git_set_upstream, git_show, git_stage,
+    git_stash_apply, git_stash_drop, git_stash_list, git_stash_pop, git_stash_push, git_stash_show,
+    git_status, git_tag_create, git_tag_delete, git_tags, git_unstage, list_files,
+    read_directory_tree, read_file_lines, read_file_text, rename_path, replace_in_files,
+    reveal_path, search_in_files, watch_directory, write_file_text,
 };
 use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
 use crate::lsp::{
@@ -237,6 +237,7 @@ fn main() {
             git_reset,
             git_reflog,
             git_cherry_pick,
+            git_compare,
             git_op_state,
             git_op_abort,
             git_op_continue,

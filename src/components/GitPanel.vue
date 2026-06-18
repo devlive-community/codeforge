@@ -66,6 +66,9 @@
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.history')" @click="showLog = true">
           <History class="w-4 h-4"/>
         </button>
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.compare')" @click="showCompare = true">
+          <GitCompareArrows class="w-4 h-4"/>
+        </button>
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.reflog')" @click="showReflog = true">
           <RotateCcw class="w-4 h-4"/>
         </button>
@@ -238,6 +241,9 @@
   <!-- 引用日志 reflog -->
   <GitReflog v-if="showReflog" :root-dir="rootDir" @close="showReflog = false" @changed="refresh"/>
 
+  <!-- 分支对比 -->
+  <GitCompare v-if="showCompare" :root-dir="rootDir" :branch="status.branch" @close="showCompare = false"/>
+
   <!-- 单文件改动对比：HEAD vs 工作区 -->
   <DiffView v-if="diffFile"
             :original="diffFile.original"
@@ -251,12 +257,13 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, Pencil, RefreshCw, RotateCcw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, Pencil, RefreshCw, RotateCcw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
 import GitLog from './GitLog.vue'
 import GitReflog from './GitReflog.vue'
+import GitCompare from './GitCompare.vue'
 import GitStash from './GitStash.vue'
 import GitTags from './GitTags.vue'
 import GitRemotes from './GitRemotes.vue'
@@ -296,6 +303,7 @@ const discardTarget = ref<GitFile | null>(null)
 // 提交历史 / 储藏 / 标签
 const showLog = ref(false)
 const showReflog = ref(false)
+const showCompare = ref(false)
 const showStash = ref(false)
 const showTags = ref(false)
 const showRemotes = ref(false)
@@ -726,7 +734,7 @@ const FileRow = (rowProps: { file: GitFile; staged?: boolean }, {emit: rowEmit }
       class: 'ml-2 text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 cursor-pointer',
       title: t('git.viewDiff'),
       onClick: () => rowEmit('diff')
-    }, h(GitCompare, {class: 'w-3.5 h-3.5'})),
+    }, h(GitCompareIcon, {class: 'w-3.5 h-3.5'})),
     h('button', {
       class: 'ml-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 cursor-pointer',
       title: t('git.discard'),

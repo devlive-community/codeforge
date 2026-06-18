@@ -1143,6 +1143,45 @@ pub async fn git_reset(root: String, hash: String, mode: String) -> Result<Strin
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+#[derive(Serialize)]
+pub struct GitCompareResult {
+    /// head 相对 base 领先 / 落后的提交数
+    ahead: u32,
+    behind: u32,
+    /// base...head 的差异补丁（含 stat）
+    patch: String,
+}
+
+/// 对比两个 ref：base...head 的领先/落后提交数与差异补丁。
+#[tauri::command]
+pub async fn git_compare(
+    root: String,
+    base: String,
+    head: String,
+) -> Result<GitCompareResult, String> {
+    tokio::task::spawn_blocking(move || {
+        let range = format!("{}...{}", base, head);
+        // rev-list --left-right --count 输出 "左 右"：左=base 独有(落后)，右=head 独有(领先)
+        let counts = run_git(&root, &["rev-list", "--left-right", "--count", &range])?;
+        let mut it = counts.split_whitespace();
+        let behind: u32 = it.next().unwrap_or("0").parse().unwrap_or(0);
+        let ahead: u32 = it.next().unwrap_or("0").parse().unwrap_or(0);
+        let mut patch = run_git(&root, &["diff", "--stat", "-p", &range])?;
+        const MAX: usize = 200_000;
+        if patch.len() > MAX {
+            patch.truncate(MAX);
+            patch.push_str("\n…(内容过长已截断)");
+        }
+        Ok(GitCompareResult {
+            ahead,
+            behind,
+            patch,
+        })
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 某个文件的提交历史（分页）。
 #[tauri::command]
 pub async fn git_log_file(
