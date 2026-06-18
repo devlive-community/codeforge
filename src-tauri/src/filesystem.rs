@@ -1090,6 +1090,44 @@ pub async fn git_log_file(
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+#[derive(Serialize)]
+pub struct GitReflogEntry {
+    short: String,
+    selector: String,
+    subject: String,
+    date: String,
+}
+
+/// HEAD 引用日志（reflog），用于误操作恢复。
+#[tauri::command]
+pub async fn git_reflog(root: String, limit: u32) -> Result<Vec<GitReflogEntry>, String> {
+    tokio::task::spawn_blocking(move || {
+        let n = format!("-n{}", limit);
+        let args = vec![
+            "reflog",
+            n.as_str(),
+            "--date=format:%Y-%m-%d %H:%M",
+            "--pretty=format:%h\x1f%gd\x1f%gs\x1f%ad",
+        ];
+        let out = run_git(&root, &args)?;
+        let mut entries = Vec::new();
+        for line in out.lines() {
+            let p: Vec<&str> = line.split('\u{1f}').collect();
+            if p.len() >= 4 {
+                entries.push(GitReflogEntry {
+                    short: p[0].to_string(),
+                    selector: p[1].to_string(),
+                    subject: p[2].to_string(),
+                    date: p[3].to_string(),
+                });
+            }
+        }
+        Ok(entries)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 某次提交的详情补丁（git show，含 stat 与 diff）。
 #[tauri::command]
 pub async fn git_show(root: String, hash: String) -> Result<String, String> {

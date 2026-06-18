@@ -66,6 +66,9 @@
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.history')" @click="showLog = true">
           <History class="w-4 h-4"/>
         </button>
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.reflog')" @click="showReflog = true">
+          <RotateCcw class="w-4 h-4"/>
+        </button>
         <button v-if="status.is_repo" class="text-gray-400 hover:text-red-500 cursor-pointer" :title="t('git.clean')" @click="openClean">
           <Eraser class="w-4 h-4"/>
         </button>
@@ -223,6 +226,9 @@
   <!-- 提交历史 -->
   <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false" @changed="refresh"/>
 
+  <!-- 引用日志 reflog -->
+  <GitReflog v-if="showReflog" :root-dir="rootDir" @close="showReflog = false" @changed="refresh"/>
+
   <!-- 单文件改动对比：HEAD vs 工作区 -->
   <DiffView v-if="diffFile"
             :original="diffFile.original"
@@ -236,11 +242,12 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, Pencil, RefreshCw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, Pencil, RefreshCw, RotateCcw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
 import GitLog from './GitLog.vue'
+import GitReflog from './GitReflog.vue'
 import GitStash from './GitStash.vue'
 import GitTags from './GitTags.vue'
 import GitRemotes from './GitRemotes.vue'
@@ -277,6 +284,7 @@ const showDiscard = ref(false)
 const discardTarget = ref<GitFile | null>(null)
 // 提交历史 / 储藏 / 标签
 const showLog = ref(false)
+const showReflog = ref(false)
 const showStash = ref(false)
 const showTags = ref(false)
 const showRemotes = ref(false)
