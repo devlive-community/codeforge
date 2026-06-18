@@ -639,6 +639,16 @@ pub async fn git_stage(root: String, paths: Vec<String>) -> Result<(), String> {
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 把某文件恢复到指定提交时的版本（checkout <ref> -- <file>，写入工作区）。
+#[tauri::command]
+pub async fn git_restore_file(root: String, rel_path: String, hash: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        run_git(&root, &["checkout", &hash, "--", &rel_path]).map(|_| ())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 丢弃已跟踪文件的改动：暂存区与工作区一并恢复到 HEAD（不可恢复）。
 /// 未跟踪文件不在此处理（由前端删除）。
 #[tauri::command]

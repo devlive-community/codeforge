@@ -35,6 +35,7 @@
               <span class="ml-auto flex-shrink-0">{{ c.date }}</span>
             </div>
             <div class="mt-1 hidden group-hover:flex items-center gap-3 text-[11px]">
+              <button v-if="relPath" class="text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer" @click.stop="restoreVersion(c)">{{ t('git.restoreVersion') }}</button>
               <button v-if="selectedRev" class="text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer" @click.stop="doCherryPick(c)">{{ t('git.cherryPick') }}</button>
               <button class="text-blue-500 hover:underline cursor-pointer" @click.stop="doRevert(c)">{{ t('git.revert') }}</button>
               <button class="text-amber-600 dark:text-amber-400 hover:underline cursor-pointer" @click.stop="openTag(c)">{{ t('git.tag') }}</button>
@@ -209,6 +210,20 @@ const doReset = async (mode: 'soft' | 'mixed' | 'hard') => {
   }
   catch (error) {
     toast.error(t('git.resetFailed') + ': ' + error)
+  }
+}
+
+const restoreVersion = async (c: GitCommit) => {
+  if (!props.relPath) {
+    return
+  }
+  try {
+    await invoke('git_restore_file', {root: props.rootDir, relPath: props.relPath, hash: c.hash})
+    toast.success(t('git.versionRestored'))
+    emit('changed')
+  }
+  catch (error) {
+    toast.error(t('git.restoreVersionFailed') + ': ' + error)
   }
 }
 
