@@ -1,5 +1,9 @@
 <template>
-  <div class="fixed top-0 right-0 bottom-0 z-40 w-[42%] min-w-[360px] max-w-[640px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col">
+  <div class="fixed top-0 right-0 bottom-0 z-40 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col"
+       :style="{ width: panelWidth + 'px' }">
+    <!-- 左缘拖拽改宽 -->
+    <div class="absolute left-0 top-0 bottom-0 w-1 -ml-0.5 cursor-col-resize hover:bg-blue-500 z-50"
+         @mousedown="startResize"></div>
     <!-- 头部：分支 + 操作 -->
     <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 min-w-0">
@@ -357,7 +361,8 @@
 </template>
 
 <script setup lang="ts">
-import {computed, h, onMounted, ref} from 'vue'
+import {computed, h, onBeforeUnmount, onMounted, ref} from 'vue'
+import {kvGet, kvSet} from '../composables/useKvStore'
 import {invoke} from '@tauri-apps/api/core'
 import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, Webhook, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
@@ -387,6 +392,36 @@ interface GitStatusData { is_repo: boolean; branch: string; ahead: number; behin
 
 const props = defineProps<{ rootDir: string }>()
 const emit = defineEmits<{ close: []; refresh: []; open: [path: string] }>()
+
+// 面板宽度（可拖拽左缘改宽，持久化到 KV）
+const clampWidth = (w: number) => Math.max(360, Math.min(w, Math.max(360, window.innerWidth - 200)))
+const panelWidth = ref(clampWidth(Number(kvGet('git-panel-width')) || Math.round(window.innerWidth * 0.42)))
+let resizeStartX = 0
+let resizeStartWidth = 0
+const onResize = (e: MouseEvent) => {
+  // 拖拽左缘：鼠标左移（clientX 减小）使面板变宽
+  panelWidth.value = clampWidth(resizeStartWidth + (resizeStartX - e.clientX))
+}
+const stopResize = () => {
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+  kvSet('git-panel-width', String(panelWidth.value))
+}
+const startResize = (e: MouseEvent) => {
+  e.preventDefault()
+  resizeStartX = e.clientX
+  resizeStartWidth = panelWidth.value
+  document.addEventListener('mousemove', onResize)
+  document.addEventListener('mouseup', stopResize)
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor = 'col-resize'
+}
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+})
 
 const toast = useToast()
 const {t} = useI18n()
