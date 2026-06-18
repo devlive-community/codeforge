@@ -84,12 +84,11 @@ import {
 } from '@uiw/codemirror-themes-all'
 import {invoke} from '@tauri-apps/api/core'
 import {useToast} from '../plugins/toast'
-import {codeFolding, foldGutter, foldKeymap, StreamLanguage} from '@codemirror/language'
+import {StreamLanguage} from '@codemirror/language'
 import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
-import {highlightSelectionMatches, search, searchKeymap} from "@codemirror/search";
 import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
@@ -533,16 +532,11 @@ export function useCodeMirrorEditor(props: Props)
         // 字体缩放快捷键
         result.push(fontSizeKeymap)
 
-        // 文件内查找/替换（Cmd/Ctrl+F 打开面板，支持正则/大小写/逐个替换），并高亮选中词的其它匹配
-        result.push(search({top: true}))
-        result.push(highlightSelectionMatches())
-        result.push(keymap.of(searchKeymap))
+        // 查找/替换（Cmd/Ctrl+F）、代码折叠、括号匹配等由 vue-codemirror 默认的 basicSetup 提供
+        // （CodeEditor 传入的 extensions 是叠加在 basicSetup 之上，而非替换），此处只补样式：
+        //   - 美化查找面板（替换原生控件外观，跟随明暗主题）
+        //   - 折叠箭头跟随主题、默认淡显（并配合下方 hideLineNumbersTheme 让箭头可见）
         result.push(buildSearchPanelTheme(isDark.value))
-
-        // 代码折叠：左缘折叠箭头 + 折叠快捷键（Ctrl/Cmd-Shift-[ 折叠 / ] 展开）
-        result.push(codeFolding())
-        result.push(foldGutter())
-        result.push(keymap.of(foldKeymap))
         result.push(foldGutterTheme)
 
         // 代码片段 Tab 展开

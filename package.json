@@ -29,7 +29,6 @@
     "@codemirror/language": "^6.11.2",
     "@codemirror/legacy-modes": "^6.5.1",
     "@codemirror/lint": "6.9.6",
-    "@codemirror/search": "^6.7.0",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.1",
     "@open-rpc/client-js": "^2.0.0",
