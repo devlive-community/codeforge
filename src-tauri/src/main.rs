@@ -67,9 +67,10 @@ use crate::filesystem::{
     git_push, git_push_force, git_push_tags, git_reflog, git_remote_add, git_remote_branches,
     git_remote_remove, git_remotes, git_reset, git_restore_file, git_revert, git_set_identity,
     git_set_upstream, git_show, git_stage, git_stash_apply, git_stash_drop, git_stash_list,
-    git_stash_pop, git_stash_push, git_stash_show, git_status, git_tag_create, git_tag_delete,
-    git_tags, git_unstage, list_files, read_directory_tree, read_file_lines, read_file_text,
-    rename_path, replace_in_files, reveal_path, search_in_files, watch_directory, write_file_text,
+    git_stash_pop, git_stash_push, git_stash_show, git_status, git_submodule_sync,
+    git_submodule_update, git_submodules, git_tag_create, git_tag_delete, git_tags, git_unstage,
+    list_files, read_directory_tree, read_file_lines, read_file_text, rename_path,
+    replace_in_files, reveal_path, search_in_files, watch_directory, write_file_text,
 };
 use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
 use crate::lsp::{
@@ -274,6 +275,9 @@ fn main() {
             git_stash_drop,
             git_stash_apply,
             git_stash_show,
+            git_submodules,
+            git_submodule_update,
+            git_submodule_sync,
             // AI 助手
             ai_chat,
             ai_chat_stream,

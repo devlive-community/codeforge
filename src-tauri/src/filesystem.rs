@@ -1073,6 +1073,83 @@ pub async fn git_log(
 }
 
 #[derive(Serialize)]
+pub struct GitSubmodule {
+    path: String,
+    hash: String,
+    /// ok / uninitialized / modified / conflict
+    state: String,
+    describe: String,
+}
+
+/// 列出子模块状态（解析 git submodule status）。
+#[tauri::command]
+pub async fn git_submodules(root: String) -> Result<Vec<GitSubmodule>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["submodule", "status"])?;
+        let mut list: Vec<GitSubmodule> = Vec::new();
+        for line in out.lines() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            // 形如 " <sha> <path> (<describe>)"，首字符表示状态
+            let prefix = line.chars().next().unwrap_or(' ');
+            let state = match prefix {
+                '-' => "uninitialized",
+                '+' => "modified",
+                'U' => "conflict",
+                _ => "ok",
+            }
+            .to_string();
+            let rest = line[1..].trim();
+            let mut it = rest.splitn(2, ' ');
+            let hash = it.next().unwrap_or("").to_string();
+            let tail = it.next().unwrap_or("");
+            let (path, describe) = match tail.find(" (") {
+                Some(idx) => (
+                    tail[..idx].trim().to_string(),
+                    tail[idx + 2..].trim_end_matches(')').to_string(),
+                ),
+                None => (tail.trim().to_string(), String::new()),
+            };
+            if !path.is_empty() {
+                list.push(GitSubmodule {
+                    path,
+                    hash,
+                    state,
+                    describe,
+                });
+            }
+        }
+        Ok(list)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 更新子模块（init + recursive）。path 为空则更新全部。
+#[tauri::command]
+pub async fn git_submodule_update(root: String, path: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["submodule", "update", "--init", "--recursive"];
+        if !path.trim().is_empty() {
+            args.push("--");
+            args.push(path.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 同步子模块 URL 配置（submodule sync --recursive）。
+#[tauri::command]
+pub async fn git_submodule_sync(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["submodule", "sync", "--recursive"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+#[derive(Serialize)]
 pub struct GitGraphCommit {
     hash: String,
     short: String,

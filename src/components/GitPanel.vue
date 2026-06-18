@@ -82,6 +82,9 @@
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.graph')" @click="showGraph = true">
           <Network class="w-4 h-4"/>
         </button>
+        <button v-if="status.is_repo && submoduleCount > 0" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.submodule')" @click="showSubmodules = true">
+          <Boxes class="w-4 h-4"/>
+        </button>
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.compare')" @click="showCompare = true">
           <GitCompareArrows class="w-4 h-4"/>
         </button>
@@ -273,6 +276,9 @@
   <!-- 分支图 -->
   <GitGraph v-if="showGraph" :root-dir="rootDir" @close="showGraph = false"/>
 
+  <!-- 子模块 -->
+  <GitSubmodules v-if="showSubmodules" :root-dir="rootDir" @close="showSubmodules = false"/>
+
   <!-- 提交历史 -->
   <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false" @changed="refresh"/>
 
@@ -295,7 +301,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, Undo2, UserCog, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Boxes, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, Undo2, UserCog, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -308,6 +314,7 @@ import GitRemotes from './GitRemotes.vue'
 import GitConfig from './GitConfig.vue'
 import HunkStageView from './HunkStageView.vue'
 import GitGraph from './GitGraph.vue'
+import GitSubmodules from './GitSubmodules.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
@@ -353,6 +360,8 @@ const showTags = ref(false)
 const showRemotes = ref(false)
 const showConfig = ref(false)
 const showGraph = ref(false)
+const showSubmodules = ref(false)
+const submoduleCount = ref(0)
 const hunkFile = ref<{ path: string; staged: boolean } | null>(null)
 const openHunks = (path: string, staged: boolean) => {
   hunkFile.value = {path, staged}
@@ -389,6 +398,7 @@ const refresh = async () => {
       branches.value = b.branches
       remoteBranches.value = await invoke<string[]>('git_remote_branches', {root: props.rootDir})
       opState.value = await invoke<string>('git_op_state', {root: props.rootDir})
+      submoduleCount.value = (await invoke<unknown[]>('git_submodules', {root: props.rootDir})).length
     }
     else {
       opState.value = 'none'
