@@ -788,6 +788,22 @@ pub async fn git_stash_push(root: String, message: String) -> Result<String, Str
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 应用某个 stash 但保留（apply）。
+#[tauri::command]
+pub async fn git_stash_apply(root: String, reference: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["stash", "apply", &reference]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 查看某个 stash 的补丁内容。
+#[tauri::command]
+pub async fn git_stash_show(root: String, reference: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["stash", "show", "-p", &reference]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 应用并移除某个 stash（pop）。
 #[tauri::command]
 pub async fn git_stash_pop(root: String, reference: String) -> Result<String, String> {
