@@ -89,6 +89,7 @@ import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
+import {highlightSelectionMatches, search, searchKeymap} from "@codemirror/search";
 import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
@@ -454,8 +455,13 @@ export function useCodeMirrorEditor(props: Props)
         // 添加函数帮助主题
         result.push(functionHelpTheme)
 
-        // 字体缩放快捷键（搜索/替换、折叠、括号匹配等由 vue-codemirror 的 basicSetup 提供）
+        // 字体缩放快捷键
         result.push(fontSizeKeymap)
+
+        // 文件内查找/替换（Cmd/Ctrl+F 打开面板，支持正则/大小写/逐个替换），并高亮选中词的其它匹配
+        result.push(search({top: true}))
+        result.push(highlightSelectionMatches())
+        result.push(keymap.of(searchKeymap))
 
         // 代码片段 Tab 展开
         result.push(snippetKeymap)
