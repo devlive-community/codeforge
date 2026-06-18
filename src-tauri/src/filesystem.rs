@@ -1036,10 +1036,16 @@ pub async fn git_log(
     limit: u32,
     skip: u32,
     revision: Option<String>,
+    grep: Option<String>,
+    author: Option<String>,
 ) -> Result<Vec<GitCommit>, String> {
     tokio::task::spawn_blocking(move || {
         let n = format!("-n{}", limit);
         let sk = format!("--skip={}", skip);
+        let grep = grep.unwrap_or_default();
+        let author = author.unwrap_or_default();
+        let grep_arg = format!("--grep={}", grep.trim());
+        let author_arg = format!("--author={}", author.trim());
         // 字段以 \x1f 分隔、每提交一行；%s 为单行主题
         let mut args = vec![
             "log",
@@ -1048,6 +1054,14 @@ pub async fn git_log(
             "--date=format:%Y-%m-%d %H:%M",
             "--pretty=format:%H\x1f%h\x1f%an\x1f%ad\x1f%s",
         ];
+        // 提交信息搜索（大小写不敏感）与作者过滤
+        if !grep.trim().is_empty() {
+            args.push("-i");
+            args.push(grep_arg.as_str());
+        }
+        if !author.trim().is_empty() {
+            args.push(author_arg.as_str());
+        }
         let rev = revision.unwrap_or_default();
         if !rev.trim().is_empty() {
             args.push(rev.as_str());
