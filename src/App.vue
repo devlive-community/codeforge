@@ -407,6 +407,10 @@
             {{ t('git.fileHistory') }}
           </button>
         </template>
+        <div v-if="editorCtx.lsp || canBlame" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="sendToTerminal">
+          {{ t('app.sendToTerminal') }}
+        </button>
       </div>
     </div>
 
@@ -1148,6 +1152,23 @@ const runTask = async (command: string) => {
   showTerminal.value = true
   await nextTick()
   terminalRef.value?.runCommand(command)
+}
+
+// B3：发送选区（无选区则当前行）到集成终端，用于 REPL 式交互
+const sendToTerminal = async () => {
+  closeEditorCtx()
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const sel = view.state.selection.main
+  const text = sel.empty
+    ? view.state.doc.lineAt(sel.head).text
+    : view.state.sliceDoc(sel.from, sel.to)
+  if (!text.trim()) {
+    return
+  }
+  await runTask(text)
 }
 
 const openSearchResult = async (path: string, line: number) => {
@@ -1897,6 +1918,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
   {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
   {id: 'tasks', label: t('command.tasks'), icon: ListChecks, run: () => openTasks()},
+  {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
   {id: 'layoutVertical', label: t('command.layoutVertical'), group: t('command.groupLayout'), icon: PanelBottom, run: () => handleLayoutChange('vertical')},
