@@ -1410,6 +1410,70 @@ pub async fn git_op_skip(root: String, op: String) -> Result<String, String> {
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+#[derive(Serialize)]
+pub struct GitBisectState {
+    active: bool,
+    /// 当前待测 HEAD 短哈希
+    head: String,
+    /// 当前待测提交主题
+    subject: String,
+    /// git bisect 最近输出（剩余步数 / 首个坏提交等）
+    message: String,
+}
+
+/// 查询二分定位状态：是否进行中、当前待测提交。
+#[tauri::command]
+pub async fn git_bisect_state(root: String) -> Result<GitBisectState, String> {
+    tokio::task::spawn_blocking(move || {
+        let git_dir = run_git(&root, &["rev-parse", "--git-dir"])?
+            .trim()
+            .to_string();
+        let p = std::path::Path::new(&git_dir);
+        let base = if p.is_absolute() {
+            std::path::PathBuf::from(&git_dir)
+        } else {
+            std::path::Path::new(&root).join(&git_dir)
+        };
+        let active = base.join("BISECT_START").exists();
+        let mut head = String::new();
+        let mut subject = String::new();
+        if active {
+            if let Ok(out) = run_git(&root, &["log", "-1", "--pretty=format:%h\x1f%s", "HEAD"]) {
+                let parts: Vec<&str> = out.split('\u{1f}').collect();
+                if parts.len() >= 2 {
+                    head = parts[0].to_string();
+                    subject = parts[1].to_string();
+                }
+            }
+        }
+        Ok(GitBisectState {
+            active,
+            head,
+            subject,
+            message: String::new(),
+        })
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 二分定位子命令：start / good / bad / skip / reset。rev 可选，仅 good/bad 使用。
+#[tauri::command]
+pub async fn git_bisect(root: String, action: String, rev: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !matches!(action.as_str(), "start" | "good" | "bad" | "skip" | "reset") {
+            return Err(format!("未知二分操作: {}", action));
+        }
+        let mut args = vec!["bisect", action.as_str()];
+        if matches!(action.as_str(), "good" | "bad") && !rev.trim().is_empty() {
+            args.push(rev.as_str());
+        }
+        run_git(&root, &args)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 拣选某提交到当前分支（cherry-pick）。
 #[tauri::command]
 pub async fn git_cherry_pick(root: String, hash: String) -> Result<String, String> {
