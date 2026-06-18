@@ -707,6 +707,28 @@ pub async fn git_push(root: String) -> Result<String, String> {
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 预览将被 git clean 删除的未跟踪文件/目录（dry-run）。
+#[tauri::command]
+pub async fn git_clean_preview(root: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = run_git(&root, &["clean", "-nd"])?;
+        Ok(out
+            .lines()
+            .filter_map(|l| l.strip_prefix("Would remove ").map(|s| s.to_string()))
+            .collect())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 清理未跟踪文件与目录（git clean -fd，不可恢复）。
+#[tauri::command]
+pub async fn git_clean(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || run_git(&root, &["clean", "-fd"]))
+        .await
+        .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 拉取并合并远程当前分支。
 #[tauri::command]
 pub async fn git_pull(root: String) -> Result<String, String> {

@@ -66,6 +66,9 @@
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.history')" @click="showLog = true">
           <History class="w-4 h-4"/>
         </button>
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-red-500 cursor-pointer" :title="t('git.clean')" @click="openClean">
+          <Eraser class="w-4 h-4"/>
+        </button>
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer disabled:opacity-40" :title="t('git.fetch')" :disabled="busy" @click="fetch">
           <DownloadCloud class="w-4 h-4" :class="{ 'animate-pulse': pending === 'fetch' }"/>
         </button>
@@ -173,6 +176,28 @@
     </div>
   </Modal>
 
+  <!-- 清理未跟踪文件确认 -->
+  <Modal v-model:show="cleanModal.show" :title="t('git.cleanTitle')" size="sm">
+    <div class="space-y-3">
+      <template v-if="cleanModal.list.length">
+        <p class="text-sm text-red-500">{{ t('git.cleanConfirm') }}</p>
+        <div class="max-h-48 overflow-y-auto rounded border border-gray-200 dark:border-gray-700 p-2 text-xs font-mono text-gray-600 dark:text-gray-300">
+          <div v-for="p in cleanModal.list" :key="p" class="truncate">{{ p }}</div>
+        </div>
+        <div class="flex justify-end gap-2">
+          <Button size="sm" type="secondary" @click="cleanModal.show = false">{{ t('git.cancel') }}</Button>
+          <Button size="sm" type="danger" @click="confirmClean">{{ t('git.clean') }}</Button>
+        </div>
+      </template>
+      <template v-else>
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('git.cleanEmpty') }}</p>
+        <div class="flex justify-end">
+          <Button size="sm" type="secondary" @click="cleanModal.show = false">{{ t('git.close') }}</Button>
+        </div>
+      </template>
+    </div>
+  </Modal>
+
   <!-- 重命名分支 -->
   <Modal v-model:show="renameBranch.show" :title="t('git.renameBranchTitle')" size="sm">
     <div class="space-y-4">
@@ -211,7 +236,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Cloud, DownloadCloud, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, Pencil, RefreshCw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare, GitMerge, History, Pencil, RefreshCw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -259,6 +284,8 @@ const showRemotes = ref(false)
 const branchMenu = ref(false)
 const newBranchName = ref('')
 const renameBranch = ref<{ show: boolean; old: string; value: string }>({show: false, old: '', value: ''})
+// 清理未跟踪文件
+const cleanModal = ref<{ show: boolean; list: string[] }>({show: false, list: []})
 
 // 未合并（冲突）：任一侧为 U，或两侧同为 A/D（AA/DD）
 const isConflict = (f: GitFile) => f.index === 'U' || f.worktree === 'U' || (f.index === f.worktree && (f.index === 'A' || f.index === 'D'))
@@ -390,6 +417,27 @@ const commitAndPush = async () => {
   }
   finally {
     pending.value = null
+  }
+}
+
+const openClean = async () => {
+  try {
+    const list = await invoke<string[]>('git_clean_preview', {root: props.rootDir})
+    cleanModal.value = {show: true, list}
+  }
+  catch (error) {
+    toast.error(t('git.cleanFailed') + ': ' + error)
+  }
+}
+const confirmClean = async () => {
+  cleanModal.value.show = false
+  try {
+    await invoke('git_clean', {root: props.rootDir})
+    toast.success(t('git.cleaned'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.cleanFailed') + ': ' + error)
   }
 }
 
