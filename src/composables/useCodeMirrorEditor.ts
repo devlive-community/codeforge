@@ -84,7 +84,7 @@ import {
 } from '@uiw/codemirror-themes-all'
 import {invoke} from '@tauri-apps/api/core'
 import {useToast} from '../plugins/toast'
-import {StreamLanguage} from '@codemirror/language'
+import {codeFolding, foldGutter, foldKeymap, StreamLanguage} from '@codemirror/language'
 import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
@@ -505,14 +505,18 @@ export function useCodeMirrorEditor(props: Props)
         }
     }
 
-    // 隐藏行号的主题扩展
+    // 隐藏行号列的主题扩展（仅隐藏行号，保留折叠等其它 gutter）
     const hideLineNumbersTheme = EditorView.theme({
         '.cm-lineNumbers': {
             display: 'none !important'
-        },
-        '.cm-gutters': {
-            display: 'none !important'
         }
+    })
+
+    // 折叠箭头：默认淡显、悬停加深，避免左缘出现显眼的列
+    const foldGutterTheme = EditorView.theme({
+        '.cm-gutters': {backgroundColor: 'transparent', border: 'none'},
+        '.cm-foldGutter .cm-gutterElement': {cursor: 'pointer', opacity: '0.4', padding: '0 2px'},
+        '.cm-foldGutter .cm-gutterElement:hover': {opacity: '0.9'}
     })
 
     // 更新扩展的函数
@@ -534,6 +538,12 @@ export function useCodeMirrorEditor(props: Props)
         result.push(highlightSelectionMatches())
         result.push(keymap.of(searchKeymap))
         result.push(buildSearchPanelTheme(isDark.value))
+
+        // 代码折叠：左缘折叠箭头 + 折叠快捷键（Ctrl/Cmd-Shift-[ 折叠 / ] 展开）
+        result.push(codeFolding())
+        result.push(foldGutter())
+        result.push(keymap.of(foldKeymap))
+        result.push(foldGutterTheme)
 
         // 代码片段 Tab 展开
         result.push(snippetKeymap)
