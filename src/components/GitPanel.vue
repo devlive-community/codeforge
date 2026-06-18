@@ -70,7 +70,7 @@
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.tagTitle')" @click="showTags = true">
           <Tag class="w-4 h-4"/>
         </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.identityTitle')" @click="showConfig = true">
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.configTitle')" @click="showConfig = true">
           <UserCog class="w-4 h-4"/>
         </button>
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.stashTitle')" @click="showStash = true">

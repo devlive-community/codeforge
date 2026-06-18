@@ -1615,6 +1615,51 @@ pub async fn git_set_identity(root: String, name: String, email: String) -> Resu
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 读取仓库本地签名配置，返回 [gpgsign("true"/""), signingkey]。
+#[tauri::command]
+pub async fn git_get_signing(root: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let sign = run_git(&root, &["config", "--local", "commit.gpgsign"])
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+        let key = run_git(&root, &["config", "--local", "user.signingkey"])
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+        let enabled = if sign == "true" {
+            "true".to_string()
+        } else {
+            String::new()
+        };
+        Ok(vec![enabled, key])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 设置仓库本地签名配置：commit.gpgsign 开关；key 非空则设 user.signingkey。
+#[tauri::command]
+pub async fn git_set_signing(root: String, enabled: bool, key: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        run_git(
+            &root,
+            &[
+                "config",
+                "--local",
+                "commit.gpgsign",
+                if enabled { "true" } else { "false" },
+            ],
+        )?;
+        if !key.trim().is_empty() {
+            run_git(&root, &["config", "--local", "user.signingkey", key.trim()])?;
+        }
+        Ok(String::new())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 创建标签。hash 为空则打在 HEAD；message 非空则创建附注标签（-a -m）。
 #[tauri::command]
 pub async fn git_tag_create(
