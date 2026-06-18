@@ -444,7 +444,7 @@ import {computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, w
 import {useI18n} from 'vue-i18n'
 import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
-import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction} from './editor/lspExtension'
+import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
@@ -907,6 +907,14 @@ const openAiForExecution = (item: ExecutionResult) => {
       ? null
       : {code: item.code, error: combinedOutput(item) || '(无输出)'}
   showAi.value = true
+}
+
+// ===== 保存时格式化（走 LSP textDocument/formatting）=====
+const formatOnSave = ref(kvGet('format-on-save') === 'true')
+const toggleFormatOnSave = () => {
+  formatOnSave.value = !formatOnSave.value
+  kvSet('format-on-save', String(formatOnSave.value))
+  toast.info(formatOnSave.value ? t('app.formatOnSaveOn') : t('app.formatOnSaveOff'))
 }
 
 // ===== AI 代码预测（幽灵补全，Tab 接受）=====
@@ -1462,6 +1470,14 @@ watch(watchMode, (v) => kvSet('watch-mode', String(v)))
 
 // 保存包装：保存后若开启监听模式则自动运行
 const handleSave = async () => {
+  // 保存前格式化：仅当开启、编辑器就绪且当前语言支持 LSP；失败/无能力则静默跳过
+  if (formatOnSave.value && editorView.value && lspSupportsLanguage(currentLanguage.value)) {
+    try {
+      await formatDocumentAsync(editorView.value)
+      await nextTick()
+    }
+    catch { /* 格式化失败不阻断保存 */ }
+  }
   await saveFile()
   if (watchMode.value && currentFilePath.value && !isDirty.value) {
     handleRunCode()
@@ -1836,6 +1852,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'runSelection', label: t('command.runSelection'), icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
   {id: 'watchMode', label: watchMode.value ? t('command.watchModeOff') : t('command.watchModeOn'), icon: Eye, run: () => { watchMode.value = !watchMode.value }},
   {id: 'aiCompletion', label: aiCompletion.value ? t('command.aiCompletionOff') : t('command.aiCompletionOn'), icon: Sparkles, run: () => toggleAiCompletion()},
+  {id: 'formatOnSave', label: formatOnSave.value ? t('command.formatOnSaveOff') : t('command.formatOnSaveOn'), icon: Save, run: () => toggleFormatOnSave()},
   {id: 'open', label: t('command.open'), icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
   {id: 'openFolder', label: t('command.openFolder'), icon: FolderOpen, run: () => openFolder()},
   {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => saveFile()},
