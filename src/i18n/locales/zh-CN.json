@@ -656,6 +656,7 @@
     "diff": "差异对比（当前 vs 已保存）",
     "preview": "实时预览（Markdown / HTML）",
     "git": "Git 源代码管理",
+    "tasks": "运行任务",
     "toggleSidebar": "切换侧栏",
     "layoutHorizontal": "布局：左右",
     "layoutVertical": "布局：上下",
@@ -1015,6 +1016,15 @@
   "breadcrumb": {
     "revealIn": "在访达中显示：{path}",
     "unsaved": "有未保存的修改"
+  },
+  "task": {
+    "title": "运行任务",
+    "labelPlaceholder": "任务名",
+    "commandPlaceholder": "命令，如 npm run build",
+    "add": "添加",
+    "run": "运行",
+    "delete": "删除",
+    "empty": "暂无任务，添加一个在集成终端中运行的命令"
   },
   "snippet": {
     "title": "代码片段",

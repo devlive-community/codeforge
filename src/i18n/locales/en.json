@@ -656,6 +656,7 @@
     "diff": "Diff (current vs saved)",
     "preview": "Live preview (Markdown / HTML)",
     "git": "Git source control",
+    "tasks": "Run tasks",
     "toggleSidebar": "Toggle sidebar",
     "layoutHorizontal": "Layout: side-by-side",
     "layoutVertical": "Layout: top-bottom",
@@ -1015,6 +1016,15 @@
   "breadcrumb": {
     "revealIn": "Reveal in file manager: {path}",
     "unsaved": "Unsaved changes"
+  },
+  "task": {
+    "title": "Run tasks",
+    "labelPlaceholder": "Task name",
+    "commandPlaceholder": "Command, e.g. npm run build",
+    "add": "Add",
+    "run": "Run",
+    "delete": "Delete",
+    "empty": "No tasks yet — add a command to run in the integrated terminal"
   },
   "snippet": {
     "title": "Snippets",

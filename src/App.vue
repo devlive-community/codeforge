@@ -262,6 +262,7 @@
     <!-- 集成终端：停靠在底部，占据高度使上方编辑区自动收缩。
          首次打开后保持挂载，用 v-show 收起以保留会话；关闭所有标签才彻底卸载 -->
     <Terminal v-if="terminalMounted"
+              ref="terminalRef"
               v-show="showTerminal"
               class="flex-shrink-0"
               :root-dir="rootDir"
@@ -359,6 +360,9 @@
                   :file-name="currentFileName"
                   @close="showPreview = false"/>
 
+    <!-- 运行任务 -->
+    <TaskRunner v-if="showTasks && rootDir" :root-dir="rootDir" @run="runTask" @close="showTasks = false"/>
+
     <!-- Git 源代码管理 -->
     <GitPanel v-if="showGit && rootDir"
               :root-dir="rootDir"
@@ -445,7 +449,7 @@ import {useI18n} from 'vue-i18n'
 import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
-import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
+import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -485,6 +489,7 @@ import PreviewPanel from './components/PreviewPanel.vue'
 import BlameView from './components/BlameView.vue'
 import GitLog from './components/GitLog.vue'
 import GitPanel from './components/GitPanel.vue'
+import TaskRunner from './components/TaskRunner.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
@@ -1118,6 +1123,7 @@ const revealInFinder = (path: string) => {
 // 集成终端：首次打开后保持挂载（保留会话），仅切换显示
 const showTerminal = ref(false)
 const terminalMounted = ref(false)
+const terminalRef = ref<any>(null)
 const toggleTerminal = () => {
   if (showTerminal.value) {
     showTerminal.value = false
@@ -1126,6 +1132,22 @@ const toggleTerminal = () => {
     terminalMounted.value = true
     showTerminal.value = true
   }
+}
+
+// ===== 运行任务（B4）：在集成终端中执行预设命令 =====
+const showTasks = ref(false)
+const openTasks = () => {
+  if (!rootDir.value) {
+    toast.info(t('app.openFolderFirst'))
+    return
+  }
+  showTasks.value = true
+}
+const runTask = async (command: string) => {
+  terminalMounted.value = true
+  showTerminal.value = true
+  await nextTick()
+  terminalRef.value?.runCommand(command)
 }
 
 const openSearchResult = async (path: string, line: number) => {
@@ -1874,6 +1896,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
   {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
   {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
+  {id: 'tasks', label: t('command.tasks'), icon: ListChecks, run: () => openTasks()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
   {id: 'layoutVertical', label: t('command.layoutVertical'), group: t('command.groupLayout'), icon: PanelBottom, run: () => handleLayoutChange('vertical')},

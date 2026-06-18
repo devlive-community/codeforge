@@ -145,6 +145,12 @@ const initXterm = async (id: string) => {
 
   try {
     await invoke('terminal_create', {id, cwd: props.rootDir || null, cols: term.cols, rows: term.rows})
+    // 会话就绪后执行挂起的命令（外部 runCommand 在会话初始化期间排入）
+    if (pendingCmd) {
+      const c = pendingCmd
+      pendingCmd = null
+      invoke('terminal_write', {id, data: c + '\r'}).catch(() => {})
+    }
   }
   catch (error) {
     term.write(`\r\n\x1b[31m${t('terminal.startFailed')}${error}\x1b[0m\r\n`)
@@ -155,6 +161,9 @@ const initXterm = async (id: string) => {
   term.focus()
 }
 
+// 外部「运行任务」排入的待执行命令（会话初始化完成后由 initXterm 发送）
+let pendingCmd: string | null = null
+
 const createSession = () => {
   const id = genId()
   seq++
@@ -162,6 +171,26 @@ const createSession = () => {
   activeId.value = id
   initXterm(id)
 }
+
+// 供父组件调用：在集成终端中运行一条命令（无会话则新建）
+const runCommand = (cmd: string) => {
+  if (sessions.value.length === 0) {
+    pendingCmd = cmd
+    createSession()
+    return
+  }
+  const id = activeId.value
+  if (terms.has(id)) {
+    invoke('terminal_write', {id, data: cmd + '\r'}).catch(() => {})
+    terms.get(id)?.term.focus()
+  }
+  else {
+    // 当前会话仍在初始化，挂起到 init 完成再发送
+    pendingCmd = cmd
+  }
+}
+
+defineExpose({runCommand})
 
 const switchTo = (id: string) => {
   if (id === activeId.value) {
