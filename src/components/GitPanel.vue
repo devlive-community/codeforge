@@ -70,6 +70,9 @@
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.tagTitle')" @click="showTags = true">
           <Tag class="w-4 h-4"/>
         </button>
+        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.identityTitle')" @click="showConfig = true">
+          <UserCog class="w-4 h-4"/>
+        </button>
         <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.stashTitle')" @click="showStash = true">
           <Archive class="w-4 h-4"/>
         </button>
@@ -258,6 +261,9 @@
   <!-- 远程 -->
   <GitRemotes v-if="showRemotes" :root-dir="rootDir" :branch="status.branch" @close="showRemotes = false"/>
 
+  <!-- 仓库身份 -->
+  <GitConfig v-if="showConfig" :root-dir="rootDir" @close="showConfig = false"/>
+
   <!-- 提交历史 -->
   <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false" @changed="refresh"/>
 
@@ -280,7 +286,7 @@
 <script setup lang="ts">
 import {computed, h, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Sparkles, Tag, Trash2, Undo2, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Cloud, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Sparkles, Tag, Trash2, Undo2, UserCog, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import DiffView from './DiffView.vue'
@@ -290,6 +296,7 @@ import GitCompare from './GitCompare.vue'
 import GitStash from './GitStash.vue'
 import GitTags from './GitTags.vue'
 import GitRemotes from './GitRemotes.vue'
+import GitConfig from './GitConfig.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
@@ -333,6 +340,7 @@ const moreMenu = ref(false)
 const showStash = ref(false)
 const showTags = ref(false)
 const showRemotes = ref(false)
+const showConfig = ref(false)
 // 分支管理弹层
 const branchMenu = ref(false)
 const newBranchName = ref('')

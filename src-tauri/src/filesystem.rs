@@ -1167,6 +1167,34 @@ pub async fn git_tags(root: String) -> Result<Vec<String>, String> {
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 读取仓库本地身份配置 (user.name / user.email)，返回 [name, email]，未设置则为空串。
+#[tauri::command]
+pub async fn git_get_identity(root: String) -> Result<Vec<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let name = run_git(&root, &["config", "--local", "user.name"]).unwrap_or_default();
+        let email = run_git(&root, &["config", "--local", "user.email"]).unwrap_or_default();
+        Ok(vec![name.trim().to_string(), email.trim().to_string()])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 设置仓库本地身份配置。传入空串则忽略对应项。
+#[tauri::command]
+pub async fn git_set_identity(root: String, name: String, email: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        if !name.trim().is_empty() {
+            run_git(&root, &["config", "--local", "user.name", name.trim()])?;
+        }
+        if !email.trim().is_empty() {
+            run_git(&root, &["config", "--local", "user.email", email.trim()])?;
+        }
+        Ok(String::new())
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 创建标签。hash 为空则打在 HEAD；message 非空则创建附注标签（-a -m）。
 #[tauri::command]
 pub async fn git_tag_create(
