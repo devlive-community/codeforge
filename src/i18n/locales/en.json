@@ -1042,7 +1042,11 @@
     "statusStopped": "Paused",
     "saveFirst": "Save the file before debugging",
     "langUnsupported": "Debugging not supported for this language",
-    "startFailed": "Failed to start debugging"
+    "startFailed": "Failed to start debugging",
+    "panelTitle": "Debug",
+    "callStack": "Call stack",
+    "variables": "Variables",
+    "notStopped": "Running (not paused)"
   },
   "snippet": {
     "title": "Snippets",

@@ -363,6 +363,9 @@
     <!-- 调试工具栏（会话进行中显示） -->
     <DebugToolbar/>
 
+    <!-- 调试侧栏：调用栈 + 变量 -->
+    <DebugPanel/>
+
     <!-- 运行任务 -->
     <TaskRunner v-if="showTasks && rootDir" :root-dir="rootDir" @run="runTask" @close="showTasks = false"/>
 
@@ -499,6 +502,7 @@ import GitLog from './components/GitLog.vue'
 import GitPanel from './components/GitPanel.vue'
 import TaskRunner from './components/TaskRunner.vue'
 import DebugToolbar from './components/DebugToolbar.vue'
+import DebugPanel from './components/DebugPanel.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
@@ -1545,8 +1549,8 @@ watch(() => debug.stopped.value, () => applyBreakpoints())
 watch(editorView, () => applyBreakpoints())
 watch(currentFilePath, () => applyBreakpoints())
 
-// 停驻时打开对应文件并跳转到执行行
-watch(() => debug.stopped.value, async (loc) => {
+// 停驻 / 选择调用栈帧时打开对应文件并跳转
+watch(() => debug.reveal.value, async (loc) => {
   if (!loc) {
     return
   }

@@ -4,6 +4,9 @@ import {DapClient} from '../debug/dapClient'
 
 export type DebugStatus = 'inactive' | 'starting' | 'running' | 'stopped'
 export interface LaunchConfig { filePath: string; language: string; cwd?: string | null }
+export interface StackFrame { id: number; name: string; line: number; column: number; source?: {path?: string; name?: string} }
+export interface Scope { name: string; variablesReference: number; expensive: boolean }
+export interface DapVariable { name: string; value: string; type?: string; variablesReference: number }
 
 // 文件绝对路径 -> 断点行号集合（1-based）
 const breakpoints = reactive<Map<string, Set<number>>>(new Map())
@@ -48,10 +51,19 @@ function setStopped(loc: {path: string; line: number} | null): void {
 // ===== P3：会话编排与控制 =====
 const status = ref<DebugStatus>('inactive')
 const consoleLines = ref<{category: string; text: string}[]>([])
+const frames = ref<StackFrame[]>([])
+const selectedFrameId = ref<number | null>(null)
+// 跳转请求（停驻/选择帧时触发，由 App 打开文件并定位）
+const reveal = ref<{path: string; line: number; seq: number} | null>(null)
+let revealSeq = 0
 let client: DapClient | null = null
 let threadId = 0
 let lastConfig: LaunchConfig | null = null
 let stopping = false
+
+function requestReveal(path: string, line: number): void {
+  reveal.value = {path, line, seq: ++revealSeq}
+}
 
 function pushOut(category: string, text: string): void {
   consoleLines.value.push({category, text})
@@ -87,21 +99,58 @@ async function syncBreakpoints(path: string | null | undefined): Promise<void> {
     .catch(() => {})
 }
 
-async function revealTopFrame(): Promise<void> {
+// 停驻后加载调用栈，定位栈顶帧
+async function loadStopState(): Promise<void> {
   if (!client) {
     return
   }
   try {
-    const res = await client.request('stackTrace', {threadId, startFrame: 0, levels: 1})
-    const frame = res?.stackFrames?.[0]
-    const path = frame?.source?.path
-    const line = frame?.line
-    if (path && line) {
-      setStopped({path, line})
+    const res = await client.request('stackTrace', {threadId, startFrame: 0, levels: 20})
+    frames.value = (res?.stackFrames ?? []) as StackFrame[]
+    const top = frames.value[0]
+    selectedFrameId.value = top?.id ?? null
+    if (top?.source?.path && top.line) {
+      setStopped({path: top.source.path, line: top.line})
+      requestReveal(top.source.path, top.line)
     }
   }
   catch {
     // 忽略
+  }
+}
+
+// 选择调用栈帧：跳转到其源码位置（不改变执行行高亮）
+function selectFrame(id: number): void {
+  selectedFrameId.value = id
+  const f = frames.value.find(x => x.id === id)
+  if (f?.source?.path && f.line) {
+    requestReveal(f.source.path, f.line)
+  }
+}
+
+async function requestScopes(frameId: number): Promise<Scope[]> {
+  if (!client) {
+    return []
+  }
+  try {
+    const res = await client.request('scopes', {frameId})
+    return (res?.scopes ?? []) as Scope[]
+  }
+  catch {
+    return []
+  }
+}
+
+async function requestVariables(variablesReference: number): Promise<DapVariable[]> {
+  if (!client || variablesReference <= 0) {
+    return []
+  }
+  try {
+    const res = await client.request('variables', {variablesReference})
+    return (res?.variables ?? []) as DapVariable[]
+  }
+  catch {
+    return []
   }
 }
 
@@ -128,11 +177,13 @@ async function startSession(config: LaunchConfig): Promise<void> {
   c.on('stopped', async (body) => {
     threadId = body?.threadId ?? threadId
     status.value = 'stopped'
-    await revealTopFrame()
+    await loadStopState()
   })
   c.on('continued', () => {
     status.value = 'running'
     setStopped(null)
+    frames.value = []
+    selectedFrameId.value = null
   })
   c.on('output', (body) => pushOut(body?.category || 'console', body?.output || ''))
   c.on('terminated', () => stopSession())
@@ -178,12 +229,18 @@ function withThread(command: string): void {
   client.request(command, {threadId}).catch(() => {})
 }
 
+function clearStopUi(): void {
+  setStopped(null)
+  frames.value = []
+  selectedFrameId.value = null
+}
+
 function doContinue(): void {
   if (status.value !== 'stopped') {
     return
   }
   status.value = 'running'
-  setStopped(null)
+  clearStopUi()
   withThread('continue')
 }
 function pause(): void {
@@ -193,21 +250,21 @@ function stepOver(): void {
   if (status.value !== 'stopped') {
     return
   }
-  setStopped(null)
+  clearStopUi()
   withThread('next')
 }
 function stepIn(): void {
   if (status.value !== 'stopped') {
     return
   }
-  setStopped(null)
+  clearStopUi()
   withThread('stepIn')
 }
 function stepOut(): void {
   if (status.value !== 'stopped') {
     return
   }
-  setStopped(null)
+  clearStopUi()
   withThread('stepOut')
 }
 
@@ -243,6 +300,8 @@ function cleanup(): void {
   threadId = 0
   status.value = 'inactive'
   setStopped(null)
+  frames.value = []
+  selectedFrameId.value = null
 }
 
 export function useDebug() {
@@ -252,10 +311,16 @@ export function useDebug() {
     stopped,
     status,
     consoleLines,
+    frames,
+    selectedFrameId,
+    reveal,
     fileBreakpoints,
     toggleBreakpoint,
     setStopped,
     syncBreakpoints,
+    selectFrame,
+    requestScopes,
+    requestVariables,
     startSession,
     stopSession,
     restart,

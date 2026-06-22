@@ -1042,7 +1042,11 @@
     "statusStopped": "已停驻",
     "saveFirst": "请先保存文件再开始调试",
     "langUnsupported": "当前语言暂不支持调试",
-    "startFailed": "启动调试失败"
+    "startFailed": "启动调试失败",
+    "panelTitle": "调试",
+    "callStack": "调用栈",
+    "variables": "变量",
+    "notStopped": "运行中（未停驻）"
   },
   "snippet": {
     "title": "代码片段",
