@@ -8,6 +8,7 @@ mod ai_history;
 mod cache;
 mod config;
 mod custom_plugin_commands;
+mod dap;
 mod db;
 mod db_connections;
 mod env_commands;
@@ -39,6 +40,7 @@ use crate::custom_plugin_commands::{
     add_custom_plugin, get_custom_plugins, remove_custom_plugin, save_custom_icon,
     update_custom_plugin,
 };
+use crate::dap::{DapState, dap_available, dap_send, dap_start, dap_stop};
 use crate::db::{run_sql, run_sql_paged};
 use crate::db_connections::{
     DbConnStore, db_connection_delete, db_connection_save, db_connections_list,
@@ -120,6 +122,7 @@ fn main() {
         .manage(DbConnStore::new().expect("failed to initialize db connections database"))
         .manage(TerminalState::new())
         .manage(LspState::new())
+        .manage(DapState::new())
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
         .manage(EnvironmentManagerState::new(env_manager))
         .setup(|app| {
@@ -328,7 +331,12 @@ fn main() {
             lsp_send,
             lsp_stop,
             lsp_server_list,
-            lsp_install
+            lsp_install,
+            // DAP 调试桥接
+            dap_available,
+            dap_start,
+            dap_send,
+            dap_stop
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

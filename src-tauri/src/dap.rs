@@ -1,0 +1,191 @@
+//! DAP 桥接：按语言拉起调试适配器进程，转发 DAP 消息（与 LSP 同为 Content-Length 帧）。
+//! 后端只做透明转发：前端发送/接收原始 JSON 字符串，握手与协议由前端的 DAP 客户端负责。
+//! 复用 lsp.rs 的 find_in_path / augmented_path / read_message。
+
+use crate::lsp::{augmented_path, find_in_path, read_message};
+use serde::Serialize;
+use std::collections::HashMap;
+use std::io::{BufReader, Read, Write};
+use std::process::{Child, Command, Stdio};
+use std::sync::Mutex as StdMutex;
+use tauri::{AppHandle, Emitter, State};
+
+struct Adapter {
+    child: Child,
+    // 写入走独立线程，避免 stdin 写阻塞主线程
+    tx: std::sync::mpsc::Sender<Vec<u8>>,
+}
+
+pub struct DapState {
+    // 以会话 key 区分（前端通常传语言名，单语言单会话）
+    adapters: StdMutex<HashMap<String, Adapter>>,
+}
+
+impl DapState {
+    pub fn new() -> Self {
+        Self {
+            adapters: StdMutex::new(HashMap::new()),
+        }
+    }
+}
+
+#[derive(Clone, Serialize)]
+struct DapBatch {
+    session: String,
+    messages: Vec<String>,
+}
+
+/// 语言 -> (适配器可执行名, 启动参数)。适配器仅负责说 DAP；
+/// 具体调试目标(program/args/cwd)由前端在 launch 请求中给出。新增语言在此加一行。
+fn adapter_cmd(language: &str) -> Option<(&'static str, Vec<&'static str>)> {
+    match language {
+        // debugpy：python -m debugpy.adapter（需 pip install debugpy）
+        "python" | "python3" | "python2" => Some(("python3", vec!["-m", "debugpy.adapter"])),
+        // delve：dlv dap
+        "go" => Some(("dlv", vec!["dap"])),
+        // lldb-dap（LLVM 自带）：适用于 Rust / C / C++
+        "rust" | "c" | "cpp" => Some(("lldb-dap", vec![])),
+        _ => None,
+    }
+}
+
+/// 该语言是否有可用的调试适配器（仅检查适配器可执行存在）
+#[tauri::command]
+pub fn dap_available(language: String) -> bool {
+    adapter_cmd(&language)
+        .map(|(prog, _)| find_in_path(prog).is_some())
+        .unwrap_or(false)
+}
+
+/// 启动调试适配器；已启动则直接返回 true。session 作为多会话区分键（前端传语言名即可）。
+#[tauri::command]
+pub fn dap_start(
+    app: AppHandle,
+    state: State<'_, DapState>,
+    session: String,
+    language: String,
+) -> Result<bool, String> {
+    {
+        let adapters = state.adapters.lock().map_err(|e| e.to_string())?;
+        if adapters.contains_key(&session) {
+            return Ok(true);
+        }
+    }
+    let (prog, args) = adapter_cmd(&language).ok_or_else(|| "该语言暂不支持调试".to_string())?;
+    let exe = find_in_path(prog)
+        .ok_or_else(|| format!("未找到调试适配器：{}（请先安装并确保在 PATH 中）", prog))?;
+
+    let mut cmd = Command::new(&exe);
+    cmd.args(&args)
+        .env("PATH", augmented_path())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("启动 {} 失败: {}", prog, e))?;
+    let stdin = child.stdin.take().ok_or("无法获取 stdin")?;
+    let stdout = child.stdout.take().ok_or("无法获取 stdout")?;
+    let stderr = child.stderr.take();
+
+    // 读取线程：解析 Content-Length 帧，丢进 channel
+    let (msg_tx, msg_rx) = std::sync::mpsc::channel::<String>();
+    std::thread::spawn(move || {
+        let mut reader = BufReader::new(stdout);
+        while let Some(body) = read_message(&mut reader) {
+            if msg_tx.send(body).is_err() {
+                break;
+            }
+        }
+    });
+
+    // 发射线程：合批转发（output/variables 等可能突发），会话结束发 dap:exit
+    let app_reader = app.clone();
+    let sess_emit = session.clone();
+    std::thread::spawn(move || {
+        while let Ok(first) = msg_rx.recv() {
+            let mut batch = vec![first];
+            while let Ok(m) = msg_rx.try_recv() {
+                batch.push(m);
+                if batch.len() >= 256 {
+                    break;
+                }
+            }
+            let _ = app_reader.emit(
+                "dap:messages",
+                DapBatch {
+                    session: sess_emit.clone(),
+                    messages: batch,
+                },
+            );
+        }
+        let _ = app_reader.emit("dap:exit", sess_emit.clone());
+    });
+
+    // 排空 stderr，避免阻塞
+    if let Some(mut err) = stderr {
+        std::thread::spawn(move || {
+            let mut buf = [0u8; 4096];
+            while let Ok(n) = err.read(&mut buf) {
+                if n == 0 {
+                    break;
+                }
+            }
+        });
+    }
+
+    // 写入线程：独占 stdin，从 channel 取帧写入
+    let (tx, rx) = std::sync::mpsc::channel::<Vec<u8>>();
+    std::thread::spawn(move || {
+        let mut stdin = stdin;
+        while let Ok(frame) = rx.recv() {
+            if stdin.write_all(&frame).is_err() {
+                break;
+            }
+            if stdin.flush().is_err() {
+                break;
+            }
+        }
+    });
+
+    state
+        .adapters
+        .lock()
+        .map_err(|e| e.to_string())?
+        .insert(session, Adapter { child, tx });
+    Ok(true)
+}
+
+/// 向调试适配器发送一条 DAP 消息（已是完整 JSON 字符串）
+#[tauri::command]
+pub fn dap_send(
+    state: State<'_, DapState>,
+    session: String,
+    message: String,
+) -> Result<(), String> {
+    let adapters = state.adapters.lock().map_err(|e| e.to_string())?;
+    let adapter = adapters
+        .get(&session)
+        .ok_or_else(|| "调试会话未启动".to_string())?;
+    let frame = format!("Content-Length: {}\r\n\r\n{}", message.len(), message);
+    adapter
+        .tx
+        .send(frame.into_bytes())
+        .map_err(|_| "调试适配器写入通道已关闭".to_string())?;
+    Ok(())
+}
+
+/// 停止调试会话
+#[tauri::command]
+pub fn dap_stop(state: State<'_, DapState>, session: String) -> Result<(), String> {
+    if let Some(mut adapter) = state
+        .adapters
+        .lock()
+        .map_err(|e| e.to_string())?
+        .remove(&session)
+    {
+        let _ = adapter.child.kill();
+    }
+    Ok(())
+}
