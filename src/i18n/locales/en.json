@@ -1042,6 +1042,8 @@
     "statusStopped": "Paused",
     "saveFirst": "Save the file before debugging",
     "langUnsupported": "Debugging not supported for this language",
+    "installPython": "debugpy not found — install it: pip install debugpy",
+    "installGo": "delve not found — install it: go install github.com/go-delve/delve/cmd/dlv@latest",
     "startFailed": "Failed to start debugging",
     "panelTitle": "Debug",
     "callStack": "Call stack",

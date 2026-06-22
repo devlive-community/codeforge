@@ -1172,12 +1172,25 @@ const startDebug = async () => {
     toast.info(t('debug.saveFirst'))
     return
   }
-  if (!dapSupportsLanguage(currentLanguage.value)) {
+  const lang = currentLanguage.value
+  if (!dapSupportsLanguage(lang)) {
     toast.info(t('debug.langUnsupported'))
     return
   }
+  // 适配器可用性检查（Python 含 debugpy 模块校验），不可用则给安装提示
+  let ok = false
   try {
-    await debug.startSession({filePath: path, language: currentLanguage.value, cwd: rootDir.value})
+    ok = await invoke<boolean>('dap_available', {language: lang})
+  }
+  catch {
+    ok = false
+  }
+  if (!ok) {
+    toast.error(lang === 'go' ? t('debug.installGo') : t('debug.installPython'))
+    return
+  }
+  try {
+    await debug.startSession({filePath: path, language: lang, cwd: rootDir.value})
   }
   catch (error) {
     toast.error(t('debug.startFailed') + ': ' + error)

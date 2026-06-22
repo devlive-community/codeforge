@@ -49,12 +49,24 @@ fn adapter_cmd(language: &str) -> Option<(&'static str, Vec<&'static str>)> {
     }
 }
 
-/// 该语言是否有可用的调试适配器（仅检查适配器可执行存在）
+/// 该语言是否有可用的调试适配器。Python 进一步校验 debugpy 模块是否可导入。
 #[tauri::command]
 pub fn dap_available(language: String) -> bool {
-    adapter_cmd(&language)
-        .map(|(prog, _)| find_in_path(prog).is_some())
-        .unwrap_or(false)
+    let Some((prog, _)) = adapter_cmd(&language) else {
+        return false;
+    };
+    let Some(exe) = find_in_path(prog) else {
+        return false;
+    };
+    if matches!(language.as_str(), "python" | "python3" | "python2") {
+        return Command::new(&exe)
+            .args(["-c", "import debugpy"])
+            .env("PATH", augmented_path())
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+    }
+    true
 }
 
 /// 启动调试适配器；已启动则直接返回 true。session 作为多会话区分键（前端传语言名即可）。

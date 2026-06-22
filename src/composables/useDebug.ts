@@ -211,6 +211,20 @@ async function requestVariables(variablesReference: number): Promise<DapVariable
   }
 }
 
+// 各语言 launch 请求参数（Python=debugpy 源码级 / Go=delve 源码级）
+function buildLaunchArgs(config: LaunchConfig): Record<string, any> {
+  const base: Record<string, any> = {
+    request: 'launch',
+    name: 'CodeForge',
+    program: config.filePath,
+    cwd: config.cwd || undefined
+  }
+  if (config.language === 'go') {
+    return {...base, mode: 'debug'}
+  }
+  return {...base, type: 'python', console: 'internalConsole', justMyCode: true, stopOnEntry: false}
+}
+
 async function startSession(config: LaunchConfig): Promise<void> {
   if (status.value !== 'inactive') {
     await stopSession()
@@ -258,16 +272,7 @@ async function startSession(config: LaunchConfig): Promise<void> {
       supportsRunInTerminalRequest: false
     })
     // launch 在 configurationDone 后才返回，故不在主流程等待
-    c.request('launch', {
-      request: 'launch',
-      type: config.language === 'go' ? 'go' : 'python',
-      name: 'CodeForge',
-      program: config.filePath,
-      console: 'internalConsole',
-      cwd: config.cwd || undefined,
-      justMyCode: true,
-      stopOnEntry: false
-    }).catch((e) => {
+    c.request('launch', buildLaunchArgs(config)).catch((e) => {
       pushOut('stderr', `launch 失败: ${e}\n`)
       stopSession()
     })

@@ -4,8 +4,8 @@
 import {invoke} from '@tauri-apps/api/core'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
 
-// 与后端 adapter_cmd 对应的可调试语言（前端静态判断，用于决定是否显示断点 gutter）
-const DAP_LANGUAGES = new Set(['python', 'python3', 'python2', 'go', 'rust', 'c', 'cpp'])
+// 已打通的可调试语言（源码级）。Rust/C/C++ 为编译型，需先构建再调试可执行文件，留待 P6b。
+const DAP_LANGUAGES = new Set(['python', 'python3', 'python2', 'go'])
 export function dapSupportsLanguage(language?: string): boolean {
   return !!language && DAP_LANGUAGES.has(language)
 }

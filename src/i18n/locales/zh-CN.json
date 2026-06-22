@@ -1042,6 +1042,8 @@
     "statusStopped": "已停驻",
     "saveFirst": "请先保存文件再开始调试",
     "langUnsupported": "当前语言暂不支持调试",
+    "installPython": "未检测到 debugpy，请先安装：pip install debugpy",
+    "installGo": "未检测到 delve，请先安装：go install github.com/go-delve/delve/cmd/dlv@latest",
     "startFailed": "启动调试失败",
     "panelTitle": "调试",
     "callStack": "调用栈",
