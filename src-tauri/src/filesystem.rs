@@ -1781,6 +1781,9 @@ pub async fn git_hook_save(
         std::fs::create_dir_all(&dir).map_err(|e| format!("创建 hooks 目录失败: {}", e))?;
         let path = dir.join(&name);
         std::fs::write(&path, &content).map_err(|e| format!("写入钩子失败: {}", e))?;
+        // 可执行权限仅类 Unix 有意义；非 Unix 平台显式消费该参数避免未使用告警
+        #[cfg(not(unix))]
+        let _ = executable;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
