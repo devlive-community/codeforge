@@ -1154,6 +1154,69 @@ const runTask = async (command: string) => {
   terminalRef.value?.runCommand(command)
 }
 
+// B2：按项目类型识别测试命令（读取根目录顶层标记文件）
+const detectTestCommand = async (): Promise<string | null> => {
+  const root = rootDir.value
+  if (!root) {
+    return null
+  }
+  let names: string[] = []
+  try {
+    const nodes = await invoke<{ name: string; is_dir: boolean }[]>('read_directory_tree', {path: root})
+    names = nodes.map(n => n.name)
+  }
+  catch {
+    return null
+  }
+  const has = (n: string) => names.includes(n)
+  if (has('Cargo.toml')) {
+    return 'cargo test'
+  }
+  if (has('go.mod')) {
+    return 'go test ./...'
+  }
+  if (has('package.json')) {
+    if (has('pnpm-lock.yaml')) {
+      return 'pnpm test'
+    }
+    if (has('yarn.lock')) {
+      return 'yarn test'
+    }
+    return 'npm test'
+  }
+  if (has('pyproject.toml') || has('pytest.ini') || has('setup.py') || has('tox.ini')) {
+    return 'pytest'
+  }
+  if (has('pom.xml')) {
+    return 'mvn test'
+  }
+  if (has('build.gradle') || has('build.gradle.kts')) {
+    return 'gradle test'
+  }
+  if (has('Gemfile')) {
+    return 'bundle exec rake test'
+  }
+  if (has('composer.json')) {
+    return 'composer test'
+  }
+  if (has('Makefile')) {
+    return 'make test'
+  }
+  return null
+}
+const runTests = async () => {
+  if (!rootDir.value) {
+    toast.info(t('app.openFolderFirst'))
+    return
+  }
+  const cmd = await detectTestCommand()
+  if (!cmd) {
+    toast.info(t('app.testCmdNotFound'))
+    return
+  }
+  await runTask(cmd)
+}
+
 // B3：发送选区（无选区则当前行）到集成终端，用于 REPL 式交互
 const sendToTerminal = async () => {
   closeEditorCtx()
@@ -1920,6 +1983,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
   {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
   {id: 'tasks', label: t('command.tasks'), icon: ListChecks, run: () => openTasks()},
+  {id: 'runTests', label: t('command.runTests'), icon: ListChecks, run: () => runTests()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
