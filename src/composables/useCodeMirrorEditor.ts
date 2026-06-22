@@ -91,6 +91,9 @@ import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
 import {showMinimap} from "@replit/codemirror-minimap";
 import {stickyScroll} from "../editor/stickyScroll";
+import {breakpointExtension} from "../editor/breakpointGutter";
+import {dapSupportsLanguage} from "../debug/dapClient";
+import {useDebug} from "./useDebug";
 import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
@@ -279,6 +282,7 @@ export function useCodeMirrorEditor(props: Props)
 {
     const toast = useToast()
     const {isDark} = useTheme()
+    const debug = useDebug()
     const {showFunctionHelpHover, functionHelpTheme} = useCodeMirrorFunctionHelp()
 
     // 状态管理
@@ -655,6 +659,11 @@ export function useCodeMirrorEditor(props: Props)
                 showOverlay: 'always'
             }))
             result.push(buildMinimapTheme(isDark.value))
+        }
+
+        // 断点 gutter（仅可调试语言）：点击切换断点，写入调试 store
+        if (dapSupportsLanguage(props.language)) {
+            result.push(breakpointExtension((line) => debug.toggleBreakpoint(props.filePath ?? null, line)))
         }
 
         // 粘性滚动：把外层作用域头部固定在顶部，可在设置中开关

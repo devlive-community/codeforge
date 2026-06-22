@@ -506,6 +506,8 @@ import {useAiConfig} from './composables/useAiConfig'
 import {setGhost, clearGhostIn, ghostActive} from './editor/aiComplete'
 import {cursorInfo} from './editor/cursorInfo'
 import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
+import {setBreakpointData} from './editor/breakpointGutter'
+import {useDebug} from './composables/useDebug'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
@@ -1497,6 +1499,23 @@ const applyDiffMarkersDebounced = debounce(applyDiffMarkers, 250)
 watch(currentFilePath, () => fetchBaseline())
 watch(code, () => applyDiffMarkersDebounced())
 watch(editorView, () => applyDiffMarkers())
+
+// ===== 断点（B1-P2）：把当前文件的断点 + 执行行派发到编辑器 =====
+const debug = useDebug()
+const applyBreakpoints = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const path = currentFilePath.value
+  const lines = debug.fileBreakpoints(path)
+  const exec = debug.stopped.value && debug.stopped.value.path === path ? debug.stopped.value.line : null
+  view.dispatch({effects: setBreakpointData.of({lines, exec})})
+}
+watch(() => debug.bpVersion.value, () => applyBreakpoints())
+watch(() => debug.stopped.value, () => applyBreakpoints())
+watch(editorView, () => applyBreakpoints())
+watch(currentFilePath, () => applyBreakpoints())
 
 // 打开文件夹、保存文件后刷新文件树 Git 徽标与差异基线
 watch(rootDir, () => refreshGitStatus(), {immediate: true})

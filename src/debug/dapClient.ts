@@ -4,6 +4,12 @@
 import {invoke} from '@tauri-apps/api/core'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
 
+// 与后端 adapter_cmd 对应的可调试语言（前端静态判断，用于决定是否显示断点 gutter）
+const DAP_LANGUAGES = new Set(['python', 'python3', 'python2', 'go', 'rust', 'c', 'cpp'])
+export function dapSupportsLanguage(language?: string): boolean {
+  return !!language && DAP_LANGUAGES.has(language)
+}
+
 type Handler = (body: any) => void
 type ReverseHandler = (args: any) => any | Promise<any>
 
