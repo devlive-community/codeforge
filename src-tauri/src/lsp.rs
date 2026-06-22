@@ -244,7 +244,7 @@ pub fn lsp_install(app: AppHandle, id: String) -> Result<(), String> {
 }
 
 /// 读取一行普通文本（以 \n 结尾，用于安装日志）
-fn read_raw_line<R: Read>(reader: &mut BufReader<R>) -> Option<String> {
+pub(crate) fn read_raw_line<R: Read>(reader: &mut BufReader<R>) -> Option<String> {
     let mut buf = Vec::new();
     let mut byte = [0u8; 1];
     loop {

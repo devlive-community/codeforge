@@ -2,7 +2,7 @@
 //! 后端只做透明转发：前端发送/接收原始 JSON 字符串，握手与协议由前端的 DAP 客户端负责。
 //! 复用 lsp.rs 的 find_in_path / augmented_path / read_message。
 
-use crate::lsp::{augmented_path, find_in_path, read_message};
+use crate::lsp::{augmented_path, find_in_path, read_message, read_raw_line};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Write};
@@ -199,5 +199,108 @@ pub fn dap_stop(state: State<'_, DapState>, session: String) -> Result<(), Strin
     {
         let _ = adapter.child.kill();
     }
+    Ok(())
+}
+
+// 可安装的调试适配器：(id, 展示名, 安装命令)
+fn adapter_defs() -> Vec<(&'static str, &'static str, &'static str)> {
+    vec![
+        (
+            "debugpy",
+            "Python (debugpy)",
+            "python3 -m pip install debugpy",
+        ),
+        (
+            "delve",
+            "Go (delve)",
+            "go install github.com/go-delve/delve/cmd/dlv@latest",
+        ),
+    ]
+}
+
+fn adapter_installed(id: &str) -> bool {
+    match id {
+        // debugpy 校验模块可导入
+        "debugpy" => dap_available("python".to_string()),
+        "delve" => find_in_path("dlv").is_some(),
+        _ => false,
+    }
+}
+
+#[derive(Serialize)]
+pub struct DapAdapterInfo {
+    id: String,
+    label: String,
+    installed: bool,
+    install: String,
+}
+
+/// 列出可安装的调试适配器及其安装状态
+#[tauri::command]
+pub fn dap_adapter_list() -> Vec<DapAdapterInfo> {
+    adapter_defs()
+        .into_iter()
+        .map(|(id, label, install)| DapAdapterInfo {
+            id: id.to_string(),
+            label: label.to_string(),
+            installed: adapter_installed(id),
+            install: install.to_string(),
+        })
+        .collect()
+}
+
+/// 一键安装某调试适配器：执行安装命令并实时输出日志（事件 dap:install / dap:install-done）
+#[tauri::command]
+pub fn dap_install(app: AppHandle, id: String) -> Result<(), String> {
+    let def = adapter_defs()
+        .into_iter()
+        .find(|(d, ..)| *d == id)
+        .ok_or_else(|| "未知的调试适配器".to_string())?;
+    let cmd_str = def.2.to_string();
+
+    let (shell, flag) = if cfg!(windows) {
+        ("cmd", "/C")
+    } else {
+        ("sh", "-c")
+    };
+    let mut child = Command::new(shell)
+        .arg(flag)
+        .arg(&cmd_str)
+        .env("PATH", augmented_path())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("无法执行安装命令: {}", e))?;
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let id_done = id.clone();
+    let app_done = app.clone();
+
+    let emit_lines = |app: AppHandle, id: String, reader: Option<Box<dyn Read + Send>>| {
+        if let Some(r) = reader {
+            std::thread::spawn(move || {
+                let mut buf = BufReader::new(r);
+                while let Some(line) = read_raw_line(&mut buf) {
+                    let _ = app.emit("dap:install", (id.clone(), line));
+                }
+            });
+        }
+    };
+    emit_lines(
+        app.clone(),
+        id.clone(),
+        stdout.map(|s| Box::new(s) as Box<dyn Read + Send>),
+    );
+    emit_lines(
+        app.clone(),
+        id.clone(),
+        stderr.map(|s| Box::new(s) as Box<dyn Read + Send>),
+    );
+
+    std::thread::spawn(move || {
+        let success = child.wait().map(|s| s.success()).unwrap_or(false);
+        let _ = app_done.emit("dap:install-done", (id_done, success));
+    });
     Ok(())
 }

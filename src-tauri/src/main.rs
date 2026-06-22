@@ -40,7 +40,9 @@ use crate::custom_plugin_commands::{
     add_custom_plugin, get_custom_plugins, remove_custom_plugin, save_custom_icon,
     update_custom_plugin,
 };
-use crate::dap::{DapState, dap_available, dap_send, dap_start, dap_stop};
+use crate::dap::{
+    DapState, dap_adapter_list, dap_available, dap_install, dap_send, dap_start, dap_stop,
+};
 use crate::db::{run_sql, run_sql_paged};
 use crate::db_connections::{
     DbConnStore, db_connection_delete, db_connection_save, db_connections_list,
@@ -336,7 +338,9 @@ fn main() {
             dap_available,
             dap_start,
             dap_send,
-            dap_stop
+            dap_stop,
+            dap_adapter_list,
+            dap_install
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
