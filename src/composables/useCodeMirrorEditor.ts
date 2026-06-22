@@ -92,6 +92,7 @@ import {EditorView, keymap} from "@codemirror/view";
 import {showMinimap} from "@replit/codemirror-minimap";
 import {stickyScroll} from "../editor/stickyScroll";
 import {breakpointExtension} from "../editor/breakpointGutter";
+import {debugHover} from "../editor/debugHover";
 import {dapSupportsLanguage} from "../debug/dapClient";
 import {useDebug} from "./useDebug";
 import {Prec} from "@codemirror/state";
@@ -661,9 +662,10 @@ export function useCodeMirrorEditor(props: Props)
             result.push(buildMinimapTheme(isDark.value))
         }
 
-        // 断点 gutter（仅可调试语言）：点击切换断点，写入调试 store
+        // 断点 gutter + 调试悬停求值（仅可调试语言）
         if (dapSupportsLanguage(props.language)) {
             result.push(breakpointExtension((line) => debug.toggleBreakpoint(props.filePath ?? null, line)))
+            result.push(debugHover)
         }
 
         // 粘性滚动：把外层作用域头部固定在顶部，可在设置中开关

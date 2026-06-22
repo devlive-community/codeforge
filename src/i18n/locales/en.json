@@ -1046,7 +1046,11 @@
     "panelTitle": "Debug",
     "callStack": "Call stack",
     "variables": "Variables",
-    "notStopped": "Running (not paused)"
+    "notStopped": "Running (not paused)",
+    "watch": "Watch",
+    "watchPlaceholder": "Add expression…",
+    "console": "Debug console",
+    "replPlaceholder": "Evaluate expression, Enter to run…"
   },
   "snippet": {
     "title": "Snippets",

@@ -65,6 +65,61 @@ function requestReveal(path: string, line: number): void {
   reveal.value = {path, line, seq: ++revealSeq}
 }
 
+// 监视表达式（停驻/选帧时重算）
+const watches = ref<{expr: string; value: string}[]>([])
+
+// 求值：在选中帧上下文中执行表达式。context: watch | repl | hover
+async function evaluate(expression: string, context: string): Promise<{result: string; variablesReference: number}> {
+  if (!client || !expression.trim()) {
+    return {result: '', variablesReference: 0}
+  }
+  const args: Record<string, any> = {expression, context}
+  if (selectedFrameId.value != null) {
+    args.frameId = selectedFrameId.value
+  }
+  const res = await client.request('evaluate', args)
+  return {result: res?.result ?? '', variablesReference: res?.variablesReference ?? 0}
+}
+
+async function refreshWatches(): Promise<void> {
+  if (status.value !== 'stopped') {
+    return
+  }
+  for (const w of watches.value) {
+    try {
+      const {result} = await evaluate(w.expr, 'watch')
+      w.value = result
+    }
+    catch (e) {
+      w.value = `<${e}>`
+    }
+  }
+}
+
+function addWatch(expr: string): void {
+  if (expr.trim()) {
+    watches.value.push({expr: expr.trim(), value: ''})
+    refreshWatches()
+  }
+}
+function removeWatch(i: number): void {
+  watches.value.splice(i, 1)
+}
+
+async function evalRepl(expr: string): Promise<void> {
+  if (!expr.trim()) {
+    return
+  }
+  pushOut('input', `› ${expr}\n`)
+  try {
+    const {result} = await evaluate(expr, 'repl')
+    pushOut('result', `${result}\n`)
+  }
+  catch (e) {
+    pushOut('stderr', `${e}\n`)
+  }
+}
+
 function pushOut(category: string, text: string): void {
   consoleLines.value.push({category, text})
   if (consoleLines.value.length > 2000) {
@@ -113,19 +168,21 @@ async function loadStopState(): Promise<void> {
       setStopped({path: top.source.path, line: top.line})
       requestReveal(top.source.path, top.line)
     }
+    await refreshWatches()
   }
   catch {
     // 忽略
   }
 }
 
-// 选择调用栈帧：跳转到其源码位置（不改变执行行高亮）
+// 选择调用栈帧：跳转到其源码位置（不改变执行行高亮），并按该帧重算监视
 function selectFrame(id: number): void {
   selectedFrameId.value = id
   const f = frames.value.find(x => x.id === id)
   if (f?.source?.path && f.line) {
     requestReveal(f.source.path, f.line)
   }
+  refreshWatches()
 }
 
 async function requestScopes(frameId: number): Promise<Scope[]> {
@@ -314,6 +371,7 @@ export function useDebug() {
     frames,
     selectedFrameId,
     reveal,
+    watches,
     fileBreakpoints,
     toggleBreakpoint,
     setStopped,
@@ -321,6 +379,10 @@ export function useDebug() {
     selectFrame,
     requestScopes,
     requestVariables,
+    evaluate,
+    addWatch,
+    removeWatch,
+    evalRepl,
     startSession,
     stopSession,
     restart,

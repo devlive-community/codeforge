@@ -1046,7 +1046,11 @@
     "panelTitle": "调试",
     "callStack": "调用栈",
     "variables": "变量",
-    "notStopped": "运行中（未停驻）"
+    "notStopped": "运行中（未停驻）",
+    "watch": "监视",
+    "watchPlaceholder": "添加表达式…",
+    "console": "调试控制台",
+    "replPlaceholder": "求值表达式，回车执行…"
   },
   "snippet": {
     "title": "代码片段",

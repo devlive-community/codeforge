@@ -12,8 +12,24 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto">
+      <!-- 监视 -->
+      <div class="px-3 py-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-2">
+        <span>{{ t('debug.watch') }}</span>
+        <input v-model="watchInput"
+               class="flex-1 min-w-0 text-[11px] font-mono border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-500"
+               :placeholder="t('debug.watchPlaceholder')"
+               @keydown.enter="addWatch"/>
+      </div>
+      <div v-for="(w, i) in debug.watches.value" :key="i"
+           class="group flex items-start gap-1 px-3 py-0.5 font-mono text-[11px] leading-5 hover:bg-gray-100 dark:hover:bg-gray-800">
+        <span class="text-purple-600 dark:text-purple-300 flex-shrink-0">{{ w.expr }}</span>
+        <span class="text-gray-400">:</span>
+        <span class="text-gray-700 dark:text-gray-200 break-all flex-1">{{ w.value }}</span>
+        <button class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 cursor-pointer flex-shrink-0" @click="debug.removeWatch(i)">×</button>
+      </div>
+
       <!-- 调用栈 -->
-      <div class="px-3 py-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 sticky top-0 bg-white dark:bg-gray-900">{{ t('debug.callStack') }}</div>
+      <div class="px-3 py-1.5 mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">{{ t('debug.callStack') }}</div>
       <div v-if="!debug.frames.value.length" class="px-3 py-2 text-[11px] text-gray-400">{{ t('debug.notStopped') }}</div>
       <button v-for="f in debug.frames.value" :key="f.id"
               class="w-full text-left px-3 py-1 text-[11px] font-mono truncate cursor-pointer"
@@ -36,6 +52,19 @@
           <DebugVarNode v-for="(v, i) in (scopeVars.get(scope.variablesReference) || [])" :key="i" :variable="v" :depth="1"/>
         </template>
       </div>
+
+      <!-- 调试控制台输出 -->
+      <div class="px-3 py-1.5 mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">{{ t('debug.console') }}</div>
+      <pre class="px-3 pb-2 text-[11px] font-mono whitespace-pre-wrap break-all"><span
+          v-for="(l, i) in debug.consoleLines.value" :key="i" :class="lineClass(l.category)">{{ l.text }}</span></pre>
+    </div>
+
+    <!-- REPL 输入 -->
+    <div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 px-2 py-1.5">
+      <input v-model="replInput"
+             class="w-full text-[11px] font-mono border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+             :placeholder="t('debug.replPlaceholder')"
+             @keydown.enter="submitRepl"/>
     </div>
   </div>
 </template>
@@ -53,6 +82,15 @@ const debug = useDebug()
 const scopes = ref<Scope[]>([])
 const openScopes = ref<Set<number>>(new Set())
 const scopeVars = ref<Map<number, DapVariable[]>>(new Map())
+const watchInput = ref('')
+const replInput = ref('')
+
+const lineClass = (category: string): string => {
+  if (category === 'stderr') return 'text-red-500'
+  if (category === 'input') return 'text-blue-500'
+  if (category === 'result') return 'text-emerald-600 dark:text-emerald-400'
+  return 'text-gray-700 dark:text-gray-300'
+}
 
 const loadScopes = async () => {
   scopes.value = []
@@ -63,7 +101,6 @@ const loadScopes = async () => {
     return
   }
   scopes.value = await debug.requestScopes(id)
-  // 默认展开第一个作用域（通常是 Locals）
   const first = scopes.value[0]
   if (first) {
     await toggleScope(first.variablesReference)
@@ -84,6 +121,15 @@ const toggleScope = async (ref_: number) => {
   openScopes.value = new Set(open)
 }
 
-// 选中帧变化时重载作用域/变量
+const addWatch = () => {
+  debug.addWatch(watchInput.value)
+  watchInput.value = ''
+}
+const submitRepl = () => {
+  const v = replInput.value
+  replInput.value = ''
+  debug.evalRepl(v)
+}
+
 watch(() => debug.selectedFrameId.value, () => loadScopes())
 </script>
