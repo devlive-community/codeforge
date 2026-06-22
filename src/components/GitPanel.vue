@@ -1,5 +1,9 @@
 <template>
-  <div class="fixed top-0 right-0 bottom-0 z-40 w-[42%] min-w-[360px] max-w-[640px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col">
+  <div class="fixed top-0 right-0 bottom-0 z-40 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col"
+       :style="{ width: panelWidth + 'px' }">
+    <!-- 左缘拖拽改宽 -->
+    <div class="absolute left-0 top-0 bottom-0 w-1 -ml-0.5 cursor-col-resize hover:bg-blue-500 z-50"
+         @mousedown="startResize"></div>
     <!-- 头部：分支 + 操作 -->
     <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 min-w-0">
@@ -64,54 +68,91 @@
         </div>
       </template>
       <div class="flex items-center gap-2 flex-shrink-0">
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.remoteTitle')" @click="showRemotes = true">
-          <Cloud class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.tagTitle')" @click="showTags = true">
-          <Tag class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.identityTitle')" @click="showConfig = true">
-          <UserCog class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.stashTitle')" @click="showStash = true">
-          <Archive class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.history')" @click="showLog = true">
-          <History class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.graph')" @click="showGraph = true">
-          <Network class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo && submoduleCount > 0" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.submodule')" @click="showSubmodules = true">
-          <Boxes class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.worktree')" @click="showWorktrees = true">
-          <TreeDeciduous class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.bisect')" @click="showBisect = true">
-          <Crosshair class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.rebase')" @click="showRebase = true">
-          <ListOrdered class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.compare')" @click="showCompare = true">
-          <GitCompareArrows class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.reflog')" @click="showReflog = true">
-          <RotateCcw class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-red-500 cursor-pointer" :title="t('git.clean')" @click="openClean">
-          <Eraser class="w-4 h-4"/>
-        </button>
-        <button v-if="status.is_repo" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer disabled:opacity-40" :title="t('git.fetch')" :disabled="busy" @click="fetch">
-          <DownloadCloud class="w-4 h-4" :class="{ 'animate-pulse': pending === 'fetch' }"/>
-        </button>
-        <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.refresh')" @click="refresh">
-          <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': loading }"/>
-        </button>
-        <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" :title="t('git.close')" @click="emit('close')">
-          <X class="w-4 h-4"/>
-        </button>
+        <Tooltip v-if="status.is_repo" :text="t('git.remoteTitle')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showRemotes = true">
+            <Cloud class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.tagTitle')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showTags = true">
+            <Tag class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.configTitle')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showConfig = true">
+            <UserCog class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.stashTitle')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showStash = true">
+            <Archive class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.history')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showLog = true">
+            <History class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.graph')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showGraph = true">
+            <Network class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo && submoduleCount > 0" :text="t('git.submodule')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showSubmodules = true">
+            <Boxes class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.worktree')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showWorktrees = true">
+            <TreeDeciduous class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.bisect')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showBisect = true">
+            <Crosshair class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.rebase')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showRebase = true">
+            <ListOrdered class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.hooks')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showHooks = true">
+            <Webhook class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.compare')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showCompare = true">
+            <GitCompareArrows class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.reflog')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showReflog = true">
+            <RotateCcw class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.clean')">
+          <button class="text-gray-400 hover:text-red-500 cursor-pointer" @click="openClean">
+            <Eraser class="w-4 h-4"/>
+          </button>
+        </Tooltip>
+        <Tooltip v-if="status.is_repo" :text="t('git.fetch')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer disabled:opacity-40" :disabled="busy" @click="fetch">
+            <DownloadCloud class="w-4 h-4" :class="{ 'animate-pulse': pending === 'fetch' }"/>
+          </button>
+        </Tooltip>
+        <Tooltip :text="t('git.refresh')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="refresh">
+            <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': loading }"/>
+          </button>
+        </Tooltip>
+        <Tooltip :text="t('git.close')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="emit('close')">
+            <X class="w-4 h-4"/>
+          </button>
+        </Tooltip>
       </div>
     </div>
 
@@ -297,6 +338,9 @@
   <!-- 交互式变基 -->
   <GitRebase v-if="showRebase" :root-dir="rootDir" @close="showRebase = false" @changed="refresh"/>
 
+  <!-- Git 钩子 -->
+  <GitHooks v-if="showHooks" :root-dir="rootDir" @close="showHooks = false"/>
+
   <!-- 提交历史 -->
   <GitLog v-if="showLog" :root-dir="rootDir" @close="showLog = false" @changed="refresh"/>
 
@@ -317,11 +361,13 @@
 </template>
 
 <script setup lang="ts">
-import {computed, h, onMounted, ref} from 'vue'
+import {computed, h, onBeforeUnmount, onMounted, ref} from 'vue'
+import {kvGet, kvSet} from '../composables/useKvStore'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, Webhook, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
+import Tooltip from '../ui/Tooltip.vue'
 import DiffView from './DiffView.vue'
 import GitLog from './GitLog.vue'
 import GitReflog from './GitReflog.vue'
@@ -336,6 +382,7 @@ import GitSubmodules from './GitSubmodules.vue'
 import GitWorktrees from './GitWorktrees.vue'
 import GitBisect from './GitBisect.vue'
 import GitRebase from './GitRebase.vue'
+import GitHooks from './GitHooks.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
@@ -345,6 +392,36 @@ interface GitStatusData { is_repo: boolean; branch: string; ahead: number; behin
 
 const props = defineProps<{ rootDir: string }>()
 const emit = defineEmits<{ close: []; refresh: []; open: [path: string] }>()
+
+// 面板宽度（可拖拽左缘改宽，持久化到 KV）
+const clampWidth = (w: number) => Math.max(360, Math.min(w, Math.max(360, window.innerWidth - 200)))
+const panelWidth = ref(clampWidth(Number(kvGet('git-panel-width')) || Math.round(window.innerWidth * 0.42)))
+let resizeStartX = 0
+let resizeStartWidth = 0
+const onResize = (e: MouseEvent) => {
+  // 拖拽左缘：鼠标左移（clientX 减小）使面板变宽
+  panelWidth.value = clampWidth(resizeStartWidth + (resizeStartX - e.clientX))
+}
+const stopResize = () => {
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+  kvSet('git-panel-width', String(panelWidth.value))
+}
+const startResize = (e: MouseEvent) => {
+  e.preventDefault()
+  resizeStartX = e.clientX
+  resizeStartWidth = panelWidth.value
+  document.addEventListener('mousemove', onResize)
+  document.addEventListener('mouseup', stopResize)
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor = 'col-resize'
+}
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+})
 
 const toast = useToast()
 const {t} = useI18n()
@@ -386,6 +463,7 @@ const submoduleCount = ref(0)
 const showWorktrees = ref(false)
 const showBisect = ref(false)
 const showRebase = ref(false)
+const showHooks = ref(false)
 const hunkFile = ref<{ path: string; staged: boolean } | null>(null)
 const openHunks = (path: string, staged: boolean) => {
   hunkFile.value = {path, staged}

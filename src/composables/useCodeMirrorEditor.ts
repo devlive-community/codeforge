@@ -89,6 +89,12 @@ import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
+import {showMinimap} from "@replit/codemirror-minimap";
+import {stickyScroll} from "../editor/stickyScroll";
+import {breakpointExtension} from "../editor/breakpointGutter";
+import {debugHover} from "../editor/debugHover";
+import {dapSupportsLanguage} from "../debug/dapClient";
+import {useDebug} from "./useDebug";
 import {Prec} from "@codemirror/state";
 import {useCodeMirrorFontFamily} from "./useCodeMirrorFontFamily.ts";
 import {diffGutterExtension} from "../editor/diffGutter";
@@ -160,10 +166,124 @@ function buildTooltipTheme(dark: boolean) {
     }, {dark})
 }
 
+// 文件内查找/替换面板样式（覆盖 CodeMirror 默认原生控件，跟随明暗主题）
+function buildSearchPanelTheme(dark: boolean) {
+    const panelBg = dark ? '#1f2937' : '#ffffff'
+    const border = dark ? '#374151' : '#e5e7eb'
+    const text = dark ? '#e5e7eb' : '#1f2937'
+    const subt = dark ? '#9ca3af' : '#6b7280'
+    const inputBg = dark ? '#111827' : '#ffffff'
+    const inputBorder = dark ? '#4b5563' : '#d1d5db'
+    const btnBg = dark ? '#374151' : '#f3f4f6'
+    const btnHover = dark ? '#4b5563' : '#e5e7eb'
+    const accent = '#3b82f6'
+    return EditorView.theme({
+        '.cm-panels': {backgroundColor: panelBg, color: text},
+        '.cm-panels.cm-panels-top': {borderBottom: `1px solid ${border}`},
+        '.cm-panel.cm-search': {
+            padding: '8px 32px 8px 10px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '6px',
+            position: 'relative',
+            fontFamily: 'inherit'
+        },
+        '.cm-panel.cm-search label': {
+            fontSize: '12px',
+            color: subt,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px'
+        },
+        '.cm-panel.cm-search input[type=checkbox]': {accentColor: accent, cursor: 'pointer'},
+        '.cm-panel.cm-search input.cm-textfield': {
+            backgroundColor: inputBg,
+            color: text,
+            border: `1px solid ${inputBorder}`,
+            borderRadius: '6px',
+            padding: '3px 8px',
+            fontSize: '12px',
+            outline: 'none'
+        },
+        '.cm-panel.cm-search input.cm-textfield:focus': {
+            borderColor: accent,
+            boxShadow: `0 0 0 2px ${accent}33`
+        },
+        '.cm-panel.cm-search .cm-button': {
+            backgroundColor: btnBg,
+            backgroundImage: 'none',
+            color: text,
+            border: `1px solid ${border}`,
+            borderRadius: '6px',
+            padding: '3px 10px',
+            fontSize: '12px',
+            cursor: 'pointer'
+        },
+        '.cm-panel.cm-search .cm-button:hover': {backgroundColor: btnHover},
+        '.cm-panel.cm-search button[name=close]': {
+            position: 'absolute',
+            top: '6px',
+            right: '8px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            color: subt,
+            fontSize: '16px',
+            lineHeight: '1',
+            padding: '2px 4px',
+            cursor: 'pointer'
+        },
+        '.cm-panel.cm-search button[name=close]:hover': {color: text}
+    }, {dark})
+}
+
+// 粘性滚动浮层样式：固定在编辑器顶部、贴合背景、底部分隔线、悬停高亮、可点击跳转
+function buildStickyTheme(dark: boolean) {
+    const border = dark ? '#374151' : '#e5e7eb'
+    const bg = dark ? '#0d1117' : '#ffffff'
+    const hover = dark ? '#1f2937' : '#f3f4f6'
+    return EditorView.theme({
+        '.cm-sticky-scroll': {
+            position: 'absolute',
+            zIndex: '6',
+            boxShadow: dark ? '0 4px 8px rgba(0,0,0,0.4)' : '0 4px 8px rgba(0,0,0,0.08)',
+            borderBottom: `1px solid ${border}`,
+            backgroundColor: bg,
+            overflow: 'hidden'
+        },
+        '.cm-sticky-line': {
+            padding: '0 4px 0 8px',
+            whiteSpace: 'pre',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            cursor: 'pointer',
+            fontFamily: 'inherit'
+        },
+        '.cm-sticky-line:hover': {backgroundColor: hover}
+    }, {dark})
+}
+
+// 代码缩略图样式微调：左侧分隔线、贴合编辑器背景、去掉厚重阴影、视口浮层更柔和
+function buildMinimapTheme(dark: boolean) {
+    const border = dark ? '#374151' : '#e5e7eb'
+    const bg = dark ? '#0d1117' : '#ffffff'
+    return EditorView.theme({
+        '.cm-minimap-gutter': {
+            borderLeft: `1px solid ${border}`,
+            backgroundColor: bg
+        },
+        '.cm-minimap-box-shadow': {boxShadow: 'none'},
+        '.cm-minimap-overlay-container .cm-minimap-overlay': {
+            backgroundColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
+        }
+    }, {dark})
+}
+
 export function useCodeMirrorEditor(props: Props)
 {
     const toast = useToast()
     const {isDark} = useTheme()
+    const debug = useDebug()
     const {showFunctionHelpHover, functionHelpTheme} = useCodeMirrorFunctionHelp()
 
     // 状态管理
@@ -433,14 +553,18 @@ export function useCodeMirrorEditor(props: Props)
         }
     }
 
-    // 隐藏行号的主题扩展
+    // 隐藏行号列的主题扩展（仅隐藏行号，保留折叠等其它 gutter）
     const hideLineNumbersTheme = EditorView.theme({
         '.cm-lineNumbers': {
             display: 'none !important'
-        },
-        '.cm-gutters': {
-            display: 'none !important'
         }
+    })
+
+    // 折叠箭头：默认淡显、悬停加深，避免左缘出现显眼的列
+    const foldGutterTheme = EditorView.theme({
+        '.cm-gutters': {backgroundColor: 'transparent', border: 'none'},
+        '.cm-foldGutter .cm-gutterElement': {cursor: 'pointer', opacity: '0.4', padding: '0 2px'},
+        '.cm-foldGutter .cm-gutterElement:hover': {opacity: '0.9'}
     })
 
     // 更新扩展的函数
@@ -454,8 +578,15 @@ export function useCodeMirrorEditor(props: Props)
         // 添加函数帮助主题
         result.push(functionHelpTheme)
 
-        // 字体缩放快捷键（搜索/替换、折叠、括号匹配等由 vue-codemirror 的 basicSetup 提供）
+        // 字体缩放快捷键
         result.push(fontSizeKeymap)
+
+        // 查找/替换（Cmd/Ctrl+F）、代码折叠、括号匹配等由 vue-codemirror 默认的 basicSetup 提供
+        // （CodeEditor 传入的 extensions 是叠加在 basicSetup 之上，而非替换），此处只补样式：
+        //   - 美化查找面板（替换原生控件外观，跟随明暗主题）
+        //   - 折叠箭头跟随主题、默认淡显（并配合下方 hideLineNumbersTheme 让箭头可见）
+        result.push(buildSearchPanelTheme(isDark.value))
+        result.push(foldGutterTheme)
 
         // 代码片段 Tab 展开
         result.push(snippetKeymap)
@@ -519,6 +650,28 @@ export function useCodeMirrorEditor(props: Props)
             const {spaceOmissionPlugin, spaceOmissionTheme} = useCodeMirrorSpaceOmission(editorConfig.value?.font_family)
             result.push(spaceOmissionPlugin)
             result.push(spaceOmissionTheme)
+        }
+
+        // 代码缩略图（minimap），右侧显示，可在设置中开关
+        if (editorConfig.value?.show_minimap) {
+            result.push(showMinimap.of({
+                create: () => ({dom: document.createElement('div')}),
+                displayText: 'characters',
+                showOverlay: 'always'
+            }))
+            result.push(buildMinimapTheme(isDark.value))
+        }
+
+        // 断点 gutter + 调试悬停求值（仅可调试语言）
+        if (dapSupportsLanguage(props.language)) {
+            result.push(breakpointExtension((line) => debug.toggleBreakpoint(props.filePath ?? null, line)))
+            result.push(debugHover)
+        }
+
+        // 粘性滚动：把外层作用域头部固定在顶部，可在设置中开关
+        if (editorConfig.value?.show_sticky_scroll) {
+            result.push(stickyScroll(editorConfig.value?.tab_size ?? 4))
+            result.push(buildStickyTheme(isDark.value))
         }
 
         extensions.value = result
@@ -633,6 +786,14 @@ export function useCodeMirrorEditor(props: Props)
 
     watch(() => editorConfig.value?.space_dot_omission, async () => {
         console.log('是否显示空格省略:', editorConfig.value?.space_dot_omission)
+        await reRenderEditor()
+    })
+
+    watch(() => editorConfig.value?.show_minimap, async () => {
+        await reRenderEditor()
+    })
+
+    watch(() => editorConfig.value?.show_sticky_scroll, async () => {
         await reRenderEditor()
     })
 

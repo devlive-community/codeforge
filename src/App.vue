@@ -15,6 +15,7 @@
                @save-file="handleSave"
                @show-history="showHistory = true"
                @show-ai="handleShowAi"
+               @show-git="openGit"
                @show-settings="showSettings = true"
                @load-example="loadExample">
     </AppHeader>
@@ -261,6 +262,7 @@
     <!-- 集成终端：停靠在底部，占据高度使上方编辑区自动收缩。
          首次打开后保持挂载，用 v-show 收起以保留会话；关闭所有标签才彻底卸载 -->
     <Terminal v-if="terminalMounted"
+              ref="terminalRef"
               v-show="showTerminal"
               class="flex-shrink-0"
               :root-dir="rootDir"
@@ -358,6 +360,15 @@
                   :file-name="currentFileName"
                   @close="showPreview = false"/>
 
+    <!-- 调试工具栏（会话进行中显示） -->
+    <DebugToolbar/>
+
+    <!-- 调试侧栏：调用栈 + 变量 -->
+    <DebugPanel/>
+
+    <!-- 运行任务 -->
+    <TaskRunner v-if="showTasks && rootDir" :root-dir="rootDir" @run="runTask" @close="showTasks = false"/>
+
     <!-- Git 源代码管理 -->
     <GitPanel v-if="showGit && rootDir"
               :root-dir="rootDir"
@@ -402,6 +413,10 @@
             {{ t('git.fileHistory') }}
           </button>
         </template>
+        <div v-if="editorCtx.lsp || canBlame" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="sendToTerminal">
+          {{ t('app.sendToTerminal') }}
+        </button>
       </div>
     </div>
 
@@ -443,8 +458,9 @@ import {computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, w
 import {useI18n} from 'vue-i18n'
 import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
-import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction} from './editor/lspExtension'
-import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
+import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
+import {dapSupportsLanguage} from './debug/dapClient'
+import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -484,6 +500,9 @@ import PreviewPanel from './components/PreviewPanel.vue'
 import BlameView from './components/BlameView.vue'
 import GitLog from './components/GitLog.vue'
 import GitPanel from './components/GitPanel.vue'
+import TaskRunner from './components/TaskRunner.vue'
+import DebugToolbar from './components/DebugToolbar.vue'
+import DebugPanel from './components/DebugPanel.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
@@ -496,6 +515,8 @@ import {useAiConfig} from './composables/useAiConfig'
 import {setGhost, clearGhostIn, ghostActive} from './editor/aiComplete'
 import {cursorInfo} from './editor/cursorInfo'
 import {computeDiffMarkers, setDiffMarkers} from './editor/diffGutter'
+import {setBreakpointData} from './editor/breakpointGutter'
+import {useDebug} from './composables/useDebug'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
@@ -908,6 +929,14 @@ const openAiForExecution = (item: ExecutionResult) => {
   showAi.value = true
 }
 
+// ===== 保存时格式化（走 LSP textDocument/formatting）=====
+const formatOnSave = ref(kvGet('format-on-save') === 'true')
+const toggleFormatOnSave = () => {
+  formatOnSave.value = !formatOnSave.value
+  kvSet('format-on-save', String(formatOnSave.value))
+  toast.info(formatOnSave.value ? t('app.formatOnSaveOn') : t('app.formatOnSaveOff'))
+}
+
 // ===== AI 代码预测（幽灵补全，Tab 接受）=====
 const {active: aiActive, reload: reloadAiCfg} = useAiConfig()
 const aiCompletion = ref(kvGet('ai-completion') === 'true')
@@ -1109,6 +1138,7 @@ const revealInFinder = (path: string) => {
 // 集成终端：首次打开后保持挂载（保留会话），仅切换显示
 const showTerminal = ref(false)
 const terminalMounted = ref(false)
+const terminalRef = ref<any>(null)
 const toggleTerminal = () => {
   if (showTerminal.value) {
     showTerminal.value = false
@@ -1117,6 +1147,134 @@ const toggleTerminal = () => {
     terminalMounted.value = true
     showTerminal.value = true
   }
+}
+
+// ===== 运行任务（B4）：在集成终端中执行预设命令 =====
+const showTasks = ref(false)
+const openTasks = () => {
+  if (!rootDir.value) {
+    toast.info(t('app.openFolderFirst'))
+    return
+  }
+  showTasks.value = true
+}
+const runTask = async (command: string) => {
+  terminalMounted.value = true
+  showTerminal.value = true
+  await nextTick()
+  terminalRef.value?.runCommand(command)
+}
+
+// B1-P3：开始调试当前文件（需已保存 + 语言可调试）
+const startDebug = async () => {
+  const path = currentFilePath.value
+  if (!path) {
+    toast.info(t('debug.saveFirst'))
+    return
+  }
+  const lang = currentLanguage.value
+  if (!dapSupportsLanguage(lang)) {
+    toast.info(t('debug.langUnsupported'))
+    return
+  }
+  // 适配器可用性检查（Python 含 debugpy 模块校验），不可用则给安装提示
+  let ok = false
+  try {
+    ok = await invoke<boolean>('dap_available', {language: lang})
+  }
+  catch {
+    ok = false
+  }
+  if (!ok) {
+    toast.error(lang === 'go' ? t('debug.installGo') : t('debug.installPython'))
+    return
+  }
+  try {
+    await debug.startSession({filePath: path, language: lang, cwd: rootDir.value})
+  }
+  catch (error) {
+    toast.error(t('debug.startFailed') + ': ' + error)
+  }
+}
+
+// B2：按项目类型识别测试命令（读取根目录顶层标记文件）
+const detectTestCommand = async (): Promise<string | null> => {
+  const root = rootDir.value
+  if (!root) {
+    return null
+  }
+  let names: string[] = []
+  try {
+    const nodes = await invoke<{ name: string; is_dir: boolean }[]>('read_directory_tree', {path: root})
+    names = nodes.map(n => n.name)
+  }
+  catch {
+    return null
+  }
+  const has = (n: string) => names.includes(n)
+  if (has('Cargo.toml')) {
+    return 'cargo test'
+  }
+  if (has('go.mod')) {
+    return 'go test ./...'
+  }
+  if (has('package.json')) {
+    if (has('pnpm-lock.yaml')) {
+      return 'pnpm test'
+    }
+    if (has('yarn.lock')) {
+      return 'yarn test'
+    }
+    return 'npm test'
+  }
+  if (has('pyproject.toml') || has('pytest.ini') || has('setup.py') || has('tox.ini')) {
+    return 'pytest'
+  }
+  if (has('pom.xml')) {
+    return 'mvn test'
+  }
+  if (has('build.gradle') || has('build.gradle.kts')) {
+    return 'gradle test'
+  }
+  if (has('Gemfile')) {
+    return 'bundle exec rake test'
+  }
+  if (has('composer.json')) {
+    return 'composer test'
+  }
+  if (has('Makefile')) {
+    return 'make test'
+  }
+  return null
+}
+const runTests = async () => {
+  if (!rootDir.value) {
+    toast.info(t('app.openFolderFirst'))
+    return
+  }
+  const cmd = await detectTestCommand()
+  if (!cmd) {
+    toast.info(t('app.testCmdNotFound'))
+    return
+  }
+  await runTask(cmd)
+}
+
+// B3：发送选区（无选区则当前行）到集成终端，用于 REPL 式交互
+const sendToTerminal = async () => {
+  closeEditorCtx()
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const sel = view.state.selection.main
+  const text = sel.empty
+    ? view.state.doc.lineAt(sel.head).text
+    : view.state.sliceDoc(sel.from, sel.to)
+  if (!text.trim()) {
+    return
+  }
+  await runTask(text)
 }
 
 const openSearchResult = async (path: string, line: number) => {
@@ -1181,11 +1339,13 @@ const onEditorContext = (e: MouseEvent) => {
   }
   editorCtx.lsp = lsp
   e.preventDefault()
-  // 将光标移到右键处，使命令作用于点击位置
   const view = editorView.value
   if (view) {
+    const cur = view.state.selection.main
     const pos = view.posAtCoords({x: e.clientX, y: e.clientY})
-    if (pos != null) {
+    // 仅在无选区、或右键点在选区之外时才移动光标；点在选区内则保留选区（不清除高亮）
+    const insideSel = !cur.empty && pos != null && pos >= cur.from && pos <= cur.to
+    if (pos != null && !insideSel) {
       view.dispatch({selection: {anchor: pos}})
     }
   }
@@ -1381,6 +1541,39 @@ watch(currentFilePath, () => fetchBaseline())
 watch(code, () => applyDiffMarkersDebounced())
 watch(editorView, () => applyDiffMarkers())
 
+// ===== 断点（B1-P2）：把当前文件的断点 + 执行行派发到编辑器 =====
+const debug = useDebug()
+const applyBreakpoints = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const path = currentFilePath.value
+  const lines = debug.fileBreakpoints(path)
+  const exec = debug.stopped.value && debug.stopped.value.path === path ? debug.stopped.value.line : null
+  view.dispatch({effects: setBreakpointData.of({lines, exec})})
+}
+watch(() => debug.bpVersion.value, () => {
+  applyBreakpoints()
+  // 会话进行中：实时下发当前文件断点
+  debug.syncBreakpoints(currentFilePath.value)
+})
+watch(() => debug.stopped.value, () => applyBreakpoints())
+watch(editorView, () => applyBreakpoints())
+watch(currentFilePath, () => applyBreakpoints())
+
+// 停驻 / 选择调用栈帧时打开对应文件并跳转
+watch(() => debug.reveal.value, async (loc) => {
+  if (!loc) {
+    return
+  }
+  if (loc.path !== currentFilePath.value) {
+    await smartOpen(loc.path)
+    await nextTick()
+  }
+  gotoLine(loc.line)
+})
+
 // 打开文件夹、保存文件后刷新文件树 Git 徽标与差异基线
 watch(rootDir, () => refreshGitStatus(), {immediate: true})
 watch(savedContent, () => refreshGitStatus())
@@ -1461,6 +1654,14 @@ watch(watchMode, (v) => kvSet('watch-mode', String(v)))
 
 // 保存包装：保存后若开启监听模式则自动运行
 const handleSave = async () => {
+  // 保存前格式化：仅当开启、编辑器就绪且当前语言支持 LSP；失败/无能力则静默跳过
+  if (formatOnSave.value && editorView.value && lspSupportsLanguage(currentLanguage.value)) {
+    try {
+      await formatDocumentAsync(editorView.value)
+      await nextTick()
+    }
+    catch { /* 格式化失败不阻断保存 */ }
+  }
   await saveFile()
   if (watchMode.value && currentFilePath.value && !isDirty.value) {
     handleRunCode()
@@ -1835,6 +2036,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'runSelection', label: t('command.runSelection'), icon: Play, hint: hintOf('runSelection'), run: () => runSelection()},
   {id: 'watchMode', label: watchMode.value ? t('command.watchModeOff') : t('command.watchModeOn'), icon: Eye, run: () => { watchMode.value = !watchMode.value }},
   {id: 'aiCompletion', label: aiCompletion.value ? t('command.aiCompletionOff') : t('command.aiCompletionOn'), icon: Sparkles, run: () => toggleAiCompletion()},
+  {id: 'formatOnSave', label: formatOnSave.value ? t('command.formatOnSaveOff') : t('command.formatOnSaveOn'), icon: Save, run: () => toggleFormatOnSave()},
   {id: 'open', label: t('command.open'), icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
   {id: 'openFolder', label: t('command.openFolder'), icon: FolderOpen, run: () => openFolder()},
   {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => saveFile()},
@@ -1856,6 +2058,10 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
   {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
   {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
+  {id: 'tasks', label: t('command.tasks'), icon: ListChecks, run: () => openTasks()},
+  {id: 'runTests', label: t('command.runTests'), icon: ListChecks, run: () => runTests()},
+  {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
+  {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
   {id: 'layoutVertical', label: t('command.layoutVertical'), group: t('command.groupLayout'), icon: PanelBottom, run: () => handleLayoutChange('vertical')},

@@ -43,6 +43,9 @@
       <Tooltip :text="t('header.ai')">
         <Button type="secondary" :icon="Sparkles" :icon-only="true" @click="emit('show-ai')"/>
       </Tooltip>
+      <Tooltip :text="t('header.git')">
+        <Button type="secondary" :icon="GitBranch" :icon-only="true" @click="emit('show-git')"/>
+      </Tooltip>
     </div>
 
     <div class="flex items-center space-x-3">
@@ -77,7 +80,7 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
 import {useI18n} from 'vue-i18n'
-import {CheckCircle, FileCode, FolderOpen, History, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Sparkles, Square} from 'lucide-vue-next'
+import {CheckCircle, FileCode, FolderOpen, GitBranch, History, Maximize2, PanelBottom, PanelLeft, PanelRight, Play, Save, Sparkles, Square} from 'lucide-vue-next'
 import Select from '../ui/Select.vue'
 import Button from '../ui/Button.vue'
 import Tooltip from '../ui/Tooltip.vue'
@@ -105,6 +108,7 @@ const emit = defineEmits<{
   'save-file': []
   'show-history': []
   'show-ai': []
+  'show-git': []
   'toggle-sidebar': []
 }>()
 

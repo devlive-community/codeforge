@@ -244,7 +244,7 @@ pub fn lsp_install(app: AppHandle, id: String) -> Result<(), String> {
 }
 
 /// 读取一行普通文本（以 \n 结尾，用于安装日志）
-fn read_raw_line<R: Read>(reader: &mut BufReader<R>) -> Option<String> {
+pub(crate) fn read_raw_line<R: Read>(reader: &mut BufReader<R>) -> Option<String> {
     let mut buf = Vec::new();
     let mut byte = [0u8; 1];
     loop {
@@ -289,7 +289,7 @@ fn dirs_home() -> Option<PathBuf> {
 }
 
 /// 在 PATH 与常见目录中查找可执行文件全路径
-fn find_in_path(prog: &str) -> Option<PathBuf> {
+pub(crate) fn find_in_path(prog: &str) -> Option<PathBuf> {
     let exts: Vec<&str> = if cfg!(windows) {
         vec!["", ".cmd", ".exe", ".bat"]
     } else {
@@ -312,7 +312,7 @@ fn find_in_path(prog: &str) -> Option<PathBuf> {
 }
 
 /// 给子进程增广 PATH（语言服务器常依赖 node 等）
-fn augmented_path() -> String {
+pub(crate) fn augmented_path() -> String {
     let mut parts: Vec<String> = Vec::new();
     if let Some(path) = std::env::var_os("PATH") {
         parts.push(path.to_string_lossy().to_string());
@@ -474,7 +474,7 @@ pub fn lsp_stop(state: State<'_, LspState>, language: String) -> Result<(), Stri
 }
 
 /// 读取一条 LSP 消息（Content-Length 帧）；EOF 返回 None
-fn read_message<R: Read>(reader: &mut BufReader<R>) -> Option<String> {
+pub(crate) fn read_message<R: Read>(reader: &mut BufReader<R>) -> Option<String> {
     let mut content_length: usize = 0;
     // 逐字节读 header 行直到空行
     loop {

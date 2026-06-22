@@ -20,6 +20,22 @@
         </button>
       </div>
 
+      <!-- 过滤栏：提交信息搜索 + 作者（仅分支/提交历史视图） -->
+      <div v-if="!relPath" class="flex items-center gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <Search class="w-3.5 h-3.5 text-gray-400 flex-shrink-0"/>
+        <input v-model="grep"
+               class="flex-1 min-w-0 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+               :placeholder="t('git.logSearchPlaceholder')"
+               @input="onFilterInput" @keydown.enter="reloadAll"/>
+        <input v-model="author"
+               class="w-40 flex-shrink-0 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+               :placeholder="t('git.logAuthorPlaceholder')"
+               @input="onFilterInput" @keydown.enter="reloadAll"/>
+        <button v-if="grep || author" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer flex-shrink-0" @click="grep = ''; author = ''; reloadAll()">
+          {{ t('git.logClearFilter') }}
+        </button>
+      </div>
+
       <div class="flex-1 min-h-0 grid grid-cols-[300px_1fr]">
         <!-- 提交列表 -->
         <aside class="border-r border-gray-200 dark:border-gray-700 overflow-y-auto" @scroll="onScroll">
@@ -92,7 +108,7 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {History, X} from 'lucide-vue-next'
+import {History, Search, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import {useToast} from '../plugins/toast'
@@ -119,6 +135,14 @@ const tagName = ref('')
 // 分支切换（查看其它分支历史以便 cherry-pick）
 const branches = ref<string[]>([])
 const selectedRev = ref('')
+// 提交信息搜索 + 作者过滤（仅分支/提交历史视图）
+const grep = ref('')
+const author = ref('')
+let filterTimer: ReturnType<typeof setTimeout> | undefined
+const onFilterInput = () => {
+  clearTimeout(filterTimer)
+  filterTimer = setTimeout(() => reloadAll(), 300)
+}
 
 const patchLines = computed(() => patch.value.split('\n'))
 
@@ -139,7 +163,7 @@ const loadMore = async () => {
   try {
     const batch = props.relPath
       ? await invoke<GitCommit[]>('git_log_file', {root: props.rootDir, relPath: props.relPath, limit: PAGE, skip: commits.value.length})
-      : await invoke<GitCommit[]>('git_log', {root: props.rootDir, limit: PAGE, skip: commits.value.length, revision: selectedRev.value || null})
+      : await invoke<GitCommit[]>('git_log', {root: props.rootDir, limit: PAGE, skip: commits.value.length, revision: selectedRev.value || null, grep: grep.value.trim() || null, author: author.value.trim() || null})
     commits.value = [...commits.value, ...batch]
     if (batch.length < PAGE) {
       done.value = true

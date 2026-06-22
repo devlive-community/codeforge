@@ -1,7 +1,7 @@
 {
   "name": "codeforge",
   "private": true,
-  "version": "26.2.0",
+  "version": "26.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -32,6 +32,7 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.1",
     "@open-rpc/client-js": "^2.0.0",
+    "@replit/codemirror-minimap": "^0.5.2",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.3.2",
     "@tauri-apps/plugin-fs": "^2.4.2",

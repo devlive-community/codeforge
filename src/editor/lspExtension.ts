@@ -177,6 +177,47 @@ export const applyCodeAction = async (view: EditorView, action: any): Promise<{o
 }
 
 /**
+ * 可 await 的「格式化整篇文档」：请求 textDocument/formatting 并应用编辑，返回是否实际改动。
+ * 供「保存时格式化」在保存前等待格式化完成（库自带的 formatDocument 是异步应用、无法 await）。
+ */
+export const formatDocumentAsync = async (
+  view: EditorView,
+  fmtOptions?: {tabSize?: number; insertSpaces?: boolean}
+): Promise<boolean> => {
+  const plugin: any = view.plugin(languageServerPlugin as any)
+  const client = plugin?.client
+  if (!client?.ready || !client.capabilities?.documentFormattingProvider) {
+    return false
+  }
+  const params = {
+    textDocument: {uri: plugin.documentUri},
+    options: {
+      tabSize: fmtOptions?.tabSize ?? 4,
+      insertSpaces: fmtOptions?.insertSpaces ?? true
+    }
+  }
+  try {
+    const edits = await client.request('textDocument/formatting', params, 10000)
+    if (!Array.isArray(edits) || edits.length === 0) {
+      return false
+    }
+    const doc = view.state.doc
+    const changes = edits
+      .map((te: any) => ({
+        from: lspPosToOffset(doc, te.range.start),
+        to: lspPosToOffset(doc, te.range.end),
+        insert: te.newText ?? ''
+      }))
+      .sort((a, b) => a.from - b.from)
+    view.dispatch({changes})
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
+/**
  * 触发代码操作：请求后派发 lsp:code-actions（携带动作与锚点坐标）由 App 弹菜单。
  * 供 Cmd+. 键位与右键菜单共用。
  */
