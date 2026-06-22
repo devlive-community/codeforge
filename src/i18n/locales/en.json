@@ -204,6 +204,8 @@
       "installing": "Installing…",
       "install": "Install",
       "note": "Auto-install relies on the matching toolchains already present on this machine: npm (pyright / typescript / intelephense / vscode-langservers-extracted), rustup (rust-analyzer), go (gopls), Homebrew (clangd / lua-language-server), gem (solargraph). If install fails, install manually with the command above then click \"Re-check\". Restart the app after installation to load the new server.",
+      "tabServers": "Language servers",
+      "tabAdapters": "Debug adapters",
       "dapTitle": "Debug adapters",
       "dapDesc": "Debug adapters (DAP). Once installed you can set breakpoints and debug the matching language.",
       "startInstall": "Starting installation…",
