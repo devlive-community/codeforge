@@ -1056,6 +1056,7 @@
     "watch": "监视",
     "watchPlaceholder": "添加表达式…",
     "breakpoints": "断点",
+    "conditionPlaceholder": "条件（可选）",
     "console": "调试控制台",
     "replPlaceholder": "求值表达式，回车执行…"
   },

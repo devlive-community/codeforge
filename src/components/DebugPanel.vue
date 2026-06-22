@@ -57,11 +57,13 @@
       <div class="px-3 py-1.5 mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">{{ t('debug.breakpoints') }}</div>
       <div v-if="!bps.length" class="px-3 py-1 text-[11px] text-gray-400">—</div>
       <div v-for="b in bps" :key="b.path + ':' + b.line"
-           class="group flex items-center gap-1.5 px-3 py-0.5 text-[11px] hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-           @click="debug.revealLocation(b.path, b.line)">
-        <span class="text-red-500 flex-shrink-0">●</span>
-        <span class="flex-1 truncate text-gray-700 dark:text-gray-200">{{ baseName(b.path) }}<span class="text-gray-400">:{{ b.line }}</span></span>
-        <button class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 flex-shrink-0" @click.stop="debug.toggleBreakpoint(b.path, b.line)">×</button>
+           class="group flex items-center gap-1.5 px-3 py-0.5 text-[11px] hover:bg-gray-100 dark:hover:bg-gray-800">
+        <span class="text-red-500 flex-shrink-0 cursor-pointer" @click="debug.revealLocation(b.path, b.line)">{{ b.condition ? '◆' : '●' }}</span>
+        <span class="truncate text-gray-700 dark:text-gray-200 flex-shrink-0 cursor-pointer" @click="debug.revealLocation(b.path, b.line)">{{ baseName(b.path) }}<span class="text-gray-400">:{{ b.line }}</span></span>
+        <input :value="b.condition" class="flex-1 min-w-0 text-[11px] font-mono bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded px-1 focus:outline-none"
+               :placeholder="t('debug.conditionPlaceholder')"
+               @change="onCondition(b.path, b.line, $event)"/>
+        <button class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 flex-shrink-0" @click="debug.toggleBreakpoint(b.path, b.line)">×</button>
       </div>
 
       <!-- 调试控制台输出 -->
@@ -102,6 +104,9 @@ const bps = computed(() => {
   return debug.allBreakpoints()
 })
 const baseName = (p: string) => p.split(/[\\/]/).pop() || p
+const onCondition = (path: string, line: number, e: Event) => {
+  debug.setBreakpointCondition(path, line, (e.target as HTMLInputElement).value.trim())
+}
 
 const lineClass = (category: string): string => {
   if (category === 'stderr') return 'text-red-500'

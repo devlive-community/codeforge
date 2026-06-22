@@ -8,9 +8,9 @@ export interface StackFrame { id: number; name: string; line: number; column: nu
 export interface Scope { name: string; variablesReference: number; expensive: boolean }
 export interface DapVariable { name: string; value: string; type?: string; variablesReference: number }
 
-// 文件绝对路径 -> 断点行号集合（1-based）
-const breakpoints = reactive<Map<string, Set<number>>>(new Map())
-// 断点变更版本号：Map/Set 深层响应不够可靠，统一用版本号驱动外部同步
+// 文件绝对路径 -> (行号(1-based) -> 条件表达式，空串表示无条件)
+const breakpoints = reactive<Map<string, Map<number, string>>>(new Map())
+// 断点变更版本号：Map 深层响应不够可靠，统一用版本号驱动外部同步
 const bpVersion = ref(0)
 // 当前停驻（执行）位置
 const stopped = ref<{path: string; line: number} | null>(null)
@@ -19,28 +19,49 @@ function fileBreakpoints(path: string | null | undefined): number[] {
   if (!path) {
     return []
   }
-  const s = breakpoints.get(path)
-  return s ? [...s].sort((a, b) => a - b) : []
+  const m = breakpoints.get(path)
+  return m ? [...m.keys()].sort((a, b) => a - b) : []
+}
+
+function breakpointCondition(path: string | null | undefined, line: number): string {
+  if (!path) {
+    return ''
+  }
+  return breakpoints.get(path)?.get(line) ?? ''
 }
 
 function toggleBreakpoint(path: string | null | undefined, line: number): void {
   if (!path || line < 1) {
     return
   }
-  let s = breakpoints.get(path)
-  if (!s) {
-    s = new Set()
-    breakpoints.set(path, s)
+  let m = breakpoints.get(path)
+  if (!m) {
+    m = new Map()
+    breakpoints.set(path, m)
   }
-  if (s.has(line)) {
-    s.delete(line)
+  if (m.has(line)) {
+    m.delete(line)
   }
   else {
-    s.add(line)
+    m.set(line, '')
   }
-  if (s.size === 0) {
+  if (m.size === 0) {
     breakpoints.delete(path)
   }
+  bpVersion.value++
+}
+
+// 设置/更新某断点的条件（行不存在则新建该断点）
+function setBreakpointCondition(path: string | null | undefined, line: number, condition: string): void {
+  if (!path || line < 1) {
+    return
+  }
+  let m = breakpoints.get(path)
+  if (!m) {
+    m = new Map()
+    breakpoints.set(path, m)
+  }
+  m.set(line, condition)
   bpVersion.value++
 }
 
@@ -49,11 +70,11 @@ function setStopped(loc: {path: string; line: number} | null): void {
 }
 
 // 列出全部断点（跨文件，供断点列表面板）
-function allBreakpoints(): {path: string; line: number}[] {
-  const out: {path: string; line: number}[] = []
+function allBreakpoints(): {path: string; line: number; condition: string}[] {
+  const out: {path: string; line: number; condition: string}[] = []
   for (const [path, lines] of breakpoints) {
-    for (const line of lines) {
-      out.push({path, line})
+    for (const [line, condition] of lines) {
+      out.push({path, line, condition})
     }
   }
   return out.sort((a, b) => (a.path === b.path ? a.line - b.line : a.path.localeCompare(b.path)))
@@ -142,13 +163,19 @@ async function sendBreakpoints(): Promise<void> {
   if (!client) {
     return
   }
-  for (const [path, lines] of breakpoints) {
-    await client
-      .request('setBreakpoints', {
-        source: {path},
-        breakpoints: [...lines].sort((a, b) => a - b).map(line => ({line}))
-      })
-      .catch(() => {})
+  for (const path of breakpoints.keys()) {
+    await client.request('setBreakpoints', bpArgs(path)).catch(() => {})
+  }
+}
+
+// 某文件的 setBreakpoints 参数（带条件）
+function bpArgs(path: string): Record<string, any> {
+  return {
+    source: {path},
+    breakpoints: fileBreakpoints(path).map((line) => {
+      const cond = breakpointCondition(path, line)
+      return cond ? {line, condition: cond} : {line}
+    })
   }
 }
 
@@ -157,12 +184,7 @@ async function syncBreakpoints(path: string | null | undefined): Promise<void> {
   if (!client || status.value === 'inactive' || !path) {
     return
   }
-  await client
-    .request('setBreakpoints', {
-      source: {path},
-      breakpoints: fileBreakpoints(path).map(line => ({line}))
-    })
-    .catch(() => {})
+  await client.request('setBreakpoints', bpArgs(path)).catch(() => {})
 }
 
 // 停驻后加载调用栈，定位栈顶帧
@@ -389,8 +411,10 @@ export function useDebug() {
     reveal,
     watches,
     fileBreakpoints,
+    breakpointCondition,
     allBreakpoints,
     toggleBreakpoint,
+    setBreakpointCondition,
     setStopped,
     revealLocation: requestReveal,
     syncBreakpoints,
