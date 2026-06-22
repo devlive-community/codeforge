@@ -100,6 +100,24 @@ function requestReveal(path: string, line: number): void {
 // 监视表达式（停驻/选帧时重算）
 const watches = ref<{expr: string; value: string}[]>([])
 
+// 异常断点：适配器声明的过滤器及当前选中项
+const exceptionFilters = ref<{filter: string; label: string; default?: boolean}[]>([])
+const selectedExceptionFilters = ref<Set<string>>(new Set())
+
+function setExceptionFilter(filter: string, enabled: boolean): void {
+  const s = new Set(selectedExceptionFilters.value)
+  if (enabled) {
+    s.add(filter)
+  }
+  else {
+    s.delete(filter)
+  }
+  selectedExceptionFilters.value = s
+  if (client && status.value !== 'inactive') {
+    client.request('setExceptionBreakpoints', {filters: [...s]}).catch(() => {})
+  }
+}
+
 // 求值：在选中帧上下文中执行表达式。context: watch | repl | hover
 async function evaluate(expression: string, context: string): Promise<{result: string; variablesReference: number}> {
   if (!client || !expression.trim()) {
@@ -275,7 +293,7 @@ async function startSession(config: LaunchConfig): Promise<void> {
   c.onClose(() => cleanup())
   c.on('initialized', async () => {
     await sendBreakpoints()
-    await c.request('setExceptionBreakpoints', {filters: []}).catch(() => {})
+    await c.request('setExceptionBreakpoints', {filters: [...selectedExceptionFilters.value]}).catch(() => {})
     await c.request('configurationDone').catch(() => {})
   })
   c.on('stopped', async (body) => {
@@ -294,7 +312,7 @@ async function startSession(config: LaunchConfig): Promise<void> {
 
   try {
     await c.start()
-    await c.request('initialize', {
+    const caps = await c.request('initialize', {
       clientID: 'codeforge',
       clientName: 'CodeForge',
       adapterID: config.language === 'go' ? 'go' : 'debugpy',
@@ -304,6 +322,13 @@ async function startSession(config: LaunchConfig): Promise<void> {
       pathFormat: 'path',
       supportsRunInTerminalRequest: false
     })
+    // 异常断点过滤器（首次连接按适配器默认项选中）
+    exceptionFilters.value = caps?.exceptionBreakpointFilters ?? []
+    if (!selectedExceptionFilters.value.size) {
+      selectedExceptionFilters.value = new Set(
+        exceptionFilters.value.filter(f => f.default).map(f => f.filter)
+      )
+    }
     // launch 在 configurationDone 后才返回，故不在主流程等待
     c.request('launch', buildLaunchArgs(config)).catch((e) => {
       pushOut('stderr', `launch 失败: ${e}\n`)
@@ -397,6 +422,7 @@ function cleanup(): void {
   setStopped(null)
   frames.value = []
   selectedFrameId.value = null
+  exceptionFilters.value = []
 }
 
 export function useDebug() {
@@ -410,6 +436,9 @@ export function useDebug() {
     selectedFrameId,
     reveal,
     watches,
+    exceptionFilters,
+    selectedExceptionFilters,
+    setExceptionFilter,
     fileBreakpoints,
     breakpointCondition,
     allBreakpoints,

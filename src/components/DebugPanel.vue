@@ -66,6 +66,18 @@
         <button class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 flex-shrink-0" @click="debug.toggleBreakpoint(b.path, b.line)">×</button>
       </div>
 
+      <!-- 异常断点 -->
+      <template v-if="debug.exceptionFilters.value.length">
+        <div class="px-3 py-1.5 mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">{{ t('debug.exceptions') }}</div>
+        <label v-for="f in debug.exceptionFilters.value" :key="f.filter"
+               class="flex items-center gap-1.5 px-3 py-0.5 text-[11px] text-gray-700 dark:text-gray-200 cursor-pointer">
+          <input type="checkbox" class="cursor-pointer"
+                 :checked="debug.selectedExceptionFilters.value.has(f.filter)"
+                 @change="debug.setExceptionFilter(f.filter, ($event.target as HTMLInputElement).checked)"/>
+          {{ f.label }}
+        </label>
+      </template>
+
       <!-- 调试控制台输出 -->
       <div class="px-3 py-1.5 mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">{{ t('debug.console') }}</div>
       <pre class="px-3 pb-2 text-[11px] font-mono whitespace-pre-wrap break-all"><span
