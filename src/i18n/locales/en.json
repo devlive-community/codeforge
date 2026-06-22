@@ -658,6 +658,7 @@
     "git": "Git source control",
     "tasks": "Run tasks",
     "runTests": "Run tests (auto-detect)",
+    "startDebug": "Debug current file",
     "sendToTerminal": "Send selection to terminal",
     "toggleSidebar": "Toggle sidebar",
     "layoutHorizontal": "Layout: side-by-side",
@@ -1027,6 +1028,21 @@
     "run": "Run",
     "delete": "Delete",
     "empty": "No tasks yet — add a command to run in the integrated terminal"
+  },
+  "debug": {
+    "continue": "Continue",
+    "pause": "Pause",
+    "stepOver": "Step over",
+    "stepIn": "Step into",
+    "stepOut": "Step out",
+    "restart": "Restart",
+    "stop": "Stop",
+    "statusStarting": "Starting…",
+    "statusRunning": "Running",
+    "statusStopped": "Paused",
+    "saveFirst": "Save the file before debugging",
+    "langUnsupported": "Debugging not supported for this language",
+    "startFailed": "Failed to start debugging"
   },
   "snippet": {
     "title": "Snippets",
