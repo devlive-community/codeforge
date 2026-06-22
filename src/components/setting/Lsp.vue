@@ -1,5 +1,5 @@
 <template>
-  <Tabs v-model="tab" type="line" size="sm" :tabs="tabDefs">
+  <Tabs v-model="tab" :tabs="tabDefs">
     <template #extra>
       <button class="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="reload">
         <RefreshCw class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''"/>{{ t('settings.lsp.recheck') }}
