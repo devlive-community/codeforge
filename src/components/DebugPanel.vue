@@ -53,6 +53,17 @@
         </template>
       </div>
 
+      <!-- 断点列表 -->
+      <div class="px-3 py-1.5 mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">{{ t('debug.breakpoints') }}</div>
+      <div v-if="!bps.length" class="px-3 py-1 text-[11px] text-gray-400">—</div>
+      <div v-for="b in bps" :key="b.path + ':' + b.line"
+           class="group flex items-center gap-1.5 px-3 py-0.5 text-[11px] hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+           @click="debug.revealLocation(b.path, b.line)">
+        <span class="text-red-500 flex-shrink-0">●</span>
+        <span class="flex-1 truncate text-gray-700 dark:text-gray-200">{{ baseName(b.path) }}<span class="text-gray-400">:{{ b.line }}</span></span>
+        <button class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 flex-shrink-0" @click.stop="debug.toggleBreakpoint(b.path, b.line)">×</button>
+      </div>
+
       <!-- 调试控制台输出 -->
       <div class="px-3 py-1.5 mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">{{ t('debug.console') }}</div>
       <pre class="px-3 pb-2 text-[11px] font-mono whitespace-pre-wrap break-all"><span
@@ -70,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, watch} from 'vue'
+import {computed, ref, watch} from 'vue'
 import {Bug, ChevronRight, Square} from 'lucide-vue-next'
 import {useI18n} from 'vue-i18n'
 import {useDebug, type DapVariable, type Scope} from '../composables/useDebug'
@@ -84,6 +95,13 @@ const openScopes = ref<Set<number>>(new Set())
 const scopeVars = ref<Map<number, DapVariable[]>>(new Map())
 const watchInput = ref('')
 const replInput = ref('')
+
+// 断点列表（随 bpVersion 刷新）
+const bps = computed(() => {
+  void debug.bpVersion.value
+  return debug.allBreakpoints()
+})
+const baseName = (p: string) => p.split(/[\\/]/).pop() || p
 
 const lineClass = (category: string): string => {
   if (category === 'stderr') return 'text-red-500'

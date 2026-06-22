@@ -22,6 +22,12 @@
     </div>
 
     <div class="flex items-center space-x-4">
+      <!-- 调试状态 -->
+      <div v-if="debug.status.value !== 'inactive'" class="flex items-center space-x-1">
+        <Bug class="w-3.5 h-3.5"/>
+        <span>{{ debug.status.value === 'stopped' ? t('debug.statusStopped') : debug.status.value === 'starting' ? t('debug.statusStarting') : t('debug.statusRunning') }}</span>
+      </div>
+
       <!-- LSP 状态（点击开关问题面板）-->
       <button v-if="lspState.status !== 'off'"
               class="flex items-center space-x-2 px-1 rounded cursor-pointer hover:bg-white/20 transition-colors"
@@ -52,15 +58,17 @@
 </template>
 
 <script setup lang="ts">
-import { AlertTriangle, Clock, Hash, RefreshCw, Terminal as TerminalIcon, XCircle } from 'lucide-vue-next'
+import { AlertTriangle, Bug, Clock, Hash, RefreshCw, Terminal as TerminalIcon, XCircle } from 'lucide-vue-next'
 import { computed, toRefs } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStatusBar } from '../composables/useStatusBar'
 import { lspState } from '../editor/lspStatus'
+import { useDebug } from '../composables/useDebug'
 import { diagnostics } from '../editor/lspDiagnostics'
 import { useShortcuts } from '../composables/useShortcuts'
 
 const {t} = useI18n()
+const debug = useDebug()
 
 const props = defineProps<{
   envInfo: {

@@ -1055,6 +1055,7 @@
     "notStopped": "运行中（未停驻）",
     "watch": "监视",
     "watchPlaceholder": "添加表达式…",
+    "breakpoints": "断点",
     "console": "调试控制台",
     "replPlaceholder": "求值表达式，回车执行…"
   },

@@ -1055,6 +1055,7 @@
     "notStopped": "Running (not paused)",
     "watch": "Watch",
     "watchPlaceholder": "Add expression…",
+    "breakpoints": "Breakpoints",
     "console": "Debug console",
     "replPlaceholder": "Evaluate expression, Enter to run…"
   },

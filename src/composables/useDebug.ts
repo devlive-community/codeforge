@@ -48,6 +48,17 @@ function setStopped(loc: {path: string; line: number} | null): void {
   stopped.value = loc
 }
 
+// 列出全部断点（跨文件，供断点列表面板）
+function allBreakpoints(): {path: string; line: number}[] {
+  const out: {path: string; line: number}[] = []
+  for (const [path, lines] of breakpoints) {
+    for (const line of lines) {
+      out.push({path, line})
+    }
+  }
+  return out.sort((a, b) => (a.path === b.path ? a.line - b.line : a.path.localeCompare(b.path)))
+}
+
 // ===== P3：会话编排与控制 =====
 const status = ref<DebugStatus>('inactive')
 const consoleLines = ref<{category: string; text: string}[]>([])
@@ -378,8 +389,10 @@ export function useDebug() {
     reveal,
     watches,
     fileBreakpoints,
+    allBreakpoints,
     toggleBreakpoint,
     setStopped,
+    revealLocation: requestReveal,
     syncBreakpoints,
     selectFrame,
     requestScopes,
