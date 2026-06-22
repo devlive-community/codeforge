@@ -1024,6 +1024,21 @@
     "revealIn": "在访达中显示：{path}",
     "unsaved": "有未保存的修改"
   },
+  "aiCode": {
+    "title": {
+      "explain": "AI 解释代码",
+      "refactor": "AI 重构代码",
+      "test": "AI 生成测试"
+    },
+    "thinking": "AI 思考中…",
+    "replace": "替换选区",
+    "insert": "插入到下方",
+    "copy": "复制",
+    "copied": "已复制",
+    "close": "关闭",
+    "failed": "AI 操作失败：",
+    "noCode": "没有可处理的代码"
+  },
   "task": {
     "title": "运行任务",
     "labelPlaceholder": "任务名",

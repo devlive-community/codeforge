@@ -1024,6 +1024,21 @@
     "revealIn": "Reveal in file manager: {path}",
     "unsaved": "Unsaved changes"
   },
+  "aiCode": {
+    "title": {
+      "explain": "AI: Explain code",
+      "refactor": "AI: Refactor code",
+      "test": "AI: Generate tests"
+    },
+    "thinking": "AI is thinking…",
+    "replace": "Replace selection",
+    "insert": "Insert below",
+    "copy": "Copy",
+    "copied": "Copied",
+    "close": "Close",
+    "failed": "AI action failed: ",
+    "noCode": "No code to process"
+  },
   "task": {
     "title": "Run tasks",
     "labelPlaceholder": "Task name",

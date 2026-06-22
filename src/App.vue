@@ -366,6 +366,10 @@
     <!-- 调试侧栏：调用栈 + 变量 -->
     <DebugPanel/>
 
+    <!-- AI 代码操作（解释/重构/生成测试） -->
+    <AiCodeAction v-if="aiCodeCtx" :language="currentLanguage" :code="aiCodeCtx.code" :action="aiCodeCtx.action"
+                  @replace="onAiReplace" @insert="onAiInsert" @close="aiCodeCtx = null"/>
+
     <!-- 运行任务 -->
     <TaskRunner v-if="showTasks && rootDir" :root-dir="rootDir" @run="runTask" @close="showTasks = false"/>
 
@@ -414,6 +418,10 @@
           </button>
         </template>
         <div v-if="editorCtx.lsp || canBlame" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('explain')">{{ t('aiCode.title.explain') }}</button>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('refactor')">{{ t('aiCode.title.refactor') }}</button>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('test')">{{ t('aiCode.title.test') }}</button>
+        <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="sendToTerminal">
           {{ t('app.sendToTerminal') }}
         </button>
@@ -503,6 +511,7 @@ import GitPanel from './components/GitPanel.vue'
 import TaskRunner from './components/TaskRunner.vue'
 import DebugToolbar from './components/DebugToolbar.vue'
 import DebugPanel from './components/DebugPanel.vue'
+import AiCodeAction from './components/AiCodeAction.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
@@ -1258,6 +1267,44 @@ const runTests = async () => {
     return
   }
   await runTask(cmd)
+}
+
+// C2：对选区（无选区则整篇）执行 AI 操作：解释 / 重构 / 生成测试
+const aiCodeCtx = ref<{action: 'explain' | 'refactor' | 'test'; code: string; from: number; to: number} | null>(null)
+const aiCodeAction = (action: 'explain' | 'refactor' | 'test') => {
+  closeEditorCtx()
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const sel = view.state.selection.main
+  let from = sel.from
+  let to = sel.to
+  let code = sel.empty ? '' : view.state.sliceDoc(from, to)
+  if (!code.trim()) {
+    code = view.state.doc.toString()
+    from = 0
+    to = view.state.doc.length
+  }
+  if (!code.trim()) {
+    toast.info(t('aiCode.noCode'))
+    return
+  }
+  aiCodeCtx.value = {action, code, from, to}
+}
+const onAiReplace = (code: string) => {
+  const view = editorView.value
+  const ctx = aiCodeCtx.value
+  if (view && ctx) {
+    view.dispatch({changes: {from: ctx.from, to: ctx.to, insert: code}})
+  }
+}
+const onAiInsert = (code: string) => {
+  const view = editorView.value
+  const ctx = aiCodeCtx.value
+  if (view && ctx) {
+    view.dispatch({changes: {from: ctx.to, insert: `\n\n${code}\n`}})
+  }
 }
 
 // B3：发送选区（无选区则当前行）到集成终端，用于 REPL 式交互
