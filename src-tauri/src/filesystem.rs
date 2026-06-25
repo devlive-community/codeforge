@@ -498,6 +498,35 @@ pub async fn git_init(root: String) -> Result<String, String> {
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 追加一段 .gitignore 模板块（按首行标题去重，已存在则跳过）。
+#[tauri::command]
+pub async fn git_ignore_append_block(root: String, content: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let block = content.trim_end_matches('\n');
+        if block.trim().is_empty() {
+            return Ok(());
+        }
+        let path = std::path::Path::new(&root).join(".gitignore");
+        let mut existing = std::fs::read_to_string(&path).unwrap_or_default();
+        // 用块首行（通常是 # 标题）判重，避免重复插入
+        let header = block.lines().next().unwrap_or("").trim();
+        if !header.is_empty() && existing.lines().any(|l| l.trim() == header) {
+            return Ok(());
+        }
+        if !existing.is_empty() {
+            if !existing.ends_with('\n') {
+                existing.push('\n');
+            }
+            existing.push('\n'); // 与上一块隔一空行
+        }
+        existing.push_str(block);
+        existing.push('\n');
+        std::fs::write(&path, existing).map_err(|e| format!("写入 .gitignore 失败: {}", e))
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 把一个匹配模式追加到 .gitignore（已存在则跳过）。
 #[tauri::command]
 pub async fn git_ignore_add(root: String, pattern: String) -> Result<(), String> {

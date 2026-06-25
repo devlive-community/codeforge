@@ -661,6 +661,7 @@
     "preview": "Live preview (Markdown / HTML)",
     "git": "Git source control",
     "tasks": "Run tasks",
+    "gitignore": "Insert .gitignore template",
     "runTests": "Run tests (auto-detect)",
     "startDebug": "Debug current file",
     "sendToTerminal": "Send selection to terminal",
@@ -1029,6 +1030,14 @@
   "breadcrumb": {
     "revealIn": "Reveal in file manager: {path}",
     "unsaved": "Unsaved changes"
+  },
+  "gitignore": {
+    "title": ".gitignore templates",
+    "hint": "Pick languages/frameworks/platforms to ignore; appended to the project root .gitignore (existing blocks are skipped).",
+    "apply": "Add to .gitignore",
+    "cancel": "Cancel",
+    "applied": "Added to .gitignore",
+    "failed": "Write failed"
   },
   "txn": {
     "begin": "Transaction",

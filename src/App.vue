@@ -374,6 +374,9 @@
     <AiCodeAction v-if="aiCodeCtx" :language="currentLanguage" :code="aiCodeCtx.code" :action="aiCodeCtx.action"
                   @replace="onAiReplace" @insert="onAiInsert" @close="aiCodeCtx = null"/>
 
+    <!-- .gitignore 模板 -->
+    <GitIgnoreTemplates v-if="showGitignore && rootDir" :root-dir="rootDir" @close="showGitignore = false"/>
+
     <!-- 运行任务 -->
     <TaskRunner v-if="showTasks && rootDir" :root-dir="rootDir" @run="runTask" @close="showTasks = false"/>
 
@@ -513,6 +516,7 @@ import BlameView from './components/BlameView.vue'
 import GitLog from './components/GitLog.vue'
 import GitPanel from './components/GitPanel.vue'
 import TaskRunner from './components/TaskRunner.vue'
+import GitIgnoreTemplates from './components/GitIgnoreTemplates.vue'
 import DebugToolbar from './components/DebugToolbar.vue'
 import DebugPanel from './components/DebugPanel.vue'
 import AiCodeAction from './components/AiCodeAction.vue'
@@ -1163,6 +1167,16 @@ const toggleTerminal = () => {
     terminalMounted.value = true
     showTerminal.value = true
   }
+}
+
+// ===== .gitignore 模板（F2）=====
+const showGitignore = ref(false)
+const openGitignore = () => {
+  if (!rootDir.value) {
+    toast.info(t('app.openFolderFirst'))
+    return
+  }
+  showGitignore.value = true
 }
 
 // ===== 运行任务（B4）：在集成终端中执行预设命令 =====
@@ -2149,6 +2163,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
   {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
   {id: 'tasks', label: t('command.tasks'), icon: ListChecks, run: () => openTasks()},
+  {id: 'gitignore', label: t('command.gitignore'), icon: GitBranch, run: () => openGitignore()},
   {id: 'runTests', label: t('command.runTests'), icon: ListChecks, run: () => runTests()},
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},

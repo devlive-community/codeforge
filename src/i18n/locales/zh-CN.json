@@ -661,6 +661,7 @@
     "preview": "实时预览（Markdown / HTML）",
     "git": "Git 源代码管理",
     "tasks": "运行任务",
+    "gitignore": "插入 .gitignore 模板",
     "runTests": "运行测试（自动识别）",
     "startDebug": "开始调试当前文件",
     "sendToTerminal": "发送选区到终端",
@@ -1029,6 +1030,14 @@
   "breadcrumb": {
     "revealIn": "在访达中显示：{path}",
     "unsaved": "有未保存的修改"
+  },
+  "gitignore": {
+    "title": ".gitignore 模板",
+    "hint": "勾选要忽略的语言/框架/平台，追加到项目根目录的 .gitignore（已存在的块会跳过）。",
+    "apply": "添加到 .gitignore",
+    "cancel": "取消",
+    "applied": "已添加到 .gitignore",
+    "failed": "写入失败"
   },
   "txn": {
     "begin": "事务",
