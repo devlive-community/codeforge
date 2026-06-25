@@ -302,6 +302,11 @@ fn adapter_defs() -> Vec<(&'static str, &'static str, &'static str)> {
             "Go (delve)",
             "go install github.com/go-delve/delve/cmd/dlv@latest",
         ),
+        (
+            "lldb-dap",
+            "Rust / C / C++ (lldb-dap，随 LLVM 提供)",
+            "brew install llvm",
+        ),
     ]
 }
 
@@ -310,6 +315,12 @@ fn adapter_installed(id: &str) -> bool {
         // debugpy 校验模块可导入
         "debugpy" => dap_available("python".to_string()),
         "delve" => find_in_path("dlv").is_some(),
+        // lldb-dap 随 LLVM 提供，brew 的 llvm 是 keg-only 不在 PATH，额外探测常见路径
+        "lldb-dap" => {
+            find_in_path("lldb-dap").is_some()
+                || std::path::Path::new("/opt/homebrew/opt/llvm/bin/lldb-dap").is_file()
+                || std::path::Path::new("/usr/local/opt/llvm/bin/lldb-dap").is_file()
+        }
         _ => false,
     }
 }
