@@ -302,11 +302,7 @@ fn adapter_defs() -> Vec<(&'static str, &'static str, &'static str)> {
             "Go (delve)",
             "go install github.com/go-delve/delve/cmd/dlv@latest",
         ),
-        (
-            "lldb-dap",
-            "Rust / C / C++ (lldb-dap，随 LLVM 提供)",
-            "brew install llvm",
-        ),
+        ("lldb-dap", "Rust / C / C++ (lldb-dap)", "brew install llvm"),
     ]
 }
 
