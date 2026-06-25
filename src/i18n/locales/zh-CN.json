@@ -816,6 +816,9 @@
     "thinking": "思考中…",
     "stop": "停止生成",
     "inputPlaceholder": "输入问题，Enter 发送（Shift+Enter 换行）",
+    "context": "上下文：",
+    "ctxFile": "当前文件",
+    "ctxProject": "项目结构",
     "copy": "复制",
     "insert": "应用到编辑器",
     "copied": "已复制代码",
@@ -834,6 +837,8 @@
     "success": "成功",
     "fail": "失败",
     "hasAi": "有 AI 对话",
+    "favOnly": "只看收藏",
+    "noFav": "暂无收藏",
     "loadingMore": "加载更多...",
     "allLoaded": "已加载全部历史",
     "chars": "字符",
@@ -871,6 +876,7 @@
     "noTable": "无表",
     "copyDdl": "复制建表语句",
     "exportCsv": "导出 CSV",
+    "export": "导出",
     "preview100": "预览前 100 行",
     "insertColumn": "插入列名：{name}",
     "noExportData": "无数据可导出",
@@ -1023,6 +1029,21 @@
   "breadcrumb": {
     "revealIn": "在访达中显示：{path}",
     "unsaved": "有未保存的修改"
+  },
+  "aiCode": {
+    "title": {
+      "explain": "AI 解释代码",
+      "refactor": "AI 重构代码",
+      "test": "AI 生成测试"
+    },
+    "thinking": "AI 思考中…",
+    "replace": "替换选区",
+    "insert": "插入到下方",
+    "copy": "复制",
+    "copied": "已复制",
+    "close": "关闭",
+    "failed": "AI 操作失败：",
+    "noCode": "没有可处理的代码"
   },
   "task": {
     "title": "运行任务",

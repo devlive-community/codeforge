@@ -36,9 +36,16 @@
             <Grid3x3 class="w-3.5 h-3.5" :class="!firstResultSet ? 'opacity-40' : ''"/>
           </button>
         </div>
-        <button v-if="firstResultSet" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('sql.exportCsv')" @click="exportCsv">
-          <FileDown class="w-3.5 h-3.5"/>
-        </button>
+        <div v-if="firstResultSet" class="relative">
+          <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('sql.export')" @click.stop="showExport = !showExport">
+            <FileDown class="w-3.5 h-3.5"/>
+          </button>
+          <div v-if="showExport" class="absolute right-0 mt-1 z-20 min-w-[110px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg py-1 text-xs">
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="doExport('csv')">CSV</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="doExport('json')">JSON</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="doExport('xlsx')">Excel (.xlsx)</button>
+          </div>
+        </div>
         <button class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" :title="t('sql.clear')" @click="emit('clear')">
           <Trash2 class="w-3.5 h-3.5"/>
         </button>
@@ -61,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue'
+import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {useI18n} from 'vue-i18n'
 import {BarChart3, ChevronLeft, ChevronRight, Database, FileDown, Grid3x3, Table2, Trash2} from 'lucide-vue-next'
@@ -70,7 +77,7 @@ import SqlSourceSelect from './SqlSourceSelect.vue'
 import SqlResultTable from './SqlResultTable.vue'
 import PivotTable from './PivotTable.vue'
 import ChartPanel from './charts/ChartPanel.vue'
-import {downloadCsv} from '../utils/csv'
+import {downloadCsv, downloadJson, downloadXlsx} from '../utils/csv'
 
 const props = defineProps<{
   output: string
@@ -113,12 +120,29 @@ watch(firstResultSet, (rs) => {
   }
 })
 
-const exportCsv = () => {
+const showExport = ref(false)
+const doExport = (fmt: 'csv' | 'json' | 'xlsx') => {
+  showExport.value = false
   const rs = firstResultSet.value
-  if (rs) {
-    downloadCsv(rs.columns, rs.rows, `sql-result-${Date.now()}.csv`)
+  if (!rs) {
+    return
+  }
+  const name = `sql-result-${Date.now()}`
+  if (fmt === 'csv') {
+    downloadCsv(rs.columns, rs.rows, `${name}.csv`)
+  }
+  else if (fmt === 'json') {
+    downloadJson(rs.columns, rs.rows, `${name}.json`)
+  }
+  else {
+    downloadXlsx(rs.columns, rs.rows, `${name}.xlsx`)
   }
 }
+const closeExport = () => {
+  showExport.value = false
+}
+onMounted(() => document.addEventListener('click', closeExport))
+onBeforeUnmount(() => document.removeEventListener('click', closeExport))
 
 // 当前数据源名（占位文案用）；选择逻辑由 SqlSourceSelect 组件负责
 const {activeLabel} = useDbConnections()

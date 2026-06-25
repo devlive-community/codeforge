@@ -1,6 +1,10 @@
 <template>
   <div v-if="debug.status.value !== 'inactive'"
-       class="fixed top-0 right-0 bottom-0 z-30 w-[300px] bg-white dark:bg-gray-900 dark:text-gray-100 border-l border-gray-200 dark:border-gray-700 shadow-xl flex flex-col">
+       class="fixed top-0 right-0 bottom-0 z-30 bg-white dark:bg-gray-900 dark:text-gray-100 border-l border-gray-200 dark:border-gray-700 shadow-xl flex flex-col"
+       :style="{ width: panelWidth + 'px' }">
+    <!-- 左缘拖拽改宽 -->
+    <div class="absolute left-0 top-0 bottom-0 w-1 -ml-0.5 cursor-col-resize hover:bg-blue-500 z-50"
+         @mousedown="startResize"></div>
     <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
         <Bug class="w-4 h-4 text-gray-400"/>
@@ -95,14 +99,44 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue'
+import {computed, onBeforeUnmount, ref, watch} from 'vue'
 import {Bug, ChevronRight, Square} from 'lucide-vue-next'
 import {useI18n} from 'vue-i18n'
 import {useDebug, type DapVariable, type Scope} from '../composables/useDebug'
+import {kvGet, kvSet} from '../composables/useKvStore'
 import DebugVarNode from './DebugVarNode.vue'
 
 const {t} = useI18n()
 const debug = useDebug()
+
+// 面板宽度（左缘拖拽改宽，持久化到 KV）
+const clampWidth = (w: number) => Math.max(240, Math.min(w, Math.max(240, window.innerWidth - 200)))
+const panelWidth = ref(clampWidth(Number(kvGet('debug-panel-width')) || 300))
+let resizeStartX = 0
+let resizeStartWidth = 0
+const onResize = (e: MouseEvent) => {
+  panelWidth.value = clampWidth(resizeStartWidth + (resizeStartX - e.clientX))
+}
+const stopResize = () => {
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+  kvSet('debug-panel-width', String(panelWidth.value))
+}
+const startResize = (e: MouseEvent) => {
+  e.preventDefault()
+  resizeStartX = e.clientX
+  resizeStartWidth = panelWidth.value
+  document.addEventListener('mousemove', onResize)
+  document.addEventListener('mouseup', stopResize)
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor = 'col-resize'
+}
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+})
 
 const scopes = ref<Scope[]>([])
 const openScopes = ref<Set<number>>(new Set())

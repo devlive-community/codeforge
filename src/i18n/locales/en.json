@@ -816,6 +816,9 @@
     "thinking": "Thinking…",
     "stop": "Stop generating",
     "inputPlaceholder": "Type a question, Enter to send (Shift+Enter for newline)",
+    "context": "Context:",
+    "ctxFile": "Current file",
+    "ctxProject": "Project tree",
     "copy": "Copy",
     "insert": "Insert into editor",
     "copied": "Code copied",
@@ -834,6 +837,8 @@
     "success": "Success",
     "fail": "Failed",
     "hasAi": "Has AI conversation",
+    "favOnly": "Favorites only",
+    "noFav": "No favorites yet",
     "loadingMore": "Loading more...",
     "allLoaded": "All history loaded",
     "chars": "chars",
@@ -871,6 +876,7 @@
     "noTable": "No tables",
     "copyDdl": "Copy CREATE statement",
     "exportCsv": "Export CSV",
+    "export": "Export",
     "preview100": "Preview first 100 rows",
     "insertColumn": "Insert column: {name}",
     "noExportData": "No data to export",
@@ -1023,6 +1029,21 @@
   "breadcrumb": {
     "revealIn": "Reveal in file manager: {path}",
     "unsaved": "Unsaved changes"
+  },
+  "aiCode": {
+    "title": {
+      "explain": "AI: Explain code",
+      "refactor": "AI: Refactor code",
+      "test": "AI: Generate tests"
+    },
+    "thinking": "AI is thinking…",
+    "replace": "Replace selection",
+    "insert": "Insert below",
+    "copy": "Copy",
+    "copied": "Copied",
+    "close": "Close",
+    "failed": "AI action failed: ",
+    "noCode": "No code to process"
   },
   "task": {
     "title": "Run tasks",

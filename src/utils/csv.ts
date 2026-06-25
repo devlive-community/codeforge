@@ -14,13 +14,41 @@ export function toCsv(columns: string[], rows: any[][]): string {
   return lines.join('\n')
 }
 
-/** 触发浏览器下载（带 BOM，便于 Excel 正确识别中文） */
-export function downloadCsv(columns: string[], rows: any[][], filename?: string): void {
-  const blob = new Blob(['﻿' + toCsv(columns, rows)], {type: 'text/csv;charset=utf-8'})
+function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = filename || `data-${Date.now()}.csv`
+  a.download = filename
   a.click()
   URL.revokeObjectURL(url)
+}
+
+/** 触发浏览器下载（带 BOM，便于 Excel 正确识别中文） */
+export function downloadCsv(columns: string[], rows: any[][], filename?: string): void {
+  triggerDownload(
+    new Blob(['﻿' + toCsv(columns, rows)], {type: 'text/csv;charset=utf-8'}),
+    filename || `data-${Date.now()}.csv`
+  )
+}
+
+/** 导出为 JSON（每行一个对象，列名为键） */
+export function downloadJson(columns: string[], rows: any[][], filename?: string): void {
+  const data = rows.map((row) => {
+    const o: Record<string, any> = {}
+    columns.forEach((c, i) => (o[c] = row[i]))
+    return o
+  })
+  triggerDownload(
+    new Blob([JSON.stringify(data, null, 2)], {type: 'application/json;charset=utf-8'}),
+    filename || `data-${Date.now()}.json`
+  )
+}
+
+/** 导出为 Excel(.xlsx)。按需加载 SheetJS，避免拖累其它引用此工具的页面 */
+export async function downloadXlsx(columns: string[], rows: any[][], filename?: string): Promise<void> {
+  const XLSX = await import('xlsx')
+  const ws = XLSX.utils.aoa_to_sheet([columns, ...rows])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
+  XLSX.writeFile(wb, filename || `data-${Date.now()}.xlsx`)
 }

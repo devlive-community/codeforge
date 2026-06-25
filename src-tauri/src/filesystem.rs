@@ -1766,7 +1766,10 @@ pub async fn git_hook_read(root: String, name: String) -> Result<String, String>
 }
 
 /// 写入某钩子内容并按 executable 设置可执行权限（类 Unix）。
+/// executable 仅在类 Unix 平台使用；非 Unix 下显式 allow，避免 clippy -D warnings 失败
+/// （参数名需保持不变以匹配前端 Tauri 调用，故不能改名为 _executable）。
 #[tauri::command]
+#[cfg_attr(not(unix), allow(unused_variables))]
 pub async fn git_hook_save(
     root: String,
     name: String,
