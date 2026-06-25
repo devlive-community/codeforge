@@ -47,31 +47,41 @@
       </div>
 
       <!-- w-max + min-w-full：长文件名时撑出横向滚动，同时高亮铺满整行 -->
-      <div v-else class="w-max min-w-full"
-           @contextmenu.prevent="onRootContext">
-        <FileTreeNode v-for="node in rootNodes" :key="node.path" :node="node" :depth="0"/>
-      </div>
-
-      <!-- 额外挂载的根（多根工作区 phase 1） -->
-      <div v-for="er in (rootDir ? (extraRoots || []) : [])"
-           :key="er"
-           class="mt-1 border-t border-gray-200 dark:border-gray-700">
-        <div class="group flex items-center gap-1 px-2 py-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-             @click="toggleExtra(er)">
+      <template v-else>
+        <!-- 主根：单根时不显示标题（保持原样）；多根时也作为可折叠分区，便于折叠后查看其它根 -->
+        <div v-if="hasExtra"
+             class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 flex items-center gap-1 px-2 py-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+             @click="primaryCollapsed = !primaryCollapsed">
           <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0"
-                        :class="{'rotate-90': !extraCollapsed[er]}"/>
+                        :class="{'rotate-90': !primaryCollapsed}"/>
           <Folder class="w-3.5 h-3.5 text-blue-500 flex-shrink-0"/>
-          <span class="flex-1 truncate text-xs font-semibold uppercase text-gray-600 dark:text-gray-300" :title="er">{{ folderName(er) }}</span>
-          <button class="p-0.5 rounded text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 cursor-pointer"
-                  :title="t('sidebar.removeFolder')"
-                  @click.stop="emit('remove-root', er)">
-            <X class="w-3 h-3"/>
-          </button>
+          <span class="flex-1 truncate text-xs font-semibold uppercase text-gray-600 dark:text-gray-300" :title="rootDir || ''">{{ rootName }}</span>
         </div>
-        <div v-show="!extraCollapsed[er]" class="w-max min-w-full">
-          <FileTreeNode v-for="node in (extraNodesMap[er] || [])" :key="node.path" :node="node" :depth="0"/>
+        <div v-show="!hasExtra || !primaryCollapsed"
+             class="w-max min-w-full"
+             @contextmenu.prevent="onRootContext">
+          <FileTreeNode v-for="node in rootNodes" :key="node.path" :node="node" :depth="0"/>
         </div>
-      </div>
+
+        <!-- 额外挂载的根（多根工作区 phase 1） -->
+        <div v-for="er in (extraRoots || [])" :key="er">
+          <div class="group sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 flex items-center gap-1 px-2 py-1 cursor-pointer border-t border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+               @click="toggleExtra(er)">
+            <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0"
+                          :class="{'rotate-90': !extraCollapsed[er]}"/>
+            <Folder class="w-3.5 h-3.5 text-blue-500 flex-shrink-0"/>
+            <span class="flex-1 truncate text-xs font-semibold uppercase text-gray-600 dark:text-gray-300" :title="er">{{ folderName(er) }}</span>
+            <button class="p-0.5 rounded text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 cursor-pointer"
+                    :title="t('sidebar.removeFolder')"
+                    @click.stop="emit('remove-root', er)">
+              <X class="w-3 h-3"/>
+            </button>
+          </div>
+          <div v-show="!extraCollapsed[er]" class="w-max min-w-full">
+            <FileTreeNode v-for="node in (extraNodesMap[er] || [])" :key="node.path" :node="node" :depth="0"/>
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- 右键菜单 -->
@@ -279,6 +289,8 @@ watch(() => props.rootDir, async () => {
 }, {immediate: true})
 
 // ===== 多根工作区（phase 1）：额外挂载的根，Git/搜索仍走主根 =====
+const hasExtra = computed(() => !!(props.extraRoots && props.extraRoots.length))
+const primaryCollapsed = ref(false)
 const extraNodesMap = reactive<Record<string, FileNode[]>>({})
 const extraCollapsed = reactive<Record<string, boolean>>({})
 const toggleExtra = (path: string) => {
