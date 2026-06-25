@@ -79,7 +79,7 @@
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-                <div class="flex items-center space-x-3 min-w-0 flex-1">
+                <div class="flex items-center space-x-3 min-w-0 flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
                   <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} {{ t('app.codeEditor') }}</h2>
                   <template v-if="currentFilePath">
