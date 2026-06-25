@@ -42,7 +42,8 @@ use crate::custom_plugin_commands::{
     update_custom_plugin,
 };
 use crate::dap::{
-    DapState, dap_adapter_list, dap_available, dap_install, dap_send, dap_start, dap_stop,
+    DapState, dap_adapter_list, dap_available, dap_build, dap_install, dap_send, dap_start,
+    dap_stop,
 };
 use crate::db::{TxnState, run_sql, run_sql_paged, tx_active, tx_begin, tx_exec, tx_finish};
 use crate::db_connections::{
@@ -358,7 +359,8 @@ fn main() {
             dap_send,
             dap_stop,
             dap_adapter_list,
-            dap_install
+            dap_install,
+            dap_build
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

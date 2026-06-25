@@ -1117,6 +1117,7 @@
     "langUnsupported": "Debugging not supported for this language",
     "installPython": "debugpy not found — install it: pip install debugpy",
     "installGo": "delve not found — install it: go install github.com/go-delve/delve/cmd/dlv@latest",
+    "installLldb": "lldb-dap not found — install LLVM (includes lldb-dap) and ensure it's on PATH",
     "startFailed": "Failed to start debugging",
     "panelTitle": "Debug",
     "callStack": "Call stack",

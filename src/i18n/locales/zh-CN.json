@@ -1117,6 +1117,7 @@
     "langUnsupported": "当前语言暂不支持调试",
     "installPython": "未检测到 debugpy，请先安装：pip install debugpy",
     "installGo": "未检测到 delve，请先安装：go install github.com/go-delve/delve/cmd/dlv@latest",
+    "installLldb": "未检测到 lldb-dap，请安装 LLVM（含 lldb-dap）并确保在 PATH 中",
     "startFailed": "启动调试失败",
     "panelTitle": "调试",
     "callStack": "调用栈",

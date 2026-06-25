@@ -1216,7 +1216,10 @@ const startDebug = async () => {
     ok = false
   }
   if (!ok) {
-    toast.error(lang === 'go' ? t('debug.installGo') : t('debug.installPython'))
+    const hint = lang === 'go' ? t('debug.installGo')
+      : (lang === 'rust' || lang === 'c' || lang === 'cpp') ? t('debug.installLldb')
+        : t('debug.installPython')
+    toast.error(hint)
     return
   }
   try {

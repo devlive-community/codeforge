@@ -202,6 +202,93 @@ pub fn dap_stop(state: State<'_, DapState>, session: String) -> Result<(), Strin
     Ok(())
 }
 
+/// 为调试构建编译型语言，返回可执行文件路径。
+/// Rust: cargo build → target/debug/<package>；C/C++: 用 cc/c++ -g 编译到临时文件。
+#[tauri::command]
+pub async fn dap_build(
+    language: String,
+    file_path: String,
+    root: String,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || match language.as_str() {
+        "rust" => build_rust(&root),
+        "c" => build_cc("cc", &file_path),
+        "cpp" => build_cc("c++", &file_path),
+        _ => Err(format!("{} 暂不支持编译调试", language)),
+    })
+    .await
+    .map_err(|e| format!("构建任务失败: {}", e))?
+}
+
+fn build_rust(root: &str) -> Result<String, String> {
+    let exe =
+        find_in_path("cargo").ok_or_else(|| "未找到 cargo（请安装 Rust 工具链）".to_string())?;
+    let out = Command::new(&exe)
+        .args(["build"])
+        .current_dir(root)
+        .env("PATH", augmented_path())
+        .output()
+        .map_err(|e| format!("执行 cargo 失败: {}", e))?;
+    if !out.status.success() {
+        return Err(format!(
+            "cargo build 失败:\n{}",
+            String::from_utf8_lossy(&out.stderr)
+        ));
+    }
+    // 解析 Cargo.toml 的 package name
+    let toml = std::fs::read_to_string(std::path::Path::new(root).join("Cargo.toml"))
+        .map_err(|e| format!("读取 Cargo.toml 失败: {}", e))?;
+    let mut name = String::new();
+    for line in toml.lines() {
+        let l = line.trim();
+        if let Some(rest) = l.strip_prefix("name") {
+            if let Some(v) = rest.trim_start_matches(['=', ' ']).strip_prefix('"') {
+                if let Some(end) = v.find('"') {
+                    name = v[..end].to_string();
+                    break;
+                }
+            }
+        }
+    }
+    if name.is_empty() {
+        return Err("无法从 Cargo.toml 解析 package name".to_string());
+    }
+    let mut bin = std::path::Path::new(root).join("target/debug").join(&name);
+    if cfg!(windows) {
+        bin.set_extension("exe");
+    }
+    if !bin.is_file() {
+        return Err(format!("未找到可执行文件: {}", bin.display()));
+    }
+    Ok(bin.to_string_lossy().to_string())
+}
+
+fn build_cc(compiler: &str, file_path: &str) -> Result<String, String> {
+    let exe =
+        find_in_path(compiler).ok_or_else(|| format!("未找到编译器 {}（请安装）", compiler))?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let mut out_path = std::env::temp_dir().join(format!("codeforge-dbg-{}", stamp));
+    if cfg!(windows) {
+        out_path.set_extension("exe");
+    }
+    let out_str = out_path.to_string_lossy().to_string();
+    let result = Command::new(&exe)
+        .args(["-g", "-O0", "-o", &out_str, file_path])
+        .env("PATH", augmented_path())
+        .output()
+        .map_err(|e| format!("执行 {} 失败: {}", compiler, e))?;
+    if !result.status.success() {
+        return Err(format!(
+            "编译失败:\n{}",
+            String::from_utf8_lossy(&result.stderr)
+        ));
+    }
+    Ok(out_str)
+}
+
 // 可安装的调试适配器：(id, 展示名, 安装命令)
 fn adapter_defs() -> Vec<(&'static str, &'static str, &'static str)> {
     vec![
