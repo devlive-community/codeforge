@@ -1766,7 +1766,10 @@ pub async fn git_hook_read(root: String, name: String) -> Result<String, String>
 }
 
 /// 写入某钩子内容并按 executable 设置可执行权限（类 Unix）。
+/// executable 仅在类 Unix 平台使用；非 Unix 下显式 allow，避免 clippy -D warnings 失败
+/// （参数名需保持不变以匹配前端 Tauri 调用，故不能改名为 _executable）。
 #[tauri::command]
+#[cfg_attr(not(unix), allow(unused_variables))]
 pub async fn git_hook_save(
     root: String,
     name: String,
@@ -1781,9 +1784,6 @@ pub async fn git_hook_save(
         std::fs::create_dir_all(&dir).map_err(|e| format!("创建 hooks 目录失败: {}", e))?;
         let path = dir.join(&name);
         std::fs::write(&path, &content).map_err(|e| format!("写入钩子失败: {}", e))?;
-        // 可执行权限仅类 Unix 有意义；非 Unix 平台显式消费该参数避免未使用告警
-        #[cfg(not(unix))]
-        let _ = executable;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
