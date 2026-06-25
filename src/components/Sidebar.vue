@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <div ref="scrollContainer" class="flex-1 overflow-auto py-1">
+    <div ref="scrollContainer" class="flex-1 overflow-auto pb-1">
       <div v-if="!rootDir" class="px-3 py-6">
         <div class="text-center">
           <p class="text-xs text-gray-400 mb-3">{{ t('sidebar.noFolder') }}</p>
