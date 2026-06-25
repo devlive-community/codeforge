@@ -166,6 +166,13 @@ const load = async () => {
   error.value = ''
   try {
     const source = resolveActiveSource()
+    // MySQL 未选具体数据库时无法列表，提示用户先在数据源中选库
+    if (source.kind === 'mysql' && !source.database) {
+      tables.value = []
+      fks.value = []
+      error.value = t('er.needDb')
+      return
+    }
     const db = source.kind === 'mysql' ? source.database || undefined : undefined
     tables.value = groupTables(await runRows(columnsSql(source.kind, db)))
     const fkQuery = fksSql(source.kind, db)

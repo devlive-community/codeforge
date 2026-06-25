@@ -1035,6 +1035,7 @@
     "summary": "{tables} tables · {fks} foreign keys",
     "loading": "Loading schema…",
     "empty": "No tables to show",
+    "needDb": "This MySQL data source has no database selected. Pick a database in the data source first, then open the ER diagram.",
     "tip": "Drag a table header to rearrange"
   },
   "aiCode": {
