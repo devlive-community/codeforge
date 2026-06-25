@@ -10,6 +10,12 @@
         </button>
         <button v-if="rootDir"
                 class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                :title="t('sidebar.addFolder')"
+                @click="emit('add-folder')">
+          <FolderPlus class="w-4 h-4"/>
+        </button>
+        <button v-if="rootDir"
+                class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
                 :title="t('sidebar.refresh')"
                 @click="loadRoot">
           <RefreshCw class="w-4 h-4"/>
@@ -44,6 +50,27 @@
       <div v-else class="w-max min-w-full"
            @contextmenu.prevent="onRootContext">
         <FileTreeNode v-for="node in rootNodes" :key="node.path" :node="node" :depth="0"/>
+      </div>
+
+      <!-- 额外挂载的根（多根工作区 phase 1） -->
+      <div v-for="er in (rootDir ? (extraRoots || []) : [])"
+           :key="er"
+           class="mt-1 border-t border-gray-200 dark:border-gray-700">
+        <div class="group flex items-center gap-1 px-2 py-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+             @click="toggleExtra(er)">
+          <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0"
+                        :class="{'rotate-90': !extraCollapsed[er]}"/>
+          <Folder class="w-3.5 h-3.5 text-blue-500 flex-shrink-0"/>
+          <span class="flex-1 truncate text-xs font-semibold uppercase text-gray-600 dark:text-gray-300" :title="er">{{ folderName(er) }}</span>
+          <button class="p-0.5 rounded text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 cursor-pointer"
+                  :title="t('sidebar.removeFolder')"
+                  @click.stop="emit('remove-root', er)">
+            <X class="w-3 h-3"/>
+          </button>
+        </div>
+        <div v-show="!extraCollapsed[er]" class="w-max min-w-full">
+          <FileTreeNode v-for="node in (extraNodesMap[er] || [])" :key="node.path" :node="node" :depth="0"/>
+        </div>
       </div>
     </div>
 
@@ -161,7 +188,7 @@ import {computed, nextTick, onMounted, onUnmounted, provide, reactive, ref, watc
 import {invoke} from '@tauri-apps/api/core'
 import {open as openDialog} from '@tauri-apps/plugin-dialog'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
-import {Folder, FolderOpen, RefreshCw} from 'lucide-vue-next'
+import {ChevronRight, Folder, FolderOpen, FolderPlus, RefreshCw, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import Input from '../ui/Input.vue'
@@ -181,6 +208,7 @@ interface FileNode
 
 const props = defineProps<{
   rootDir: string | null
+  extraRoots?: string[]
   activePath?: string | null
   recentFolders?: string[]
   gitStatus?: Record<string, string>
@@ -189,6 +217,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'open-folder': []
+  'add-folder': []
+  'remove-root': [path: string]
   'open-recent': [path: string]
   'open-file': [path: string]
   'renamed': [from: string, to: string]
@@ -247,6 +277,33 @@ watch(() => props.rootDir, async () => {
   await loadRoot()
   await startWatching()
 }, {immediate: true})
+
+// ===== 多根工作区（phase 1）：额外挂载的根，Git/搜索仍走主根 =====
+const extraNodesMap = reactive<Record<string, FileNode[]>>({})
+const extraCollapsed = reactive<Record<string, boolean>>({})
+const toggleExtra = (path: string) => {
+  extraCollapsed[path] = !extraCollapsed[path]
+}
+const loadExtraRoots = async () => {
+  for (const er of props.extraRoots || []) {
+    if (!(er in extraNodesMap)) {
+      try {
+        extraNodesMap[er] = await invoke<FileNode[]>('read_directory_tree', {path: er})
+        await invoke('watch_directory', {path: er}).catch(() => {})
+      }
+      catch {
+        extraNodesMap[er] = []
+      }
+    }
+  }
+  // 清理已移除的根
+  for (const k of Object.keys(extraNodesMap)) {
+    if (!(props.extraRoots || []).includes(k)) {
+      delete extraNodesMap[k]
+    }
+  }
+}
+watch(() => props.extraRoots, () => loadExtraRoots(), {immediate: true, deep: true})
 
 // ===== 刷新信号：变更后通知已展开目录刷新（保留展开状态）=====
 const refreshSignal = ref(0)

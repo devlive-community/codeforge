@@ -777,6 +777,8 @@
   "sidebar": {
     "explorer": "Explorer",
     "openFolder": "Open folder",
+    "addFolder": "Add folder to workspace",
+    "removeFolder": "Remove from workspace",
     "refresh": "Refresh",
     "noFolder": "No folder open",
     "recent": "Recent",

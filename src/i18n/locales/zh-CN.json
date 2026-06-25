@@ -777,6 +777,8 @@
   "sidebar": {
     "explorer": "资源管理器",
     "openFolder": "打开文件夹",
+    "addFolder": "添加文件夹到工作区",
+    "removeFolder": "从工作区移除",
     "refresh": "刷新",
     "noFolder": "未打开文件夹",
     "recent": "最近打开",

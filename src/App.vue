@@ -53,6 +53,7 @@
       <!-- 左侧文件树侧栏 -->
       <template v-if="sidebarVisible">
         <Sidebar :root-dir="rootDir"
+                 :extra-roots="extraRoots"
                  :active-path="currentFilePath"
                  :recent-folders="recentFolders"
                  :git-status="gitStatus"
@@ -60,6 +61,8 @@
                  class="flex-shrink-0"
                  :style="{ width: `${sidebarWidth}px` }"
                  @open-folder="openFolder"
+                 @add-folder="addWorkspaceFolder"
+                 @remove-root="removeWorkspaceFolder"
                  @open-recent="openFolderPath"
                  @open-file="smartOpen"
                  @renamed="(from, to) => updateTabPath(from, to)"
@@ -708,6 +711,24 @@ const openFolderPath = (path: string) => {
   rootDir.value = path
   sidebarVisible.value = true
   rememberFolder(path)
+  // 打开新文件夹视为新工作区，清空额外挂载的根
+  extraRoots.value = []
+  kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
+}
+
+// ===== 多根工作区（E3，phase 1）：额外挂载的文件夹（Git/搜索仍走主根 rootDir）=====
+const WORKSPACE_EXTRA_KEY = 'workspace-extra-roots'
+const extraRoots = ref<string[]>(kvGetJSON<string[]>(WORKSPACE_EXTRA_KEY, []))
+const addWorkspaceFolder = async () => {
+  const selected = await openDialog({directory: true, multiple: false})
+  if (selected && typeof selected === 'string' && selected !== rootDir.value && !extraRoots.value.includes(selected)) {
+    extraRoots.value = [...extraRoots.value, selected]
+    kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
+  }
+}
+const removeWorkspaceFolder = (path: string) => {
+  extraRoots.value = extraRoots.value.filter(p => p !== path)
+  kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
 }
 
 // ===== 标签会话持久化 =====
