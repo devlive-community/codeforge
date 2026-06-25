@@ -2,7 +2,7 @@
   <div class="inline-flex items-center gap-1">
     <template v-if="!txn.active.value">
       <button class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 cursor-pointer"
-              :title="t('txn.beginTitle')" :disabled="busy" @click="begin">
+              :disabled="busy" @click="begin">
         <PlayCircle class="w-3.5 h-3.5"/>
         <span>{{ t('txn.begin') }}</span>
       </button>
@@ -25,6 +25,7 @@ import {useSqlTxn} from '../composables/useSqlTxn'
 import {useDbConnections} from '../composables/useDbConnections'
 import {useToast} from '../plugins/toast'
 
+const emit = defineEmits<{ notice: [text: string] }>()
 const {t} = useI18n()
 const txn = useSqlTxn()
 const {resolveActiveSource} = useDbConnections()
@@ -36,6 +37,7 @@ const begin = async () => {
   try {
     await txn.begin(resolveActiveSource())
     toast.success(t('txn.began'))
+    emit('notice', t('txn.began'))
   }
   catch (e) {
     toast.error(t('txn.failed') + ': ' + e)
@@ -49,7 +51,9 @@ const finish = async (commit: boolean) => {
   busy.value = true
   try {
     await txn.finish(commit)
-    toast.success(commit ? t('txn.committed') : t('txn.rolledBack'))
+    const msg = commit ? t('txn.committed') : t('txn.rolledBack')
+    toast.success(msg)
+    emit('notice', msg)
   }
   catch (e) {
     toast.error(t('txn.failed') + ': ' + e)

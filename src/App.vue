@@ -96,7 +96,7 @@
                   <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
                   <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
-                  <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+                  <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0" @notice="onTxnNotice"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -236,7 +236,7 @@
             <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
                   <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
-                  <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+                  <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0" @notice="onTxnNotice"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -1598,6 +1598,15 @@ watch(editorView, () => applyDiffMarkers())
 // ===== 断点（B1-P2）：把当前文件的断点 + 执行行派发到编辑器 =====
 const debug = useDebug()
 const sqlTxn = useSqlTxn()
+
+// 事务开启/提交/回滚的反馈写入结果面板
+const onTxnNotice = (text: string) => {
+  if (layoutMode.value === 'editor') {
+    showConsole.value = true
+  }
+  output.value = JSON.stringify({result_sets: [], messages: [text], error: null})
+  isSuccess.value = true
+}
 const applyBreakpoints = () => {
   const view = editorView.value
   if (!view) {
