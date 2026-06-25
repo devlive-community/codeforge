@@ -95,6 +95,7 @@
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
+                  <SqlHistory v-if="currentLanguage === 'sql'" class="flex-shrink-0" @load="loadSql" @run="previewTable"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -233,6 +234,7 @@
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
             <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
+                  <SqlHistory v-if="currentLanguage === 'sql'" class="flex-shrink-0" @load="loadSql" @run="previewTable"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -512,6 +514,8 @@ import TaskRunner from './components/TaskRunner.vue'
 import DebugToolbar from './components/DebugToolbar.vue'
 import DebugPanel from './components/DebugPanel.vue'
 import AiCodeAction from './components/AiCodeAction.vue'
+import SqlHistory from './components/SqlHistory.vue'
+import {useSqlHistory} from './composables/useSqlHistory'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
@@ -1590,6 +1594,7 @@ watch(editorView, () => applyDiffMarkers())
 
 // ===== 断点（B1-P2）：把当前文件的断点 + 执行行派发到编辑器 =====
 const debug = useDebug()
+const {addHistory: addSqlHistory} = useSqlHistory()
 const applyBreakpoints = () => {
   const view = editorView.value
   if (!view) {
@@ -1836,6 +1841,7 @@ const runSql = async (sqlOverride?: string) => {
     toast.info(t('app.noSql'))
     return
   }
+  addSqlHistory(sql)
   const source = resolveActiveSource()
   output.value = ''
   isSuccess.value = false
@@ -1868,6 +1874,14 @@ const runSql = async (sqlOverride?: string) => {
   }
   finally {
     isRunning.value = false
+  }
+}
+
+// SQL 历史：载入到编辑器（不运行）
+const loadSql = (sql: string) => {
+  const view = editorView.value
+  if (view) {
+    view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: sql}})
   }
 }
 

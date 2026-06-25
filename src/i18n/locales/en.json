@@ -1028,6 +1028,12 @@
     "revealIn": "Reveal in file manager: {path}",
     "unsaved": "Unsaved changes"
   },
+  "sqlHistory": {
+    "title": "Query history",
+    "empty": "No query history",
+    "run": "Run",
+    "clear": "Clear (keep favorites)"
+  },
   "aiCode": {
     "title": {
       "explain": "AI: Explain code",
