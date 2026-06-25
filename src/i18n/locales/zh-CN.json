@@ -837,6 +837,8 @@
     "success": "成功",
     "fail": "失败",
     "hasAi": "有 AI 对话",
+    "favOnly": "只看收藏",
+    "noFav": "暂无收藏",
     "loadingMore": "加载更多...",
     "allLoaded": "已加载全部历史",
     "chars": "字符",

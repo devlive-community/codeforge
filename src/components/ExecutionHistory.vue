@@ -10,14 +10,19 @@
           <div class="text-sm font-medium text-gray-700 dark:text-gray-200">
             {{ t('history.count', { n: total }) }}
           </div>
-          <Button type="secondary"
-                  variant="ghost"
-                  size="sm"
-                  :icon="RefreshCw"
-                  :icon-only="true"
-                  :title="t('history.refresh')"
-                  :loading="isLoading"
-                  @click="reloadHistory"/>
+          <div class="flex items-center gap-1">
+            <button class="p-1.5 rounded cursor-pointer" :class="favOnly ? 'text-amber-400 bg-amber-50 dark:bg-amber-900/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'" :title="t('history.favOnly')" @click="favOnly = !favOnly">
+              <Star class="w-4 h-4" :fill="favOnly ? 'currentColor' : 'none'"/>
+            </button>
+            <Button type="secondary"
+                    variant="ghost"
+                    size="sm"
+                    :icon="RefreshCw"
+                    :icon-only="true"
+                    :title="t('history.refresh')"
+                    :loading="isLoading"
+                    @click="reloadHistory"/>
+          </div>
         </div>
 
         <div v-if="isLoading" class="flex-1 flex items-center justify-center text-sm text-gray-500">
@@ -30,13 +35,15 @@
         </div>
 
         <div v-else class="flex-1 overflow-y-auto p-2 space-y-1" @scroll="handleHistoryScroll">
-          <button v-for="item in history"
+          <div v-if="favOnly && !displayedHistory.length" class="py-8 text-center text-xs text-gray-400">{{ t('history.noFav') }}</div>
+          <button v-for="item in displayedHistory"
                   :key="item.timestamp + item.language + item.execution_time"
                   class="w-full text-left p-3 rounded-md border transition-colors"
                   :class="selectedItem === item ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700' : 'bg-white border-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-700'"
                   @click="selectedItem = item">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              <span class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate flex items-center gap-1.5">
+                <Star class="w-3.5 h-3.5 flex-shrink-0 cursor-pointer" :class="isFav(item) ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'" :fill="isFav(item) ? 'currentColor' : 'none'" @click.stop="toggleFav(item)"/>
                 {{ getLanguageDisplayName(item.language) }}
               </span>
               <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
@@ -140,13 +147,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { Copy, History, Play, RefreshCw, RotateCcw, Sparkles, Trash2 } from 'lucide-vue-next'
+import { Copy, History, Play, RefreshCw, RotateCcw, Sparkles, Star, Trash2 } from 'lucide-vue-next'
 import Modal from '../ui/Modal.vue'
 import Button from '../ui/Button.vue'
 import SqlResultTable from './SqlResultTable.vue'
 import type { ExecutionResult, Language } from '../types/app'
 import { useToast } from '../plugins/toast'
 import { useI18n } from 'vue-i18n'
+import { kvGetJSON, kvSetJSON } from '../composables/useKvStore'
 
 interface ExecutionHistoryPage
 {
@@ -171,6 +179,26 @@ const { t } = useI18n()
 const history = ref<ExecutionResult[]>([])
 // 有 AI 对话的执行 id 集合
 const aiConversationIds = ref<Set<number>>(new Set())
+
+// 收藏（按执行记录 id，KV 持久化）
+const FAV_KEY = 'execution-favorites'
+const favorites = ref<Set<number>>(new Set(kvGetJSON<number[]>(FAV_KEY, [])))
+const favOnly = ref(false)
+const isFav = (item: ExecutionResult) => item.id != null && favorites.value.has(item.id)
+const toggleFav = (item: ExecutionResult) => {
+  if (item.id == null) {
+    return
+  }
+  if (favorites.value.has(item.id)) {
+    favorites.value.delete(item.id)
+  }
+  else {
+    favorites.value.add(item.id)
+  }
+  favorites.value = new Set(favorites.value)
+  kvSetJSON(FAV_KEY, [...favorites.value])
+}
+const displayedHistory = computed(() => favOnly.value ? history.value.filter(isFav) : history.value)
 const hasAi = (item: ExecutionResult) => item.id != null && aiConversationIds.value.has(item.id)
 const selectedItem = ref<ExecutionResult | null>(null)
 const isLoading = ref(false)

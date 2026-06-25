@@ -837,6 +837,8 @@
     "success": "Success",
     "fail": "Failed",
     "hasAi": "Has AI conversation",
+    "favOnly": "Favorites only",
+    "noFav": "No favorites yet",
     "loadingMore": "Loading more...",
     "allLoaded": "All history loaded",
     "chars": "chars",
