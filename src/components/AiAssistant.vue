@@ -55,6 +55,20 @@
           {{ t('chat.stop') }}
         </button>
       </div>
+      <!-- 上下文附带（C3） -->
+      <div class="mb-1.5 flex items-center gap-1.5">
+        <span class="text-[11px] text-gray-400">{{ t('chat.context') }}</span>
+        <button class="text-[11px] px-1.5 py-0.5 rounded border cursor-pointer transition-colors"
+                :class="includeFile ? 'border-blue-400 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                :disabled="!code?.trim()" @click="includeFile = !includeFile">
+          {{ t('chat.ctxFile') }}
+        </button>
+        <button class="text-[11px] px-1.5 py-0.5 rounded border cursor-pointer transition-colors"
+                :class="includeProject ? 'border-blue-400 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                :disabled="!rootDir" @click="includeProject = !includeProject">
+          {{ t('chat.ctxProject') }}
+        </button>
+      </div>
       <textarea v-model="input"
                 rows="2"
                 class="w-full text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 rounded px-2 py-1.5 resize-none focus:outline-none focus:border-blue-400"
@@ -130,6 +144,36 @@ const {saveConversation, getMessages, deleteConversation} = useAiHistory()
 
 const messages = ref<AiMsg[]>([])
 const input = ref('')
+// C3：对话上下文附带（当前文件 / 项目结构）
+const includeFile = ref(false)
+const includeProject = ref(false)
+let projectFilesCache: string[] | null = null
+
+// 构造附带上下文的 system 提示
+const buildContext = async (): Promise<string> => {
+  let ctx = ''
+  if (includeFile.value && props.code?.trim()) {
+    const max = 12000
+    const snippet = props.code.length > max ? props.code.slice(0, max) + '\n…(已截断)' : props.code
+    ctx += `\n\n用户当前打开的文件内容（作为上下文）：\n\`\`\`${props.language}\n${snippet}\n\`\`\``
+  }
+  if (includeProject.value && props.rootDir) {
+    if (!projectFilesCache) {
+      try {
+        const all = await invoke<string[]>('list_files', {path: props.rootDir})
+        const root = props.rootDir
+        projectFilesCache = all.slice(0, 200).map(p => p.startsWith(root) ? p.slice(root.length).replace(/^[\\/]/, '') : p)
+      }
+      catch {
+        projectFilesCache = []
+      }
+    }
+    if (projectFilesCache.length) {
+      ctx += `\n\n项目文件列表（部分，作为上下文）：\n${projectFilesCache.join('\n')}`
+    }
+  }
+  return ctx
+}
 const sending = ref(false)
 const streamingIndex = ref(-1)
 const listRef = ref<HTMLElement | null>(null)
@@ -205,6 +249,7 @@ onUnmounted(() => {
 
 // 切换到不同的执行 → 切换对应对话
 watch(() => props.executionId, loadForExecution)
+watch(() => props.rootDir, () => { projectFilesCache = null })
 
 const send = async (text?: string) => {
   const content = (text ?? input.value).trim()
@@ -231,6 +276,7 @@ const send = async (text?: string) => {
   sending.value = true
   scrollToBottom()
 
+  const context = await buildContext()
   try {
     await invoke('ai_chat_stream', {
       streamId,
@@ -238,7 +284,7 @@ const send = async (text?: string) => {
       baseUrl: active.value.baseUrl,
       apiKey: active.value.apiKey,
       model: active.value.model,
-      system: `你是嵌入代码编辑器的编程助手。回答简洁、准确，必要时给出可运行的代码。当前编程语言：${props.language}。`,
+      system: `你是嵌入代码编辑器的编程助手。回答简洁、准确，必要时给出可运行的代码。当前编程语言：${props.language}。${context}`,
       messages: payloadMessages
     })
     if (!messages.value[streamingIndex.value].content) {
