@@ -874,6 +874,7 @@
     "noTable": "无表",
     "copyDdl": "复制建表语句",
     "exportCsv": "导出 CSV",
+    "export": "导出",
     "preview100": "预览前 100 行",
     "insertColumn": "插入列名：{name}",
     "noExportData": "无数据可导出",

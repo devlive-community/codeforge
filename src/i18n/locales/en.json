@@ -874,6 +874,7 @@
     "noTable": "No tables",
     "copyDdl": "Copy CREATE statement",
     "exportCsv": "Export CSV",
+    "export": "Export",
     "preview100": "Preview first 100 rows",
     "insertColumn": "Insert column: {name}",
     "noExportData": "No data to export",
