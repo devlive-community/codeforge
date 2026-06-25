@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <div class="flex-1 overflow-auto py-1">
+    <div ref="scrollContainer" class="flex-1 overflow-auto py-1">
       <div v-if="!rootDir" class="px-3 py-6">
         <div class="text-center">
           <p class="text-xs text-gray-400 mb-3">{{ t('sidebar.noFolder') }}</p>
@@ -64,7 +64,7 @@
         </div>
 
         <!-- 额外挂载的根（多根工作区 phase 1） -->
-        <div v-for="er in (extraRoots || [])" :key="er">
+        <div v-for="er in (extraRoots || [])" :key="er" :ref="setRootEl(er)">
           <div class="group sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 flex items-center gap-1 px-2 py-1 cursor-pointer border-t border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
                @click="toggleExtra(er)">
             <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0"
@@ -293,6 +293,12 @@ const hasExtra = computed(() => !!(props.extraRoots && props.extraRoots.length))
 const primaryCollapsed = ref(false)
 const extraNodesMap = reactive<Record<string, FileNode[]>>({})
 const extraCollapsed = reactive<Record<string, boolean>>({})
+const scrollContainer = ref<HTMLElement | null>(null)
+const rootEls = new Map<string, HTMLElement>()
+const setRootEl = (path: string) => (el: unknown) => {
+  if (el) rootEls.set(path, el as HTMLElement)
+  else rootEls.delete(path)
+}
 const toggleExtra = (path: string) => {
   extraCollapsed[path] = !extraCollapsed[path]
 }
@@ -315,7 +321,18 @@ const loadExtraRoots = async () => {
     }
   }
 }
-watch(() => props.extraRoots, () => loadExtraRoots(), {immediate: true, deep: true})
+watch(() => props.extraRoots, async (next, prev) => {
+  await loadExtraRoots()
+  // 新增一个根时（非首次挂载），滚动到该分区，参考 VSCode 添加文件夹后即可见
+  if (prev !== undefined) {
+    const added = (next || []).find(p => !(prev || []).includes(p))
+    if (added) {
+      extraCollapsed[added] = false
+      await nextTick()
+      rootEls.get(added)?.scrollIntoView({block: 'nearest', behavior: 'smooth'})
+    }
+  }
+}, {immediate: true, deep: true})
 
 // ===== 刷新信号：变更后通知已展开目录刷新（保留展开状态）=====
 const refreshSignal = ref(0)
