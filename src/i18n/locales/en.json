@@ -1030,6 +1030,13 @@
     "revealIn": "Reveal in file manager: {path}",
     "unsaved": "Unsaved changes"
   },
+  "er": {
+    "title": "ER diagram",
+    "summary": "{tables} tables · {fks} foreign keys",
+    "loading": "Loading schema…",
+    "empty": "No tables to show",
+    "tip": "Drag a table header to rearrange"
+  },
   "aiCode": {
     "title": {
       "explain": "AI: Explain code",

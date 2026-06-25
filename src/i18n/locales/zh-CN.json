@@ -1030,6 +1030,13 @@
     "revealIn": "在访达中显示：{path}",
     "unsaved": "有未保存的修改"
   },
+  "er": {
+    "title": "ER 图",
+    "summary": "{tables} 张表 · {fks} 个外键",
+    "loading": "加载结构中…",
+    "empty": "没有可显示的表",
+    "tip": "拖动表头可调整布局"
+  },
   "aiCode": {
     "title": {
       "explain": "AI 解释代码",

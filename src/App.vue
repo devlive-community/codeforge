@@ -95,6 +95,7 @@
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
+                  <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -233,6 +234,7 @@
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
             <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
+                  <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -512,6 +514,7 @@ import TaskRunner from './components/TaskRunner.vue'
 import DebugToolbar from './components/DebugToolbar.vue'
 import DebugPanel from './components/DebugPanel.vue'
 import AiCodeAction from './components/AiCodeAction.vue'
+import ErDiagram from './components/ErDiagram.vue'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
