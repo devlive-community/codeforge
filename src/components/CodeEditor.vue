@@ -4,8 +4,8 @@
                 :style="{ width: '100%', height: '100%', fontSize: editorConfig?.font_size ? `${editorConfig.font_size}px` : undefined }"
                 :model-value="modelValue"
                 :extensions="extensions"
-                :indent-with-tab="editorConfig?.indent_with_tab"
-                :tab-size="editorConfig?.tab_size"
+                :indent-with-tab="effectiveIndentWithTab"
+                :tab-size="effectiveTabSize"
                 @change="handleInput"
                 @ready="onReady"/>
   </div>
@@ -32,6 +32,8 @@ const {
   isReady,
   extensions,
   editorConfig,
+  effectiveTabSize,
+  effectiveIndentWithTab,
   initializeEditor
 } = useCodeMirrorEditor(props)
 

@@ -77,8 +77,8 @@ use crate::filesystem::{
     git_stash_show, git_status, git_submodule_sync, git_submodule_update, git_submodules,
     git_tag_create, git_tag_delete, git_tags, git_unstage, git_worktree_add, git_worktree_prune,
     git_worktree_remove, git_worktrees, list_files, read_directory_tree, read_file_lines,
-    read_file_text, rename_path, replace_in_files, reveal_path, search_in_files, watch_directory,
-    write_file_text,
+    read_file_text, rename_path, replace_in_files, resolve_editorconfig, reveal_path,
+    search_in_files, watch_directory, write_file_text,
 };
 use crate::gitignore_templates::{
     GitignoreStore, gitignore_template_delete, gitignore_template_save, gitignore_templates_list,
@@ -287,6 +287,7 @@ fn main() {
             git_init,
             git_ignore_add,
             git_ignore_append_block,
+            resolve_editorconfig,
             git_clone,
             git_clean_preview,
             git_clean,
