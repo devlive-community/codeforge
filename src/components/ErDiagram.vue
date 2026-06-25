@@ -12,7 +12,9 @@
             <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
               <Network class="w-4 h-4 text-gray-400"/>
               <span>{{ t('er.title') }} · {{ activeLabel() }}</span>
-              <span v-if="!loading" class="text-[11px] text-gray-400">{{ t('er.summary', { tables: tables.length, fks: fks.length }) }}</span>
+              <span v-if="pickedDb" class="text-[11px] text-gray-400">/ {{ pickedDb }}</span>
+              <button v-if="pickedDb" class="text-[11px] text-blue-500 hover:underline cursor-pointer" @click="backToPick">{{ t('er.switchDb') }}</button>
+              <span v-if="!loading && !picking" class="text-[11px] text-gray-400">{{ t('er.summary', { tables: tables.length, fks: fks.length }) }}</span>
             </div>
             <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="visible = false">
               <X class="w-4 h-4"/>
@@ -22,6 +24,13 @@
           <div class="flex-1 relative overflow-auto bg-gray-50 dark:bg-gray-950">
             <div v-if="loading" class="absolute inset-0 flex items-center justify-center text-sm text-gray-400">{{ t('er.loading') }}</div>
             <div v-else-if="error" class="absolute inset-0 flex items-center justify-center text-sm text-red-500 px-6 text-center">{{ error }}</div>
+            <div v-else-if="picking" class="absolute inset-0 overflow-auto p-4">
+              <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ t('er.pickDb') }}</div>
+              <div v-if="dbList.length" class="flex flex-wrap gap-2">
+                <button v-for="d in dbList" :key="d" class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:text-blue-500 cursor-pointer" @click="selectDb(d)">{{ d }}</button>
+              </div>
+              <div v-else class="text-xs text-gray-400">{{ t('er.empty') }}</div>
+            </div>
             <div v-else-if="!tables.length" class="absolute inset-0 flex items-center justify-center text-sm text-gray-400">{{ t('er.empty') }}</div>
             <div v-else class="relative" :style="{ width: canvas.w + 'px', height: canvas.h + 'px' }">
               <!-- 外键连线 -->
@@ -76,6 +85,10 @@ const loading = ref(false)
 const error = ref('')
 const tables = ref<Tbl[]>([])
 const fks = ref<Fk[]>([])
+// MySQL 未选库时的内联数据库选择
+const picking = ref(false)
+const dbList = ref<string[]>([])
+const pickedDb = ref('')
 const pos = reactive<Record<string, {x: number; y: number}>>({})
 
 const cardH = (tbl: Tbl) => HEADER_H + tbl.columns.length * ROW_H + 4
@@ -166,14 +179,18 @@ const load = async () => {
   error.value = ''
   try {
     const source = resolveActiveSource()
-    // MySQL 未选具体数据库时无法列表，提示用户先在数据源中选库
-    if (source.kind === 'mysql' && !source.database) {
-      tables.value = []
-      fks.value = []
-      error.value = t('er.needDb')
+    // MySQL 未选具体数据库时，先列出数据库让用户在此选择
+    if (source.kind === 'mysql' && !source.database && !pickedDb.value) {
+      picking.value = true
+      dbList.value = (await runRows(
+        'SELECT schema_name FROM information_schema.schemata '
+        + "WHERE schema_name NOT IN ('information_schema','mysql','performance_schema','sys') "
+        + 'ORDER BY schema_name'
+      )).map(r => String(r[0]))
       return
     }
-    const db = source.kind === 'mysql' ? source.database || undefined : undefined
+    picking.value = false
+    const db = source.kind === 'mysql' ? source.database || pickedDb.value || undefined : undefined
     tables.value = groupTables(await runRows(columnsSql(source.kind, db)))
     const fkQuery = fksSql(source.kind, db)
     if (fkQuery) {
@@ -195,6 +212,19 @@ const load = async () => {
 
 const open = () => {
   visible.value = true
+  pickedDb.value = ''
+  picking.value = false
+  load()
+}
+
+// 选择数据库后加载该库的 ER
+const selectDb = (name: string) => {
+  pickedDb.value = name
+  load()
+}
+// 返回数据库选择
+const backToPick = () => {
+  pickedDb.value = ''
   load()
 }
 

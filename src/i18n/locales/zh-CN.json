@@ -1035,7 +1035,8 @@
     "summary": "{tables} 张表 · {fks} 个外键",
     "loading": "加载结构中…",
     "empty": "没有可显示的表",
-    "needDb": "当前 MySQL 数据源未指定数据库，请先在数据源中选择一个数据库再查看 ER 图",
+    "pickDb": "请选择要查看的数据库：",
+    "switchDb": "换库",
     "tip": "拖动表头可调整布局"
   },
   "aiCode": {
