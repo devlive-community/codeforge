@@ -1030,6 +1030,17 @@
     "revealIn": "在访达中显示：{path}",
     "unsaved": "有未保存的修改"
   },
+  "txn": {
+    "begin": "事务",
+    "beginTitle": "开启事务（在同一连接上执行，直到提交/回滚）",
+    "inTxn": "事务中",
+    "commit": "提交",
+    "rollback": "回滚",
+    "began": "事务已开启",
+    "committed": "已提交",
+    "rolledBack": "已回滚",
+    "failed": "事务操作失败"
+  },
   "er": {
     "title": "ER 图",
     "summary": "{tables} 张表 · {fks} 个外键",

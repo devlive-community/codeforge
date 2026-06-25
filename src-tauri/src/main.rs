@@ -43,7 +43,7 @@ use crate::custom_plugin_commands::{
 use crate::dap::{
     DapState, dap_adapter_list, dap_available, dap_install, dap_send, dap_start, dap_stop,
 };
-use crate::db::{run_sql, run_sql_paged};
+use crate::db::{TxnState, run_sql, run_sql_paged, tx_active, tx_begin, tx_exec, tx_finish};
 use crate::db_connections::{
     DbConnStore, db_connection_delete, db_connection_save, db_connections_list,
 };
@@ -125,6 +125,7 @@ fn main() {
         .manage(TerminalState::new())
         .manage(LspState::new())
         .manage(DapState::new())
+        .manage(TxnState::new())
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
         .manage(EnvironmentManagerState::new(env_manager))
         .setup(|app| {
@@ -327,6 +328,11 @@ fn main() {
             // SQL 执行
             run_sql,
             run_sql_paged,
+            // 交互式事务
+            tx_begin,
+            tx_exec,
+            tx_finish,
+            tx_active,
             // LSP 桥接
             lsp_available,
             lsp_start,

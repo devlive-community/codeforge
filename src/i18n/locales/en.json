@@ -1030,6 +1030,17 @@
     "revealIn": "Reveal in file manager: {path}",
     "unsaved": "Unsaved changes"
   },
+  "txn": {
+    "begin": "Transaction",
+    "beginTitle": "Begin a transaction (runs on one connection until commit/rollback)",
+    "inTxn": "In transaction",
+    "commit": "Commit",
+    "rollback": "Rollback",
+    "began": "Transaction started",
+    "committed": "Committed",
+    "rolledBack": "Rolled back",
+    "failed": "Transaction failed"
+  },
   "er": {
     "title": "ER diagram",
     "summary": "{tables} tables · {fks} foreign keys",

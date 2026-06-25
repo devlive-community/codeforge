@@ -96,6 +96,7 @@
                   <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
                   <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+                  <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -235,6 +236,7 @@
             <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
                   <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+                  <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -515,6 +517,8 @@ import DebugToolbar from './components/DebugToolbar.vue'
 import DebugPanel from './components/DebugPanel.vue'
 import AiCodeAction from './components/AiCodeAction.vue'
 import ErDiagram from './components/ErDiagram.vue'
+import TxnControl from './components/TxnControl.vue'
+import {useSqlTxn} from './composables/useSqlTxn'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
@@ -1593,6 +1597,7 @@ watch(editorView, () => applyDiffMarkers())
 
 // ===== 断点（B1-P2）：把当前文件的断点 + 执行行派发到编辑器 =====
 const debug = useDebug()
+const sqlTxn = useSqlTxn()
 const applyBreakpoints = () => {
   const view = editorView.value
   if (!view) {
@@ -1837,6 +1842,32 @@ const runSql = async (sqlOverride?: string) => {
   const sql = sqlOverride ?? code.value
   if (!sql.trim()) {
     toast.info(t('app.noSql'))
+    return
+  }
+  // 事务进行中：整段在持有连接上执行（不走分页，否则分页用的是另一条连接看不到未提交数据）
+  if (sqlTxn.active.value) {
+    output.value = ''
+    isSuccess.value = false
+    if (layoutMode.value === 'editor') {
+      showConsole.value = true
+    }
+    isRunning.value = true
+    try {
+      const res = await sqlTxn.exec(sql)
+      output.value = JSON.stringify(res)
+      isSuccess.value = !res.error
+      lastExecutionTime.value = res.elapsed_ms || 0
+      if (res.error) {
+        toast.error(t('app.sqlFailed'))
+      }
+    }
+    catch (error) {
+      output.value = JSON.stringify({result_sets: [], messages: [], error: String(error)})
+      toast.error(t('app.sqlFailedColon') + error)
+    }
+    finally {
+      isRunning.value = false
+    }
     return
   }
   const source = resolveActiveSource()
