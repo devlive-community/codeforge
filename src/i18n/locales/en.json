@@ -217,6 +217,10 @@
     "gitignore": {
       "title": "Custom .gitignore templates",
       "desc": "Manage custom ignore templates (stored in a dedicated local DB table); they appear alongside built-in ones in \"Insert .gitignore template\".",
+      "newTitle": "New template",
+      "editTitle": "Edit template",
+      "name": "Template name",
+      "content": "Ignore rules",
       "labelPlaceholder": "Template name, e.g. My frontend project",
       "contentPlaceholder": "# My template\nnode_modules/\ndist/\n…",
       "add": "Add",

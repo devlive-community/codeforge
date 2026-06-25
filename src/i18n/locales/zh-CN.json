@@ -217,6 +217,10 @@
     "gitignore": {
       "title": "自定义 .gitignore 模板",
       "desc": "在此管理自定义忽略模板（保存到本地数据库独立表），可在「插入 .gitignore 模板」中与内置模板一起选用。",
+      "newTitle": "新增模板",
+      "editTitle": "编辑模板",
+      "name": "模板名称",
+      "content": "忽略规则",
       "labelPlaceholder": "模板名称，如 我的前端项目",
       "contentPlaceholder": "# 我的模板\nnode_modules/\ndist/\n…",
       "add": "添加",
