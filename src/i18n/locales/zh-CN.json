@@ -1028,12 +1028,6 @@
     "revealIn": "在访达中显示：{path}",
     "unsaved": "有未保存的修改"
   },
-  "sqlHistory": {
-    "title": "查询历史",
-    "empty": "暂无查询历史",
-    "run": "运行",
-    "clear": "清空（保留收藏）"
-  },
   "aiCode": {
     "title": {
       "explain": "AI 解释代码",
