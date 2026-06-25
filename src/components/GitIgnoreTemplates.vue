@@ -34,22 +34,33 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {FileCode2, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
-import {gitignoreTemplates} from '../data/gitignoreTemplates'
+import {gitignoreTemplates, type GitignoreTemplate} from '../data/gitignoreTemplates'
 
 const props = defineProps<{ rootDir: string }>()
 const emit = defineEmits<{ close: [] }>()
 
 const toast = useToast()
 const {t} = useI18n()
-const templates = gitignoreTemplates
+// 内置 + 用户自定义（独立表）
+const templates = ref<GitignoreTemplate[]>([...gitignoreTemplates])
 const selected = ref<Set<string>>(new Set())
 const busy = ref(false)
+
+onMounted(async () => {
+  try {
+    const custom = await invoke<GitignoreTemplate[]>('gitignore_templates_list')
+    templates.value = [...gitignoreTemplates, ...custom]
+  }
+  catch {
+    // 忽略，仅用内置
+  }
+})
 
 const firstPatterns = (content: string) =>
   content.split('\n').filter(l => l.trim() && !l.trim().startsWith('#')).slice(0, 4).join('  ')
@@ -68,7 +79,7 @@ const toggle = (id: string) => {
 const apply = async () => {
   busy.value = true
   try {
-    for (const tpl of templates) {
+    for (const tpl of templates.value) {
       if (selected.value.has(tpl.id)) {
         await invoke('git_ignore_append_block', {root: props.rootDir, content: tpl.content})
       }

@@ -1,5 +1,5 @@
 import { computed, nextTick, ref } from 'vue'
-import { BracesIcon, CodeIcon, Cpu, Database, FileText, Globe, Keyboard, Languages, Server, ShieldIcon, Sparkles } from 'lucide-vue-next'
+import { BracesIcon, CodeIcon, Cpu, Database, FileCode2, FileText, Globe, Keyboard, Languages, Server, ShieldIcon, Sparkles } from 'lucide-vue-next'
 import { i18n } from '../i18n'
 
 export function useSettings(emit: any)
@@ -19,6 +19,7 @@ export function useSettings(emit: any)
         { key: 'database', label: t('settings.nav.database'), icon: Server },
         { key: 'language', label: t('settings.nav.language'), icon: BracesIcon },
         { key: 'lsp', label: t('settings.nav.lsp'), icon: Cpu },
+        { key: 'gitignore', label: t('settings.nav.gitignore'), icon: FileCode2 },
         { key: 'network', label: t('settings.nav.network'), icon: Globe },
         { key: 'cache', label: t('settings.nav.cache'), icon: Database },
         { key: 'logs', label: t('settings.nav.logs'), icon: FileText },

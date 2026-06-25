@@ -10,6 +10,7 @@
       "database": "数据库",
       "language": "语言",
       "lsp": "语言服务",
+      "gitignore": ".gitignore",
       "network": "网络",
       "cache": "缓存",
       "logs": "日志",
@@ -212,6 +213,20 @@
       "startInstallFailed": "启动安装失败：",
       "installDone": "✓ 安装完成",
       "installFailed": "✗ 安装失败"
+    },
+    "gitignore": {
+      "title": "自定义 .gitignore 模板",
+      "desc": "在此管理自定义忽略模板（保存到本地数据库独立表），可在「插入 .gitignore 模板」中与内置模板一起选用。",
+      "labelPlaceholder": "模板名称，如 我的前端项目",
+      "contentPlaceholder": "# 我的模板\nnode_modules/\ndist/\n…",
+      "add": "添加",
+      "update": "保存修改",
+      "cancel": "取消",
+      "edit": "编辑",
+      "delete": "删除",
+      "empty": "还没有自定义模板",
+      "saved": "已保存",
+      "failed": "操作失败"
     },
     "language": {
       "filter": "筛选语言",

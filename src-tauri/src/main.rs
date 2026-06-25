@@ -19,6 +19,7 @@ mod execution;
 mod filesystem;
 mod font;
 mod geo;
+mod gitignore_templates;
 mod kv;
 mod logger;
 mod lsp;
@@ -79,6 +80,9 @@ use crate::filesystem::{
     read_file_text, rename_path, replace_in_files, reveal_path, search_in_files, watch_directory,
     write_file_text,
 };
+use crate::gitignore_templates::{
+    GitignoreStore, gitignore_template_delete, gitignore_template_save, gitignore_templates_list,
+};
 use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
 use crate::lsp::{
     LspState, lsp_available, lsp_install, lsp_send, lsp_server_list, lsp_start, lsp_stop,
@@ -123,6 +127,7 @@ fn main() {
         .manage(Snippets::new().expect("failed to initialize snippets database"))
         .manage(KvStore::new().expect("failed to initialize kv store database"))
         .manage(DbConnStore::new().expect("failed to initialize db connections database"))
+        .manage(GitignoreStore::new().expect("failed to initialize gitignore templates database"))
         .manage(TerminalState::new())
         .manage(LspState::new())
         .manage(DapState::new())
@@ -322,6 +327,10 @@ fn main() {
             db_connections_list,
             db_connection_save,
             db_connection_delete,
+            // 自定义 .gitignore 模板
+            gitignore_templates_list,
+            gitignore_template_save,
+            gitignore_template_delete,
             // 集成终端
             terminal_create,
             terminal_write,

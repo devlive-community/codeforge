@@ -10,6 +10,7 @@
       "database": "Database",
       "language": "Languages",
       "lsp": "Language Server",
+      "gitignore": ".gitignore",
       "network": "Network",
       "cache": "Cache",
       "logs": "Logs",
@@ -212,6 +213,20 @@
       "startInstallFailed": "Failed to start installation: ",
       "installDone": "✓ Installation complete",
       "installFailed": "✗ Installation failed"
+    },
+    "gitignore": {
+      "title": "Custom .gitignore templates",
+      "desc": "Manage custom ignore templates (stored in a dedicated local DB table); they appear alongside built-in ones in \"Insert .gitignore template\".",
+      "labelPlaceholder": "Template name, e.g. My frontend project",
+      "contentPlaceholder": "# My template\nnode_modules/\ndist/\n…",
+      "add": "Add",
+      "update": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "empty": "No custom templates yet",
+      "saved": "Saved",
+      "failed": "Operation failed"
     },
     "language": {
       "filter": "Filter languages",
