@@ -24,9 +24,11 @@
         <div v-if="!tasks.length" class="px-4 py-10 text-center text-sm text-gray-400">{{ t('task.empty') }}</div>
         <div v-for="(tk, i) in tasks" :key="i"
              class="group flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-800">
-          <button class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 cursor-pointer flex-shrink-0" :title="t('task.run')" @click="run(tk)">
-            <Play class="w-4 h-4"/>
-          </button>
+          <Tooltip :text="t('task.run')">
+            <button class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 cursor-pointer flex-shrink-0" @click="run(tk)">
+              <Play class="w-4 h-4"/>
+            </button>
+          </Tooltip>
           <div class="flex-1 min-w-0">
             <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{{ tk.label }}</div>
             <div class="text-[11px] text-gray-400 font-mono truncate">{{ tk.command }}</div>
@@ -42,6 +44,7 @@
 import {onMounted, ref} from 'vue'
 import {ListChecks, Play, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
+import Tooltip from '../ui/Tooltip.vue'
 import {kvGetJSON, kvSetJSON} from '../composables/useKvStore'
 import {useI18n} from 'vue-i18n'
 

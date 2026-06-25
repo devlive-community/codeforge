@@ -29,12 +29,16 @@
              class="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-800"
              :class="row.action === 'drop' ? 'opacity-50' : ''">
           <div class="flex flex-col flex-shrink-0">
-            <button class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-20 cursor-pointer leading-none" :disabled="i === 0" :title="t('git.rebaseMoveUp')" @click="move(i, -1)">
-              <ChevronUp class="w-3.5 h-3.5"/>
-            </button>
-            <button class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-20 cursor-pointer leading-none" :disabled="i === rows.length - 1" :title="t('git.rebaseMoveDown')" @click="move(i, 1)">
-              <ChevronDown class="w-3.5 h-3.5"/>
-            </button>
+            <Tooltip :text="t('git.rebaseMoveUp')">
+              <button class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-20 cursor-pointer leading-none" :disabled="i === 0" @click="move(i, -1)">
+                <ChevronUp class="w-3.5 h-3.5"/>
+              </button>
+            </Tooltip>
+            <Tooltip :text="t('git.rebaseMoveDown')">
+              <button class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-20 cursor-pointer leading-none" :disabled="i === rows.length - 1" @click="move(i, 1)">
+                <ChevronDown class="w-3.5 h-3.5"/>
+              </button>
+            </Tooltip>
           </div>
           <select v-model="row.action" class="flex-shrink-0 w-32 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded px-1.5 py-1 focus:outline-none cursor-pointer">
             <option value="pick" class="dark:bg-gray-800">{{ t('git.rebaseActionPick') }}</option>
@@ -60,6 +64,7 @@ import {onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {ChevronDown, ChevronUp, ListOrdered, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
+import Tooltip from '../ui/Tooltip.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 

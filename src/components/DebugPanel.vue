@@ -10,9 +10,11 @@
         <Bug class="w-4 h-4 text-gray-400"/>
         <span>{{ t('debug.panelTitle') }}</span>
       </div>
-      <button class="text-gray-400 hover:text-red-500 cursor-pointer" :title="t('debug.stop')" @click="debug.stopSession()">
-        <Square class="w-4 h-4"/>
-      </button>
+      <Tooltip :text="t('debug.stop')">
+        <button class="text-gray-400 hover:text-red-500 cursor-pointer" @click="debug.stopSession()">
+          <Square class="w-4 h-4"/>
+        </button>
+      </Tooltip>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto">
@@ -104,6 +106,7 @@ import {Bug, ChevronRight, Square} from 'lucide-vue-next'
 import {useI18n} from 'vue-i18n'
 import {useDebug, type DapVariable, type Scope} from '../composables/useDebug'
 import {kvGet, kvSet} from '../composables/useKvStore'
+import Tooltip from '../ui/Tooltip.vue'
 import DebugVarNode from './DebugVarNode.vue'
 
 const {t} = useI18n()

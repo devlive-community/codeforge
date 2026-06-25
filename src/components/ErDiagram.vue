@@ -1,9 +1,10 @@
 <template>
   <div class="inline-block">
-    <button class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-            :title="t('er.title')" @click="open">
-      <Network class="w-3.5 h-3.5"/>
-    </button>
+    <Tooltip :text="t('er.title')">
+      <button class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="open">
+        <Network class="w-3.5 h-3.5"/>
+      </button>
+    </Tooltip>
 
     <Teleport to="body">
       <div v-if="visible" class="fixed inset-0 z-50 flex items-start justify-center pt-10 px-6 pb-6" @click="visible = false">
@@ -65,6 +66,7 @@ import {invoke} from '@tauri-apps/api/core'
 import {Network, X} from 'lucide-vue-next'
 import {useI18n} from 'vue-i18n'
 import {useDbConnections} from '../composables/useDbConnections'
+import Tooltip from '../ui/Tooltip.vue'
 import {columnsSql, fksSql} from '../utils/dbSchema'
 
 interface Col { name: string; type: string }
