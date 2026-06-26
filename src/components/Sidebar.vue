@@ -66,7 +66,8 @@
         <!-- 额外挂载的根（多根工作区 phase 1） -->
         <div v-for="er in (extraRoots || [])" :key="er" :ref="setRootEl(er)">
           <div class="group sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 flex items-center gap-1 px-2 py-1 cursor-pointer border-t border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-               @click="toggleExtra(er)">
+               @click="toggleExtra(er)"
+               @contextmenu.prevent.stop="onExtraRootContext(er, $event)">
             <ChevronRight class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0"
                           :class="{'rotate-90': !extraCollapsed[er]}"/>
             <Folder class="w-3.5 h-3.5 text-blue-500 flex-shrink-0"/>
@@ -95,15 +96,19 @@
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptCreate('folder')">{{ t('sidebar.newFolder') }}</button>
         </template>
         <template v-if="ctx.node">
-          <div v-if="!ctx.node || ctx.node.is_dir" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptRename">{{ t('sidebar.rename') }}</button>
-          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-600" @click="confirmDelete">{{ t('sidebar.delete') }}</button>
+          <div v-if="ctx.node.is_dir" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+          <!-- 额外挂载的根：从工作区移除（不删除磁盘文件） -->
+          <button v-if="ctxExtraRoot" class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-600" @click="removeExtraRoot">{{ t('sidebar.removeFolder') }}</button>
+          <template v-else>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="promptRename">{{ t('sidebar.rename') }}</button>
+            <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-600" @click="confirmDelete">{{ t('sidebar.delete') }}</button>
+          </template>
           <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="reveal">{{ t('sidebar.revealIn', { label: revealLabel }) }}</button>
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="copyPath">{{ t('git.copyPath') }}</button>
 
-          <!-- Git 操作 -->
-          <template v-if="gitRepo">
+          <!-- Git 操作（仅作用于主仓库内的节点）-->
+          <template v-if="gitRepo && nodeInPrimary">
             <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
             <template v-if="!ctx.node.is_dir">
               <template v-if="ctxChanged">
@@ -118,7 +123,7 @@
             </template>
             <button v-else class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitStageDir">{{ t('git.stageDir') }}</button>
           </template>
-          <template v-else-if="ctx.node.is_dir && rootDir">
+          <template v-else-if="ctx.node.is_dir && rootDir && nodeInPrimary">
             <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
             <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="gitInit">{{ t('git.init') }}</button>
           </template>
@@ -364,8 +369,17 @@ onUnmounted(() => {
 const ctx = reactive<{ visible: boolean, x: number, y: number, node: FileNode | null }>({
   visible: false, x: 0, y: 0, node: null
 })
+// 右键目标若为某个额外挂载的根，记录其路径（菜单显示「从工作区移除」而非删除/重命名）
+const ctxExtraRoot = ref<string | null>(null)
+// 右键节点是否属于主仓库（额外根及其子节点不暴露主仓库的 Git 操作）
+const nodeInPrimary = computed(() => {
+  if (!ctx.node || !props.rootDir) return false
+  const root = props.rootDir.replace(/[\\/]+$/, '')
+  return ctx.node.path === root || ctx.node.path.startsWith(root + '/')
+})
 const menuRef = ref<HTMLElement | null>(null)
-const openCtx = async (node: FileNode | null, e: MouseEvent) => {
+const openCtx = async (node: FileNode | null, e: MouseEvent, extraRoot: string | null = null) => {
+  ctxExtraRoot.value = extraRoot
   ctx.node = node
   ctx.x = e.clientX
   ctx.y = e.clientY
@@ -393,6 +407,14 @@ const onRootContext = (e: MouseEvent) => {
   if (props.rootDir) {
     openCtx({name: rootName.value, path: props.rootDir, is_dir: true}, e)
   }
+}
+// 额外挂载根的标题右键菜单
+const onExtraRootContext = (er: string, e: MouseEvent) => {
+  openCtx({name: folderName(er), path: er, is_dir: true}, e, er)
+}
+const removeExtraRoot = () => {
+  if (ctxExtraRoot.value) emit('remove-root', ctxExtraRoot.value)
+  closeCtx()
 }
 
 const isMac = /Mac/i.test(navigator.platform)
