@@ -2,3 +2,7 @@ node_modules
 dist
 .vite
 *.local
+
+# 根 .gitignore 忽略了所有 pnpm-lock.yaml，这里为文档站重新纳入，
+# 供 CI 的 --frozen-lockfile 与依赖缓存使用
+!pnpm-lock.yaml
