@@ -1562,31 +1562,42 @@ const openGit = () => {
 // 文件树徽标用：绝对路径 → 状态字母（M/A/D/U）
 const gitStatus = ref<Record<string, string>>({})
 const gitRepo = ref(false)
-const refreshGitStatus = async () => {
-  if (!rootDir.value) {
-    gitStatus.value = {}
-    return
-  }
+// 计算单个根的 Git 状态（路径用绝对路径作 key，便于多根合并到同一张表）
+const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, map: Record<string, string> }> => {
   try {
     const s = await invoke<{ is_repo: boolean, files: { path: string, index: string, worktree: string }[] }>(
-        'git_status', {root: rootDir.value}
+        'git_status', {root}
     )
-    gitRepo.value = s.is_repo
     const map: Record<string, string> = {}
     if (s.is_repo) {
       for (const f of s.files) {
         const code = f.index === '?'
             ? 'U'
             : (f.worktree.trim() || f.index.trim() || 'M')
-        map[`${rootDir.value}/${f.path}`] = code
+        map[`${root}/${f.path}`] = code
       }
     }
-    gitStatus.value = map
+    return {isRepo: s.is_repo, map}
   }
   catch {
+    return {isRepo: false, map: {}}
+  }
+}
+const refreshGitStatus = async () => {
+  if (!rootDir.value) {
     gitStatus.value = {}
     gitRepo.value = false
+    return
   }
+  const primary = await gitStatusFor(rootDir.value)
+  gitRepo.value = primary.isRepo
+  const map: Record<string, string> = {...primary.map}
+  // 额外挂载的根各自可为独立仓库，合并它们的状态徽标
+  if (extraRoots.value.length) {
+    const extra = await Promise.all(extraRoots.value.map(er => gitStatusFor(er)))
+    for (const e of extra) Object.assign(map, e.map)
+  }
+  gitStatus.value = map
   // HEAD 可能因提交/切换分支变化，刷新编辑器行内差异基线
   fetchBaseline()
 }
@@ -1676,8 +1687,8 @@ watch(() => debug.reveal.value, async (loc) => {
   gotoLine(loc.line)
 })
 
-// 打开文件夹、保存文件后刷新文件树 Git 徽标与差异基线
-watch(rootDir, () => refreshGitStatus(), {immediate: true})
+// 打开文件夹、保存文件、挂载/移除额外根后刷新文件树 Git 徽标与差异基线
+watch([rootDir, extraRoots], () => refreshGitStatus(), {immediate: true, deep: true})
 watch(savedContent, () => refreshGitStatus())
 
 const closeViewer = () => {
