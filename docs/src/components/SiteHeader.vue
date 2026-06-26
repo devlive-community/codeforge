@@ -1,0 +1,45 @@
+<template>
+  <header class="sticky top-0 z-40 backdrop-blur bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800">
+    <!-- 公告条 -->
+    <div v-if="latestRelease" class="bg-brand-600 text-white text-center text-sm py-1.5 px-4">
+      💗 CodeForge <em class="not-italic font-semibold">{{ latestRelease.version }}</em> 已发布，
+      <a class="underline hover:text-brand-100" href="https://github.com/devlive-community/codeforge" target="_blank" rel="noopener">前往 GitHub 支持我们</a> ❤️
+    </div>
+
+    <nav class="max-w-6xl mx-auto px-4 h-14 flex items-center gap-6">
+      <RouterLink to="/" class="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100">
+        <img src="/logo.svg" alt="CodeForge" class="w-7 h-7"/>
+        <span>CodeForge</span>
+      </RouterLink>
+
+      <div class="flex items-center gap-1 text-sm ml-2">
+        <RouterLink v-for="l in links" :key="l.to" :to="l.to"
+                    class="px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    active-class="text-brand-600 dark:text-brand-400 font-medium">
+          {{ l.text }}
+        </RouterLink>
+      </div>
+
+      <div class="ml-auto flex items-center gap-2">
+        <a href="https://github.com/devlive-community/codeforge" target="_blank" rel="noopener"
+           class="p-2 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+           aria-label="GitHub">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.5 2.87 8.32 6.84 9.67.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05A9.36 9.36 0 0 1 12 7.07c.85 0 1.71.12 2.51.34 1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.26C22 6.58 17.52 2 12 2z"/>
+          </svg>
+        </a>
+        <ThemeToggle/>
+      </div>
+    </nav>
+  </header>
+</template>
+
+<script setup lang="ts">
+import ThemeToggle from './ThemeToggle.vue'
+import {latestRelease} from '../content/releases'
+
+const links = [
+  {to: '/download', text: '下载'},
+  {to: '/release', text: '发布日志'}
+]
+</script>

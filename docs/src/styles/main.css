@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* 发布日志正文排版（Markdown 渲染结果）。设计阶段再细化。 */
+.prose-doc {
+  @apply text-gray-700 dark:text-gray-300 leading-7;
+}
+.prose-doc h1 {
+  @apply text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2 mb-6 scroll-mt-24;
+}
+.prose-doc h2 {
+  @apply text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-10 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800 scroll-mt-24;
+}
+.prose-doc h3 {
+  @apply text-xl font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-3 scroll-mt-24;
+}
+.prose-doc p {
+  @apply my-4;
+}
+.prose-doc a {
+  @apply text-brand-600 dark:text-brand-400 hover:underline;
+}
+.prose-doc ul {
+  @apply list-disc pl-6 my-4 space-y-1.5;
+}
+.prose-doc ol {
+  @apply list-decimal pl-6 my-4 space-y-1.5;
+}
+.prose-doc code {
+  @apply px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-brand-600 dark:text-brand-300 text-[0.9em] font-mono;
+}
+.prose-doc pre {
+  @apply p-4 rounded-lg bg-gray-900 text-gray-100 overflow-x-auto my-5 text-sm;
+}
+.prose-doc pre code {
+  @apply bg-transparent text-gray-100 p-0;
+}
+.prose-doc blockquote {
+  @apply border-l-4 border-brand-300 dark:border-brand-700 pl-4 italic text-gray-500 dark:text-gray-400 my-4;
+}
+.prose-doc table {
+  @apply w-full my-5 text-sm border-collapse;
+}
+.prose-doc th,
+.prose-doc td {
+  @apply border border-gray-200 dark:border-gray-700 px-3 py-2 text-left;
+}
+.prose-doc th {
+  @apply bg-gray-50 dark:bg-gray-800 font-semibold;
+}
+.prose-doc hr {
+  @apply my-8 border-gray-200 dark:border-gray-800;
+}
+.prose-doc img {
+  @apply inline-block max-w-full;
+}
