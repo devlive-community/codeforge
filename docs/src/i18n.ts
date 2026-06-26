@@ -37,6 +37,12 @@ const messages = {
       macNote: 'Apple Silicon 与 Intel',
       allVersions: '查看全部历史版本与安装包'
     },
+    stats: {
+      languages: '数十种', languagesLabel: '支持语言',
+      workbenches: '6', workbenchesLabel: '核心工作台',
+      platforms: '2', platformsLabel: '跨平台支持',
+      open: '100%', openLabel: '开源免费'
+    },
     releaseList: {title: '发布日志', intro: '每个版本的更新内容如下，点击查看详情。'},
     footer: {download: '下载', releases: '发布日志'}
   },
@@ -72,6 +78,12 @@ const messages = {
       winNote: '.msi / .exe installers',
       macNote: 'Apple Silicon & Intel',
       allVersions: 'Browse all releases and installers'
+    },
+    stats: {
+      languages: 'Dozens', languagesLabel: 'Languages',
+      workbenches: '6', workbenchesLabel: 'Workbenches',
+      platforms: '2', platformsLabel: 'Platforms',
+      open: '100%', openLabel: 'Open source'
     },
     releaseList: {title: 'Releases', intro: 'Update notes for each version. Click to view details.'},
     footer: {download: 'Download', releases: 'Releases'}

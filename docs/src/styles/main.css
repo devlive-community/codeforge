@@ -63,8 +63,49 @@ body {
 @property --a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 @keyframes spin-border { to { --a: 360deg; } }
 
+/* 标题流光渐变 */
+@keyframes gradient-move { to { background-position: 200% center; } }
+.animate-gradient {
+  background-size: 200% auto;
+  animation: gradient-move 6s linear infinite;
+}
+
+/* 鼠标跟随光斑（hero）：由 JS 设置 --mx/--my */
+.spotlight-bg {
+  background: radial-gradient(600px circle at var(--mx, 50%) var(--my, 0%), rgba(99, 102, 241, .18), transparent 60%);
+  transition: background .15s ease-out;
+}
+
+/* 光晕跟随卡片：hover 时跟随光标的渐变描边 */
+.spotlight-card { position: relative; }
+.spotlight-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(129, 140, 248, .8), transparent 60%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity .3s;
+}
+.spotlight-card:hover::before { opacity: 1; }
+.spotlight-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgba(99, 102, 241, .12), transparent 60%);
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+}
+.spotlight-card:hover::after { opacity: 1; }
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-blob, .animate-float, .animate-spin-slow, .animate-marquee, .shimmer::after, .glow-border::before {
+  .animate-blob, .animate-float, .animate-spin-slow, .animate-marquee, .animate-gradient, .shimmer::after, .glow-border::before {
     animation: none !important;
   }
 }
