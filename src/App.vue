@@ -696,6 +696,29 @@ const handleCopyPath = async (path: string) => {
     toast.error(t('app.copyFailed') + error)
   }
 }
+// 复制当前文件指定行的远程仓库永久链接
+const copyPermalink = async () => {
+  if (!rootDir.value || !currentFilePath.value) {
+    toast.info(t('app.noFileToReveal'))
+    return
+  }
+  const root = rootDir.value
+  const p = currentFilePath.value
+  if (!(p === root || p.startsWith(root + '/') || p.startsWith(root + '\\'))) {
+    toast.info(t('app.permalinkOutside'))
+    return
+  }
+  const rel = p.slice(root.length).replace(/^[\\/]/, '')
+  try {
+    const url = await invoke<string>('git_permalink', {root, relPath: rel, line: cursorInfo.value.line})
+    await navigator.clipboard.writeText(url)
+    toast.success(t('app.permalinkCopied'))
+  }
+  catch (error) {
+    toast.error(t('app.permalinkFailed') + ': ' + error)
+  }
+}
+
 const handleCopyRelativePath = (path: string) => {
   const root = rootDir.value
   const rel = root && (path === root || path.startsWith(root + '/') || path.startsWith(root + '\\'))
@@ -2323,6 +2346,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
   {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
+  {id: 'copyPermalink', label: t('command.copyPermalink'), icon: GitBranch, run: () => copyPermalink()},
   {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},
