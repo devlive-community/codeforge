@@ -14,6 +14,61 @@ body {
   @apply font-sans antialiased;
 }
 
+/* ===== 科技感动效 ===== */
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+.animate-blob { animation: blob 14s ease-in-out infinite; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.animate-spin-slow { animation: spin-slow 6s linear infinite; }
+
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.animate-marquee { animation: marquee 28s linear infinite; }
+
+@keyframes shimmer { 100% { transform: translateX(200%); } }
+.shimmer { position: relative; overflow: hidden; }
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-200%);
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%);
+  animation: shimmer 3.5s ease-in-out infinite;
+}
+
+/* 渐变描边（旋转的 conic 光圈） */
+.glow-border { position: relative; }
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--a, 0deg), #6366f1, #22d3ee, #a855f7, #6366f1);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin-border 8s linear infinite;
+  opacity: .7;
+}
+@property --a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes spin-border { to { --a: 360deg; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob, .animate-float, .animate-spin-slow, .animate-marquee, .shimmer::after, .glow-border::before {
+    animation: none !important;
+  }
+}
+
 /* 发布日志正文排版（Markdown 渲染结果） */
 .prose-doc {
   @apply text-slate-700 dark:text-slate-300 leading-7 text-[15px];
