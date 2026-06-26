@@ -647,6 +647,8 @@
     "newTab": "New tab",
     "closeOthers": "Close others",
     "closeRight": "Close to the right",
+    "pin": "Pin tab",
+    "unpin": "Unpin tab",
     "revealInTree": "Reveal in file tree",
     "revealInFinder": "Reveal in file manager",
     "copyPath": "Copy path",

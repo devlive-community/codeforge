@@ -647,6 +647,8 @@
     "newTab": "新建标签页",
     "closeOthers": "关闭其他",
     "closeRight": "关闭右侧",
+    "pin": "置顶标签",
+    "unpin": "取消置顶",
     "revealInTree": "在文件树中定位",
     "revealInFinder": "在文件管理器中显示",
     "copyPath": "复制路径",

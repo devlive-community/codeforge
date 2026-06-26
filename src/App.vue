@@ -83,7 +83,7 @@
             <div class="h-full flex flex-col overflow-hidden">
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"
-                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder"/>
+                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder" @toggle-pin="togglePin"/>
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3 min-w-0 flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
@@ -224,7 +224,7 @@
       <div v-else class="h-full flex flex-col overflow-hidden">
         <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"
-                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder"/>
+                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder" @toggle-pin="togglePin"/>
         <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3 min-w-0 flex-1">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
@@ -623,6 +623,8 @@ const {
   closeOthers,
   closeToRight,
   reopenClosed,
+  togglePin,
+  restorePinned,
   moveTab,
   updateTabPath,
   detachTabPath,
@@ -755,19 +757,20 @@ const SESSION_TABS_KEY = 'session-tabs'
 
 const persistSession = () => {
   const paths = editorTabs.value.map(t => t.filePath).filter((p): p is string => !!p)
+  const pinned = editorTabs.value.filter(t => t.pinned && t.filePath).map(t => t.filePath as string)
   const activePath = editorTabs.value.find(t => t.id === activeTabId.value)?.filePath || null
-  kvSetJSON(SESSION_TABS_KEY, {paths, activePath})
+  kvSetJSON(SESSION_TABS_KEY, {paths, pinned, activePath})
 }
 
-// 标签集合/文件/激活项变化时持久化（不含正文编辑，避免频繁写入）
+// 标签集合/文件/激活项/置顶变化时持久化（不含正文编辑，避免频繁写入）
 watch(
-    () => editorTabs.value.map(t => t.filePath || '').join('|') + '#' + activeTabId.value,
+    () => editorTabs.value.map(t => (t.pinned ? '*' : '') + (t.filePath || '')).join('|') + '#' + activeTabId.value,
     () => persistSession()
 )
 
 // 启动时恢复上次打开的文件标签（仅已保存且可读的文本文件）
 const restoreSession = async () => {
-  const saved = kvGetJSON<{ paths: string[], activePath: string | null } | null>(SESSION_TABS_KEY, null)
+  const saved = kvGetJSON<{ paths: string[], pinned?: string[], activePath: string | null } | null>(SESSION_TABS_KEY, null)
   if (!saved || !saved.paths?.length) {
     return
   }
@@ -783,6 +786,10 @@ const restoreSession = async () => {
     catch {
       // 跳过已删除/无法读取的文件
     }
+  }
+
+  if (saved.pinned?.length) {
+    restorePinned(saved.pinned)
   }
 
   if (saved.activePath) {
