@@ -235,6 +235,7 @@ const props = defineProps<{
   recentFolders?: string[]
   gitStatus?: Record<string, string>
   gitRepo?: boolean
+  revealRequest?: { path: string, n: number } | null
 }>()
 
 const emit = defineEmits<{
@@ -359,6 +360,57 @@ const triggerRefresh = () => {
 const collapseSignal = ref(0)
 provide('treeCollapseAll', collapseSignal)
 const collapseAllFolders = () => collapseSignal.value++
+
+// ===== 在文件树中定位当前文件（参考 VSCode Reveal in Explorer）=====
+const revealDirs = ref<Set<string>>(new Set())
+const revealLeaf = ref<string | null>(null)
+provide('treeRevealDirs', revealDirs)
+provide('treeRevealLeaf', revealLeaf)
+let revealTimer: ReturnType<typeof setTimeout> | null = null
+const revealInTree = (path: string) => {
+  const roots = [props.rootDir, ...(props.extraRoots || [])].filter(Boolean) as string[]
+  // 取最长匹配，定位文件归属的根
+  const root = roots
+      .filter(r => path === r || path.startsWith(r + '/') || path.startsWith(r + '\\'))
+      .sort((a, b) => b.length - a.length)[0]
+  if (!root) {
+    return
+  }
+  // 确保归属根所在分区已展开
+  if (root === props.rootDir) {
+    primaryCollapsed.value = false
+  }
+  else {
+    extraCollapsed[root] = false
+  }
+  // 收集 root 与 path 之间的所有祖先目录
+  const dirs = new Set<string>()
+  let cur = path
+  while (true) {
+    const parent = cur.replace(/[\\/][^\\/]*$/, '')
+    if (parent === cur || parent.length <= root.length) {
+      break
+    }
+    dirs.add(parent)
+    cur = parent
+  }
+  revealDirs.value = dirs
+  revealLeaf.value = path
+  // 定位完成后清除，避免后续无关重挂载再次触发滚动
+  if (revealTimer) {
+    clearTimeout(revealTimer)
+  }
+  revealTimer = setTimeout(() => {
+    revealDirs.value = new Set()
+    revealLeaf.value = null
+  }, 1500)
+}
+
+watch(() => props.revealRequest, (req) => {
+  if (req?.path) {
+    revealInTree(req.path)
+  }
+})
 
 // 文件系统变化（外部改动）防抖刷新
 let fsTimer: any = null

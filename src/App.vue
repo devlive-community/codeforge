@@ -54,6 +54,7 @@
       <template v-if="sidebarVisible">
         <Sidebar :root-dir="rootDir"
                  :extra-roots="extraRoots"
+                 :reveal-request="revealRequest"
                  :active-path="currentFilePath"
                  :recent-folders="recentFolders"
                  :git-status="gitStatus"
@@ -1179,6 +1180,18 @@ const openOutline = () => {
   showOutline.value = true
 }
 
+// 在文件树中定位当前文件
+const revealRequest = ref<{ path: string, n: number } | null>(null)
+let revealSeq = 0
+const revealInTree = () => {
+  if (!currentFilePath.value) {
+    toast.info(t('app.noFileToReveal'))
+    return
+  }
+  sidebarVisible.value = true
+  revealRequest.value = {path: currentFilePath.value, n: ++revealSeq}
+}
+
 // 代码片段管理
 const showSnippets = ref(false)
 
@@ -2273,6 +2286,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'runTests', label: t('command.runTests'), icon: ListChecks, run: () => runTests()},
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
+  {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},

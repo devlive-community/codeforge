@@ -1,6 +1,7 @@
 <template>
   <div>
-    <div class="flex items-center py-1 pr-4 cursor-pointer text-sm select-none w-full whitespace-nowrap"
+    <div ref="rowEl"
+         class="flex items-center py-1 pr-4 cursor-pointer text-sm select-none w-full whitespace-nowrap"
          :class="isActive ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
          :style="{ paddingLeft: `${depth * 12 + 8}px` }"
          @click="onClick"
@@ -25,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, inject, ref, watch, type ComputedRef, type Ref} from 'vue'
+import {computed, inject, nextTick, onMounted, ref, watch, type ComputedRef, type Ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {ChevronRight, File, Folder, FolderOpen} from 'lucide-vue-next'
 
@@ -44,6 +45,7 @@ const props = defineProps<{
 const expanded = ref(false)
 const children = ref<FileNode[]>([])
 const loaded = ref(false)
+const rowEl = ref<HTMLElement | null>(null)
 
 // 由 Sidebar 提供的注入项
 const openFile = inject<(path: string) => void>('treeOpenFile')
@@ -52,6 +54,9 @@ const contextMenu = inject<(node: FileNode, e: MouseEvent) => void>('treeContext
 const refreshSignal = inject<Ref<number>>('treeRefresh')
 const collapseSignal = inject<Ref<number>>('treeCollapseAll')
 const gitStatus = inject<ComputedRef<Record<string, string>>>('treeGitStatus')
+// 「在文件树中定位」：需展开的祖先目录集合 + 目标文件
+const revealDirs = inject<Ref<Set<string>>>('treeRevealDirs')
+const revealLeaf = inject<Ref<string | null>>('treeRevealLeaf')
 
 const isActive = computed(() => !props.node.is_dir && activePath?.value === props.node.path)
 
@@ -109,5 +114,29 @@ if (collapseSignal) {
       expanded.value = false
     }
   })
+}
+
+// 「在文件树中定位」：祖先目录自动展开、目标文件滚动到视野。
+// 借助已知的祖先集合，新挂载的子节点会在自身 onMounted 时自查并继续展开，天然适配懒加载树。
+const maybeReveal = async () => {
+  if (props.node.is_dir && revealDirs?.value?.has(props.node.path)) {
+    if (!expanded.value) {
+      expanded.value = true
+      if (!loaded.value) {
+        await loadChildren()
+      }
+    }
+  }
+  if (!props.node.is_dir && revealLeaf?.value === props.node.path) {
+    await nextTick()
+    rowEl.value?.scrollIntoView({block: 'center'})
+  }
+}
+onMounted(maybeReveal)
+if (revealDirs) {
+  watch(revealDirs, maybeReveal)
+}
+if (revealLeaf) {
+  watch(revealLeaf, maybeReveal)
 }
 </script>
