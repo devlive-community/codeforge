@@ -16,6 +16,12 @@
         </button>
         <button v-if="rootDir"
                 class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                :title="t('sidebar.collapseFolders')"
+                @click="collapseAllFolders">
+          <ChevronsDownUp class="w-4 h-4"/>
+        </button>
+        <button v-if="rootDir"
+                class="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
                 :title="t('sidebar.refresh')"
                 @click="loadRoot">
           <RefreshCw class="w-4 h-4"/>
@@ -203,7 +209,7 @@ import {computed, nextTick, onMounted, onUnmounted, provide, reactive, ref, watc
 import {invoke} from '@tauri-apps/api/core'
 import {open as openDialog} from '@tauri-apps/plugin-dialog'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
-import {ChevronRight, Folder, FolderOpen, FolderPlus, RefreshCw, X} from 'lucide-vue-next'
+import {ChevronRight, ChevronsDownUp, Folder, FolderOpen, FolderPlus, RefreshCw, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import Input from '../ui/Input.vue'
@@ -346,6 +352,11 @@ const triggerRefresh = () => {
   refreshSignal.value++
   loadRoot()
 }
+
+// ===== 折叠所有文件夹（参考 VSCode 资源管理器）=====
+const collapseSignal = ref(0)
+provide('treeCollapseAll', collapseSignal)
+const collapseAllFolders = () => collapseSignal.value++
 
 // 文件系统变化（外部改动）防抖刷新
 let fsTimer: any = null

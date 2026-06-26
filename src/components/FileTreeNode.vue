@@ -50,6 +50,7 @@ const openFile = inject<(path: string) => void>('treeOpenFile')
 const activePath = inject<ComputedRef<string | null>>('treeActivePath')
 const contextMenu = inject<(node: FileNode, e: MouseEvent) => void>('treeContextMenu')
 const refreshSignal = inject<Ref<number>>('treeRefresh')
+const collapseSignal = inject<Ref<number>>('treeCollapseAll')
 const gitStatus = inject<ComputedRef<Record<string, string>>>('treeGitStatus')
 
 const isActive = computed(() => !props.node.is_dir && activePath?.value === props.node.path)
@@ -97,6 +98,15 @@ if (refreshSignal) {
   watch(refreshSignal, () => {
     if (props.node.is_dir && expanded.value && loaded.value) {
       loadChildren()
+    }
+  })
+}
+
+// 「折叠文件夹」：收到信号即折叠（子节点已卸载，递归整棵树自然全部折叠）
+if (collapseSignal) {
+  watch(collapseSignal, () => {
+    if (props.node.is_dir) {
+      expanded.value = false
     }
   })
 }
