@@ -25,6 +25,7 @@ const SHORTCUT_DEFS: { id: string; default: string }[] = [
     {id: 'generate', default: 'Mod+K'},
     {id: 'newTab', default: 'Mod+N'},
     {id: 'closeTab', default: 'Mod+W'},
+    {id: 'reopenClosed', default: 'Mod+Shift+T'},
     {id: 'toggleSidebar', default: 'Mod+B'},
     {id: 'toggleTerminal', default: 'Mod+`'},
     {id: 'toggleWordWrap', default: 'Alt+Z'}

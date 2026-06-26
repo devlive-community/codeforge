@@ -685,6 +685,7 @@
     "runTests": "Run tests (auto-detect)",
     "startDebug": "Debug current file",
     "sendToTerminal": "Send selection to terminal",
+    "reopenClosed": "Reopen closed tab",
     "toggleSidebar": "Toggle sidebar",
     "toggleWordWrap": "Toggle word wrap",
     "layoutHorizontal": "Layout: side-by-side",
@@ -711,6 +712,7 @@
     "generate": "AI generate code",
     "newTab": "New tab",
     "closeTab": "Close tab",
+    "reopenClosed": "Reopen closed tab",
     "toggleSidebar": "Toggle sidebar",
     "toggleTerminal": "Toggle terminal",
     "toggleWordWrap": "Toggle word wrap"
@@ -1303,6 +1305,7 @@
     "formatOnSaveOff": "Format on save disabled",
     "wordWrapOn": "Word wrap enabled",
     "wordWrapOff": "Word wrap disabled",
+    "noClosedTab": "No closed tab to reopen",
     "aiPredictOff": "AI code prediction disabled",
     "aiPredictOnNoKey": "AI code prediction enabled, but no API Key is configured. Fill it in \"Settings → AI\"",
     "aiPredictOn": "AI code prediction enabled; pause typing to see the gray completion, press Tab to accept",

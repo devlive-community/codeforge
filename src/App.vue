@@ -619,6 +619,7 @@ const {
   closeTab,
   closeOthers,
   closeToRight,
+  reopenClosed,
   moveTab,
   updateTabPath,
   detachTabPath,
@@ -671,6 +672,12 @@ const onLanguageChange = (language: string) => {
 
 const handleNewTab = () => newTab({language: currentLanguage.value, code: ''})
 const handleCloseTab = (id: string) => closeTab(id, {language: currentLanguage.value})
+const handleReopenClosed = () => {
+  const reopened = reopenClosed()
+  if (!reopened) {
+    toast.info(t('app.noClosedTab'))
+  }
+}
 
 const handleCopyPath = async (path: string) => {
   try {
@@ -2203,6 +2210,7 @@ const shortcutDispatch: Record<string, () => void> = {
   open: () => handleOpenFileClick(),
   newTab: () => handleNewTab(),
   closeTab: () => handleCloseTab(activeTabId.value),
+  reopenClosed: () => handleReopenClosed(),
   toggleSidebar: () => toggleSidebar(),
   toggleTerminal: () => toggleTerminal(),
   toggleWordWrap: () => toggleWordWrap()
@@ -2244,6 +2252,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'saveAs', label: t('command.saveAs'), icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
   {id: 'newTab', label: t('command.newTab'), icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
   {id: 'closeTab', label: t('command.closeTab'), icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
+  {id: 'reopenClosed', label: t('command.reopenClosed'), icon: Plus, hint: hintOf('reopenClosed'), run: () => handleReopenClosed()},
   {id: 'quickOpen', label: t('command.quickOpen'), icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
   {id: 'gotoLine', label: t('command.gotoLine'), icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
   {id: 'outline', label: t('command.outline'), icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},

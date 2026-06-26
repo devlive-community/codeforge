@@ -36,6 +36,20 @@ export function useWorkspace(deps: WorkspaceDeps)
     // 还原 tab 期间抑制同步 watch，避免把中间状态写错 tab
     let isRestoring = false
 
+    // 最近关闭的标签快照栈，供「重新打开已关闭标签」恢复
+    const closedStack = ref<WorkspaceTab[]>([])
+    const CLOSED_LIMIT = 20
+    const pushClosed = (t: WorkspaceTab) => {
+        // 空白草稿（无文件且无内容）不值得记录
+        if (t.filePath === null && (t.code ?? '') === '') {
+            return
+        }
+        closedStack.value.push({...t})
+        if (closedStack.value.length > CLOSED_LIMIT) {
+            closedStack.value.shift()
+        }
+    }
+
     const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value) || null)
 
     const captureToActive = () => {
@@ -112,6 +126,11 @@ export function useWorkspace(deps: WorkspaceDeps)
             return
         }
         const wasActive = id === activeTabId.value
+        // 关闭前先把活动标签的实时内容落盘到快照，保证恢复的是最新内容
+        if (wasActive) {
+            captureToActive()
+        }
+        pushClosed(tabs.value[idx])
         tabs.value.splice(idx, 1)
 
         // 至少保留一个 tab
@@ -143,6 +162,11 @@ export function useWorkspace(deps: WorkspaceDeps)
         if (!keep) {
             return
         }
+        for (const t of tabs.value) {
+            if (t.id !== id) {
+                pushClosed(t)
+            }
+        }
         tabs.value = [keep]
         if (activeTabId.value !== id) {
             activeTabId.value = id
@@ -158,6 +182,9 @@ export function useWorkspace(deps: WorkspaceDeps)
         }
         captureToActive()
         const activeRemoved = tabs.value.slice(idx + 1).some(t => t.id === activeTabId.value)
+        for (const t of tabs.value.slice(idx + 1)) {
+            pushClosed(t)
+        }
         tabs.value = tabs.value.slice(0, idx + 1)
         if (activeRemoved) {
             activeTabId.value = id
@@ -219,6 +246,22 @@ export function useWorkspace(deps: WorkspaceDeps)
         }
     }
 
+    // 重新打开最近关闭的标签；若该文件已在其它标签打开则直接切过去
+    const reopenClosed = () => {
+        const t = closedStack.value.pop()
+        if (!t) {
+            return null
+        }
+        if (t.filePath) {
+            const existing = tabs.value.find(x => x.filePath === t.filePath)
+            if (existing) {
+                switchTab(existing.id)
+                return existing
+            }
+        }
+        return newTab({language: t.language, code: t.code, filePath: t.filePath, savedContent: t.savedContent})
+    }
+
     // 当前 tab 是否为可复用的空白草稿（未关联文件且内容为空）
     const isActiveReusableScratch = () => {
         const t = activeTab.value
@@ -235,6 +278,7 @@ export function useWorkspace(deps: WorkspaceDeps)
         closeTab,
         closeOthers,
         closeToRight,
+        reopenClosed,
         moveTab,
         updateTabPath,
         detachTabPath,
