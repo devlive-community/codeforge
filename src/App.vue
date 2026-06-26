@@ -1202,6 +1202,22 @@ const revealInTree = (path?: string) => {
   revealRequest.value = {path: target, n: ++revealSeq}
 }
 
+// 切换文件时自动在文件树中定位（仅当侧栏已打开，避免频繁强开侧栏打扰）
+const autoRevealTree = ref(kvGet('auto-reveal-tree') === 'true')
+const toggleAutoReveal = () => {
+  autoRevealTree.value = !autoRevealTree.value
+  kvSet('auto-reveal-tree', String(autoRevealTree.value))
+  toast.info(autoRevealTree.value ? t('app.autoRevealOn') : t('app.autoRevealOff'))
+  if (autoRevealTree.value && sidebarVisible.value && currentFilePath.value) {
+    revealRequest.value = {path: currentFilePath.value, n: ++revealSeq}
+  }
+}
+watch(currentFilePath, (p) => {
+  if (autoRevealTree.value && sidebarVisible.value && p) {
+    revealRequest.value = {path: p, n: ++revealSeq}
+  }
+})
+
 // 代码片段管理
 const showSnippets = ref(false)
 
@@ -2297,6 +2313,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
   {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
+  {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
