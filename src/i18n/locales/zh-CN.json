@@ -1062,7 +1062,9 @@
   },
   "breadcrumb": {
     "revealIn": "在访达中显示：{path}",
-    "unsaved": "有未保存的修改"
+    "unsaved": "有未保存的修改",
+    "loading": "加载中…",
+    "empty": "空目录"
   },
   "gitignore": {
     "title": ".gitignore 模板",

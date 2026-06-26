@@ -1062,7 +1062,9 @@
   },
   "breadcrumb": {
     "revealIn": "Reveal in file manager: {path}",
-    "unsaved": "Unsaved changes"
+    "unsaved": "Unsaved changes",
+    "loading": "Loading…",
+    "empty": "Empty folder"
   },
   "gitignore": {
     "title": ".gitignore templates",
