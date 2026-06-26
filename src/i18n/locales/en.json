@@ -647,7 +647,10 @@
     "newTab": "New tab",
     "closeOthers": "Close others",
     "closeRight": "Close to the right",
+    "revealInTree": "Reveal in file tree",
+    "revealInFinder": "Reveal in file manager",
     "copyPath": "Copy path",
+    "copyRelativePath": "Copy relative path",
     "untitled": "Untitled"
   },
   "command": {

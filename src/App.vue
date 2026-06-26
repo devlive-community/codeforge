@@ -82,7 +82,8 @@
           <template #primary>
             <div class="h-full flex flex-col overflow-hidden">
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
-                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
+                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"
+                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder"/>
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3 min-w-0 flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
@@ -222,7 +223,8 @@
       <!-- 仅编辑器：控制台未展开时占满 -->
       <div v-else class="h-full flex flex-col overflow-hidden">
         <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
-                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
+                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"
+                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder"/>
         <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3 min-w-0 flex-1">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
@@ -688,6 +690,13 @@ const handleCopyPath = async (path: string) => {
   catch (error) {
     toast.error(t('app.copyFailed') + error)
   }
+}
+const handleCopyRelativePath = (path: string) => {
+  const root = rootDir.value
+  const rel = root && (path === root || path.startsWith(root + '/') || path.startsWith(root + '\\'))
+      ? path.slice(root.length).replace(/^[\\/]/, '')
+      : path
+  handleCopyPath(rel)
 }
 
 // ===== 侧栏 / 文件夹 =====
@@ -1183,13 +1192,14 @@ const openOutline = () => {
 // 在文件树中定位当前文件
 const revealRequest = ref<{ path: string, n: number } | null>(null)
 let revealSeq = 0
-const revealInTree = () => {
-  if (!currentFilePath.value) {
+const revealInTree = (path?: string) => {
+  const target = path ?? currentFilePath.value
+  if (!target) {
     toast.info(t('app.noFileToReveal'))
     return
   }
   sidebarVisible.value = true
-  revealRequest.value = {path: currentFilePath.value, n: ++revealSeq}
+  revealRequest.value = {path: target, n: ++revealSeq}
 }
 
 // 代码片段管理

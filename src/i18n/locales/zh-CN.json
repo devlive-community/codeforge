@@ -647,7 +647,10 @@
     "newTab": "新建标签页",
     "closeOthers": "关闭其他",
     "closeRight": "关闭右侧",
+    "revealInTree": "在文件树中定位",
+    "revealInFinder": "在文件管理器中显示",
     "copyPath": "复制路径",
+    "copyRelativePath": "复制相对路径",
     "untitled": "未命名"
   },
   "command": {
