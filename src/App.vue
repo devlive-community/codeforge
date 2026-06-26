@@ -53,6 +53,8 @@
       <!-- 左侧文件树侧栏 -->
       <template v-if="sidebarVisible">
         <Sidebar :root-dir="rootDir"
+                 :extra-roots="extraRoots"
+                 :reveal-request="revealRequest"
                  :active-path="currentFilePath"
                  :recent-folders="recentFolders"
                  :git-status="gitStatus"
@@ -60,8 +62,11 @@
                  class="flex-shrink-0"
                  :style="{ width: `${sidebarWidth}px` }"
                  @open-folder="openFolder"
+                 @add-folder="addWorkspaceFolder"
+                 @remove-root="removeWorkspaceFolder"
                  @open-recent="openFolderPath"
                  @open-file="smartOpen"
+                 @search-in="openSearchInFolder"
                  @renamed="(from, to) => updateTabPath(from, to)"
                  @deleted="(p) => detachTabPath(p)"
                  @git-refresh="refreshGitStatus"/>
@@ -77,7 +82,8 @@
           <template #primary>
             <div class="h-full flex flex-col overflow-hidden">
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
-                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
+                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"
+                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder"/>
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3 min-w-0 flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
@@ -85,7 +91,7 @@
                   <template v-if="currentFilePath">
                     <span class="text-gray-400 text-xs flex-shrink-0">·</span>
                     <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                      <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+                      <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder" @open="smartOpen"/>
                     </div>
                   </template>
                   <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center whitespace-nowrap flex-shrink-0">
@@ -217,7 +223,8 @@
       <!-- 仅编辑器：控制台未展开时占满 -->
       <div v-else class="h-full flex flex-col overflow-hidden">
         <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
-                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
+                          @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"
+                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder"/>
         <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3 min-w-0 flex-1">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
@@ -225,7 +232,7 @@
             <template v-if="currentFilePath">
               <span class="text-gray-400 text-xs flex-shrink-0">·</span>
               <div class="min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder"/>
+                <Breadcrumbs :path="currentFilePath" :root-dir="rootDir" :dirty="isDirty" @reveal="revealInFinder" @open="smartOpen"/>
               </div>
             </template>
             <span v-else-if="currentFileName" class="text-xs text-gray-500 flex items-center whitespace-nowrap flex-shrink-0">
@@ -310,7 +317,7 @@
     <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" :initial-prompt="aiInitialPrompt" :root-dir="rootDir" @close="showAi = false" @insert-code="applyAiCode"/>
 
     <!-- 文件夹内全局搜索 -->
-    <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" @open="openSearchResult" @replaced="reloadAffectedFiles" @close="showSearch = false"/>
+    <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" :extra-roots="extraRoots" :scope="searchScope" @open="openSearchResult" @replaced="reloadAffectedFiles" @close="showSearch = false"/>
 
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
@@ -334,6 +341,7 @@
     <Outline v-if="showOutline"
              :code="code"
              :language="currentLanguage"
+             :current-line="cursorInfo.line"
              @go="gotoLine"
              @close="showOutline = false"/>
 
@@ -475,7 +483,7 @@ import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {dapSupportsLanguage} from './debug/dapClient'
-import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
+import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -614,6 +622,7 @@ const {
   closeTab,
   closeOthers,
   closeToRight,
+  reopenClosed,
   moveTab,
   updateTabPath,
   detachTabPath,
@@ -666,6 +675,12 @@ const onLanguageChange = (language: string) => {
 
 const handleNewTab = () => newTab({language: currentLanguage.value, code: ''})
 const handleCloseTab = (id: string) => closeTab(id, {language: currentLanguage.value})
+const handleReopenClosed = () => {
+  const reopened = reopenClosed()
+  if (!reopened) {
+    toast.info(t('app.noClosedTab'))
+  }
+}
 
 const handleCopyPath = async (path: string) => {
   try {
@@ -675,6 +690,13 @@ const handleCopyPath = async (path: string) => {
   catch (error) {
     toast.error(t('app.copyFailed') + error)
   }
+}
+const handleCopyRelativePath = (path: string) => {
+  const root = rootDir.value
+  const rel = root && (path === root || path.startsWith(root + '/') || path.startsWith(root + '\\'))
+      ? path.slice(root.length).replace(/^[\\/]/, '')
+      : path
+  handleCopyPath(rel)
 }
 
 // ===== 侧栏 / 文件夹 =====
@@ -708,6 +730,24 @@ const openFolderPath = (path: string) => {
   rootDir.value = path
   sidebarVisible.value = true
   rememberFolder(path)
+  // 打开新文件夹视为新工作区，清空额外挂载的根
+  extraRoots.value = []
+  kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
+}
+
+// ===== 多根工作区（E3，phase 1）：额外挂载的文件夹（Git/搜索仍走主根 rootDir）=====
+const WORKSPACE_EXTRA_KEY = 'workspace-extra-roots'
+const extraRoots = ref<string[]>(kvGetJSON<string[]>(WORKSPACE_EXTRA_KEY, []))
+const addWorkspaceFolder = async () => {
+  const selected = await openDialog({directory: true, multiple: false})
+  if (selected && typeof selected === 'string' && selected !== rootDir.value && !extraRoots.value.includes(selected)) {
+    extraRoots.value = [...extraRoots.value, selected]
+    kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
+  }
+}
+const removeWorkspaceFolder = (path: string) => {
+  extraRoots.value = extraRoots.value.filter(p => p !== path)
+  kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
 }
 
 // ===== 标签会话持久化 =====
@@ -1106,11 +1146,21 @@ const insertGeneratedCode = (text: string) => {
 
 // 文件夹内全局搜索（Cmd+Shift+F）
 const showSearch = ref(false)
+const searchScope = ref<string | null>(null)
 const openSearch = () => {
   if (!rootDir.value) {
     toast.info(t('app.openFolderFirst'))
     return
   }
+  searchScope.value = null
+  showSearch.value = true
+}
+// 来自文件树「在文件夹中搜索」：限定搜索范围为该目录
+const openSearchInFolder = (path: string) => {
+  if (!rootDir.value) {
+    return
+  }
+  searchScope.value = path
   showSearch.value = true
 }
 
@@ -1137,6 +1187,19 @@ const openGoToLine = () => {
 const showOutline = ref(false)
 const openOutline = () => {
   showOutline.value = true
+}
+
+// 在文件树中定位当前文件
+const revealRequest = ref<{ path: string, n: number } | null>(null)
+let revealSeq = 0
+const revealInTree = (path?: string) => {
+  const target = path ?? currentFilePath.value
+  if (!target) {
+    toast.info(t('app.noFileToReveal'))
+    return
+  }
+  sidebarVisible.value = true
+  revealRequest.value = {path: target, n: ++revealSeq}
 }
 
 // 代码片段管理
@@ -1541,31 +1604,42 @@ const openGit = () => {
 // 文件树徽标用：绝对路径 → 状态字母（M/A/D/U）
 const gitStatus = ref<Record<string, string>>({})
 const gitRepo = ref(false)
-const refreshGitStatus = async () => {
-  if (!rootDir.value) {
-    gitStatus.value = {}
-    return
-  }
+// 计算单个根的 Git 状态（路径用绝对路径作 key，便于多根合并到同一张表）
+const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, map: Record<string, string> }> => {
   try {
     const s = await invoke<{ is_repo: boolean, files: { path: string, index: string, worktree: string }[] }>(
-        'git_status', {root: rootDir.value}
+        'git_status', {root}
     )
-    gitRepo.value = s.is_repo
     const map: Record<string, string> = {}
     if (s.is_repo) {
       for (const f of s.files) {
         const code = f.index === '?'
             ? 'U'
             : (f.worktree.trim() || f.index.trim() || 'M')
-        map[`${rootDir.value}/${f.path}`] = code
+        map[`${root}/${f.path}`] = code
       }
     }
-    gitStatus.value = map
+    return {isRepo: s.is_repo, map}
   }
   catch {
+    return {isRepo: false, map: {}}
+  }
+}
+const refreshGitStatus = async () => {
+  if (!rootDir.value) {
     gitStatus.value = {}
     gitRepo.value = false
+    return
   }
+  const primary = await gitStatusFor(rootDir.value)
+  gitRepo.value = primary.isRepo
+  const map: Record<string, string> = {...primary.map}
+  // 额外挂载的根各自可为独立仓库，合并它们的状态徽标
+  if (extraRoots.value.length) {
+    const extra = await Promise.all(extraRoots.value.map(er => gitStatusFor(er)))
+    for (const e of extra) Object.assign(map, e.map)
+  }
+  gitStatus.value = map
   // HEAD 可能因提交/切换分支变化，刷新编辑器行内差异基线
   fetchBaseline()
 }
@@ -1655,8 +1729,8 @@ watch(() => debug.reveal.value, async (loc) => {
   gotoLine(loc.line)
 })
 
-// 打开文件夹、保存文件后刷新文件树 Git 徽标与差异基线
-watch(rootDir, () => refreshGitStatus(), {immediate: true})
+// 打开文件夹、保存文件、挂载/移除额外根后刷新文件树 Git 徽标与差异基线
+watch([rootDir, extraRoots], () => refreshGitStatus(), {immediate: true, deep: true})
 watch(savedContent, () => refreshGitStatus())
 
 const closeViewer = () => {
@@ -1734,6 +1808,43 @@ const watchMode = ref(kvGet('watch-mode') === 'true')
 watch(watchMode, (v) => kvSet('watch-mode', String(v)))
 
 // 保存包装：保存后若开启监听模式则自动运行
+// 保存前按 .editorconfig 清理：去除行尾空白 / 补末尾换行（无 .editorconfig 时为空操作）
+const applyEditorconfigOnSave = async () => {
+  const view = editorView.value
+  if (!view || !currentFilePath.value) {
+    return
+  }
+  let r: { trim_trailing_whitespace?: boolean; insert_final_newline?: boolean } | null = null
+  try {
+    r = await invoke('resolve_editorconfig', {filePath: currentFilePath.value})
+  }
+  catch {
+    return
+  }
+  const trim = r?.trim_trailing_whitespace === true
+  const finalNl = r?.insert_final_newline === true
+  if (!trim && !finalNl) {
+    return
+  }
+  const text = view.state.doc.toString()
+  let next = text
+  if (trim) {
+    next = next.replace(/[ \t]+(\r?\n)/g, '$1').replace(/[ \t]+$/, '')
+  }
+  if (finalNl && next.length > 0 && !next.endsWith('\n')) {
+    next += '\n'
+  }
+  if (next === text) {
+    return
+  }
+  const head = view.state.selection.main.head
+  view.dispatch({
+    changes: {from: 0, to: view.state.doc.length, insert: next},
+    selection: {anchor: Math.min(head, next.length)}
+  })
+  await nextTick()
+}
+
 const handleSave = async () => {
   // 保存前格式化：仅当开启、编辑器就绪且当前语言支持 LSP；失败/无能力则静默跳过
   if (formatOnSave.value && editorView.value && lspSupportsLanguage(currentLanguage.value)) {
@@ -1743,6 +1854,7 @@ const handleSave = async () => {
     }
     catch { /* 格式化失败不阻断保存 */ }
   }
+  await applyEditorconfigOnSave()
   await saveFile()
   if (watchMode.value && currentFilePath.value && !isDirty.value) {
     handleRunCode()
@@ -2004,6 +2116,7 @@ const handleRunCode = async () => {
     showRunPrompt.value = true
   }
   else {
+    await applyEditorconfigOnSave()
     await saveFile()
     runCode({...buildRunBase(), filePath: currentFilePath.value})
   }
@@ -2011,6 +2124,7 @@ const handleRunCode = async () => {
 
 const promptSaveAndRun = async () => {
   showRunPrompt.value = false
+  await applyEditorconfigOnSave()
   await saveFile()
   runCode({...buildRunBase(), filePath: currentFilePath.value})
 }
@@ -2119,8 +2233,19 @@ const shortcutDispatch: Record<string, () => void> = {
   open: () => handleOpenFileClick(),
   newTab: () => handleNewTab(),
   closeTab: () => handleCloseTab(activeTabId.value),
+  reopenClosed: () => handleReopenClosed(),
   toggleSidebar: () => toggleSidebar(),
-  toggleTerminal: () => toggleTerminal()
+  toggleTerminal: () => toggleTerminal(),
+  toggleWordWrap: () => toggleWordWrap()
+}
+
+// 切换自动换行（即时生效并随编辑器配置持久化）
+const toggleWordWrap = () => {
+  if (!editorConfig.value) {
+    return
+  }
+  editorConfig.value.word_wrap = !editorConfig.value.word_wrap
+  toast.info(editorConfig.value.word_wrap ? t('app.wordWrapOn') : t('app.wordWrapOff'))
 }
 
 // 切换并持久化外观主题
@@ -2146,10 +2271,11 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'formatOnSave', label: formatOnSave.value ? t('command.formatOnSaveOff') : t('command.formatOnSaveOn'), icon: Save, run: () => toggleFormatOnSave()},
   {id: 'open', label: t('command.open'), icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
   {id: 'openFolder', label: t('command.openFolder'), icon: FolderOpen, run: () => openFolder()},
-  {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => saveFile()},
+  {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => handleSave()},
   {id: 'saveAs', label: t('command.saveAs'), icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
   {id: 'newTab', label: t('command.newTab'), icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
   {id: 'closeTab', label: t('command.closeTab'), icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
+  {id: 'reopenClosed', label: t('command.reopenClosed'), icon: Plus, hint: hintOf('reopenClosed'), run: () => handleReopenClosed()},
   {id: 'quickOpen', label: t('command.quickOpen'), icon: Search, hint: hintOf('quickOpen'), run: () => openQuickOpen()},
   {id: 'gotoLine', label: t('command.gotoLine'), icon: CornerDownRight, hint: hintOf('gotoLine'), run: () => openGoToLine()},
   {id: 'outline', label: t('command.outline'), icon: ListTree, hint: hintOf('outline'), run: () => openOutline()},
@@ -2170,7 +2296,9 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'runTests', label: t('command.runTests'), icon: ListChecks, run: () => runTests()},
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
+  {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
+  {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
   {id: 'layoutVertical', label: t('command.layoutVertical'), group: t('command.groupLayout'), icon: PanelBottom, run: () => handleLayoutChange('vertical')},
   {id: 'layoutEditor', label: t('command.layoutEditor'), group: t('command.groupLayout'), icon: Maximize2, run: () => handleLayoutChange('editor')},

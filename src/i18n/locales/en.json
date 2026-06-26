@@ -48,6 +48,7 @@
       "spaceDotOmission": "Show whitespace dots",
       "showMinimap": "Show minimap",
       "showStickyScroll": "Enable sticky scroll",
+      "wordWrap": "Word wrap",
       "tabSize": "Indent size",
       "font": "Editor font",
       "fontSize": "Font size",
@@ -646,7 +647,10 @@
     "newTab": "New tab",
     "closeOthers": "Close others",
     "closeRight": "Close to the right",
+    "revealInTree": "Reveal in file tree",
+    "revealInFinder": "Reveal in file manager",
     "copyPath": "Copy path",
+    "copyRelativePath": "Copy relative path",
     "untitled": "Untitled"
   },
   "command": {
@@ -684,7 +688,10 @@
     "runTests": "Run tests (auto-detect)",
     "startDebug": "Debug current file",
     "sendToTerminal": "Send selection to terminal",
+    "reopenClosed": "Reopen closed tab",
+    "revealInTree": "Reveal in file tree",
     "toggleSidebar": "Toggle sidebar",
+    "toggleWordWrap": "Toggle word wrap",
     "layoutHorizontal": "Layout: side-by-side",
     "layoutVertical": "Layout: top-bottom",
     "layoutEditor": "Layout: editor only",
@@ -709,8 +716,10 @@
     "generate": "AI generate code",
     "newTab": "New tab",
     "closeTab": "Close tab",
+    "reopenClosed": "Reopen closed tab",
     "toggleSidebar": "Toggle sidebar",
-    "toggleTerminal": "Toggle terminal"
+    "toggleTerminal": "Toggle terminal",
+    "toggleWordWrap": "Toggle word wrap"
   },
   "view": {
     "clear": "Clear",
@@ -777,6 +786,10 @@
   "sidebar": {
     "explorer": "Explorer",
     "openFolder": "Open folder",
+    "addFolder": "Add folder to workspace",
+    "removeFolder": "Remove from workspace",
+    "collapseFolders": "Collapse folders",
+    "searchInFolder": "Search in folder",
     "refresh": "Refresh",
     "noFolder": "No folder open",
     "recent": "Recent",
@@ -806,6 +819,7 @@
   },
   "search": {
     "placeholder": "Search in folder…",
+    "scopedTo": "Searching in \"{folder}\"",
     "searching": "Searching…",
     "countSummary": "{count} matches / {files} files",
     "replacePlaceholder": "Replace with… (case-insensitive)",
@@ -1048,7 +1062,9 @@
   },
   "breadcrumb": {
     "revealIn": "Reveal in file manager: {path}",
-    "unsaved": "Unsaved changes"
+    "unsaved": "Unsaved changes",
+    "loading": "Loading…",
+    "empty": "Empty folder"
   },
   "gitignore": {
     "title": ".gitignore templates",
@@ -1293,6 +1309,10 @@
     "formatFailed": "Format failed: ",
     "formatOnSaveOn": "Format on save enabled",
     "formatOnSaveOff": "Format on save disabled",
+    "wordWrapOn": "Word wrap enabled",
+    "wordWrapOff": "Word wrap disabled",
+    "noClosedTab": "No closed tab to reopen",
+    "noFileToReveal": "No file to reveal",
     "aiPredictOff": "AI code prediction disabled",
     "aiPredictOnNoKey": "AI code prediction enabled, but no API Key is configured. Fill it in \"Settings → AI\"",
     "aiPredictOn": "AI code prediction enabled; pause typing to see the gray completion, press Tab to accept",

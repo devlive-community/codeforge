@@ -48,6 +48,7 @@
       "spaceDotOmission": "是否显示空格省略",
       "showMinimap": "显示代码缩略图 (minimap)",
       "showStickyScroll": "启用粘性滚动 (sticky scroll)",
+      "wordWrap": "自动换行",
       "tabSize": "缩进空格数",
       "font": "编辑器字体",
       "fontSize": "字体大小",
@@ -646,7 +647,10 @@
     "newTab": "新建标签页",
     "closeOthers": "关闭其他",
     "closeRight": "关闭右侧",
+    "revealInTree": "在文件树中定位",
+    "revealInFinder": "在文件管理器中显示",
     "copyPath": "复制路径",
+    "copyRelativePath": "复制相对路径",
     "untitled": "未命名"
   },
   "command": {
@@ -684,7 +688,10 @@
     "runTests": "运行测试（自动识别）",
     "startDebug": "开始调试当前文件",
     "sendToTerminal": "发送选区到终端",
+    "reopenClosed": "重新打开已关闭标签",
+    "revealInTree": "在文件树中定位",
     "toggleSidebar": "切换侧栏",
+    "toggleWordWrap": "切换自动换行",
     "layoutHorizontal": "布局：左右",
     "layoutVertical": "布局：上下",
     "layoutEditor": "布局：仅编辑器",
@@ -709,8 +716,10 @@
     "generate": "AI 生成代码",
     "newTab": "新建标签",
     "closeTab": "关闭标签",
+    "reopenClosed": "重新打开已关闭标签",
     "toggleSidebar": "切换侧栏",
-    "toggleTerminal": "切换终端"
+    "toggleTerminal": "切换终端",
+    "toggleWordWrap": "切换自动换行"
   },
   "view": {
     "clear": "清空",
@@ -777,6 +786,10 @@
   "sidebar": {
     "explorer": "资源管理器",
     "openFolder": "打开文件夹",
+    "addFolder": "添加文件夹到工作区",
+    "removeFolder": "从工作区移除",
+    "collapseFolders": "折叠文件夹",
+    "searchInFolder": "在文件夹中搜索",
     "refresh": "刷新",
     "noFolder": "未打开文件夹",
     "recent": "最近打开",
@@ -806,6 +819,7 @@
   },
   "search": {
     "placeholder": "在文件夹内搜索…",
+    "scopedTo": "在「{folder}」中搜索",
     "searching": "搜索中…",
     "countSummary": "{count} 处 / {files} 文件",
     "replacePlaceholder": "替换为…（大小写不敏感）",
@@ -1048,7 +1062,9 @@
   },
   "breadcrumb": {
     "revealIn": "在访达中显示：{path}",
-    "unsaved": "有未保存的修改"
+    "unsaved": "有未保存的修改",
+    "loading": "加载中…",
+    "empty": "空目录"
   },
   "gitignore": {
     "title": ".gitignore 模板",
@@ -1293,6 +1309,10 @@
     "formatFailed": "格式化失败: ",
     "formatOnSaveOn": "已开启保存时格式化",
     "formatOnSaveOff": "已关闭保存时格式化",
+    "wordWrapOn": "已开启自动换行",
+    "wordWrapOff": "已关闭自动换行",
+    "noClosedTab": "没有可重新打开的标签",
+    "noFileToReveal": "当前没有可定位的文件",
     "aiPredictOff": "AI 代码预测已关闭",
     "aiPredictOnNoKey": "AI 代码预测已开启，但尚未配置 API Key，请在「设置 → AI」中填写",
     "aiPredictOn": "AI 代码预测已开启，停顿打字即可看到灰色补全，Tab 接受",

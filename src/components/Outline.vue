@@ -27,7 +27,7 @@
                 @click="choose(s)"
                 @mousemove="activeIndex = i">
           <span class="w-12 flex-shrink-0 text-[10px] uppercase font-semibold" :class="kindColor(s.kind)">{{ s.kind }}</span>
-          <span class="text-sm text-gray-800 dark:text-gray-100 truncate font-mono">{{ s.name }}</span>
+          <span class="text-sm text-gray-800 dark:text-gray-100 truncate font-mono" :style="{ paddingLeft: `${s.depth * 14}px` }">{{ s.name }}</span>
           <span class="ml-auto pl-3 text-xs text-gray-400 flex-shrink-0">{{ s.line }}</span>
         </button>
       </div>
@@ -42,9 +42,9 @@ import {ListTree} from 'lucide-vue-next'
 
 const {t} = useI18n()
 
-interface Symbol { name: string; kind: string; line: number }
+interface Symbol { name: string; kind: string; line: number; depth: number }
 
-const props = defineProps<{ code: string; language?: string }>()
+const props = defineProps<{ code: string; language?: string; currentLine?: number }>()
 const emit = defineEmits<{ go: [line: number]; close: [] }>()
 
 const query = ref('')
@@ -56,7 +56,21 @@ const setItemRef = (el: any, i: number) => {
   if (el) itemRefs[i] = el
 }
 
-onMounted(() => inputRef.value?.focus())
+onMounted(() => {
+  inputRef.value?.focus()
+  // 预选：定位到光标所在（或其上方最近）的符号，打开即落在当前函数
+  if (props.currentLine && symbols.value.length) {
+    let idx = -1
+    for (let i = 0; i < symbols.value.length; i++) {
+      if (symbols.value[i].line <= props.currentLine) idx = i
+      else break
+    }
+    if (idx >= 0) {
+      activeIndex.value = idx
+      nextTick(() => itemRefs[idx]?.scrollIntoView({block: 'center'}))
+    }
+  }
+})
 
 // 控制关键字，避免把 if/for 等当成方法名
 const STOP = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'else', 'do', 'foreach', 'with', 'when', 'match'])
@@ -137,18 +151,23 @@ const rulesFor = (fam: string): [RegExp, string, number][] => {
 const symbols = computed<Symbol[]>(() => {
   const lines = (props.code || '').split('\n')
   const rules = rulesFor(family.value)
-  const out: Symbol[] = []
+  const raw: { name: string; kind: string; line: number; indent: number }[] = []
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     for (const [re, kind, g] of rules) {
       const m = re.exec(line)
       if (m && m[g] && !STOP.has(m[g])) {
-        out.push({name: m[g], kind, line: i + 1})
+        // 缩进宽度（tab 记为 4），用于推断层级
+        const lead = line.slice(0, line.length - line.trimStart().length)
+        const indent = lead.replace(/\t/g, '    ').length
+        raw.push({name: m[g], kind, line: i + 1, indent})
         break
       }
     }
   }
-  return out
+  // 将出现过的缩进值排序后映射为层级，避免受具体缩进大小影响
+  const levels = Array.from(new Set(raw.map(s => s.indent))).sort((a, b) => a - b)
+  return raw.map(s => ({name: s.name, kind: s.kind, line: s.line, depth: levels.indexOf(s.indent)}))
 })
 
 const filtered = computed<Symbol[]>(() => {

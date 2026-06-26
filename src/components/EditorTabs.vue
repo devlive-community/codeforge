@@ -46,7 +46,10 @@
       <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close-right', menu.tabId!))">{{ t('tabs.closeRight') }}</button>
       <template v-if="menuTabPath">
         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('reveal-tree', menuTabPath!))">{{ t('tabs.revealInTree') }}</button>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('reveal-finder', menuTabPath!))">{{ t('tabs.revealInFinder') }}</button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('copy-path', menuTabPath!))">{{ t('tabs.copyPath') }}</button>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('copy-relative', menuTabPath!))">{{ t('tabs.copyRelativePath') }}</button>
       </template>
     </div>
   </div>
@@ -72,6 +75,9 @@ const emit = defineEmits<{
   'close-others': [id: string]
   'close-right': [id: string]
   'copy-path': [path: string]
+  'copy-relative': [path: string]
+  'reveal-tree': [path: string]
+  'reveal-finder': [path: string]
   move: [fromId: string, toId: string]
 }>()
 

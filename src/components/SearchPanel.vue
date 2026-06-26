@@ -30,6 +30,12 @@
         </button>
       </div>
 
+      <!-- 搜索范围（来自「在文件夹中搜索」）-->
+      <div v-if="scope" class="px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+        <FolderSearch class="w-3.5 h-3.5 text-gray-400"/>
+        <span>{{ t('search.scopedTo', { folder: scopeName }) }}</span>
+      </div>
+
       <!-- 全部替换确认 -->
       <div v-if="confirming" class="px-3 py-2 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 flex-shrink-0 text-xs">
         <p class="text-amber-700 dark:text-amber-300 mb-2">
@@ -68,7 +74,7 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {FileText, Replace, Search} from 'lucide-vue-next'
+import {FileText, FolderSearch, Replace, Search} from 'lucide-vue-next'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 
@@ -79,7 +85,10 @@ interface Match
   text: string
 }
 
-const props = defineProps<{ rootDir: string }>()
+const props = defineProps<{ rootDir: string, extraRoots?: string[], scope?: string | null }>()
+// 有 scope 时只搜该文件夹；否则覆盖主根 + 全部额外挂载根
+const allRoots = computed(() => props.scope ? [props.scope] : [props.rootDir, ...(props.extraRoots || [])])
+const scopeName = computed(() => props.scope ? (props.scope.split(/[\\/]/).filter(Boolean).pop() || props.scope) : '')
 const emit = defineEmits<{
   open: [path: string, line: number]
   close: []
@@ -110,11 +119,17 @@ const replaceAll = async () => {
   const affected = Array.from(new Set(results.value.map(m => m.path)))
   replacing.value = true
   try {
-    const summary = await invoke<{ files_changed: number, replacements: number }>('replace_in_files', {
-      root: props.rootDir,
-      query: q,
-      replacement: replacement.value
-    })
+    const summaries = await Promise.all(allRoots.value.map(r =>
+        invoke<{ files_changed: number, replacements: number }>('replace_in_files', {
+          root: r,
+          query: q,
+          replacement: replacement.value
+        }).catch(() => ({files_changed: 0, replacements: 0}))
+    ))
+    const summary = summaries.reduce((a, b) => ({
+      files_changed: a.files_changed + b.files_changed,
+      replacements: a.replacements + b.replacements
+    }), {files_changed: 0, replacements: 0})
     toast.success(t('search.replacedSummary', { count: summary.replacements, files: summary.files_changed }))
     emit('replaced', affected)
     await search()
@@ -127,7 +142,18 @@ const replaceAll = async () => {
   }
 }
 
-const rel = (p: string) => p.startsWith(props.rootDir) ? p.slice(props.rootDir.length + 1) : p
+// 找到该路径所属的根（多根时取最长匹配，避免嵌套根误判）
+const ownerRoot = (p: string) => allRoots.value
+    .filter(r => p === r || p.startsWith(r + '/') || p.startsWith(r + '\\'))
+    .sort((a, b) => b.length - a.length)[0] || ''
+const folderName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
+const rel = (p: string) => {
+  const root = ownerRoot(p)
+  let r = root && p.startsWith(root) ? p.slice(root.length).replace(/^[\\/]/, '') : p
+  // 多根时在相对路径前加上根名，便于区分来自哪个根
+  if (allRoots.value.length > 1 && root) r = `${folderName(root)}/${r}`
+  return r
+}
 
 const groups = computed(() => {
   const map = new Map<string, Match[]>()
@@ -153,7 +179,10 @@ const search = async () => {
   }
   loading.value = true
   try {
-    results.value = await invoke<Match[]>('search_in_files', {root: props.rootDir, query: q})
+    const perRoot = await Promise.all(
+        allRoots.value.map(r => invoke<Match[]>('search_in_files', {root: r, query: q}).catch(() => []))
+    )
+    results.value = perRoot.flat()
   }
   catch (error) {
     console.error('搜索失败:', error)
