@@ -692,6 +692,11 @@ export function useCodeMirrorEditor(props: Props)
             result.push(buildMinimapTheme(isDark.value))
         }
 
+        // 自动换行：超出视口宽度的长行折行显示，可在设置中开关
+        if (editorConfig.value?.word_wrap) {
+            result.push(EditorView.lineWrapping)
+        }
+
         // 断点 gutter + 调试悬停求值（仅可调试语言）
         if (dapSupportsLanguage(props.language)) {
             result.push(breakpointExtension((line) => debug.toggleBreakpoint(props.filePath ?? null, line)))
@@ -826,6 +831,10 @@ export function useCodeMirrorEditor(props: Props)
     })
 
     watch(() => editorConfig.value?.show_sticky_scroll, async () => {
+        await reRenderEditor()
+    })
+
+    watch(() => editorConfig.value?.word_wrap, async () => {
         await reRenderEditor()
     })
 

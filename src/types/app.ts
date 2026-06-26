@@ -59,6 +59,7 @@ export interface EditorConfig
     space_dot_omission?: boolean
     show_minimap?: boolean
     show_sticky_scroll?: boolean
+    word_wrap?: boolean
     layout?: LayoutMode
     last_direction?: SplitDirection
     max_open_file_size?: number

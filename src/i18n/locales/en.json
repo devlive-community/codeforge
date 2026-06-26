@@ -48,6 +48,7 @@
       "spaceDotOmission": "Show whitespace dots",
       "showMinimap": "Show minimap",
       "showStickyScroll": "Enable sticky scroll",
+      "wordWrap": "Word wrap",
       "tabSize": "Indent size",
       "font": "Editor font",
       "fontSize": "Font size",
