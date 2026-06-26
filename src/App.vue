@@ -338,6 +338,7 @@
     <Outline v-if="showOutline"
              :code="code"
              :language="currentLanguage"
+             :current-line="cursorInfo.line"
              @go="gotoLine"
              @close="showOutline = false"/>
 
