@@ -10,56 +10,79 @@ html {
   scroll-behavior: smooth;
 }
 
-/* 发布日志正文排版（Markdown 渲染结果）。设计阶段再细化。 */
+body {
+  @apply font-sans antialiased;
+}
+
+/* 发布日志正文排版（Markdown 渲染结果） */
 .prose-doc {
-  @apply text-gray-700 dark:text-gray-300 leading-7;
+  @apply text-slate-700 dark:text-slate-300 leading-7 text-[15px];
 }
 .prose-doc h1 {
-  @apply text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2 mb-6 scroll-mt-24;
+  @apply text-3xl font-bold tracking-tight text-slate-900 dark:text-white mt-2 mb-6 scroll-mt-24;
 }
 .prose-doc h2 {
-  @apply text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-10 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800 scroll-mt-24;
+  @apply text-xl font-semibold text-slate-900 dark:text-white mt-12 mb-4 pb-2 border-b border-slate-200 dark:border-slate-800 scroll-mt-24;
 }
 .prose-doc h3 {
-  @apply text-xl font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-3 scroll-mt-24;
+  @apply text-lg font-semibold text-slate-900 dark:text-white mt-8 mb-3 scroll-mt-24;
 }
 .prose-doc p {
   @apply my-4;
 }
 .prose-doc a {
-  @apply text-brand-600 dark:text-brand-400 hover:underline;
+  @apply text-brand-600 dark:text-brand-400 font-medium hover:underline underline-offset-2;
+}
+.prose-doc strong {
+  @apply font-semibold text-slate-900 dark:text-slate-100;
 }
 .prose-doc ul {
-  @apply list-disc pl-6 my-4 space-y-1.5;
+  @apply list-disc pl-5 my-4 space-y-2 marker:text-slate-300 dark:marker:text-slate-600;
 }
 .prose-doc ol {
-  @apply list-decimal pl-6 my-4 space-y-1.5;
+  @apply list-decimal pl-5 my-4 space-y-2 marker:text-slate-400;
+}
+.prose-doc li > ul,
+.prose-doc li > ol {
+  @apply my-2;
 }
 .prose-doc code {
-  @apply px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-brand-600 dark:text-brand-300 text-[0.9em] font-mono;
+  @apply px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-brand-600 dark:text-brand-300 text-[0.85em] font-mono;
 }
 .prose-doc pre {
-  @apply p-4 rounded-lg bg-gray-900 text-gray-100 overflow-x-auto my-5 text-sm;
+  @apply p-4 rounded-xl bg-slate-900 dark:bg-slate-900 border border-slate-800 text-slate-100 overflow-x-auto my-5 text-sm leading-relaxed;
 }
 .prose-doc pre code {
-  @apply bg-transparent text-gray-100 p-0;
+  @apply bg-transparent text-slate-100 p-0 text-[0.85em];
 }
 .prose-doc blockquote {
-  @apply border-l-4 border-brand-300 dark:border-brand-700 pl-4 italic text-gray-500 dark:text-gray-400 my-4;
+  @apply border-l-2 border-brand-400 dark:border-brand-600 pl-4 my-5 text-slate-500 dark:text-slate-400;
 }
 .prose-doc table {
-  @apply w-full my-5 text-sm border-collapse;
+  @apply w-full my-6 text-sm border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden border-separate border-spacing-0;
+}
+.prose-doc thead {
+  @apply bg-slate-50 dark:bg-slate-800/60;
 }
 .prose-doc th,
 .prose-doc td {
-  @apply border border-gray-200 dark:border-gray-700 px-3 py-2 text-left;
+  @apply border-b border-slate-200 dark:border-slate-800 px-3.5 py-2.5 text-left;
+}
+.prose-doc tbody tr:last-child td {
+  @apply border-b-0;
 }
 .prose-doc th {
-  @apply bg-gray-50 dark:bg-gray-800 font-semibold;
+  @apply font-semibold text-slate-700 dark:text-slate-200;
 }
 .prose-doc hr {
-  @apply my-8 border-gray-200 dark:border-gray-800;
+  @apply my-10 border-slate-200 dark:border-slate-800;
 }
 .prose-doc img {
-  @apply inline-block max-w-full;
+  @apply inline-block max-w-full align-middle;
+}
+
+/* 锚点链接（markdown-it-anchor headerLink）：去掉默认下划线 */
+.prose-doc :where(h1, h2, h3) a {
+  @apply no-underline text-inherit;
+  font-weight: inherit;
 }
