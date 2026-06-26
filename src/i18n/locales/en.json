@@ -780,6 +780,7 @@
     "addFolder": "Add folder to workspace",
     "removeFolder": "Remove from workspace",
     "collapseFolders": "Collapse folders",
+    "searchInFolder": "Search in folder",
     "refresh": "Refresh",
     "noFolder": "No folder open",
     "recent": "Recent",
@@ -809,6 +810,7 @@
   },
   "search": {
     "placeholder": "Search in folder…",
+    "scopedTo": "Searching in \"{folder}\"",
     "searching": "Searching…",
     "countSummary": "{count} matches / {files} files",
     "replacePlaceholder": "Replace with… (case-insensitive)",

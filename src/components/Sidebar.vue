@@ -110,6 +110,7 @@
             <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-600" @click="confirmDelete">{{ t('sidebar.delete') }}</button>
           </template>
           <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+          <button v-if="ctx.node.is_dir" class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="searchInFolder">{{ t('sidebar.searchInFolder') }}</button>
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="reveal">{{ t('sidebar.revealIn', { label: revealLabel }) }}</button>
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="copyPath">{{ t('git.copyPath') }}</button>
 
@@ -242,6 +243,7 @@ const emit = defineEmits<{
   'remove-root': [path: string]
   'open-recent': [path: string]
   'open-file': [path: string]
+  'search-in': [path: string]
   'renamed': [from: string, to: string]
   'deleted': [path: string]
   'git-refresh': []
@@ -425,6 +427,10 @@ const onExtraRootContext = (er: string, e: MouseEvent) => {
 }
 const removeExtraRoot = () => {
   if (ctxExtraRoot.value) emit('remove-root', ctxExtraRoot.value)
+  closeCtx()
+}
+const searchInFolder = () => {
+  if (ctx.node?.is_dir) emit('search-in', ctx.node.path)
   closeCtx()
 }
 

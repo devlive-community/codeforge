@@ -65,6 +65,7 @@
                  @remove-root="removeWorkspaceFolder"
                  @open-recent="openFolderPath"
                  @open-file="smartOpen"
+                 @search-in="openSearchInFolder"
                  @renamed="(from, to) => updateTabPath(from, to)"
                  @deleted="(p) => detachTabPath(p)"
                  @git-refresh="refreshGitStatus"/>
@@ -313,7 +314,7 @@
     <AiAssistant v-if="showAi" :code="code" :language="currentLanguage" :execution-id="aiExecutionId" :error-context="aiErrorContext" :initial-prompt="aiInitialPrompt" :root-dir="rootDir" @close="showAi = false" @insert-code="applyAiCode"/>
 
     <!-- 文件夹内全局搜索 -->
-    <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" :extra-roots="extraRoots" @open="openSearchResult" @replaced="reloadAffectedFiles" @close="showSearch = false"/>
+    <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" :extra-roots="extraRoots" :scope="searchScope" @open="openSearchResult" @replaced="reloadAffectedFiles" @close="showSearch = false"/>
 
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
@@ -1127,11 +1128,21 @@ const insertGeneratedCode = (text: string) => {
 
 // 文件夹内全局搜索（Cmd+Shift+F）
 const showSearch = ref(false)
+const searchScope = ref<string | null>(null)
 const openSearch = () => {
   if (!rootDir.value) {
     toast.info(t('app.openFolderFirst'))
     return
   }
+  searchScope.value = null
+  showSearch.value = true
+}
+// 来自文件树「在文件夹中搜索」：限定搜索范围为该目录
+const openSearchInFolder = (path: string) => {
+  if (!rootDir.value) {
+    return
+  }
+  searchScope.value = path
   showSearch.value = true
 }
 

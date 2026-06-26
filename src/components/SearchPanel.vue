@@ -30,6 +30,12 @@
         </button>
       </div>
 
+      <!-- 搜索范围（来自「在文件夹中搜索」）-->
+      <div v-if="scope" class="px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+        <FolderSearch class="w-3.5 h-3.5 text-gray-400"/>
+        <span>{{ t('search.scopedTo', { folder: scopeName }) }}</span>
+      </div>
+
       <!-- 全部替换确认 -->
       <div v-if="confirming" class="px-3 py-2 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 flex-shrink-0 text-xs">
         <p class="text-amber-700 dark:text-amber-300 mb-2">
@@ -68,7 +74,7 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {FileText, Replace, Search} from 'lucide-vue-next'
+import {FileText, FolderSearch, Replace, Search} from 'lucide-vue-next'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 
@@ -79,9 +85,10 @@ interface Match
   text: string
 }
 
-const props = defineProps<{ rootDir: string, extraRoots?: string[] }>()
-// 主根 + 额外挂载的根，搜索/替换覆盖整个工作区
-const allRoots = computed(() => [props.rootDir, ...(props.extraRoots || [])])
+const props = defineProps<{ rootDir: string, extraRoots?: string[], scope?: string | null }>()
+// 有 scope 时只搜该文件夹；否则覆盖主根 + 全部额外挂载根
+const allRoots = computed(() => props.scope ? [props.scope] : [props.rootDir, ...(props.extraRoots || [])])
+const scopeName = computed(() => props.scope ? (props.scope.split(/[\\/]/).filter(Boolean).pop() || props.scope) : '')
 const emit = defineEmits<{
   open: [path: string, line: number]
   close: []
