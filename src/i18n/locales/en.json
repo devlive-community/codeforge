@@ -686,6 +686,7 @@
     "startDebug": "Debug current file",
     "sendToTerminal": "Send selection to terminal",
     "toggleSidebar": "Toggle sidebar",
+    "toggleWordWrap": "Toggle word wrap",
     "layoutHorizontal": "Layout: side-by-side",
     "layoutVertical": "Layout: top-bottom",
     "layoutEditor": "Layout: editor only",
@@ -711,7 +712,8 @@
     "newTab": "New tab",
     "closeTab": "Close tab",
     "toggleSidebar": "Toggle sidebar",
-    "toggleTerminal": "Toggle terminal"
+    "toggleTerminal": "Toggle terminal",
+    "toggleWordWrap": "Toggle word wrap"
   },
   "view": {
     "clear": "Clear",
@@ -1299,6 +1301,8 @@
     "formatFailed": "Format failed: ",
     "formatOnSaveOn": "Format on save enabled",
     "formatOnSaveOff": "Format on save disabled",
+    "wordWrapOn": "Word wrap enabled",
+    "wordWrapOff": "Word wrap disabled",
     "aiPredictOff": "AI code prediction disabled",
     "aiPredictOnNoKey": "AI code prediction enabled, but no API Key is configured. Fill it in \"Settings → AI\"",
     "aiPredictOn": "AI code prediction enabled; pause typing to see the gray completion, press Tab to accept",

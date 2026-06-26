@@ -686,6 +686,7 @@
     "startDebug": "开始调试当前文件",
     "sendToTerminal": "发送选区到终端",
     "toggleSidebar": "切换侧栏",
+    "toggleWordWrap": "切换自动换行",
     "layoutHorizontal": "布局：左右",
     "layoutVertical": "布局：上下",
     "layoutEditor": "布局：仅编辑器",
@@ -711,7 +712,8 @@
     "newTab": "新建标签",
     "closeTab": "关闭标签",
     "toggleSidebar": "切换侧栏",
-    "toggleTerminal": "切换终端"
+    "toggleTerminal": "切换终端",
+    "toggleWordWrap": "切换自动换行"
   },
   "view": {
     "clear": "清空",
@@ -1299,6 +1301,8 @@
     "formatFailed": "格式化失败: ",
     "formatOnSaveOn": "已开启保存时格式化",
     "formatOnSaveOff": "已关闭保存时格式化",
+    "wordWrapOn": "已开启自动换行",
+    "wordWrapOff": "已关闭自动换行",
     "aiPredictOff": "AI 代码预测已关闭",
     "aiPredictOnNoKey": "AI 代码预测已开启，但尚未配置 API Key，请在「设置 → AI」中填写",
     "aiPredictOn": "AI 代码预测已开启，停顿打字即可看到灰色补全，Tab 接受",

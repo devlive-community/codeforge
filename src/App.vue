@@ -480,7 +480,7 @@ import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {dapSupportsLanguage} from './debug/dapClient'
-import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, X} from 'lucide-vue-next'
+import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -2204,7 +2204,17 @@ const shortcutDispatch: Record<string, () => void> = {
   newTab: () => handleNewTab(),
   closeTab: () => handleCloseTab(activeTabId.value),
   toggleSidebar: () => toggleSidebar(),
-  toggleTerminal: () => toggleTerminal()
+  toggleTerminal: () => toggleTerminal(),
+  toggleWordWrap: () => toggleWordWrap()
+}
+
+// 切换自动换行（即时生效并随编辑器配置持久化）
+const toggleWordWrap = () => {
+  if (!editorConfig.value) {
+    return
+  }
+  editorConfig.value.word_wrap = !editorConfig.value.word_wrap
+  toast.info(editorConfig.value.word_wrap ? t('app.wordWrapOn') : t('app.wordWrapOff'))
 }
 
 // 切换并持久化外观主题
@@ -2255,6 +2265,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
+  {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
   {id: 'layoutVertical', label: t('command.layoutVertical'), group: t('command.groupLayout'), icon: PanelBottom, run: () => handleLayoutChange('vertical')},
   {id: 'layoutEditor', label: t('command.layoutEditor'), group: t('command.groupLayout'), icon: Maximize2, run: () => handleLayoutChange('editor')},

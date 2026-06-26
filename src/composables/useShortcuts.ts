@@ -26,7 +26,8 @@ const SHORTCUT_DEFS: { id: string; default: string }[] = [
     {id: 'newTab', default: 'Mod+N'},
     {id: 'closeTab', default: 'Mod+W'},
     {id: 'toggleSidebar', default: 'Mod+B'},
-    {id: 'toggleTerminal', default: 'Mod+`'}
+    {id: 'toggleTerminal', default: 'Mod+`'},
+    {id: 'toggleWordWrap', default: 'Alt+Z'}
 ]
 
 const STORAGE_KEY = 'shortcuts'
