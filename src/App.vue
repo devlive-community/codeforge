@@ -114,6 +114,7 @@
                   <span v-if="cursorInfo.selLen">{{ t('app.selected') }} <strong>{{ cursorInfo.selLen }}</strong></span>
                   <span><strong>{{ (code || '').length }}</strong> {{ t('app.chars') }}</span>
                   <span><strong>{{ (code || '').split('\n').length }}</strong> {{ t('app.lines') }}</span>
+                  <IndentControl v-if="editorConfig" :config="editorConfig"/>
                 </div>
               </div>
               <div class="flex-1 overflow-hidden relative">
@@ -255,6 +256,7 @@
             <span v-if="cursorInfo.selLen">{{ t('app.selected') }} <strong>{{ cursorInfo.selLen }}</strong></span>
             <span><strong>{{ (code || '').length }}</strong> {{ t('app.chars') }}</span>
             <span><strong>{{ (code || '').split('\n').length }}</strong> {{ t('app.lines') }}</span>
+            <IndentControl v-if="editorConfig" :config="editorConfig"/>
           </div>
         </div>
         <div class="flex-1 overflow-hidden relative">
@@ -514,6 +516,7 @@ import {useFileManager} from './composables/useFileManager'
 import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
 import EditorTabs from './components/EditorTabs.vue'
+import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
 import QuickOpen from './components/QuickOpen.vue'

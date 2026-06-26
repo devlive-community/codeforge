@@ -1264,6 +1264,13 @@
       "mapChina": "首个维度作省份名(如「北京市」)、首个指标作值", "mapWorld": "首个维度作国家名(英文)、首个指标作值"
     }
   },
+  "statusbar": {
+    "indentTitle": "缩进设置",
+    "indentType": "缩进类型",
+    "tabWidth": "Tab 宽度",
+    "spaces": "空格",
+    "tabs": "制表符"
+  },
   "app": {
     "runInputToggle": "运行输入（参数 / stdin / 环境变量）",
     "runArgs": "运行参数",

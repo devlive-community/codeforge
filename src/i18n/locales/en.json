@@ -1264,6 +1264,13 @@
       "mapChina": "First dimension as province name (e.g. \"Beijing\"), first metric as value", "mapWorld": "First dimension as country name (English), first metric as value"
     }
   },
+  "statusbar": {
+    "indentTitle": "Indentation settings",
+    "indentType": "Indent type",
+    "tabWidth": "Tab width",
+    "spaces": "Spaces",
+    "tabs": "Tabs"
+  },
   "app": {
     "runInputToggle": "Run input (args / stdin / env vars)",
     "runArgs": "Run arguments",
