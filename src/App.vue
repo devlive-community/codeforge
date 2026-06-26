@@ -1778,6 +1778,43 @@ const watchMode = ref(kvGet('watch-mode') === 'true')
 watch(watchMode, (v) => kvSet('watch-mode', String(v)))
 
 // 保存包装：保存后若开启监听模式则自动运行
+// 保存前按 .editorconfig 清理：去除行尾空白 / 补末尾换行（无 .editorconfig 时为空操作）
+const applyEditorconfigOnSave = async () => {
+  const view = editorView.value
+  if (!view || !currentFilePath.value) {
+    return
+  }
+  let r: { trim_trailing_whitespace?: boolean; insert_final_newline?: boolean } | null = null
+  try {
+    r = await invoke('resolve_editorconfig', {filePath: currentFilePath.value})
+  }
+  catch {
+    return
+  }
+  const trim = r?.trim_trailing_whitespace === true
+  const finalNl = r?.insert_final_newline === true
+  if (!trim && !finalNl) {
+    return
+  }
+  const text = view.state.doc.toString()
+  let next = text
+  if (trim) {
+    next = next.replace(/[ \t]+(\r?\n)/g, '$1').replace(/[ \t]+$/, '')
+  }
+  if (finalNl && next.length > 0 && !next.endsWith('\n')) {
+    next += '\n'
+  }
+  if (next === text) {
+    return
+  }
+  const head = view.state.selection.main.head
+  view.dispatch({
+    changes: {from: 0, to: view.state.doc.length, insert: next},
+    selection: {anchor: Math.min(head, next.length)}
+  })
+  await nextTick()
+}
+
 const handleSave = async () => {
   // 保存前格式化：仅当开启、编辑器就绪且当前语言支持 LSP；失败/无能力则静默跳过
   if (formatOnSave.value && editorView.value && lspSupportsLanguage(currentLanguage.value)) {
@@ -1787,6 +1824,7 @@ const handleSave = async () => {
     }
     catch { /* 格式化失败不阻断保存 */ }
   }
+  await applyEditorconfigOnSave()
   await saveFile()
   if (watchMode.value && currentFilePath.value && !isDirty.value) {
     handleRunCode()
@@ -2048,6 +2086,7 @@ const handleRunCode = async () => {
     showRunPrompt.value = true
   }
   else {
+    await applyEditorconfigOnSave()
     await saveFile()
     runCode({...buildRunBase(), filePath: currentFilePath.value})
   }
@@ -2055,6 +2094,7 @@ const handleRunCode = async () => {
 
 const promptSaveAndRun = async () => {
   showRunPrompt.value = false
+  await applyEditorconfigOnSave()
   await saveFile()
   runCode({...buildRunBase(), filePath: currentFilePath.value})
 }
@@ -2190,7 +2230,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'formatOnSave', label: formatOnSave.value ? t('command.formatOnSaveOff') : t('command.formatOnSaveOn'), icon: Save, run: () => toggleFormatOnSave()},
   {id: 'open', label: t('command.open'), icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
   {id: 'openFolder', label: t('command.openFolder'), icon: FolderOpen, run: () => openFolder()},
-  {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => saveFile()},
+  {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => handleSave()},
   {id: 'saveAs', label: t('command.saveAs'), icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
   {id: 'newTab', label: t('command.newTab'), icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
   {id: 'closeTab', label: t('command.closeTab'), icon: X, hint: hintOf('closeTab'), run: () => handleCloseTab(activeTabId.value)},
