@@ -469,6 +469,29 @@ pub async fn git_diff(root: String) -> Result<String, String> {
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 已暂存改动的 diff（git diff --cached），用于 AI 生成提交信息
+#[tauri::command]
+pub async fn git_staged_diff(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let output = std::process::Command::new("git")
+            .args(["-C", &root, "diff", "--cached"])
+            .output()
+            .map_err(|e| format!("执行 git 失败: {}", e))?;
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("git diff --cached 失败：{}", err.trim()));
+        }
+        let mut diff = String::from_utf8_lossy(&output.stdout).to_string();
+        if diff.len() > MAX_DIFF_LEN {
+            diff.truncate(MAX_DIFF_LEN);
+            diff.push_str("\n…(diff 过长已截断)");
+        }
+        Ok(diff)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 // ===== Git 源代码管理 =====
 
 /// 克隆远程仓库到 dir 下，返回克隆出的仓库目录路径。

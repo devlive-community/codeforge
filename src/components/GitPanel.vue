@@ -882,7 +882,9 @@ const genMessage = async () => {
   }
   generating.value = true
   try {
-    const diff = await invoke<string>('git_diff', {root: props.rootDir})
+    // 有暂存改动且非「提交全部」时，仅依据将要提交的暂存 diff，避免描述未纳入提交的改动
+    const useStaged = staged.value.length > 0 && !commitAll.value
+    const diff = await invoke<string>(useStaged ? 'git_staged_diff' : 'git_diff', {root: props.rootDir})
     if (!diff.trim()) {
       toast.info(t('git.noDiff'))
       return
