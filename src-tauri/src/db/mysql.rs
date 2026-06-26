@@ -1,7 +1,87 @@
-use super::{DataSource, DbExecutor, SqlResultSet, SqlRunResult, resolve_endpoint, split_sql};
+use super::{
+    DataSource, DbExecutor, Endpoint, SqlResultSet, SqlRunResult, TxnConn, resolve_endpoint,
+    split_sql,
+};
 use serde_json::Value as JsonValue;
 
 pub(crate) struct MysqlExecutor;
+
+// 建连并返回连接 + 端点（端点持有 SSH 隧道，须随连接一起存活）
+fn connect(source: &DataSource) -> Result<(mysql::Conn, Endpoint), String> {
+    let endpoint = resolve_endpoint(source, 3306)?;
+    let mut builder = mysql::OptsBuilder::new()
+        .ip_or_hostname(Some(endpoint.host.clone()))
+        .tcp_port(endpoint.port)
+        .user(source.user.clone())
+        .pass(source.password.clone())
+        .db_name(source.database.clone());
+    if source.ssl.unwrap_or(false) {
+        builder = builder.ssl_opts(Some(
+            mysql::SslOpts::default()
+                .with_danger_accept_invalid_certs(true)
+                .with_danger_skip_domain_validation(true),
+        ));
+    }
+    let conn = mysql::Conn::new(builder).map_err(|e| format!("连接 MySQL 失败: {}", e))?;
+    Ok((conn, endpoint))
+}
+
+/// 在已有连接上执行脚本（run 与事务会话共用）
+fn run_on_conn(conn: &mut mysql::Conn, sql: &str) -> SqlRunResult {
+    use mysql::prelude::Queryable;
+    let mut result = SqlRunResult::new();
+    'stmts: for stmt_sql in split_sql(sql) {
+        let mut qr = match conn.query_iter(&stmt_sql) {
+            Ok(q) => q,
+            Err(e) => {
+                result.error = Some(e.to_string());
+                break 'stmts;
+            }
+        };
+        let columns: Vec<String> = qr
+            .columns()
+            .as_ref()
+            .iter()
+            .map(|c| c.name_str().to_string())
+            .collect();
+        if columns.is_empty() {
+            let affected = qr.affected_rows();
+            result.messages.push(format!("OK，影响 {} 行", affected));
+        } else {
+            let mut rows = Vec::new();
+            for r in qr.by_ref() {
+                match r {
+                    Ok(row) => {
+                        let vals = row.unwrap();
+                        rows.push(vals.iter().map(value_to_json).collect());
+                    }
+                    Err(e) => {
+                        result.error = Some(e.to_string());
+                        break 'stmts;
+                    }
+                }
+            }
+            result.result_sets.push(SqlResultSet { columns, rows });
+        }
+    }
+    result
+}
+
+struct MysqlTxn {
+    conn: mysql::Conn,
+    _endpoint: Endpoint,
+}
+impl TxnConn for MysqlTxn {
+    fn exec(&mut self, sql: &str) -> SqlRunResult {
+        run_on_conn(&mut self.conn, sql)
+    }
+    fn finish(&mut self, commit: bool) -> Result<(), String> {
+        use mysql::prelude::Queryable;
+        self.conn
+            .query_drop(if commit { "COMMIT" } else { "ROLLBACK" })
+            .map_err(|e| e.to_string())
+    }
+}
 
 fn value_to_json(v: &mysql::Value) -> JsonValue {
     use mysql::Value::*;
@@ -36,76 +116,25 @@ impl DbExecutor for MysqlExecutor {
     }
 
     fn run(&self, sql: &str, source: &DataSource) -> SqlRunResult {
-        use mysql::prelude::Queryable;
-        let mut result = SqlRunResult::new();
-
-        // 解析端点：启用 SSH 时隧道转发到本地端口（隧道随 endpoint 在本函数结束时关闭）
-        let endpoint = match resolve_endpoint(source, 3306) {
-            Ok(e) => e,
+        match connect(source) {
+            // endpoint 持有隧道，run 期间保持存活
+            Ok((mut conn, _endpoint)) => run_on_conn(&mut conn, sql),
             Err(e) => {
+                let mut result = SqlRunResult::new();
                 result.error = Some(e);
-                return result;
-            }
-        };
-
-        let mut builder = mysql::OptsBuilder::new()
-            .ip_or_hostname(Some(endpoint.host.clone()))
-            .tcp_port(endpoint.port)
-            .user(source.user.clone())
-            .pass(source.password.clone())
-            .db_name(source.database.clone());
-
-        // 启用 SSL：rustls 加密连接（开发场景放宽证书校验）
-        if source.ssl.unwrap_or(false) {
-            builder = builder.ssl_opts(Some(
-                mysql::SslOpts::default()
-                    .with_danger_accept_invalid_certs(true)
-                    .with_danger_skip_domain_validation(true),
-            ));
-        }
-
-        let mut conn = match mysql::Conn::new(builder) {
-            Ok(c) => c,
-            Err(e) => {
-                result.error = Some(format!("连接 MySQL 失败: {}", e));
-                return result;
-            }
-        };
-
-        'stmts: for stmt_sql in split_sql(sql) {
-            let mut qr = match conn.query_iter(&stmt_sql) {
-                Ok(q) => q,
-                Err(e) => {
-                    result.error = Some(e.to_string());
-                    break 'stmts;
-                }
-            };
-            let columns: Vec<String> = qr
-                .columns()
-                .as_ref()
-                .iter()
-                .map(|c| c.name_str().to_string())
-                .collect();
-            if columns.is_empty() {
-                let affected = qr.affected_rows();
-                result.messages.push(format!("OK，影响 {} 行", affected));
-            } else {
-                let mut rows = Vec::new();
-                for r in qr.by_ref() {
-                    match r {
-                        Ok(row) => {
-                            let vals = row.unwrap();
-                            rows.push(vals.iter().map(value_to_json).collect());
-                        }
-                        Err(e) => {
-                            result.error = Some(e.to_string());
-                            break 'stmts;
-                        }
-                    }
-                }
-                result.result_sets.push(SqlResultSet { columns, rows });
+                result
             }
         }
-        result
+    }
+
+    fn begin(&self, source: &DataSource) -> Result<Box<dyn TxnConn>, String> {
+        use mysql::prelude::Queryable;
+        let (mut conn, endpoint) = connect(source)?;
+        conn.query_drop("START TRANSACTION")
+            .map_err(|e| format!("开启事务失败: {}", e))?;
+        Ok(Box::new(MysqlTxn {
+            conn,
+            _endpoint: endpoint,
+        }))
     }
 }

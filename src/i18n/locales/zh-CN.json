@@ -10,6 +10,7 @@
       "database": "数据库",
       "language": "语言",
       "lsp": "语言服务",
+      "gitignore": ".gitignore",
       "network": "网络",
       "cache": "缓存",
       "logs": "日志",
@@ -212,6 +213,24 @@
       "startInstallFailed": "启动安装失败：",
       "installDone": "✓ 安装完成",
       "installFailed": "✗ 安装失败"
+    },
+    "gitignore": {
+      "title": "自定义 .gitignore 模板",
+      "desc": "在此管理自定义忽略模板（保存到本地数据库独立表），可在「插入 .gitignore 模板」中与内置模板一起选用。",
+      "newTitle": "新增模板",
+      "editTitle": "编辑模板",
+      "name": "模板名称",
+      "content": "忽略规则",
+      "labelPlaceholder": "模板名称，如 我的前端项目",
+      "contentPlaceholder": "# 我的模板\nnode_modules/\ndist/\n…",
+      "add": "添加",
+      "update": "保存修改",
+      "cancel": "取消",
+      "edit": "编辑",
+      "delete": "删除",
+      "empty": "还没有自定义模板",
+      "saved": "已保存",
+      "failed": "操作失败"
     },
     "language": {
       "filter": "筛选语言",
@@ -661,6 +680,7 @@
     "preview": "实时预览（Markdown / HTML）",
     "git": "Git 源代码管理",
     "tasks": "运行任务",
+    "gitignore": "插入 .gitignore 模板",
     "runTests": "运行测试（自动识别）",
     "startDebug": "开始调试当前文件",
     "sendToTerminal": "发送选区到终端",
@@ -1030,6 +1050,34 @@
     "revealIn": "在访达中显示：{path}",
     "unsaved": "有未保存的修改"
   },
+  "gitignore": {
+    "title": ".gitignore 模板",
+    "hint": "勾选要忽略的语言/框架/平台，追加到项目根目录的 .gitignore（已存在的块会跳过）。",
+    "apply": "添加到 .gitignore",
+    "cancel": "取消",
+    "applied": "已添加到 .gitignore",
+    "failed": "写入失败"
+  },
+  "txn": {
+    "begin": "事务",
+    "beginTitle": "开启事务（在同一连接上执行，直到提交/回滚）",
+    "inTxn": "事务中",
+    "commit": "提交",
+    "rollback": "回滚",
+    "began": "事务已开启",
+    "committed": "已提交",
+    "rolledBack": "已回滚",
+    "failed": "事务操作失败"
+  },
+  "er": {
+    "title": "ER 图",
+    "summary": "{tables} 张表 · {fks} 个外键",
+    "loading": "加载结构中…",
+    "empty": "没有可显示的表",
+    "pickDb": "请选择要查看的数据库：",
+    "switchDb": "换库",
+    "tip": "拖动表头可调整布局"
+  },
   "aiCode": {
     "title": {
       "explain": "AI 解释代码",
@@ -1069,6 +1117,7 @@
     "langUnsupported": "当前语言暂不支持调试",
     "installPython": "未检测到 debugpy，请先安装：pip install debugpy",
     "installGo": "未检测到 delve，请先安装：go install github.com/go-delve/delve/cmd/dlv@latest",
+    "installLldb": "未检测到 lldb-dap，请安装 LLVM（含 lldb-dap）并确保在 PATH 中",
     "startFailed": "启动调试失败",
     "panelTitle": "调试",
     "callStack": "调用栈",

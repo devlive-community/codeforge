@@ -79,7 +79,7 @@
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"/>
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-                <div class="flex items-center space-x-3 min-w-0 flex-1">
+                <div class="flex items-center space-x-3 min-w-0 flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
                   <h2 class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap flex-shrink-0">{{ getLanguageDisplayName(currentLanguage) }} {{ t('app.codeEditor') }}</h2>
                   <template v-if="currentFilePath">
@@ -95,6 +95,8 @@
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
+                  <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+                  <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0" @notice="onTxnNotice"/>
                 </div>
 
                 <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -233,6 +235,8 @@
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
             <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
+                  <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
+                  <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0" @notice="onTxnNotice"/>
           </div>
 
           <div class="flex items-center space-x-2 text-xs text-gray-500 whitespace-nowrap flex-shrink-0 pl-3">
@@ -369,6 +373,9 @@
     <!-- AI 代码操作（解释/重构/生成测试） -->
     <AiCodeAction v-if="aiCodeCtx" :language="currentLanguage" :code="aiCodeCtx.code" :action="aiCodeCtx.action"
                   @replace="onAiReplace" @insert="onAiInsert" @close="aiCodeCtx = null"/>
+
+    <!-- .gitignore 模板 -->
+    <GitIgnoreTemplates v-if="showGitignore && rootDir" :root-dir="rootDir" @close="showGitignore = false"/>
 
     <!-- 运行任务 -->
     <TaskRunner v-if="showTasks && rootDir" :root-dir="rootDir" @run="runTask" @close="showTasks = false"/>
@@ -509,9 +516,13 @@ import BlameView from './components/BlameView.vue'
 import GitLog from './components/GitLog.vue'
 import GitPanel from './components/GitPanel.vue'
 import TaskRunner from './components/TaskRunner.vue'
+import GitIgnoreTemplates from './components/GitIgnoreTemplates.vue'
 import DebugToolbar from './components/DebugToolbar.vue'
 import DebugPanel from './components/DebugPanel.vue'
 import AiCodeAction from './components/AiCodeAction.vue'
+import ErDiagram from './components/ErDiagram.vue'
+import TxnControl from './components/TxnControl.vue'
+import {useSqlTxn} from './composables/useSqlTxn'
 import GoToLine from './components/GoToLine.vue'
 import Outline from './components/Outline.vue'
 import SnippetManager from './components/SnippetManager.vue'
@@ -1158,6 +1169,16 @@ const toggleTerminal = () => {
   }
 }
 
+// ===== .gitignore 模板（F2）=====
+const showGitignore = ref(false)
+const openGitignore = () => {
+  if (!rootDir.value) {
+    toast.info(t('app.openFolderFirst'))
+    return
+  }
+  showGitignore.value = true
+}
+
 // ===== 运行任务（B4）：在集成终端中执行预设命令 =====
 const showTasks = ref(false)
 const openTasks = () => {
@@ -1195,7 +1216,10 @@ const startDebug = async () => {
     ok = false
   }
   if (!ok) {
-    toast.error(lang === 'go' ? t('debug.installGo') : t('debug.installPython'))
+    const hint = lang === 'go' ? t('debug.installGo')
+      : (lang === 'rust' || lang === 'c' || lang === 'cpp') ? t('debug.installLldb')
+        : t('debug.installPython')
+    toast.error(hint)
     return
   }
   try {
@@ -1590,6 +1614,16 @@ watch(editorView, () => applyDiffMarkers())
 
 // ===== 断点（B1-P2）：把当前文件的断点 + 执行行派发到编辑器 =====
 const debug = useDebug()
+const sqlTxn = useSqlTxn()
+
+// 事务开启/提交/回滚的反馈写入结果面板
+const onTxnNotice = (text: string) => {
+  if (layoutMode.value === 'editor') {
+    showConsole.value = true
+  }
+  output.value = JSON.stringify({result_sets: [], messages: [text], error: null})
+  isSuccess.value = true
+}
 const applyBreakpoints = () => {
   const view = editorView.value
   if (!view) {
@@ -1834,6 +1868,32 @@ const runSql = async (sqlOverride?: string) => {
   const sql = sqlOverride ?? code.value
   if (!sql.trim()) {
     toast.info(t('app.noSql'))
+    return
+  }
+  // 事务进行中：整段在持有连接上执行（不走分页，否则分页用的是另一条连接看不到未提交数据）
+  if (sqlTxn.active.value) {
+    output.value = ''
+    isSuccess.value = false
+    if (layoutMode.value === 'editor') {
+      showConsole.value = true
+    }
+    isRunning.value = true
+    try {
+      const res = await sqlTxn.exec(sql)
+      output.value = JSON.stringify(res)
+      isSuccess.value = !res.error
+      lastExecutionTime.value = res.elapsed_ms || 0
+      if (res.error) {
+        toast.error(t('app.sqlFailed'))
+      }
+    }
+    catch (error) {
+      output.value = JSON.stringify({result_sets: [], messages: [], error: String(error)})
+      toast.error(t('app.sqlFailedColon') + error)
+    }
+    finally {
+      isRunning.value = false
+    }
     return
   }
   const source = resolveActiveSource()
@@ -2106,6 +2166,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
   {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
   {id: 'tasks', label: t('command.tasks'), icon: ListChecks, run: () => openTasks()},
+  {id: 'gitignore', label: t('command.gitignore'), icon: GitBranch, run: () => openGitignore()},
   {id: 'runTests', label: t('command.runTests'), icon: ListChecks, run: () => runTests()},
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},

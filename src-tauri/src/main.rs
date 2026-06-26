@@ -19,6 +19,7 @@ mod execution;
 mod filesystem;
 mod font;
 mod geo;
+mod gitignore_templates;
 mod kv;
 mod logger;
 mod lsp;
@@ -41,9 +42,10 @@ use crate::custom_plugin_commands::{
     update_custom_plugin,
 };
 use crate::dap::{
-    DapState, dap_adapter_list, dap_available, dap_install, dap_send, dap_start, dap_stop,
+    DapState, dap_adapter_list, dap_available, dap_build, dap_install, dap_send, dap_start,
+    dap_stop,
 };
-use crate::db::{run_sql, run_sql_paged};
+use crate::db::{TxnState, run_sql, run_sql_paged, tx_active, tx_begin, tx_exec, tx_finish};
 use crate::db_connections::{
     DbConnStore, db_connection_delete, db_connection_save, db_connections_list,
 };
@@ -67,16 +69,20 @@ use crate::filesystem::{
     git_branches, git_checkout, git_checkout_track, git_cherry_pick, git_clean, git_clean_preview,
     git_clone, git_commit, git_compare, git_delete_remote_branch, git_diff, git_discard, git_fetch,
     git_file_diff, git_file_head, git_get_identity, git_get_signing, git_graph, git_hook_delete,
-    git_hook_read, git_hook_save, git_hooks, git_ignore_add, git_init, git_log, git_log_file,
-    git_merge, git_op_abort, git_op_continue, git_op_skip, git_op_state, git_pull, git_pull_rebase,
-    git_push, git_push_force, git_push_tags, git_rebase_interactive, git_reflog, git_remote_add,
-    git_remote_branches, git_remote_remove, git_remotes, git_reset, git_restore_file, git_revert,
-    git_set_identity, git_set_signing, git_set_upstream, git_show, git_stage, git_stash_apply,
-    git_stash_drop, git_stash_list, git_stash_pop, git_stash_push, git_stash_show, git_status,
-    git_submodule_sync, git_submodule_update, git_submodules, git_tag_create, git_tag_delete,
-    git_tags, git_unstage, git_worktree_add, git_worktree_prune, git_worktree_remove,
-    git_worktrees, list_files, read_directory_tree, read_file_lines, read_file_text, rename_path,
-    replace_in_files, reveal_path, search_in_files, watch_directory, write_file_text,
+    git_hook_read, git_hook_save, git_hooks, git_ignore_add, git_ignore_append_block, git_init,
+    git_log, git_log_file, git_merge, git_op_abort, git_op_continue, git_op_skip, git_op_state,
+    git_pull, git_pull_rebase, git_push, git_push_force, git_push_tags, git_rebase_interactive,
+    git_reflog, git_remote_add, git_remote_branches, git_remote_remove, git_remotes, git_reset,
+    git_restore_file, git_revert, git_set_identity, git_set_signing, git_set_upstream, git_show,
+    git_stage, git_stash_apply, git_stash_drop, git_stash_list, git_stash_pop, git_stash_push,
+    git_stash_show, git_status, git_submodule_sync, git_submodule_update, git_submodules,
+    git_tag_create, git_tag_delete, git_tags, git_unstage, git_worktree_add, git_worktree_prune,
+    git_worktree_remove, git_worktrees, list_files, read_directory_tree, read_file_lines,
+    read_file_text, rename_path, replace_in_files, resolve_editorconfig, reveal_path,
+    search_in_files, watch_directory, write_file_text,
+};
+use crate::gitignore_templates::{
+    GitignoreStore, gitignore_template_delete, gitignore_template_save, gitignore_templates_list,
 };
 use crate::kv::{KvStore, kv_delete, kv_get_all, kv_set};
 use crate::lsp::{
@@ -122,9 +128,11 @@ fn main() {
         .manage(Snippets::new().expect("failed to initialize snippets database"))
         .manage(KvStore::new().expect("failed to initialize kv store database"))
         .manage(DbConnStore::new().expect("failed to initialize db connections database"))
+        .manage(GitignoreStore::new().expect("failed to initialize gitignore templates database"))
         .manage(TerminalState::new())
         .manage(LspState::new())
         .manage(DapState::new())
+        .manage(TxnState::new())
         .manage(ExecutionPluginManagerState::new(PluginManager::new()))
         .manage(EnvironmentManagerState::new(env_manager))
         .setup(|app| {
@@ -279,6 +287,8 @@ fn main() {
             git_set_upstream,
             git_init,
             git_ignore_add,
+            git_ignore_append_block,
+            resolve_editorconfig,
             git_clone,
             git_clean_preview,
             git_clean,
@@ -319,6 +329,10 @@ fn main() {
             db_connections_list,
             db_connection_save,
             db_connection_delete,
+            // 自定义 .gitignore 模板
+            gitignore_templates_list,
+            gitignore_template_save,
+            gitignore_template_delete,
             // 集成终端
             terminal_create,
             terminal_write,
@@ -327,6 +341,11 @@ fn main() {
             // SQL 执行
             run_sql,
             run_sql_paged,
+            // 交互式事务
+            tx_begin,
+            tx_exec,
+            tx_finish,
+            tx_active,
             // LSP 桥接
             lsp_available,
             lsp_start,
@@ -340,7 +359,8 @@ fn main() {
             dap_send,
             dap_stop,
             dap_adapter_list,
-            dap_install
+            dap_install,
+            dap_build
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

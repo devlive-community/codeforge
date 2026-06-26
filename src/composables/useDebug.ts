@@ -1,5 +1,6 @@
 // 调试状态共享 store（单例）。P2：断点与执行位置；P3：会话编排与控制。
 import {reactive, ref} from 'vue'
+import {invoke} from '@tauri-apps/api/core'
 import {DapClient} from '../debug/dapClient'
 
 export type DebugStatus = 'inactive' | 'starting' | 'running' | 'stopped'
@@ -263,15 +264,30 @@ async function requestVariables(variablesReference: number): Promise<DapVariable
 }
 
 // 各语言 launch 请求参数（Python=debugpy 源码级 / Go=delve 源码级）
-function buildLaunchArgs(config: LaunchConfig): Record<string, any> {
+const COMPILED = ['rust', 'c', 'cpp']
+function adapterIdFor(language: string): string {
+  if (language === 'go') {
+    return 'go'
+  }
+  if (COMPILED.includes(language)) {
+    return 'lldb'
+  }
+  return 'debugpy'
+}
+
+function buildLaunchArgs(config: LaunchConfig, program: string): Record<string, any> {
   const base: Record<string, any> = {
     request: 'launch',
     name: 'CodeForge',
-    program: config.filePath,
+    program,
     cwd: config.cwd || undefined
   }
   if (config.language === 'go') {
     return {...base, mode: 'debug'}
+  }
+  if (COMPILED.includes(config.language)) {
+    // lldb-dap：program 为编译产物
+    return {...base, args: [], stopOnEntry: false}
   }
   return {...base, type: 'python', console: 'internalConsole', justMyCode: true, stopOnEntry: false}
 }
@@ -287,6 +303,23 @@ async function startSession(config: LaunchConfig): Promise<void> {
   status.value = 'starting'
   consoleLines.value = []
   threadId = 0
+  // 编译型语言：先构建拿到可执行文件作为 program
+  let program = config.filePath
+  if (COMPILED.includes(config.language)) {
+    pushOut('console', '正在构建…\n')
+    try {
+      program = await invoke<string>('dap_build', {
+        language: config.language,
+        filePath: config.filePath,
+        root: config.cwd || ''
+      })
+    }
+    catch (e) {
+      pushOut('stderr', `${e}\n`)
+      cleanup()
+      throw e
+    }
+  }
   const c = new DapClient('debug', config.language)
   client = c
 
@@ -315,7 +348,7 @@ async function startSession(config: LaunchConfig): Promise<void> {
     const caps = await c.request('initialize', {
       clientID: 'codeforge',
       clientName: 'CodeForge',
-      adapterID: config.language === 'go' ? 'go' : 'debugpy',
+      adapterID: adapterIdFor(config.language),
       locale: 'en',
       linesStartAt1: true,
       columnsStartAt1: true,
@@ -330,7 +363,7 @@ async function startSession(config: LaunchConfig): Promise<void> {
       )
     }
     // launch 在 configurationDone 后才返回，故不在主流程等待
-    c.request('launch', buildLaunchArgs(config)).catch((e) => {
+    c.request('launch', buildLaunchArgs(config, program)).catch((e) => {
       pushOut('stderr', `launch 失败: ${e}\n`)
       stopSession()
     })

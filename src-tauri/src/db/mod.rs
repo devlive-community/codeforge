@@ -118,12 +118,103 @@ pub(crate) fn resolve_endpoint(source: &DataSource, default_port: u16) -> Result
     }
 }
 
+/// 交互式事务会话：持有一条连接，跨多次调用在同一连接上执行。
+pub(crate) trait TxnConn: Send {
+    /// 在持有连接上执行 SQL（错误写入 result.error）
+    fn exec(&mut self, sql: &str) -> SqlRunResult;
+    /// 结束事务：commit=true 提交，否则回滚
+    fn finish(&mut self, commit: bool) -> Result<(), String>;
+}
+
 /// 数据库执行器接口：新增数据库类型只需实现本 trait 并在 executors() 注册。
 pub(crate) trait DbExecutor: Send + Sync {
     /// 是否处理该数据源类型（如 sqlite 同时处理 "sqlite" 与 "memory"）
     fn handles(&self, kind: &str) -> bool;
     /// 执行脚本，返回结构化结果（错误写入 result.error，不以 Err 形式返回）
     fn run(&self, sql: &str, source: &DataSource) -> SqlRunResult;
+    /// 开启交互式事务，返回持有连接的会话；不支持事务的执行器返回 Err。
+    fn begin(&self, _source: &DataSource) -> Result<Box<dyn TxnConn>, String> {
+        Err("该数据源暂不支持交互式事务".to_string())
+    }
+}
+
+/// 全局事务状态：同一时刻仅允许一个进行中的交互式事务（一个编辑器一个事务）。
+pub struct TxnState(pub std::sync::Arc<std::sync::Mutex<Option<Box<dyn TxnConn>>>>);
+
+impl TxnState {
+    pub fn new() -> Self {
+        Self(std::sync::Arc::new(std::sync::Mutex::new(None)))
+    }
+}
+
+impl Default for TxnState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// 开启事务（已有进行中的事务会先回滚丢弃）。
+#[tauri::command]
+pub async fn tx_begin(source: DataSource, state: tauri::State<'_, TxnState>) -> Result<(), String> {
+    let slot = state.0.clone();
+    tokio::task::spawn_blocking(move || {
+        let execs = executors();
+        let exec = execs
+            .iter()
+            .find(|e| e.handles(&source.kind))
+            .ok_or_else(|| format!("不支持的数据源类型: {}", source.kind))?;
+        let conn = exec.begin(&source)?;
+        let mut guard = slot.lock().map_err(|e| e.to_string())?;
+        if let Some(mut old) = guard.take() {
+            let _ = old.finish(false);
+        }
+        *guard = Some(conn);
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("事务任务失败: {}", e))?
+}
+
+/// 在进行中的事务上执行 SQL。
+#[tauri::command]
+pub async fn tx_exec(
+    sql: String,
+    state: tauri::State<'_, TxnState>,
+) -> Result<SqlRunResult, String> {
+    let slot = state.0.clone();
+    tokio::task::spawn_blocking(move || {
+        let mut guard = slot.lock().map_err(|e| e.to_string())?;
+        let conn = guard
+            .as_mut()
+            .ok_or_else(|| "没有进行中的事务".to_string())?;
+        Ok(conn.exec(&sql))
+    })
+    .await
+    .map_err(|e| format!("事务任务失败: {}", e))?
+}
+
+/// 结束事务：commit=true 提交，否则回滚。
+#[tauri::command]
+pub async fn tx_finish(commit: bool, state: tauri::State<'_, TxnState>) -> Result<(), String> {
+    let slot = state.0.clone();
+    tokio::task::spawn_blocking(move || {
+        let mut guard = slot.lock().map_err(|e| e.to_string())?;
+        match guard.take() {
+            Some(mut conn) => conn.finish(commit),
+            None => Err("没有进行中的事务".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("事务任务失败: {}", e))?
+}
+
+/// 是否有进行中的事务。
+#[tauri::command]
+pub async fn tx_active(state: tauri::State<'_, TxnState>) -> Result<bool, String> {
+    let slot = state.0.clone();
+    tokio::task::spawn_blocking(move || Ok(slot.lock().map(|g| g.is_some()).unwrap_or(false)))
+        .await
+        .map_err(|e| format!("事务任务失败: {}", e))?
 }
 
 /// 已注册的执行器。新增数据库类型：在此加一行。

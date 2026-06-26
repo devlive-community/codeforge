@@ -37,9 +37,11 @@
             </div>
             <div class="text-[11px] text-gray-400 truncate">{{ wt.path }}</div>
           </div>
-          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 cursor-pointer flex-shrink-0" :title="t('git.worktreeReveal')" @click="reveal(wt.path)">
-            <FolderOpen class="w-3.5 h-3.5"/>
-          </button>
+          <Tooltip :text="t('git.worktreeReveal')">
+            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 cursor-pointer flex-shrink-0" @click="reveal(wt.path)">
+              <FolderOpen class="w-3.5 h-3.5"/>
+            </button>
+          </Tooltip>
           <button class="text-xs text-red-500 hover:underline opacity-0 group-hover:opacity-100 cursor-pointer flex-shrink-0" :disabled="busy" @click="remove(wt.path)">{{ t('git.worktreeRemove') }}</button>
         </div>
       </div>
@@ -52,6 +54,7 @@ import {onMounted, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
 import {FolderOpen, TreeDeciduous, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
+import Tooltip from '../ui/Tooltip.vue'
 import {useToast} from '../plugins/toast'
 import {useI18n} from 'vue-i18n'
 

@@ -1,4 +1,4 @@
-import {nextTick, ref, shallowRef, watch} from 'vue'
+import {computed, nextTick, ref, shallowRef, watch} from 'vue'
 import {debounce} from 'lodash-es'
 import {useTheme} from './useTheme'
 import {i18n} from '../i18n'
@@ -293,6 +293,36 @@ export function useCodeMirrorEditor(props: Props)
     // 仅在显式整体赋值 extensions.value = result 时才触发重建。
     const extensions = shallowRef<any[]>([])
     const editorConfig = ref<EditorConfig>({})
+
+    // 当前文件的 .editorconfig 覆盖（按文件解析，覆盖全局缩进设置）
+    const ecOverride = ref<{indentWithTab?: boolean; tabSize?: number}>({})
+    const resolveEditorconfig = async () => {
+        if (!props.filePath) {
+            ecOverride.value = {}
+            return
+        }
+        try {
+            const r = await invoke<any>('resolve_editorconfig', {filePath: props.filePath})
+            const o: {indentWithTab?: boolean; tabSize?: number} = {}
+            if (r?.indent_style === 'tab') {
+                o.indentWithTab = true
+            }
+            else if (r?.indent_style === 'space') {
+                o.indentWithTab = false
+            }
+            const size = r?.indent_size ?? r?.tab_width
+            if (typeof size === 'number' && size > 0) {
+                o.tabSize = size
+            }
+            ecOverride.value = o
+        }
+        catch {
+            ecOverride.value = {}
+        }
+    }
+    // 实际生效的缩进：.editorconfig 优先，否则用全局配置
+    const effectiveTabSize = computed(() => ecOverride.value.tabSize ?? editorConfig.value?.tab_size)
+    const effectiveIndentWithTab = computed(() => ecOverride.value.indentWithTab ?? editorConfig.value?.indent_with_tab)
     const defaultConfig = {
         theme: 'githubLight',
         indent_with_tab: true,
@@ -739,6 +769,7 @@ export function useCodeMirrorEditor(props: Props)
     // 初始化编辑器
     const initializeEditor = async () => {
         await loadEditorConfig()
+        await resolveEditorconfig()
     }
 
     // 监听语言变化
@@ -747,8 +778,9 @@ export function useCodeMirrorEditor(props: Props)
         await reRenderEditor()
     }, {immediate: false})
 
-    // 文件切换：重建扩展以切换 LSP 文档（就地重配置，避免闪烁）
+    // 文件切换：重建扩展以切换 LSP 文档（就地重配置，避免闪烁）；并重解析 .editorconfig
     watch(() => props.filePath, async () => {
+        await resolveEditorconfig()
         await updateExtensions()
     }, {immediate: false})
 
@@ -802,6 +834,8 @@ export function useCodeMirrorEditor(props: Props)
         isReady,
         extensions,
         editorConfig,
+        effectiveTabSize,
+        effectiveIndentWithTab,
 
         // 方法
         initializeEditor,

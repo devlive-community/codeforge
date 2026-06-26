@@ -41,6 +41,11 @@
         <Lsp v-if="activeTab === 'lsp'"/>
       </template>
 
+      <!-- .gitignore 模板 -->
+      <template #gitignore>
+        <Gitignore v-if="activeTab === 'gitignore'"/>
+      </template>
+
       <!-- 网络配置 -->
       <template #network>
         <Network v-if="activeTab === 'network'" @settings-changed="handleNetworkSettingsChanged" @error="handleEditorError"/>
@@ -76,6 +81,7 @@ import Shortcut from './setting/Shortcut.vue'
 import Ai from './setting/Ai.vue'
 import Database from './setting/Database.vue'
 import Lsp from './setting/Lsp.vue'
+import Gitignore from './setting/Gitignore.vue'
 import Network from './setting/Network.vue'
 import Cache from './setting/Cache.vue'
 import Logs from './setting/Logs.vue'

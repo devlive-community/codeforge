@@ -498,6 +498,232 @@ pub async fn git_init(root: String) -> Result<String, String> {
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+#[derive(Serialize, Default)]
+pub struct EditorConfigResolved {
+    /// "tab" | "space"
+    indent_style: Option<String>,
+    indent_size: Option<u32>,
+    tab_width: Option<u32>,
+    trim_trailing_whitespace: Option<bool>,
+    insert_final_newline: Option<bool>,
+}
+
+/// 把 editorconfig glob 转为正则（覆盖 * ** ? {a,b} [..]）
+fn editorconfig_glob_to_regex(glob: &str) -> String {
+    let chars: Vec<char> = glob.chars().collect();
+    let mut re = String::from("^");
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        match c {
+            '*' => {
+                if i + 1 < chars.len() && chars[i + 1] == '*' {
+                    re.push_str(".*");
+                    i += 1;
+                } else {
+                    re.push_str("[^/]*");
+                }
+            }
+            '?' => re.push_str("[^/]"),
+            '{' => {
+                // {a,b,c} -> (a|b|c)
+                let mut j = i + 1;
+                let mut buf = String::new();
+                let mut alts = String::from("(");
+                let mut closed = false;
+                while j < chars.len() {
+                    match chars[j] {
+                        '}' => {
+                            alts.push_str(&regex::escape(&buf));
+                            alts.push(')');
+                            closed = true;
+                            j += 1;
+                            break;
+                        }
+                        ',' => {
+                            alts.push_str(&regex::escape(&buf));
+                            alts.push('|');
+                            buf.clear();
+                        }
+                        ch => buf.push(ch),
+                    }
+                    j += 1;
+                }
+                if closed {
+                    re.push_str(&alts);
+                    i = j;
+                    continue;
+                } else {
+                    re.push_str("\\{");
+                }
+            }
+            '[' => {
+                re.push('[');
+                let mut j = i + 1;
+                if j < chars.len() && chars[j] == '!' {
+                    re.push('^');
+                    j += 1;
+                }
+                while j < chars.len() && chars[j] != ']' {
+                    re.push(chars[j]);
+                    j += 1;
+                }
+                re.push(']');
+                i = j;
+                continue;
+            }
+            '.' | '(' | ')' | '+' | '|' | '^' | '$' | '\\' => {
+                re.push('\\');
+                re.push(c);
+            }
+            _ => re.push(c),
+        }
+        i += 1;
+    }
+    re.push('$');
+    re
+}
+
+fn editorconfig_is_root(content: &str) -> bool {
+    for line in content.lines() {
+        let l = line.trim();
+        if l.starts_with('[') {
+            break;
+        }
+        if let Some((k, v)) = l.split_once('=') {
+            if k.trim().eq_ignore_ascii_case("root") && v.trim().eq_ignore_ascii_case("true") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn editorconfig_apply(
+    content: &str,
+    rel_path: &str,
+    file_name: &str,
+    out: &mut EditorConfigResolved,
+) {
+    let mut matched = false;
+    for line in content.lines() {
+        let l = line.trim();
+        if l.is_empty() || l.starts_with('#') || l.starts_with(';') {
+            continue;
+        }
+        if let Some(glob) = l.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
+            // 含 '/' 按相对路径匹配，否则按文件名匹配
+            let (pat, target) = if glob.contains('/') {
+                (glob.trim_start_matches('/'), rel_path)
+            } else {
+                (glob, file_name)
+            };
+            matched = regex::Regex::new(&editorconfig_glob_to_regex(pat))
+                .map(|re| re.is_match(target))
+                .unwrap_or(false);
+            continue;
+        }
+        if !matched {
+            continue;
+        }
+        if let Some((k, v)) = l.split_once('=') {
+            let key = k.trim().to_lowercase();
+            let val = v.trim().to_string();
+            match key.as_str() {
+                "indent_style" => out.indent_style = Some(val.to_lowercase()),
+                "indent_size" => {
+                    if let Ok(n) = val.parse::<u32>() {
+                        out.indent_size = Some(n);
+                    }
+                }
+                "tab_width" => {
+                    if let Ok(n) = val.parse::<u32>() {
+                        out.tab_width = Some(n);
+                    }
+                }
+                "trim_trailing_whitespace" => {
+                    out.trim_trailing_whitespace = Some(val.eq_ignore_ascii_case("true"))
+                }
+                "insert_final_newline" => {
+                    out.insert_final_newline = Some(val.eq_ignore_ascii_case("true"))
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+/// 解析某文件适用的 .editorconfig（向上查找，近的覆盖远的，遇 root=true 停）。
+#[tauri::command]
+pub async fn resolve_editorconfig(file_path: String) -> Result<EditorConfigResolved, String> {
+    tokio::task::spawn_blocking(move || {
+        let path = std::path::PathBuf::from(&file_path);
+        let file_name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        // 自近向远收集 .editorconfig，遇 root 停
+        let mut configs: Vec<std::path::PathBuf> = Vec::new();
+        let mut dir = path.parent();
+        while let Some(d) = dir {
+            let cfg = d.join(".editorconfig");
+            if cfg.is_file() {
+                let is_root = std::fs::read_to_string(&cfg)
+                    .map(|c| editorconfig_is_root(&c))
+                    .unwrap_or(false);
+                configs.push(cfg);
+                if is_root {
+                    break;
+                }
+            }
+            dir = d.parent();
+        }
+        // 自远向近应用（近的覆盖）
+        let mut out = EditorConfigResolved::default();
+        for cfg in configs.iter().rev() {
+            if let (Ok(content), Some(cfg_dir)) = (std::fs::read_to_string(cfg), cfg.parent()) {
+                let rel = path
+                    .strip_prefix(cfg_dir)
+                    .map(|p| p.to_string_lossy().replace('\\', "/"))
+                    .unwrap_or_default();
+                editorconfig_apply(&content, &rel, &file_name, &mut out);
+            }
+        }
+        Ok(out)
+    })
+    .await
+    .map_err(|e| format!(".editorconfig 解析失败: {}", e))?
+}
+
+/// 追加一段 .gitignore 模板块（按首行标题去重，已存在则跳过）。
+#[tauri::command]
+pub async fn git_ignore_append_block(root: String, content: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let block = content.trim_end_matches('\n');
+        if block.trim().is_empty() {
+            return Ok(());
+        }
+        let path = std::path::Path::new(&root).join(".gitignore");
+        let mut existing = std::fs::read_to_string(&path).unwrap_or_default();
+        // 用块首行（通常是 # 标题）判重，避免重复插入
+        let header = block.lines().next().unwrap_or("").trim();
+        if !header.is_empty() && existing.lines().any(|l| l.trim() == header) {
+            return Ok(());
+        }
+        if !existing.is_empty() {
+            if !existing.ends_with('\n') {
+                existing.push('\n');
+            }
+            existing.push('\n'); // 与上一块隔一空行
+        }
+        existing.push_str(block);
+        existing.push('\n');
+        std::fs::write(&path, existing).map_err(|e| format!("写入 .gitignore 失败: {}", e))
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 /// 把一个匹配模式追加到 .gitignore（已存在则跳过）。
 #[tauri::command]
 pub async fn git_ignore_add(root: String, pattern: String) -> Result<(), String> {

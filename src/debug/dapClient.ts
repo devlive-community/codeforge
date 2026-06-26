@@ -4,8 +4,8 @@
 import {invoke} from '@tauri-apps/api/core'
 import {listen, type UnlistenFn} from '@tauri-apps/api/event'
 
-// 已打通的可调试语言（源码级）。Rust/C/C++ 为编译型，需先构建再调试可执行文件，留待 P6b。
-const DAP_LANGUAGES = new Set(['python', 'python3', 'python2', 'go'])
+// 已打通的可调试语言。Rust/C/C++ 为编译型：先 dap_build 构建，再用产物经 lldb-dap 调试。
+const DAP_LANGUAGES = new Set(['python', 'python3', 'python2', 'go', 'rust', 'c', 'cpp'])
 export function dapSupportsLanguage(language?: string): boolean {
   return !!language && DAP_LANGUAGES.has(language)
 }
