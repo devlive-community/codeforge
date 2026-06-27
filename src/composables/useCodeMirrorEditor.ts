@@ -90,6 +90,7 @@ import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
 import {showMinimap} from "@replit/codemirror-minimap";
+import {indentationMarkers} from "@replit/codemirror-indentation-markers";
 import {stickyScroll} from "../editor/stickyScroll";
 import {breakpointExtension} from "../editor/breakpointGutter";
 import {debugHover} from "../editor/debugHover";
@@ -697,6 +698,11 @@ export function useCodeMirrorEditor(props: Props)
             result.push(EditorView.lineWrapping)
         }
 
+        // 缩进参考线：按缩进层级绘制竖向引导线，可在设置中开关
+        if (editorConfig.value?.show_indent_guides) {
+            result.push(indentationMarkers({hideFirstIndent: true, highlightActiveBlock: true}))
+        }
+
         // 断点 gutter + 调试悬停求值（仅可调试语言）
         if (dapSupportsLanguage(props.language)) {
             result.push(breakpointExtension((line) => debug.toggleBreakpoint(props.filePath ?? null, line)))
@@ -835,6 +841,10 @@ export function useCodeMirrorEditor(props: Props)
     })
 
     watch(() => editorConfig.value?.word_wrap, async () => {
+        await reRenderEditor()
+    })
+
+    watch(() => editorConfig.value?.show_indent_guides, async () => {
         await reRenderEditor()
     })
 

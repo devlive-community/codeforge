@@ -49,6 +49,7 @@
       "showMinimap": "显示代码缩略图 (minimap)",
       "showStickyScroll": "启用粘性滚动 (sticky scroll)",
       "wordWrap": "自动换行",
+      "showIndentGuides": "显示缩进参考线",
       "tabSize": "缩进空格数",
       "font": "编辑器字体",
       "fontSize": "字体大小",

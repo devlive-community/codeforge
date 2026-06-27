@@ -49,6 +49,7 @@
       "showMinimap": "Show minimap",
       "showStickyScroll": "Enable sticky scroll",
       "wordWrap": "Word wrap",
+      "showIndentGuides": "Show indent guides",
       "tabSize": "Indent size",
       "font": "Editor font",
       "fontSize": "Font size",
