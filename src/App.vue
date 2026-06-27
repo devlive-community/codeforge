@@ -492,7 +492,7 @@ import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {dapSupportsLanguage} from './debug/dapClient'
-import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
+import {ArrowDownAZ, ArrowUpAZ, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -737,6 +737,44 @@ const openPermalink = async () => {
   if (url) {
     await openExternalUrl(url).catch((e) => toast.error(t('app.permalinkFailed') + ': ' + e))
   }
+}
+
+// ===== 文本变换命令 =====
+// 对选区做变换；无选区时作用于当前行
+const transformSelectionOrLine = (fn: (s: string) => string) => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const sel = view.state.selection.main
+  let from = sel.from
+  let to = sel.to
+  if (sel.empty) {
+    const line = view.state.doc.lineAt(sel.head)
+    from = line.from
+    to = line.to
+  }
+  const out = fn(view.state.doc.sliceString(from, to))
+  view.dispatch({changes: {from, to, insert: out}, selection: {anchor: from, head: from + out.length}})
+  view.focus()
+}
+// 排序选中行；无选区时排序整篇
+const sortLines = (desc: boolean) => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const sel = view.state.selection.main
+  const from = sel.empty ? 0 : view.state.doc.lineAt(sel.from).from
+  const to = sel.empty ? view.state.doc.length : view.state.doc.lineAt(sel.to).to
+  const lines = view.state.doc.sliceString(from, to).split('\n')
+  lines.sort((a: string, b: string) => a.localeCompare(b))
+  if (desc) {
+    lines.reverse()
+  }
+  const out = lines.join('\n')
+  view.dispatch({changes: {from, to, insert: out}, selection: {anchor: from, head: from + out.length}})
+  view.focus()
 }
 
 const handleCopyRelativePath = (path: string) => {
@@ -2384,6 +2422,10 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
   {id: 'copyPermalink', label: t('command.copyPermalink'), icon: GitBranch, run: () => copyPermalink()},
   {id: 'openPermalink', label: t('command.openPermalink'), icon: GitBranch, run: () => openPermalink()},
+  {id: 'sortLinesAsc', label: t('command.sortLinesAsc'), group: t('command.groupText'), icon: ArrowDownAZ, run: () => sortLines(false)},
+  {id: 'sortLinesDesc', label: t('command.sortLinesDesc'), group: t('command.groupText'), icon: ArrowUpAZ, run: () => sortLines(true)},
+  {id: 'toUpperCase', label: t('command.toUpperCase'), group: t('command.groupText'), icon: CaseUpper, run: () => transformSelectionOrLine(s => s.toUpperCase())},
+  {id: 'toLowerCase', label: t('command.toLowerCase'), group: t('command.groupText'), icon: CaseLower, run: () => transformSelectionOrLine(s => s.toLowerCase())},
   {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},
