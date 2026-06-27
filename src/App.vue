@@ -434,6 +434,12 @@
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="openFileHistory">
             {{ t('git.fileHistory') }}
           </button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="() => { closeEditorCtx(); copyPermalink() }">
+            {{ t('app.copyPermalinkShort') }}
+          </button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="() => { closeEditorCtx(); openPermalink() }">
+            {{ t('app.openOnRemote') }}
+          </button>
         </template>
         <div v-if="editorCtx.lsp || canBlame" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('explain')">{{ t('aiCode.title.explain') }}</button>
@@ -557,6 +563,7 @@ import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
 import {open as openDialog} from '@tauri-apps/plugin-dialog'
+import {open as openExternalUrl} from '@tauri-apps/plugin-shell'
 import {invoke} from '@tauri-apps/api/core'
 import {useEventManager} from './composables/useEventManager'
 import {useShortcuts} from './composables/useShortcuts'
@@ -697,26 +704,38 @@ const handleCopyPath = async (path: string) => {
     toast.error(t('app.copyFailed') + error)
   }
 }
-// 复制当前文件指定行的远程仓库永久链接
-const copyPermalink = async () => {
+// 生成当前文件指定行的远程仓库永久链接
+const buildPermalink = async (): Promise<string | null> => {
   if (!rootDir.value || !currentFilePath.value) {
     toast.info(t('app.noFileToReveal'))
-    return
+    return null
   }
   const root = rootDir.value
   const p = currentFilePath.value
   if (!(p === root || p.startsWith(root + '/') || p.startsWith(root + '\\'))) {
     toast.info(t('app.permalinkOutside'))
-    return
+    return null
   }
   const rel = p.slice(root.length).replace(/^[\\/]/, '')
   try {
-    const url = await invoke<string>('git_permalink', {root, relPath: rel, line: cursorInfo.value.line})
-    await navigator.clipboard.writeText(url)
-    toast.success(t('app.permalinkCopied'))
+    return await invoke<string>('git_permalink', {root, relPath: rel, line: cursorInfo.value.line})
   }
   catch (error) {
     toast.error(t('app.permalinkFailed') + ': ' + error)
+    return null
+  }
+}
+const copyPermalink = async () => {
+  const url = await buildPermalink()
+  if (url) {
+    await navigator.clipboard.writeText(url)
+    toast.success(t('app.permalinkCopied'))
+  }
+}
+const openPermalink = async () => {
+  const url = await buildPermalink()
+  if (url) {
+    await openExternalUrl(url).catch((e) => toast.error(t('app.permalinkFailed') + ': ' + e))
   }
 }
 
@@ -2361,6 +2380,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
   {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
   {id: 'copyPermalink', label: t('command.copyPermalink'), icon: GitBranch, run: () => copyPermalink()},
+  {id: 'openPermalink', label: t('command.openPermalink'), icon: GitBranch, run: () => openPermalink()},
   {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},
