@@ -334,7 +334,8 @@
     "lspReady": "语言服务已就绪：{lang}（点击查看问题）",
     "lspBadgeIndexing": "LSP 索引中",
     "chars": "字符",
-    "terminalTip": "终端（{key}）"
+    "terminalTip": "终端（{key}）",
+    "gitBranchTip": "当前分支（点击打开 Git 面板）"
   },
   "git": {
     "notRepo": "非 Git 仓库",

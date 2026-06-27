@@ -334,7 +334,8 @@
     "lspReady": "Language server ready: {lang} (click to view problems)",
     "lspBadgeIndexing": "LSP indexing",
     "chars": "chars",
-    "terminalTip": "Terminal ({key})"
+    "terminalTip": "Terminal ({key})",
+    "gitBranchTip": "Current branch (click to open Git panel)"
   },
   "git": {
     "notRepo": "Not a Git repository",

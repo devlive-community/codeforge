@@ -283,7 +283,7 @@
               @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
-    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal" @toggle-problems="showDiagnostics = !showDiagnostics"/>
+    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" :git-repo="gitRepo" :git-branch="gitBranch" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal" @toggle-problems="showDiagnostics = !showDiagnostics" @open-git="openGit"/>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
@@ -1686,10 +1686,11 @@ const openGit = () => {
 // 文件树徽标用：绝对路径 → 状态字母（M/A/D/U）
 const gitStatus = ref<Record<string, string>>({})
 const gitRepo = ref(false)
+const gitBranch = ref('')
 // 计算单个根的 Git 状态（路径用绝对路径作 key，便于多根合并到同一张表）
-const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, map: Record<string, string> }> => {
+const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, branch: string, map: Record<string, string> }> => {
   try {
-    const s = await invoke<{ is_repo: boolean, files: { path: string, index: string, worktree: string }[] }>(
+    const s = await invoke<{ is_repo: boolean, branch: string, files: { path: string, index: string, worktree: string }[] }>(
         'git_status', {root}
     )
     const map: Record<string, string> = {}
@@ -1701,20 +1702,22 @@ const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, map: Recor
         map[`${root}/${f.path}`] = code
       }
     }
-    return {isRepo: s.is_repo, map}
+    return {isRepo: s.is_repo, branch: s.branch || '', map}
   }
   catch {
-    return {isRepo: false, map: {}}
+    return {isRepo: false, branch: '', map: {}}
   }
 }
 const refreshGitStatus = async () => {
   if (!rootDir.value) {
     gitStatus.value = {}
     gitRepo.value = false
+    gitBranch.value = ''
     return
   }
   const primary = await gitStatusFor(rootDir.value)
   gitRepo.value = primary.isRepo
+  gitBranch.value = primary.branch
   const map: Record<string, string> = {...primary.map}
   // 额外挂载的根各自可为独立仓库，合并它们的状态徽标
   if (extraRoots.value.length) {

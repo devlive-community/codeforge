@@ -22,6 +22,15 @@
     </div>
 
     <div class="flex items-center space-x-4">
+      <!-- 当前 Git 分支（点击打开 Git 面板）-->
+      <button v-if="gitRepo && gitBranch"
+              class="flex items-center space-x-1.5 px-1 rounded cursor-pointer hover:bg-white/20 transition-colors"
+              :title="t('status.gitBranchTip')"
+              @click="emit('openGit')">
+        <GitBranch class="w-3.5 h-3.5"/>
+        <span class="max-w-[160px] truncate">{{ gitBranch }}</span>
+      </button>
+
       <!-- 调试状态 -->
       <div v-if="debug.status.value !== 'inactive'" class="flex items-center space-x-1">
         <Bug class="w-3.5 h-3.5"/>
@@ -58,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { AlertTriangle, Bug, Clock, Hash, RefreshCw, Terminal as TerminalIcon, XCircle } from 'lucide-vue-next'
+import { AlertTriangle, Bug, Clock, GitBranch, Hash, RefreshCw, Terminal as TerminalIcon, XCircle } from 'lucide-vue-next'
 import { computed, toRefs } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStatusBar } from '../composables/useStatusBar'
@@ -80,12 +89,15 @@ const props = defineProps<{
   isLoading: boolean
   executionTime: number
   codeLength: number
+  gitRepo?: boolean
+  gitBranch?: string
 }>()
 
 const emit = defineEmits<{
   checkEnvironment: []
   toggleTerminal: []
   toggleProblems: []
+  openGit: []
 }>()
 
 const errorCount = computed(() => diagnostics.value.filter(d => d.severity === 'error').length)
