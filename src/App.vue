@@ -1,6 +1,7 @@
 <template>
   <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-    <AppHeader :is-running="isRunning"
+    <AppHeader v-if="!zenMode"
+               :is-running="isRunning"
                :env-installed="envInfo.installed"
                :supported-languages="supportedLanguages"
                :current-language="currentLanguage"
@@ -21,7 +22,7 @@
     </AppHeader>
 
     <!-- 运行输入：参数 + stdin（任何布局/运行前都可填）-->
-    <div class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+    <div v-if="!zenMode" class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="showRunInput = !showRunInput">
         <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
         {{ t('app.runInputToggle') }}
@@ -51,7 +52,7 @@
 
     <div class="flex-1 min-h-0 overflow-hidden flex">
       <!-- 左侧文件树侧栏 -->
-      <template v-if="sidebarVisible">
+      <template v-if="sidebarVisible && !zenMode">
         <Sidebar :root-dir="rootDir"
                  :extra-roots="extraRoots"
                  :reveal-request="revealRequest"
@@ -283,7 +284,16 @@
               @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
-    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" :git-repo="gitRepo" :git-branch="gitBranch" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal" @toggle-problems="showDiagnostics = !showDiagnostics" @open-git="openGit"/>
+    <StatusBar v-if="!zenMode" class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" :git-repo="gitRepo" :git-branch="gitBranch" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal" @toggle-problems="showDiagnostics = !showDiagnostics" @open-git="openGit"/>
+
+    <!-- 专注模式退出按钮（仅专注模式显示）-->
+    <button v-if="zenMode"
+            class="fixed top-3 right-3 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-gray-800/80 text-gray-100 hover:bg-gray-700 backdrop-blur shadow-lg cursor-pointer"
+            :title="t('command.toggleZen')"
+            @click="toggleZen">
+      <Minimize2 class="w-3.5 h-3.5"/>
+      {{ t('app.exitZen') }}
+    </button>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
@@ -492,7 +502,7 @@ import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {dapSupportsLanguage} from './debug/dapClient'
-import {ArrowDownAZ, ArrowUpAZ, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
+import {ArrowDownAZ, ArrowUpAZ, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Minimize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -826,6 +836,11 @@ const handleCopyRelativePath = (path: string) => {
 // ===== 侧栏 / 文件夹 =====
 const rootDir = ref<string | null>(null)
 const sidebarVisible = ref(kvGet('sidebar-visible') === 'true')
+// 专注模式：隐藏顶部工具栏/运行输入/侧栏/状态栏，沉浸编辑
+const zenMode = ref(false)
+const toggleZen = () => {
+  zenMode.value = !zenMode.value
+}
 const sidebarWidth = ref(Number(kvGet('sidebar-width')) || 240)
 
 // 最近打开的文件夹
@@ -2468,6 +2483,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'trimTrailingWhitespace', label: t('command.trimTrailingWhitespace'), group: t('command.groupText'), icon: Eraser, run: () => trimTrailingWhitespace()},
   {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
+  {id: 'toggleZen', label: t('command.toggleZen'), icon: Minimize2, run: () => toggleZen()},
   {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
   {id: 'layoutVertical', label: t('command.layoutVertical'), group: t('command.groupLayout'), icon: PanelBottom, run: () => handleLayoutChange('vertical')},
