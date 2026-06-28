@@ -534,6 +534,7 @@ import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
 import {useGitPermalink} from './composables/useGitPermalink'
+import {useRevealInTree} from './composables/useRevealInTree'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -1232,34 +1233,8 @@ const openOutline = () => {
   showOutline.value = true
 }
 
-// 在文件树中定位当前文件
-const revealRequest = ref<{ path: string, n: number } | null>(null)
-let revealSeq = 0
-const revealInTree = (path?: string) => {
-  const target = path ?? currentFilePath.value
-  if (!target) {
-    toast.info(t('app.noFileToReveal'))
-    return
-  }
-  sidebarVisible.value = true
-  revealRequest.value = {path: target, n: ++revealSeq}
-}
-
-// 切换文件时自动在文件树中定位（仅当侧栏已打开，避免频繁强开侧栏打扰）
-const autoRevealTree = ref(kvGet('auto-reveal-tree') === 'true')
-const toggleAutoReveal = () => {
-  autoRevealTree.value = !autoRevealTree.value
-  kvSet('auto-reveal-tree', String(autoRevealTree.value))
-  toast.info(autoRevealTree.value ? t('app.autoRevealOn') : t('app.autoRevealOff'))
-  if (autoRevealTree.value && sidebarVisible.value && currentFilePath.value) {
-    revealRequest.value = {path: currentFilePath.value, n: ++revealSeq}
-  }
-}
-watch(currentFilePath, (p) => {
-  if (autoRevealTree.value && sidebarVisible.value && p) {
-    revealRequest.value = {path: p, n: ++revealSeq}
-  }
-})
+// 在文件树中定位当前文件 + 切换文件自动定位（抽离到 useRevealInTree）
+const {revealRequest, revealInTree, toggleAutoReveal} = useRevealInTree(currentFilePath, sidebarVisible)
 
 // 代码片段管理
 const showSnippets = ref(false)
