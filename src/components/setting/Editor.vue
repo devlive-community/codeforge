@@ -28,6 +28,10 @@
       <Switch v-model="editorConfig.word_wrap"/>
     </Label>
 
+    <Label :label="t('settings.editor.showIndentGuides')">
+      <Switch v-model="editorConfig.show_indent_guides"/>
+    </Label>
+
     <Label :label="t('settings.editor.tabSize')">
       <Number v-model="editorConfig.tab_size" :min="1" :max="8" :placeholder="t('settings.editor.tabSize')"/>
     </Label>

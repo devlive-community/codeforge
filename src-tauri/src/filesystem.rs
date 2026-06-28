@@ -469,6 +469,86 @@ pub async fn git_diff(root: String) -> Result<String, String> {
     .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 已暂存改动的 diff（git diff --cached），用于 AI 生成提交信息
+#[tauri::command]
+pub async fn git_staged_diff(root: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let output = std::process::Command::new("git")
+            .args(["-C", &root, "diff", "--cached"])
+            .output()
+            .map_err(|e| format!("执行 git 失败: {}", e))?;
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("git diff --cached 失败：{}", err.trim()));
+        }
+        let mut diff = String::from_utf8_lossy(&output.stdout).to_string();
+        if diff.len() > MAX_DIFF_LEN {
+            diff.truncate(MAX_DIFF_LEN);
+            diff.push_str("\n…(diff 过长已截断)");
+        }
+        Ok(diff)
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
+/// 生成当前文件指定行的远程仓库永久链接（基于 origin 远程与当前 HEAD 提交）。
+/// 支持 GitHub / Gitee（/blob/）与 GitLab（/-/blob/），SSH 与 HTTPS 远程均可解析。
+#[tauri::command]
+pub async fn git_permalink(root: String, rel_path: String, line: u32) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let git = |args: &[&str]| -> Result<String, String> {
+            let mut a: Vec<&str> = vec!["-C", &root];
+            a.extend_from_slice(args);
+            let out = std::process::Command::new("git")
+                .args(&a)
+                .output()
+                .map_err(|e| format!("执行 git 失败: {}", e))?;
+            if !out.status.success() {
+                return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
+            }
+            Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+        };
+
+        let remote =
+            git(&["remote", "get-url", "origin"]).map_err(|_| "未找到 origin 远程".to_string())?;
+        let sha = git(&["rev-parse", "HEAD"]).map_err(|_| "无法获取当前提交".to_string())?;
+
+        // 解析远程地址 → (host, owner/repo)
+        let raw = remote.trim();
+        let raw = raw.strip_suffix(".git").unwrap_or(raw);
+        let (host, path) = if let Some(rest) = raw.strip_prefix("git@") {
+            // scp 形式：git@host:owner/repo
+            rest.split_once(':')
+                .map(|(h, p)| (h.to_string(), p.trim_start_matches('/').to_string()))
+                .ok_or_else(|| "无法解析远程地址".to_string())?
+        } else {
+            let rest = raw
+                .strip_prefix("https://")
+                .or_else(|| raw.strip_prefix("http://"))
+                .or_else(|| raw.strip_prefix("ssh://"))
+                .ok_or_else(|| "无法解析远程地址".to_string())?;
+            let rest = rest.strip_prefix("git@").unwrap_or(rest);
+            rest.split_once('/')
+                .map(|(h, p)| (h.to_string(), p.trim_start_matches('/').to_string()))
+                .ok_or_else(|| "无法解析远程地址".to_string())?
+        };
+
+        let rel = rel_path.trim_start_matches(['/', '\\']).replace('\\', "/");
+        let blob = if host.contains("gitlab") {
+            "/-/blob/"
+        } else {
+            "/blob/"
+        };
+        Ok(format!(
+            "https://{}/{}{}{}/{}#L{}",
+            host, path, blob, sha, rel, line
+        ))
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 // ===== Git 源代码管理 =====
 
 /// 克隆远程仓库到 dir 下，返回克隆出的仓库目录路径。

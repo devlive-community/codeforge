@@ -7,6 +7,7 @@ export interface WorkspaceTab
     code: string
     filePath: string | null
     savedContent: string | null
+    pinned?: boolean
 }
 
 interface WorkspaceDeps
@@ -155,7 +156,32 @@ export function useWorkspace(deps: WorkspaceDeps)
         }
     }
 
-    // 关闭除 id 外的所有标签
+    // 置顶/取消置顶：置顶的标签稳定排到前面
+    const reorderPinned = () => {
+        const pinned = tabs.value.filter(t => t.pinned)
+        const rest = tabs.value.filter(t => !t.pinned)
+        tabs.value = [...pinned, ...rest]
+    }
+    const togglePin = (id: string) => {
+        const t = tabs.value.find(t => t.id === id)
+        if (!t) {
+            return
+        }
+        t.pinned = !t.pinned
+        reorderPinned()
+    }
+    // 按文件路径恢复置顶状态（会话恢复用）
+    const restorePinned = (paths: string[]) => {
+        const set = new Set(paths)
+        for (const t of tabs.value) {
+            if (t.filePath && set.has(t.filePath)) {
+                t.pinned = true
+            }
+        }
+        reorderPinned()
+    }
+
+    // 关闭除 id 外的所有标签（置顶标签保留）
     const closeOthers = (id: string) => {
         captureToActive()
         const keep = tabs.value.find(t => t.id === id)
@@ -163,11 +189,11 @@ export function useWorkspace(deps: WorkspaceDeps)
             return
         }
         for (const t of tabs.value) {
-            if (t.id !== id) {
+            if (t.id !== id && !t.pinned) {
                 pushClosed(t)
             }
         }
-        tabs.value = [keep]
+        tabs.value = tabs.value.filter(t => t.id === id || t.pinned)
         if (activeTabId.value !== id) {
             activeTabId.value = id
             loadTab(keep)
@@ -181,14 +207,17 @@ export function useWorkspace(deps: WorkspaceDeps)
             return
         }
         captureToActive()
-        const activeRemoved = tabs.value.slice(idx + 1).some(t => t.id === activeTabId.value)
-        for (const t of tabs.value.slice(idx + 1)) {
+        // 右侧的置顶标签保留
+        const toClose = tabs.value.slice(idx + 1).filter(t => !t.pinned)
+        const closeIds = new Set(toClose.map(t => t.id))
+        const activeRemoved = closeIds.has(activeTabId.value)
+        for (const t of toClose) {
             pushClosed(t)
         }
-        tabs.value = tabs.value.slice(0, idx + 1)
+        tabs.value = tabs.value.filter(t => !closeIds.has(t.id))
         if (activeRemoved) {
             activeTabId.value = id
-            const keep = tabs.value[idx]
+            const keep = tabs.value.find(t => t.id === id)
             if (keep) {
                 loadTab(keep)
             }
@@ -279,6 +308,8 @@ export function useWorkspace(deps: WorkspaceDeps)
         closeOthers,
         closeToRight,
         reopenClosed,
+        togglePin,
+        restorePinned,
         moveTab,
         updateTabPath,
         detachTabPath,

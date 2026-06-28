@@ -20,9 +20,16 @@
       <img :src="iconUrl(tab.language)" class="w-4 h-4 flex-shrink-0" :alt="tab.language"
            @error="(e) => { const t = e.target as HTMLImageElement; if (!t.src.endsWith('/icons/text.svg')) t.src = '/icons/text.svg' }"/>
       <span class="text-xs truncate">{{ title(tab) }}</span>
-      <span v-if="isDirty(tab)" class="text-amber-500 text-xs flex-shrink-0" :title="t('tabs.unsaved')">●</span>
-      <button class="ml-1 rounded p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-              :class="{ 'opacity-100': tab.id === activeId }"
+      <span v-if="isDirty(tab) && !tab.pinned" class="text-amber-500 text-xs flex-shrink-0" :title="t('tabs.unsaved')">●</span>
+      <!-- 置顶图标：默认显示，hover 时让位给关闭按钮 -->
+      <button v-if="tab.pinned"
+              class="ml-1 rounded p-0.5 text-brand-500 group-hover:hidden flex-shrink-0"
+              :title="t('tabs.unpin')"
+              @click.stop="emit('toggle-pin', tab.id)">
+        <Pin class="w-3 h-3 fill-current"/>
+      </button>
+      <button class="ml-1 rounded p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-opacity flex-shrink-0"
+              :class="tab.pinned ? 'hidden group-hover:inline-flex' : (tab.id === activeId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')"
               :title="t('tabs.close')"
               @click.stop="emit('close', tab.id)">
         <X class="w-3 h-3"/>
@@ -41,6 +48,8 @@
     <div class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[140px]"
          :style="{ top: `${menu.y}px`, left: `${menu.x}px` }"
          @click.stop>
+      <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('toggle-pin', menu.tabId!))">{{ menuTabPinned ? t('tabs.unpin') : t('tabs.pin') }}</button>
+      <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
       <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close', menu.tabId!))">{{ t('tabs.close') }}</button>
       <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close-others', menu.tabId!))">{{ t('tabs.closeOthers') }}</button>
       <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="act(() => emit('close-right', menu.tabId!))">{{ t('tabs.closeRight') }}</button>
@@ -58,7 +67,7 @@
 <script setup lang="ts">
 import {computed, reactive, ref} from 'vue'
 import {useI18n} from 'vue-i18n'
-import {Plus, X} from 'lucide-vue-next'
+import {Pin, Plus, X} from 'lucide-vue-next'
 import type {WorkspaceTab} from '../composables/useWorkspace'
 
 const {t} = useI18n()
@@ -78,6 +87,7 @@ const emit = defineEmits<{
   'copy-relative': [path: string]
   'reveal-tree': [path: string]
   'reveal-finder': [path: string]
+  'toggle-pin': [id: string]
   move: [fromId: string, toId: string]
 }>()
 
@@ -120,6 +130,7 @@ const menu = reactive<{ visible: boolean, x: number, y: number, tabId: string | 
   visible: false, x: 0, y: 0, tabId: null
 })
 const menuTabPath = computed(() => props.tabs.find(t => t.id === menu.tabId)?.filePath || null)
+const menuTabPinned = computed(() => props.tabs.find(t => t.id === menu.tabId)?.pinned || false)
 const openMenu = (tab: WorkspaceTab, e: MouseEvent) => {
   menu.tabId = tab.id
   menu.x = e.clientX

@@ -1,6 +1,7 @@
 <template>
   <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-    <AppHeader :is-running="isRunning"
+    <AppHeader v-if="!zenMode"
+               :is-running="isRunning"
                :env-installed="envInfo.installed"
                :supported-languages="supportedLanguages"
                :current-language="currentLanguage"
@@ -21,7 +22,7 @@
     </AppHeader>
 
     <!-- 运行输入：参数 + stdin（任何布局/运行前都可填）-->
-    <div class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+    <div v-if="!zenMode" class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <button class="w-full flex items-center px-4 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="showRunInput = !showRunInput">
         <ChevronRight class="w-3 h-3 mr-1 transition-transform" :class="{ 'rotate-90': showRunInput }"/>
         {{ t('app.runInputToggle') }}
@@ -51,7 +52,7 @@
 
     <div class="flex-1 min-h-0 overflow-hidden flex">
       <!-- 左侧文件树侧栏 -->
-      <template v-if="sidebarVisible">
+      <template v-if="sidebarVisible && !zenMode">
         <Sidebar :root-dir="rootDir"
                  :extra-roots="extraRoots"
                  :reveal-request="revealRequest"
@@ -83,7 +84,7 @@
             <div class="h-full flex flex-col overflow-hidden">
               <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"
-                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder"/>
+                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder" @toggle-pin="togglePin"/>
               <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center space-x-3 min-w-0 flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
@@ -114,6 +115,7 @@
                   <span v-if="cursorInfo.selLen">{{ t('app.selected') }} <strong>{{ cursorInfo.selLen }}</strong></span>
                   <span><strong>{{ (code || '').length }}</strong> {{ t('app.chars') }}</span>
                   <span><strong>{{ (code || '').split('\n').length }}</strong> {{ t('app.lines') }}</span>
+                  <IndentControl v-if="editorConfig" :config="editorConfig"/>
                 </div>
               </div>
               <div class="flex-1 overflow-hidden relative">
@@ -224,7 +226,7 @@
       <div v-else class="h-full flex flex-col overflow-hidden">
         <EditorTabs :tabs="editorTabs" :active-id="activeTabId" @switch="switchTab" @close="handleCloseTab" @new="handleNewTab"
                           @close-others="closeOthers" @close-right="closeToRight" @move="moveTab" @copy-path="handleCopyPath"
-                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder"/>
+                          @copy-relative="handleCopyRelativePath" @reveal-tree="revealInTree" @reveal-finder="revealInFinder" @toggle-pin="togglePin"/>
         <div v-if="!showViewer" class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center space-x-3 min-w-0 flex-1">
             <img :src="`/icons/${currentLanguage.replace(/\d+$/, '')}.svg`" class="w-5 h-5 flex-shrink-0" :alt="currentLanguage" @error="onIconError"/>
@@ -255,6 +257,7 @@
             <span v-if="cursorInfo.selLen">{{ t('app.selected') }} <strong>{{ cursorInfo.selLen }}</strong></span>
             <span><strong>{{ (code || '').length }}</strong> {{ t('app.chars') }}</span>
             <span><strong>{{ (code || '').split('\n').length }}</strong> {{ t('app.lines') }}</span>
+            <IndentControl v-if="editorConfig" :config="editorConfig"/>
           </div>
         </div>
         <div class="flex-1 overflow-hidden relative">
@@ -281,7 +284,16 @@
               @close="showTerminal = false; terminalMounted = false"/>
 
     <!-- 状态栏 -->
-    <StatusBar class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal" @toggle-problems="showDiagnostics = !showDiagnostics"/>
+    <StatusBar v-if="!zenMode" class="flex-shrink-0" :env-info="envInfo" :is-loading="isLoadingEnvInfo" :execution-time="lastExecutionTime" :code-length="(code || '').length" :git-repo="gitRepo" :git-branch="gitBranch" @check-environment="refreshEnvInfo" @toggle-terminal="toggleTerminal" @toggle-problems="showDiagnostics = !showDiagnostics" @open-git="openGit"/>
+
+    <!-- 专注模式退出按钮（仅专注模式显示）-->
+    <button v-if="zenMode"
+            class="fixed top-3 right-3 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-gray-800/80 text-gray-100 hover:bg-gray-700 backdrop-blur shadow-lg cursor-pointer"
+            :title="t('command.toggleZen')"
+            @click="toggleZen">
+      <Minimize2 class="w-3.5 h-3.5"/>
+      {{ t('app.exitZen') }}
+    </button>
 
     <!-- 关于组件 -->
     <About v-if="showAbout" @close="closeAbout"/>
@@ -402,7 +414,8 @@
 
     <!-- 编辑器 LSP 右键菜单 -->
     <div v-if="editorCtx.visible" class="fixed inset-0 z-50" @click="closeEditorCtx" @contextmenu.prevent="closeEditorCtx">
-      <div class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[170px]"
+      <div ref="editorMenuRef"
+           class="absolute bg-white dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm min-w-[170px]"
            :style="{ top: `${editorCtx.y}px`, left: `${editorCtx.x}px` }"
            @click.stop>
         <template v-if="editorCtx.lsp">
@@ -430,6 +443,12 @@
           </button>
           <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="openFileHistory">
             {{ t('git.fileHistory') }}
+          </button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="() => { closeEditorCtx(); copyPermalink() }">
+            {{ t('app.copyPermalinkShort') }}
+          </button>
+          <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="() => { closeEditorCtx(); openPermalink() }">
+            {{ t('app.openOnRemote') }}
           </button>
         </template>
         <div v-if="editorCtx.lsp || canBlame" class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
@@ -483,7 +502,7 @@ import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {dapSupportsLanguage} from './debug/dapClient'
-import {ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
+import {ArrowDownAZ, ArrowUpAZ, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Minimize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -513,7 +532,11 @@ import {useLanguageManager} from './composables/useLanguageManager'
 import {useFileManager} from './composables/useFileManager'
 import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
+import {useTextCommands} from './composables/useTextCommands'
+import {useGitPermalink} from './composables/useGitPermalink'
+import {useRevealInTree} from './composables/useRevealInTree'
 import EditorTabs from './components/EditorTabs.vue'
+import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
 import LargeFileViewer from './components/LargeFileViewer.vue'
 import QuickOpen from './components/QuickOpen.vue'
@@ -623,6 +646,8 @@ const {
   closeOthers,
   closeToRight,
   reopenClosed,
+  togglePin,
+  restorePinned,
   moveTab,
   updateTabPath,
   detachTabPath,
@@ -691,6 +716,9 @@ const handleCopyPath = async (path: string) => {
     toast.error(t('app.copyFailed') + error)
   }
 }
+
+// 文本变换命令在 editorView 声明之后初始化（见下方 useTextCommands）
+
 const handleCopyRelativePath = (path: string) => {
   const root = rootDir.value
   const rel = root && (path === root || path.startsWith(root + '/') || path.startsWith(root + '\\'))
@@ -701,7 +729,15 @@ const handleCopyRelativePath = (path: string) => {
 
 // ===== 侧栏 / 文件夹 =====
 const rootDir = ref<string | null>(null)
+
+// 远程仓库永久链接（复制 / 在浏览器打开）
+const {copyPermalink, openPermalink} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
 const sidebarVisible = ref(kvGet('sidebar-visible') === 'true')
+// 专注模式：隐藏顶部工具栏/运行输入/侧栏/状态栏，沉浸编辑
+const zenMode = ref(false)
+const toggleZen = () => {
+  zenMode.value = !zenMode.value
+}
 const sidebarWidth = ref(Number(kvGet('sidebar-width')) || 240)
 
 // 最近打开的文件夹
@@ -755,19 +791,20 @@ const SESSION_TABS_KEY = 'session-tabs'
 
 const persistSession = () => {
   const paths = editorTabs.value.map(t => t.filePath).filter((p): p is string => !!p)
+  const pinned = editorTabs.value.filter(t => t.pinned && t.filePath).map(t => t.filePath as string)
   const activePath = editorTabs.value.find(t => t.id === activeTabId.value)?.filePath || null
-  kvSetJSON(SESSION_TABS_KEY, {paths, activePath})
+  kvSetJSON(SESSION_TABS_KEY, {paths, pinned, activePath})
 }
 
-// 标签集合/文件/激活项变化时持久化（不含正文编辑，避免频繁写入）
+// 标签集合/文件/激活项/置顶变化时持久化（不含正文编辑，避免频繁写入）
 watch(
-    () => editorTabs.value.map(t => t.filePath || '').join('|') + '#' + activeTabId.value,
+    () => editorTabs.value.map(t => (t.pinned ? '*' : '') + (t.filePath || '')).join('|') + '#' + activeTabId.value,
     () => persistSession()
 )
 
 // 启动时恢复上次打开的文件标签（仅已保存且可读的文本文件）
 const restoreSession = async () => {
-  const saved = kvGetJSON<{ paths: string[], activePath: string | null } | null>(SESSION_TABS_KEY, null)
+  const saved = kvGetJSON<{ paths: string[], pinned?: string[], activePath: string | null } | null>(SESSION_TABS_KEY, null)
   if (!saved || !saved.paths?.length) {
     return
   }
@@ -783,6 +820,10 @@ const restoreSession = async () => {
     catch {
       // 跳过已删除/无法读取的文件
     }
+  }
+
+  if (saved.pinned?.length) {
+    restorePinned(saved.pinned)
   }
 
   if (saved.activePath) {
@@ -1117,6 +1158,9 @@ const confirmApplyAi = () => {
 // （LSP 接入后 client 持续 mutate 会立刻触发该循环）。
 const editorView = shallowRef<any>(null)
 
+// ===== 文本变换命令（排序行/大小写/去重/去行尾空白）=====
+const {transformSelectionOrLine, sortLines, removeDuplicateLines, trimTrailingWhitespace} = useTextCommands(editorView)
+
 // AI 自然语言生成 / 选区改写
 const showGenerate = ref(false)
 const generateSelection = ref('')
@@ -1189,18 +1233,8 @@ const openOutline = () => {
   showOutline.value = true
 }
 
-// 在文件树中定位当前文件
-const revealRequest = ref<{ path: string, n: number } | null>(null)
-let revealSeq = 0
-const revealInTree = (path?: string) => {
-  const target = path ?? currentFilePath.value
-  if (!target) {
-    toast.info(t('app.noFileToReveal'))
-    return
-  }
-  sidebarVisible.value = true
-  revealRequest.value = {path: target, n: ++revealSeq}
-}
+// 在文件树中定位当前文件 + 切换文件自动定位（抽离到 useRevealInTree）
+const {revealRequest, revealInTree, toggleAutoReveal} = useRevealInTree(currentFilePath, sidebarVisible)
 
 // 代码片段管理
 const showSnippets = ref(false)
@@ -1434,6 +1468,7 @@ const showDiagnostics = ref(false)
 
 // ===== 编辑器 LSP 右键菜单（跳转定义 / 重命名 / 格式化）=====
 const editorCtx = reactive({visible: false, x: 0, y: 0, lsp: false})
+const editorMenuRef = ref<HTMLElement | null>(null)
 const closeEditorCtx = () => {
   editorCtx.visible = false
 }
@@ -1464,7 +1499,7 @@ const openFileHistory = () => {
   const rel = path.slice(root.length).replace(/^[\\/]/, '')
   fileHistory.value = {root, rel, name: rel.split(/[\\/]/).pop() || rel}
 }
-const onEditorContext = (e: MouseEvent) => {
+const onEditorContext = async (e: MouseEvent) => {
   const target = e.target as HTMLElement | null
   const lsp = lspSupportsLanguage(currentLanguage.value) && !!editorView.value
   // 在编辑器内容区，且支持 LSP 或可 Blame 时弹出
@@ -1483,10 +1518,22 @@ const onEditorContext = (e: MouseEvent) => {
       view.dispatch({selection: {anchor: pos}})
     }
   }
-  // 夹取到视口内，避免贴边裁切（菜单约 180×180）
-  editorCtx.x = Math.min(e.clientX, window.innerWidth - 190)
-  editorCtx.y = Math.min(e.clientY, window.innerHeight - 190)
+  // 先按光标位置弹出，渲染后测量真实尺寸再夹取到视口内（菜单项数量可变，避免贴底/贴右裁切）
+  editorCtx.x = e.clientX
+  editorCtx.y = e.clientY
   editorCtx.visible = true
+  await nextTick()
+  const el = editorMenuRef.value
+  if (el) {
+    const r = el.getBoundingClientRect()
+    const margin = 8
+    if (editorCtx.x + r.width > window.innerWidth) {
+      editorCtx.x = Math.max(margin, window.innerWidth - r.width - margin)
+    }
+    if (editorCtx.y + r.height > window.innerHeight) {
+      editorCtx.y = Math.max(margin, window.innerHeight - r.height - margin)
+    }
+  }
 }
 const runEditorCommand = (cmd: (v: any) => boolean) => {
   closeEditorCtx()
@@ -1604,10 +1651,11 @@ const openGit = () => {
 // 文件树徽标用：绝对路径 → 状态字母（M/A/D/U）
 const gitStatus = ref<Record<string, string>>({})
 const gitRepo = ref(false)
+const gitBranch = ref('')
 // 计算单个根的 Git 状态（路径用绝对路径作 key，便于多根合并到同一张表）
-const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, map: Record<string, string> }> => {
+const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, branch: string, map: Record<string, string> }> => {
   try {
-    const s = await invoke<{ is_repo: boolean, files: { path: string, index: string, worktree: string }[] }>(
+    const s = await invoke<{ is_repo: boolean, branch: string, files: { path: string, index: string, worktree: string }[] }>(
         'git_status', {root}
     )
     const map: Record<string, string> = {}
@@ -1619,20 +1667,22 @@ const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, map: Recor
         map[`${root}/${f.path}`] = code
       }
     }
-    return {isRepo: s.is_repo, map}
+    return {isRepo: s.is_repo, branch: s.branch || '', map}
   }
   catch {
-    return {isRepo: false, map: {}}
+    return {isRepo: false, branch: '', map: {}}
   }
 }
 const refreshGitStatus = async () => {
   if (!rootDir.value) {
     gitStatus.value = {}
     gitRepo.value = false
+    gitBranch.value = ''
     return
   }
   const primary = await gitStatusFor(rootDir.value)
   gitRepo.value = primary.isRepo
+  gitBranch.value = primary.branch
   const map: Record<string, string> = {...primary.map}
   // 额外挂载的根各自可为独立仓库，合并它们的状态徽标
   if (extraRoots.value.length) {
@@ -2297,7 +2347,17 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
   {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
+  {id: 'copyPermalink', label: t('command.copyPermalink'), icon: GitBranch, run: () => copyPermalink()},
+  {id: 'openPermalink', label: t('command.openPermalink'), icon: GitBranch, run: () => openPermalink()},
+  {id: 'sortLinesAsc', label: t('command.sortLinesAsc'), group: t('command.groupText'), icon: ArrowDownAZ, run: () => sortLines(false)},
+  {id: 'sortLinesDesc', label: t('command.sortLinesDesc'), group: t('command.groupText'), icon: ArrowUpAZ, run: () => sortLines(true)},
+  {id: 'toUpperCase', label: t('command.toUpperCase'), group: t('command.groupText'), icon: CaseUpper, run: () => transformSelectionOrLine(s => s.toUpperCase())},
+  {id: 'toLowerCase', label: t('command.toLowerCase'), group: t('command.groupText'), icon: CaseLower, run: () => transformSelectionOrLine(s => s.toLowerCase())},
+  {id: 'removeDuplicateLines', label: t('command.removeDuplicateLines'), group: t('command.groupText'), icon: ListChecks, run: () => removeDuplicateLines()},
+  {id: 'trimTrailingWhitespace', label: t('command.trimTrailingWhitespace'), group: t('command.groupText'), icon: Eraser, run: () => trimTrailingWhitespace()},
+  {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
+  {id: 'toggleZen', label: t('command.toggleZen'), icon: Minimize2, run: () => toggleZen()},
   {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},
   {id: 'layoutHorizontal', label: t('command.layoutHorizontal'), group: t('command.groupLayout'), icon: PanelRight, run: () => handleLayoutChange('horizontal')},
   {id: 'layoutVertical', label: t('command.layoutVertical'), group: t('command.groupLayout'), icon: PanelBottom, run: () => handleLayoutChange('vertical')},
