@@ -533,6 +533,7 @@ import {useFileManager} from './composables/useFileManager'
 import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
+import {useGitPermalink} from './composables/useGitPermalink'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -574,7 +575,6 @@ import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import ExecutionHistory from './components/ExecutionHistory.vue'
 import {open as openDialog} from '@tauri-apps/plugin-dialog'
-import {open as openExternalUrl} from '@tauri-apps/plugin-shell'
 import {invoke} from '@tauri-apps/api/core'
 import {useEventManager} from './composables/useEventManager'
 import {useShortcuts} from './composables/useShortcuts'
@@ -715,40 +715,6 @@ const handleCopyPath = async (path: string) => {
     toast.error(t('app.copyFailed') + error)
   }
 }
-// 生成当前文件指定行的远程仓库永久链接
-const buildPermalink = async (): Promise<string | null> => {
-  if (!rootDir.value || !currentFilePath.value) {
-    toast.info(t('app.noFileToReveal'))
-    return null
-  }
-  const root = rootDir.value
-  const p = currentFilePath.value
-  if (!(p === root || p.startsWith(root + '/') || p.startsWith(root + '\\'))) {
-    toast.info(t('app.permalinkOutside'))
-    return null
-  }
-  const rel = p.slice(root.length).replace(/^[\\/]/, '')
-  try {
-    return await invoke<string>('git_permalink', {root, relPath: rel, line: cursorInfo.value.line})
-  }
-  catch (error) {
-    toast.error(t('app.permalinkFailed') + ': ' + error)
-    return null
-  }
-}
-const copyPermalink = async () => {
-  const url = await buildPermalink()
-  if (url) {
-    await navigator.clipboard.writeText(url)
-    toast.success(t('app.permalinkCopied'))
-  }
-}
-const openPermalink = async () => {
-  const url = await buildPermalink()
-  if (url) {
-    await openExternalUrl(url).catch((e) => toast.error(t('app.permalinkFailed') + ': ' + e))
-  }
-}
 
 // 文本变换命令在 editorView 声明之后初始化（见下方 useTextCommands）
 
@@ -762,6 +728,9 @@ const handleCopyRelativePath = (path: string) => {
 
 // ===== 侧栏 / 文件夹 =====
 const rootDir = ref<string | null>(null)
+
+// 远程仓库永久链接（复制 / 在浏览器打开）
+const {copyPermalink, openPermalink} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
 const sidebarVisible = ref(kvGet('sidebar-visible') === 'true')
 // 专注模式：隐藏顶部工具栏/运行输入/侧栏/状态栏，沉浸编辑
 const zenMode = ref(false)
