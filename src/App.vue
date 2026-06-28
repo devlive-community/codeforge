@@ -535,6 +535,7 @@ import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
+import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -732,6 +733,9 @@ const rootDir = ref<string | null>(null)
 
 // 远程仓库永久链接（复制 / 在浏览器打开）
 const {copyPermalink, openPermalink} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
+
+// 多根工作区：额外挂载的文件夹（Git/搜索仍走主根 rootDir）
+const {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots} = useWorkspaceRoots(rootDir)
 const sidebarVisible = ref(kvGet('sidebar-visible') === 'true')
 // 专注模式：隐藏顶部工具栏/运行输入/侧栏/状态栏，沉浸编辑
 const zenMode = ref(false)
@@ -767,23 +771,7 @@ const openFolderPath = (path: string) => {
   sidebarVisible.value = true
   rememberFolder(path)
   // 打开新文件夹视为新工作区，清空额外挂载的根
-  extraRoots.value = []
-  kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
-}
-
-// ===== 多根工作区（E3，phase 1）：额外挂载的文件夹（Git/搜索仍走主根 rootDir）=====
-const WORKSPACE_EXTRA_KEY = 'workspace-extra-roots'
-const extraRoots = ref<string[]>(kvGetJSON<string[]>(WORKSPACE_EXTRA_KEY, []))
-const addWorkspaceFolder = async () => {
-  const selected = await openDialog({directory: true, multiple: false})
-  if (selected && typeof selected === 'string' && selected !== rootDir.value && !extraRoots.value.includes(selected)) {
-    extraRoots.value = [...extraRoots.value, selected]
-    kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
-  }
-}
-const removeWorkspaceFolder = (path: string) => {
-  extraRoots.value = extraRoots.value.filter(p => p !== path)
-  kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
+  resetExtraRoots()
 }
 
 // ===== 标签会话持久化 =====
