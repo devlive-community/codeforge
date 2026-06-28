@@ -532,6 +532,7 @@ import {useLanguageManager} from './composables/useLanguageManager'
 import {useFileManager} from './composables/useFileManager'
 import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
+import {useTextCommands} from './composables/useTextCommands'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -749,81 +750,7 @@ const openPermalink = async () => {
   }
 }
 
-// ===== 文本变换命令 =====
-// 对选区做变换；无选区时作用于当前行
-const transformSelectionOrLine = (fn: (s: string) => string) => {
-  const view = editorView.value
-  if (!view) {
-    return
-  }
-  const sel = view.state.selection.main
-  let from = sel.from
-  let to = sel.to
-  if (sel.empty) {
-    const line = view.state.doc.lineAt(sel.head)
-    from = line.from
-    to = line.to
-  }
-  const out = fn(view.state.doc.sliceString(from, to))
-  view.dispatch({changes: {from, to, insert: out}, selection: {anchor: from, head: from + out.length}})
-  view.focus()
-}
-// 排序选中行；无选区时排序整篇
-const sortLines = (desc: boolean) => {
-  const view = editorView.value
-  if (!view) {
-    return
-  }
-  const sel = view.state.selection.main
-  const from = sel.empty ? 0 : view.state.doc.lineAt(sel.from).from
-  const to = sel.empty ? view.state.doc.length : view.state.doc.lineAt(sel.to).to
-  const lines = view.state.doc.sliceString(from, to).split('\n')
-  lines.sort((a: string, b: string) => a.localeCompare(b))
-  if (desc) {
-    lines.reverse()
-  }
-  const out = lines.join('\n')
-  view.dispatch({changes: {from, to, insert: out}, selection: {anchor: from, head: from + out.length}})
-  view.focus()
-}
-// 选中行（无选区则全文）按整行的范围
-const lineBlockRange = () => {
-  const view = editorView.value!
-  const sel = view.state.selection.main
-  const from = sel.empty ? 0 : view.state.doc.lineAt(sel.from).from
-  const to = sel.empty ? view.state.doc.length : view.state.doc.lineAt(sel.to).to
-  return {from, to}
-}
-// 删除重复行（保留首次出现）
-const removeDuplicateLines = () => {
-  const view = editorView.value
-  if (!view) {
-    return
-  }
-  const {from, to} = lineBlockRange()
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const l of view.state.doc.sliceString(from, to).split('\n')) {
-    if (!seen.has(l)) {
-      seen.add(l)
-      out.push(l)
-    }
-  }
-  const text = out.join('\n')
-  view.dispatch({changes: {from, to, insert: text}, selection: {anchor: from, head: from + text.length}})
-  view.focus()
-}
-// 去除行尾空白
-const trimTrailingWhitespace = () => {
-  const view = editorView.value
-  if (!view) {
-    return
-  }
-  const {from, to} = lineBlockRange()
-  const text = view.state.doc.sliceString(from, to).replace(/[ \t]+(\r?\n)/g, '$1').replace(/[ \t]+$/, '')
-  view.dispatch({changes: {from, to, insert: text}, selection: {anchor: from, head: from + text.length}})
-  view.focus()
-}
+// 文本变换命令在 editorView 声明之后初始化（见下方 useTextCommands）
 
 const handleCopyRelativePath = (path: string) => {
   const root = rootDir.value
@@ -1260,6 +1187,9 @@ const confirmApplyAi = () => {
 // 与 applyDiffMarkers 的 dispatch 形成 mutation→watch→dispatch→mutation 无限循环导致整页卡死
 // （LSP 接入后 client 持续 mutate 会立刻触发该循环）。
 const editorView = shallowRef<any>(null)
+
+// ===== 文本变换命令（排序行/大小写/去重/去行尾空白）=====
+const {transformSelectionOrLine, sortLines, removeDuplicateLines, trimTrailingWhitespace} = useTextCommands(editorView)
 
 // AI 自然语言生成 / 选区改写
 const showGenerate = ref(false)
