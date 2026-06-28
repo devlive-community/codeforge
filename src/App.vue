@@ -536,6 +536,7 @@ import {useTextCommands} from './composables/useTextCommands'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
 import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
+import {useGitStatus} from './composables/useGitStatus'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -1636,51 +1637,8 @@ const openGit = () => {
   showGit.value = true
 }
 
-// 文件树徽标用：绝对路径 → 状态字母（M/A/D/U）
-const gitStatus = ref<Record<string, string>>({})
-const gitRepo = ref(false)
-const gitBranch = ref('')
-// 计算单个根的 Git 状态（路径用绝对路径作 key，便于多根合并到同一张表）
-const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, branch: string, map: Record<string, string> }> => {
-  try {
-    const s = await invoke<{ is_repo: boolean, branch: string, files: { path: string, index: string, worktree: string }[] }>(
-        'git_status', {root}
-    )
-    const map: Record<string, string> = {}
-    if (s.is_repo) {
-      for (const f of s.files) {
-        const code = f.index === '?'
-            ? 'U'
-            : (f.worktree.trim() || f.index.trim() || 'M')
-        map[`${root}/${f.path}`] = code
-      }
-    }
-    return {isRepo: s.is_repo, branch: s.branch || '', map}
-  }
-  catch {
-    return {isRepo: false, branch: '', map: {}}
-  }
-}
-const refreshGitStatus = async () => {
-  if (!rootDir.value) {
-    gitStatus.value = {}
-    gitRepo.value = false
-    gitBranch.value = ''
-    return
-  }
-  const primary = await gitStatusFor(rootDir.value)
-  gitRepo.value = primary.isRepo
-  gitBranch.value = primary.branch
-  const map: Record<string, string> = {...primary.map}
-  // 额外挂载的根各自可为独立仓库，合并它们的状态徽标
-  if (extraRoots.value.length) {
-    const extra = await Promise.all(extraRoots.value.map(er => gitStatusFor(er)))
-    for (const e of extra) Object.assign(map, e.map)
-  }
-  gitStatus.value = map
-  // HEAD 可能因提交/切换分支变化，刷新编辑器行内差异基线
-  fetchBaseline()
-}
+// 文件树 Git 徽标 + 当前分支（抽离到 useGitStatus）；HEAD 变化时刷新差异基线
+const {gitStatus, gitRepo, gitBranch, refreshGitStatus} = useGitStatus(rootDir, extraRoots, () => fetchBaseline())
 
 // ===== 编辑器行内差异标记（vs HEAD）=====
 // 当前文件在 HEAD 中的内容；null 表示无基线（新文件/非 git/未跟踪），不显示标记
