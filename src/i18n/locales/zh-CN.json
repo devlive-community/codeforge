@@ -700,6 +700,8 @@
     "sortLinesDesc": "排序行（降序）",
     "toUpperCase": "转为大写",
     "toLowerCase": "转为小写",
+    "removeDuplicateLines": "删除重复行",
+    "trimTrailingWhitespace": "去除行尾空白",
     "groupText": "文本",
     "toggleAutoReveal": "切换：自动定位当前文件",
     "toggleSidebar": "切换侧栏",

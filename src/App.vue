@@ -492,7 +492,7 @@ import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {dapSupportsLanguage} from './debug/dapClient'
-import {ArrowDownAZ, ArrowUpAZ, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
+import {ArrowDownAZ, ArrowUpAZ, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -774,6 +774,44 @@ const sortLines = (desc: boolean) => {
   }
   const out = lines.join('\n')
   view.dispatch({changes: {from, to, insert: out}, selection: {anchor: from, head: from + out.length}})
+  view.focus()
+}
+// 选中行（无选区则全文）按整行的范围
+const lineBlockRange = () => {
+  const view = editorView.value!
+  const sel = view.state.selection.main
+  const from = sel.empty ? 0 : view.state.doc.lineAt(sel.from).from
+  const to = sel.empty ? view.state.doc.length : view.state.doc.lineAt(sel.to).to
+  return {from, to}
+}
+// 删除重复行（保留首次出现）
+const removeDuplicateLines = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const {from, to} = lineBlockRange()
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const l of view.state.doc.sliceString(from, to).split('\n')) {
+    if (!seen.has(l)) {
+      seen.add(l)
+      out.push(l)
+    }
+  }
+  const text = out.join('\n')
+  view.dispatch({changes: {from, to, insert: text}, selection: {anchor: from, head: from + text.length}})
+  view.focus()
+}
+// 去除行尾空白
+const trimTrailingWhitespace = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const {from, to} = lineBlockRange()
+  const text = view.state.doc.sliceString(from, to).replace(/[ \t]+(\r?\n)/g, '$1').replace(/[ \t]+$/, '')
+  view.dispatch({changes: {from, to, insert: text}, selection: {anchor: from, head: from + text.length}})
   view.focus()
 }
 
@@ -2426,6 +2464,8 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'sortLinesDesc', label: t('command.sortLinesDesc'), group: t('command.groupText'), icon: ArrowUpAZ, run: () => sortLines(true)},
   {id: 'toUpperCase', label: t('command.toUpperCase'), group: t('command.groupText'), icon: CaseUpper, run: () => transformSelectionOrLine(s => s.toUpperCase())},
   {id: 'toLowerCase', label: t('command.toLowerCase'), group: t('command.groupText'), icon: CaseLower, run: () => transformSelectionOrLine(s => s.toLowerCase())},
+  {id: 'removeDuplicateLines', label: t('command.removeDuplicateLines'), group: t('command.groupText'), icon: ListChecks, run: () => removeDuplicateLines()},
+  {id: 'trimTrailingWhitespace', label: t('command.trimTrailingWhitespace'), group: t('command.groupText'), icon: Eraser, run: () => trimTrailingWhitespace()},
   {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleWordWrap', label: t('command.toggleWordWrap'), icon: WrapText, hint: hintOf('toggleWordWrap'), run: () => toggleWordWrap()},

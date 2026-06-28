@@ -700,6 +700,8 @@
     "sortLinesDesc": "Sort lines descending",
     "toUpperCase": "Transform to uppercase",
     "toLowerCase": "Transform to lowercase",
+    "removeDuplicateLines": "Remove duplicate lines",
+    "trimTrailingWhitespace": "Trim trailing whitespace",
     "groupText": "Text",
     "toggleAutoReveal": "Toggle: auto-reveal active file",
     "toggleSidebar": "Toggle sidebar",
