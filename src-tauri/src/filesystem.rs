@@ -510,7 +510,8 @@ pub async fn git_permalink(root: String, rel_path: String, line: u32) -> Result<
             Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
         };
 
-        let remote = git(&["remote", "get-url", "origin"]).map_err(|_| "未找到 origin 远程".to_string())?;
+        let remote =
+            git(&["remote", "get-url", "origin"]).map_err(|_| "未找到 origin 远程".to_string())?;
         let sha = git(&["rev-parse", "HEAD"]).map_err(|_| "无法获取当前提交".to_string())?;
 
         // 解析远程地址 → (host, owner/repo)
@@ -534,8 +535,15 @@ pub async fn git_permalink(root: String, rel_path: String, line: u32) -> Result<
         };
 
         let rel = rel_path.trim_start_matches(['/', '\\']).replace('\\', "/");
-        let blob = if host.contains("gitlab") { "/-/blob/" } else { "/blob/" };
-        Ok(format!("https://{}/{}{}{}/{}#L{}", host, path, blob, sha, rel, line))
+        let blob = if host.contains("gitlab") {
+            "/-/blob/"
+        } else {
+            "/blob/"
+        };
+        Ok(format!(
+            "https://{}/{}{}{}/{}#L{}",
+            host, path, blob, sha, rel, line
+        ))
     })
     .await
     .map_err(|e| format!("git 任务失败: {}", e))?
