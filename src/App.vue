@@ -1136,6 +1136,38 @@ const copyAsMarkdown = async () => {
   }
 }
 
+// 转换整篇的缩进：空格 ↔ 制表符（按 tab 宽度换算）
+const convertIndentation = (toTabs: boolean) => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const size = editorConfig.value?.tab_size ?? 2
+  const original = view.state.doc.toString()
+  const out = original.split('\n').map((line: string) => {
+    const m = line.match(/^[ \t]+/)
+    if (!m) {
+      return line
+    }
+    // 把行首空白展开为列数（tab 计为 size 列）
+    let cols = 0
+    for (const ch of m[0]) {
+      cols += ch === '\t' ? size : 1
+    }
+    const rest = line.slice(m[0].length)
+    return toTabs
+      ? '\t'.repeat(Math.floor(cols / size)) + ' '.repeat(cols % size) + rest
+      : ' '.repeat(cols) + rest
+  }).join('\n')
+  if (out === original) {
+    return
+  }
+  const head = Math.min(view.state.selection.main.head, out.length)
+  view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: out}, selection: {anchor: head}})
+  view.focus()
+  toast.success(t('app.indentConverted'))
+}
+
 // AI 自然语言生成 / 选区改写
 const showGenerate = ref(false)
 const generateSelection = ref('')
@@ -2193,6 +2225,8 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'removeDuplicateLines', label: t('command.removeDuplicateLines'), group: t('command.groupText'), icon: ListChecks, run: () => removeDuplicateLines()},
   {id: 'trimTrailingWhitespace', label: t('command.trimTrailingWhitespace'), group: t('command.groupText'), icon: Eraser, run: () => trimTrailingWhitespace()},
   {id: 'copyAsMarkdown', label: t('command.copyAsMarkdown'), group: t('command.groupText'), icon: Code2, run: () => copyAsMarkdown()},
+  {id: 'indentToSpaces', label: t('command.indentToSpaces'), group: t('command.groupText'), icon: Eraser, run: () => convertIndentation(false)},
+  {id: 'indentToTabs', label: t('command.indentToTabs'), group: t('command.groupText'), icon: Eraser, run: () => convertIndentation(true)},
   {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleZen', label: t('command.toggleZen'), icon: Minimize2, run: () => toggleZen()},
