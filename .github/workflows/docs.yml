@@ -2,6 +2,9 @@ name: Deploy docs to GitHub Pages
 
 on:
   push:
+    # 限定分支触发，排除标签：发布打的 tag 会触发部署，但 github-pages
+    # 环境保护规则不允许从 tag 部署，导致 deploy 被拒。
+    branches: [ '**' ]
     paths: [ 'docs/**', '.github/workflows/docs.yml' ]
   workflow_dispatch:
 
