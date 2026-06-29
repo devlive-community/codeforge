@@ -1109,6 +1109,25 @@ const editorView = shallowRef<any>(null)
 // ===== 文本变换命令（排序行/大小写/去重/去行尾空白）=====
 const {transformSelectionOrLine, sortLines, removeDuplicateLines, trimTrailingWhitespace} = useTextCommands(editorView)
 
+// 复制为 Markdown 代码块（选区或全文，带语言围栏）
+const copyAsMarkdown = async () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const sel = view.state.selection.main
+  const text = sel.empty ? view.state.doc.toString() : view.state.doc.sliceString(sel.from, sel.to)
+  const lang = (currentLanguage.value || '').toLowerCase().replace(/\d+$/, '')
+  const fence = '```' + lang + '\n' + text.replace(/\n$/, '') + '\n```'
+  try {
+    await navigator.clipboard.writeText(fence)
+    toast.success(t('app.copiedMarkdown'))
+  }
+  catch (error) {
+    toast.error(t('app.copyFailed') + error)
+  }
+}
+
 // AI 自然语言生成 / 选区改写
 const showGenerate = ref(false)
 const generateSelection = ref('')
@@ -2188,6 +2207,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'toLowerCase', label: t('command.toLowerCase'), group: t('command.groupText'), icon: CaseLower, run: () => transformSelectionOrLine(s => s.toLowerCase())},
   {id: 'removeDuplicateLines', label: t('command.removeDuplicateLines'), group: t('command.groupText'), icon: ListChecks, run: () => removeDuplicateLines()},
   {id: 'trimTrailingWhitespace', label: t('command.trimTrailingWhitespace'), group: t('command.groupText'), icon: Eraser, run: () => trimTrailingWhitespace()},
+  {id: 'copyAsMarkdown', label: t('command.copyAsMarkdown'), group: t('command.groupText'), icon: Code2, run: () => copyAsMarkdown()},
   {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleZen', label: t('command.toggleZen'), icon: Minimize2, run: () => toggleZen()},
