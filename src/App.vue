@@ -538,6 +538,7 @@ import {useRevealInTree} from './composables/useRevealInTree'
 import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
 import {useGitStatus} from './composables/useGitStatus'
 import {useSessionTabs} from './composables/useSessionTabs'
+import {useEditorContextMenu} from './composables/useEditorContextMenu'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -1412,15 +1413,12 @@ const onLspOpenLocation = async (e: Event) => {
 const showDiagnostics = ref(false)
 
 // ===== 编辑器 LSP 右键菜单（跳转定义 / 重命名 / 格式化）=====
-const editorCtx = reactive({visible: false, x: 0, y: 0, lsp: false})
-const editorMenuRef = ref<HTMLElement | null>(null)
-const closeEditorCtx = () => {
-  editorCtx.visible = false
-}
-
 // Git Blame：当前文件在已打开文件夹内时可用
 const blameInfo = ref<{ root: string; rel: string; name: string } | null>(null)
 const canBlame = computed(() => !!rootDir.value && !!currentFilePath.value && currentFilePath.value.startsWith(rootDir.value))
+
+// 编辑器右键菜单（状态/定位/全局监听抽离到 useEditorContextMenu）
+const {editorCtx, editorMenuRef, closeEditorCtx} = useEditorContextMenu({editorView, currentLanguage, canBlame})
 const openBlame = () => {
   editorCtx.visible = false
   const root = rootDir.value
@@ -1443,42 +1441,6 @@ const openFileHistory = () => {
   }
   const rel = path.slice(root.length).replace(/^[\\/]/, '')
   fileHistory.value = {root, rel, name: rel.split(/[\\/]/).pop() || rel}
-}
-const onEditorContext = async (e: MouseEvent) => {
-  const target = e.target as HTMLElement | null
-  const lsp = lspSupportsLanguage(currentLanguage.value) && !!editorView.value
-  // 在编辑器内容区，且支持 LSP 或可 Blame 时弹出
-  if (!target?.closest('.cm-content') || (!lsp && !canBlame.value)) {
-    return
-  }
-  editorCtx.lsp = lsp
-  e.preventDefault()
-  const view = editorView.value
-  if (view) {
-    const cur = view.state.selection.main
-    const pos = view.posAtCoords({x: e.clientX, y: e.clientY})
-    // 仅在无选区、或右键点在选区之外时才移动光标；点在选区内则保留选区（不清除高亮）
-    const insideSel = !cur.empty && pos != null && pos >= cur.from && pos <= cur.to
-    if (pos != null && !insideSel) {
-      view.dispatch({selection: {anchor: pos}})
-    }
-  }
-  // 先按光标位置弹出，渲染后测量真实尺寸再夹取到视口内（菜单项数量可变，避免贴底/贴右裁切）
-  editorCtx.x = e.clientX
-  editorCtx.y = e.clientY
-  editorCtx.visible = true
-  await nextTick()
-  const el = editorMenuRef.value
-  if (el) {
-    const r = el.getBoundingClientRect()
-    const margin = 8
-    if (editorCtx.x + r.width > window.innerWidth) {
-      editorCtx.x = Math.max(margin, window.innerWidth - r.width - margin)
-    }
-    if (editorCtx.y + r.height > window.innerHeight) {
-      editorCtx.y = Math.max(margin, window.innerHeight - r.height - margin)
-    }
-  }
 }
 const runEditorCommand = (cmd: (v: any) => boolean) => {
   closeEditorCtx()
@@ -2312,7 +2274,6 @@ onMounted(async () => {
   window.addEventListener('keydown', onGlobalKeydown, true)
   window.addEventListener('lsp:open-location', onLspOpenLocation)
   window.addEventListener('lsp:code-actions', onLspCodeActions)
-  window.addEventListener('contextmenu', onEditorContext)
 
   // 触发 app-ready 事件，通知主进程
   window.dispatchEvent(new CustomEvent('app-ready'))
@@ -2323,6 +2284,5 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKeydown, true)
   window.removeEventListener('lsp:open-location', onLspOpenLocation)
   window.removeEventListener('lsp:code-actions', onLspCodeActions)
-  window.removeEventListener('contextmenu', onEditorContext)
 })
 </script>
