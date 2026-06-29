@@ -535,6 +535,11 @@ import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
+import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
+import {useGitStatus} from './composables/useGitStatus'
+import {useSessionTabs} from './composables/useSessionTabs'
+import {useEditorContextMenu} from './composables/useEditorContextMenu'
+import {useRunConfig} from './composables/useRunConfig'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -732,6 +737,9 @@ const rootDir = ref<string | null>(null)
 
 // 远程仓库永久链接（复制 / 在浏览器打开）
 const {copyPermalink, openPermalink} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
+
+// 多根工作区：额外挂载的文件夹（Git/搜索仍走主根 rootDir）
+const {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots} = useWorkspaceRoots(rootDir)
 const sidebarVisible = ref(kvGet('sidebar-visible') === 'true')
 // 专注模式：隐藏顶部工具栏/运行输入/侧栏/状态栏，沉浸编辑
 const zenMode = ref(false)
@@ -767,72 +775,11 @@ const openFolderPath = (path: string) => {
   sidebarVisible.value = true
   rememberFolder(path)
   // 打开新文件夹视为新工作区，清空额外挂载的根
-  extraRoots.value = []
-  kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
-}
-
-// ===== 多根工作区（E3，phase 1）：额外挂载的文件夹（Git/搜索仍走主根 rootDir）=====
-const WORKSPACE_EXTRA_KEY = 'workspace-extra-roots'
-const extraRoots = ref<string[]>(kvGetJSON<string[]>(WORKSPACE_EXTRA_KEY, []))
-const addWorkspaceFolder = async () => {
-  const selected = await openDialog({directory: true, multiple: false})
-  if (selected && typeof selected === 'string' && selected !== rootDir.value && !extraRoots.value.includes(selected)) {
-    extraRoots.value = [...extraRoots.value, selected]
-    kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
-  }
-}
-const removeWorkspaceFolder = (path: string) => {
-  extraRoots.value = extraRoots.value.filter(p => p !== path)
-  kvSetJSON(WORKSPACE_EXTRA_KEY, extraRoots.value)
+  resetExtraRoots()
 }
 
 // ===== 标签会话持久化 =====
-const SESSION_TABS_KEY = 'session-tabs'
-
-const persistSession = () => {
-  const paths = editorTabs.value.map(t => t.filePath).filter((p): p is string => !!p)
-  const pinned = editorTabs.value.filter(t => t.pinned && t.filePath).map(t => t.filePath as string)
-  const activePath = editorTabs.value.find(t => t.id === activeTabId.value)?.filePath || null
-  kvSetJSON(SESSION_TABS_KEY, {paths, pinned, activePath})
-}
-
-// 标签集合/文件/激活项/置顶变化时持久化（不含正文编辑，避免频繁写入）
-watch(
-    () => editorTabs.value.map(t => (t.pinned ? '*' : '') + (t.filePath || '')).join('|') + '#' + activeTabId.value,
-    () => persistSession()
-)
-
-// 启动时恢复上次打开的文件标签（仅已保存且可读的文本文件）
-const restoreSession = async () => {
-  const saved = kvGetJSON<{ paths: string[], pinned?: string[], activePath: string | null } | null>(SESSION_TABS_KEY, null)
-  if (!saved || !saved.paths?.length) {
-    return
-  }
-
-  const limitBytes = (editorConfig.value?.max_open_file_size ?? 5) * 1024 * 1024
-  for (const p of saved.paths) {
-    try {
-      const meta = await invoke<{ size_bytes: number, is_text: boolean }>('get_text_file_meta', {path: p})
-      if (meta.is_text && meta.size_bytes <= limitBytes) {
-        await openPath(p)
-      }
-    }
-    catch {
-      // 跳过已删除/无法读取的文件
-    }
-  }
-
-  if (saved.pinned?.length) {
-    restorePinned(saved.pinned)
-  }
-
-  if (saved.activePath) {
-    const t = editorTabs.value.find(tab => tab.filePath === saved.activePath)
-    if (t) {
-      switchTab(t.id)
-    }
-  }
-}
+// 标签会话持久化见下方 useSessionTabs（待 editorConfig 声明后初始化）
 
 watch(sidebarVisible, (v) => kvSet('sidebar-visible', String(v)))
 
@@ -1467,15 +1414,12 @@ const onLspOpenLocation = async (e: Event) => {
 const showDiagnostics = ref(false)
 
 // ===== 编辑器 LSP 右键菜单（跳转定义 / 重命名 / 格式化）=====
-const editorCtx = reactive({visible: false, x: 0, y: 0, lsp: false})
-const editorMenuRef = ref<HTMLElement | null>(null)
-const closeEditorCtx = () => {
-  editorCtx.visible = false
-}
-
 // Git Blame：当前文件在已打开文件夹内时可用
 const blameInfo = ref<{ root: string; rel: string; name: string } | null>(null)
 const canBlame = computed(() => !!rootDir.value && !!currentFilePath.value && currentFilePath.value.startsWith(rootDir.value))
+
+// 编辑器右键菜单（状态/定位/全局监听抽离到 useEditorContextMenu）
+const {editorCtx, editorMenuRef, closeEditorCtx} = useEditorContextMenu({editorView, currentLanguage, canBlame})
 const openBlame = () => {
   editorCtx.visible = false
   const root = rootDir.value
@@ -1498,42 +1442,6 @@ const openFileHistory = () => {
   }
   const rel = path.slice(root.length).replace(/^[\\/]/, '')
   fileHistory.value = {root, rel, name: rel.split(/[\\/]/).pop() || rel}
-}
-const onEditorContext = async (e: MouseEvent) => {
-  const target = e.target as HTMLElement | null
-  const lsp = lspSupportsLanguage(currentLanguage.value) && !!editorView.value
-  // 在编辑器内容区，且支持 LSP 或可 Blame 时弹出
-  if (!target?.closest('.cm-content') || (!lsp && !canBlame.value)) {
-    return
-  }
-  editorCtx.lsp = lsp
-  e.preventDefault()
-  const view = editorView.value
-  if (view) {
-    const cur = view.state.selection.main
-    const pos = view.posAtCoords({x: e.clientX, y: e.clientY})
-    // 仅在无选区、或右键点在选区之外时才移动光标；点在选区内则保留选区（不清除高亮）
-    const insideSel = !cur.empty && pos != null && pos >= cur.from && pos <= cur.to
-    if (pos != null && !insideSel) {
-      view.dispatch({selection: {anchor: pos}})
-    }
-  }
-  // 先按光标位置弹出，渲染后测量真实尺寸再夹取到视口内（菜单项数量可变，避免贴底/贴右裁切）
-  editorCtx.x = e.clientX
-  editorCtx.y = e.clientY
-  editorCtx.visible = true
-  await nextTick()
-  const el = editorMenuRef.value
-  if (el) {
-    const r = el.getBoundingClientRect()
-    const margin = 8
-    if (editorCtx.x + r.width > window.innerWidth) {
-      editorCtx.x = Math.max(margin, window.innerWidth - r.width - margin)
-    }
-    if (editorCtx.y + r.height > window.innerHeight) {
-      editorCtx.y = Math.max(margin, window.innerHeight - r.height - margin)
-    }
-  }
 }
 const runEditorCommand = (cmd: (v: any) => boolean) => {
   closeEditorCtx()
@@ -1648,51 +1556,8 @@ const openGit = () => {
   showGit.value = true
 }
 
-// 文件树徽标用：绝对路径 → 状态字母（M/A/D/U）
-const gitStatus = ref<Record<string, string>>({})
-const gitRepo = ref(false)
-const gitBranch = ref('')
-// 计算单个根的 Git 状态（路径用绝对路径作 key，便于多根合并到同一张表）
-const gitStatusFor = async (root: string): Promise<{ isRepo: boolean, branch: string, map: Record<string, string> }> => {
-  try {
-    const s = await invoke<{ is_repo: boolean, branch: string, files: { path: string, index: string, worktree: string }[] }>(
-        'git_status', {root}
-    )
-    const map: Record<string, string> = {}
-    if (s.is_repo) {
-      for (const f of s.files) {
-        const code = f.index === '?'
-            ? 'U'
-            : (f.worktree.trim() || f.index.trim() || 'M')
-        map[`${root}/${f.path}`] = code
-      }
-    }
-    return {isRepo: s.is_repo, branch: s.branch || '', map}
-  }
-  catch {
-    return {isRepo: false, branch: '', map: {}}
-  }
-}
-const refreshGitStatus = async () => {
-  if (!rootDir.value) {
-    gitStatus.value = {}
-    gitRepo.value = false
-    gitBranch.value = ''
-    return
-  }
-  const primary = await gitStatusFor(rootDir.value)
-  gitRepo.value = primary.isRepo
-  gitBranch.value = primary.branch
-  const map: Record<string, string> = {...primary.map}
-  // 额外挂载的根各自可为独立仓库，合并它们的状态徽标
-  if (extraRoots.value.length) {
-    const extra = await Promise.all(extraRoots.value.map(er => gitStatusFor(er)))
-    for (const e of extra) Object.assign(map, e.map)
-  }
-  gitStatus.value = map
-  // HEAD 可能因提交/切换分支变化，刷新编辑器行内差异基线
-  fetchBaseline()
-}
+// 文件树 Git 徽标 + 当前分支（抽离到 useGitStatus）；HEAD 变化时刷新差异基线
+const {gitStatus, gitRepo, gitBranch, refreshGitStatus} = useGitStatus(rootDir, extraRoots, () => fetchBaseline())
 
 // ===== 编辑器行内差异标记（vs HEAD）=====
 // 当前文件在 HEAD 中的内容；null 表示无基线（新文件/非 git/未跟踪），不显示标记
@@ -1803,6 +1668,9 @@ const {
   loadConfig: loadEditorConfig
 } = useEditorConfig()
 
+// 标签会话持久化（依赖 editorConfig，放在其声明之后）
+const {restoreSession} = useSessionTabs({editorTabs, activeTabId, editorConfig, openPath, restorePinned, switchTab})
+
 // 强制刷新 CodeEditor 组件的 key
 const editorConfigKey = ref(0)
 const consoleType = ref('console')
@@ -1912,44 +1780,8 @@ const handleSave = async () => {
 }
 
 // ===== 按文件记忆运行配置（args/stdin/env）=====
-const RUN_CONFIGS_KEY = 'run-configs'
-type RunConfig = { args: string, stdin: string, env: string }
-const loadRunConfigs = (): Record<string, RunConfig> =>
-    kvGetJSON<Record<string, RunConfig>>(RUN_CONFIGS_KEY, {})
-// 把当前输入写入指定文件的配置（全空则删除该条）
-const saveRunConfig = (path: string) => {
-  const map = loadRunConfigs()
-  if (!runArgs.value && !runStdin.value && !runEnv.value) {
-    delete map[path]
-  }
-  else {
-    map[path] = {args: runArgs.value, stdin: runStdin.value, env: runEnv.value}
-  }
-  kvSetJSON(RUN_CONFIGS_KEY, map)
-}
-// 载入指定文件的配置（无则清空）
-const loadRunConfig = (path: string | null) => {
-  const cfg = path ? loadRunConfigs()[path] : null
-  runArgs.value = cfg?.args || ''
-  runStdin.value = cfg?.stdin || ''
-  runEnv.value = cfg?.env || ''
-}
-
-// 切换文件时：保存旧文件输入、载入新文件输入
-watch(currentFilePath, (np, op) => {
-  if (op) {
-    saveRunConfig(op)
-  }
-  loadRunConfig(np)
-})
-
-// 编辑输入时防抖保存到当前文件
-const persistRunConfig = debounce(() => {
-  if (currentFilePath.value) {
-    saveRunConfig(currentFilePath.value)
-  }
-}, 400)
-watch([runArgs, runStdin, runEnv], () => persistRunConfig())
+// 按文件记忆运行输入（参数/stdin/环境变量）—— 抽离到 useRunConfig
+useRunConfig(currentFilePath, runArgs, runStdin, runEnv)
 
 // 解析环境变量文本（KEY=值，按换行或分号分隔）
 const parseEnv = (text: string): Record<string, string> => {
@@ -2407,7 +2239,6 @@ onMounted(async () => {
   window.addEventListener('keydown', onGlobalKeydown, true)
   window.addEventListener('lsp:open-location', onLspOpenLocation)
   window.addEventListener('lsp:code-actions', onLspCodeActions)
-  window.addEventListener('contextmenu', onEditorContext)
 
   // 触发 app-ready 事件，通知主进程
   window.dispatchEvent(new CustomEvent('app-ready'))
@@ -2418,6 +2249,5 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKeydown, true)
   window.removeEventListener('lsp:open-location', onLspOpenLocation)
   window.removeEventListener('lsp:code-actions', onLspCodeActions)
-  window.removeEventListener('contextmenu', onEditorContext)
 })
 </script>
