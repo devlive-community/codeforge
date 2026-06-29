@@ -91,6 +91,7 @@ import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
 import {EditorView, keymap} from "@codemirror/view";
 import {showMinimap} from "@replit/codemirror-minimap";
 import {indentationMarkers} from "@replit/codemirror-indentation-markers";
+import {bookmarkExtension} from "../editor/bookmark";
 import {stickyScroll} from "../editor/stickyScroll";
 import {breakpointExtension} from "../editor/breakpointGutter";
 import {debugHover} from "../editor/debugHover";
@@ -702,6 +703,9 @@ export function useCodeMirrorEditor(props: Props)
         if (editorConfig.value?.show_indent_guides) {
             result.push(indentationMarkers({hideFirstIndent: true, highlightActiveBlock: true}))
         }
+
+        // 书签：行高亮，数据由 App 按当前文件 dispatch
+        result.push(bookmarkExtension)
 
         // 断点 gutter + 调试悬停求值（仅可调试语言）
         if (dapSupportsLanguage(props.language)) {

@@ -694,6 +694,11 @@
     "sendToTerminal": "Send selection to terminal",
     "reopenClosed": "Reopen closed tab",
     "revealInTree": "Reveal in file tree",
+    "toggleBookmark": "Toggle bookmark",
+    "nextBookmark": "Next bookmark",
+    "prevBookmark": "Previous bookmark",
+    "clearBookmarks": "Clear bookmarks in file",
+    "groupBookmark": "Bookmarks",
     "copyPermalink": "Copy remote permalink (current line)",
     "openPermalink": "Open remote link in browser (current line)",
     "sortLinesAsc": "Sort lines ascending",
@@ -738,7 +743,8 @@
     "reopenClosed": "Reopen closed tab",
     "toggleSidebar": "Toggle sidebar",
     "toggleTerminal": "Toggle terminal",
-    "toggleWordWrap": "Toggle word wrap"
+    "toggleWordWrap": "Toggle word wrap",
+    "toggleBookmark": "Toggle bookmark"
   },
   "view": {
     "clear": "Clear",

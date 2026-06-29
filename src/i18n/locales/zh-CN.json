@@ -694,6 +694,11 @@
     "sendToTerminal": "发送选区到终端",
     "reopenClosed": "重新打开已关闭标签",
     "revealInTree": "在文件树中定位",
+    "toggleBookmark": "切换书签",
+    "nextBookmark": "下一处书签",
+    "prevBookmark": "上一处书签",
+    "clearBookmarks": "清空本文件书签",
+    "groupBookmark": "书签",
     "copyPermalink": "复制远程永久链接（当前行）",
     "openPermalink": "在浏览器打开远程链接（当前行）",
     "sortLinesAsc": "排序行（升序）",
@@ -738,7 +743,8 @@
     "reopenClosed": "重新打开已关闭标签",
     "toggleSidebar": "切换侧栏",
     "toggleTerminal": "切换终端",
-    "toggleWordWrap": "切换自动换行"
+    "toggleWordWrap": "切换自动换行",
+    "toggleBookmark": "切换书签"
   },
   "view": {
     "clear": "清空",
