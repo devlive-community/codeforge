@@ -539,6 +539,7 @@ import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
 import {useGitStatus} from './composables/useGitStatus'
 import {useSessionTabs} from './composables/useSessionTabs'
 import {useEditorContextMenu} from './composables/useEditorContextMenu'
+import {useRunConfig} from './composables/useRunConfig'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -1779,44 +1780,8 @@ const handleSave = async () => {
 }
 
 // ===== 按文件记忆运行配置（args/stdin/env）=====
-const RUN_CONFIGS_KEY = 'run-configs'
-type RunConfig = { args: string, stdin: string, env: string }
-const loadRunConfigs = (): Record<string, RunConfig> =>
-    kvGetJSON<Record<string, RunConfig>>(RUN_CONFIGS_KEY, {})
-// 把当前输入写入指定文件的配置（全空则删除该条）
-const saveRunConfig = (path: string) => {
-  const map = loadRunConfigs()
-  if (!runArgs.value && !runStdin.value && !runEnv.value) {
-    delete map[path]
-  }
-  else {
-    map[path] = {args: runArgs.value, stdin: runStdin.value, env: runEnv.value}
-  }
-  kvSetJSON(RUN_CONFIGS_KEY, map)
-}
-// 载入指定文件的配置（无则清空）
-const loadRunConfig = (path: string | null) => {
-  const cfg = path ? loadRunConfigs()[path] : null
-  runArgs.value = cfg?.args || ''
-  runStdin.value = cfg?.stdin || ''
-  runEnv.value = cfg?.env || ''
-}
-
-// 切换文件时：保存旧文件输入、载入新文件输入
-watch(currentFilePath, (np, op) => {
-  if (op) {
-    saveRunConfig(op)
-  }
-  loadRunConfig(np)
-})
-
-// 编辑输入时防抖保存到当前文件
-const persistRunConfig = debounce(() => {
-  if (currentFilePath.value) {
-    saveRunConfig(currentFilePath.value)
-  }
-}, 400)
-watch([runArgs, runStdin, runEnv], () => persistRunConfig())
+// 按文件记忆运行输入（参数/stdin/环境变量）—— 抽离到 useRunConfig
+useRunConfig(currentFilePath, runArgs, runStdin, runEnv)
 
 // 解析环境变量文本（KEY=值，按换行或分号分隔）
 const parseEnv = (text: string): Record<string, string> => {
