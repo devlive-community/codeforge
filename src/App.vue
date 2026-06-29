@@ -399,7 +399,7 @@
     <DebugPanel/>
 
     <!-- AI 代码操作（解释/重构/生成测试） -->
-    <AiCodeAction v-if="aiCodeCtx" :language="currentLanguage" :code="aiCodeCtx.code" :action="aiCodeCtx.action"
+    <AiCodeAction v-if="aiCodeCtx" :language="currentLanguage" :code="aiCodeCtx.code" :action="aiCodeCtx.action" :diagnostics="aiCodeCtx.diagnostics"
                   @replace="onAiReplace" @insert="onAiInsert" @close="aiCodeCtx = null"/>
 
     <!-- .gitignore 模板 -->
@@ -463,6 +463,7 @@
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('explain')">{{ t('aiCode.title.explain') }}</button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('refactor')">{{ t('aiCode.title.refactor') }}</button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('test')">{{ t('aiCode.title.test') }}</button>
+        <button v-if="canBlame || editorCtx.lsp" class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiFixDiagnostics">{{ t('aiCode.title.fix') }}</button>
         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="sendToTerminal">
           {{ t('app.sendToTerminal') }}
@@ -543,6 +544,7 @@ import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
 import {useBookmarks} from './composables/useBookmarks'
 import {foldAll, unfoldAll, matchBrackets} from '@codemirror/language'
+import {diagnostics} from './editor/lspDiagnostics'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
 import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
@@ -1420,7 +1422,21 @@ const runTests = async () => {
 }
 
 // C2：对选区（无选区则整篇）执行 AI 操作：解释 / 重构 / 生成测试
-const aiCodeCtx = ref<{action: 'explain' | 'refactor' | 'test'; code: string; from: number; to: number} | null>(null)
+const aiCodeCtx = ref<{action: 'explain' | 'refactor' | 'test' | 'fix'; code: string; from: number; to: number; diagnostics?: string} | null>(null)
+// AI 修复诊断：把当前文件的 LSP 诊断交给 AI 修复整篇
+const aiFixDiagnostics = () => {
+  closeEditorCtx()
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  if (!diagnostics.value.length) {
+    toast.info(t('app.noDiagnostics'))
+    return
+  }
+  const diagText = diagnostics.value.map(d => `[${d.severity}] L${d.line}:${d.col} ${d.message}`).join('\n')
+  aiCodeCtx.value = {action: 'fix', code: view.state.doc.toString(), from: 0, to: view.state.doc.length, diagnostics: diagText}
+}
 const aiCodeAction = (action: 'explain' | 'refactor' | 'test') => {
   closeEditorCtx()
   const view = editorView.value
@@ -2228,6 +2244,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'explainCode', label: t('command.explainCode'), icon: Sparkles, run: () => explainCode()},
   {id: 'generateTests', label: t('command.generateTests'), icon: Sparkles, run: () => generateTests()},
   {id: 'formatWithAi', label: t('command.formatWithAi'), icon: Sparkles, run: () => formatWithAi()},
+  {id: 'aiFixDiagnostics', label: t('command.aiFixDiagnostics'), icon: Sparkles, run: () => aiFixDiagnostics()},
   {id: 'history', label: t('command.history'), icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
   {id: 'compareClipboard', label: t('command.compareClipboard'), icon: GitCompare, run: () => compareWithClipboard()},

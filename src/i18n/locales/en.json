@@ -683,6 +683,7 @@
     "explainCode": "AI explain code (selection or all)",
     "generateTests": "AI generate tests (selection or all)",
     "formatWithAi": "AI format code",
+    "aiFixDiagnostics": "AI fix diagnostics",
     "history": "Run history",
     "diff": "Diff (current vs saved)",
     "preview": "Live preview (Markdown / HTML)",
@@ -1128,7 +1129,8 @@
     "title": {
       "explain": "AI: Explain code",
       "refactor": "AI: Refactor code",
-      "test": "AI: Generate tests"
+      "test": "AI: Generate tests",
+      "fix": "AI: Fix diagnostics"
     },
     "thinking": "AI is thinking…",
     "replace": "Replace selection",
@@ -1338,6 +1340,7 @@
     "copiedMarkdown": "Copied as Markdown code block",
     "indentConverted": "Indentation converted",
     "noMatchingBracket": "No matching bracket at cursor",
+    "noDiagnostics": "No diagnostics in the current file",
     "clipboardEmpty": "Clipboard is empty",
     "clipboardReadFailed": "Failed to read clipboard: ",
     "copyFailed": "Copy failed: ",
