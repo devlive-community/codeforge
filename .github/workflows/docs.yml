@@ -47,7 +47,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/dist
+          # 用绝对路径：job 设了 working-directory: docs，upload-pages-artifact 内部
+          # 的 tar 会继承该目录，相对路径 docs/dist 会被当成 docs/docs/dist 而找不到。
+          path: ${{ github.workspace }}/docs/dist
 
   deploy:
     needs: build

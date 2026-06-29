@@ -367,6 +367,14 @@
               :file-name="currentFileName"
               @close="showDiff = false"/>
 
+    <!-- 与剪贴板比较 -->
+    <DiffView v-if="clipboardDiff"
+              :original="clipboardDiff.original"
+              :modified="code"
+              :file-name="currentFileName"
+              :title="t('diff.clipboardTitle')"
+              @close="clipboardDiff = null"/>
+
     <!-- 应用 AI 代码前的差异预览 -->
     <DiffView v-if="applyPreview"
               :original="code"
@@ -540,6 +548,7 @@ import {useGitStatus} from './composables/useGitStatus'
 import {useSessionTabs} from './composables/useSessionTabs'
 import {useEditorContextMenu} from './composables/useEditorContextMenu'
 import {useRunConfig} from './composables/useRunConfig'
+import {useGlobalShortcuts} from './composables/useGlobalShortcuts'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -1108,6 +1117,25 @@ const editorView = shallowRef<any>(null)
 // ===== 文本变换命令（排序行/大小写/去重/去行尾空白）=====
 const {transformSelectionOrLine, sortLines, removeDuplicateLines, trimTrailingWhitespace} = useTextCommands(editorView)
 
+// 复制为 Markdown 代码块（选区或全文，带语言围栏）
+const copyAsMarkdown = async () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const sel = view.state.selection.main
+  const text = sel.empty ? view.state.doc.toString() : view.state.doc.sliceString(sel.from, sel.to)
+  const lang = (currentLanguage.value || '').toLowerCase().replace(/\d+$/, '')
+  const fence = '```' + lang + '\n' + text.replace(/\n$/, '') + '\n```'
+  try {
+    await navigator.clipboard.writeText(fence)
+    toast.success(t('app.copiedMarkdown'))
+  }
+  catch (error) {
+    toast.error(t('app.copyFailed') + error)
+  }
+}
+
 // AI 自然语言生成 / 选区改写
 const showGenerate = ref(false)
 const generateSelection = ref('')
@@ -1541,6 +1569,21 @@ const openDiff = () => {
     return
   }
   showDiff.value = true
+}
+// 与剪贴板内容比较（剪贴板为原始，当前编辑内容为修改）
+const clipboardDiff = ref<{ original: string } | null>(null)
+const compareWithClipboard = async () => {
+  try {
+    const text = await navigator.clipboard.readText()
+    if (!text) {
+      toast.info(t('app.clipboardEmpty'))
+      return
+    }
+    clipboardDiff.value = {original: text}
+  }
+  catch (error) {
+    toast.error(t('app.clipboardReadFailed') + error)
+  }
 }
 const togglePreview = () => {
   showPreview.value = !showPreview.value
@@ -2096,7 +2139,7 @@ const isOverlayOpen = () =>
     || showHistory.value || showViewer.value || showRunPrompt.value
     || showQuickOpen.value || showGenerate.value || showSearch.value
     || showCommandPalette.value || showDiff.value || showGoToLine.value || showOutline.value || showSnippets.value
-    || applyPreview.value != null
+    || applyPreview.value != null || clipboardDiff.value != null
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
@@ -2171,6 +2214,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'formatWithAi', label: t('command.formatWithAi'), icon: Sparkles, run: () => formatWithAi()},
   {id: 'history', label: t('command.history'), icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
+  {id: 'compareClipboard', label: t('command.compareClipboard'), icon: GitCompare, run: () => compareWithClipboard()},
   {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
   {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
   {id: 'tasks', label: t('command.tasks'), icon: ListChecks, run: () => openTasks()},
@@ -2187,6 +2231,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'toLowerCase', label: t('command.toLowerCase'), group: t('command.groupText'), icon: CaseLower, run: () => transformSelectionOrLine(s => s.toLowerCase())},
   {id: 'removeDuplicateLines', label: t('command.removeDuplicateLines'), group: t('command.groupText'), icon: ListChecks, run: () => removeDuplicateLines()},
   {id: 'trimTrailingWhitespace', label: t('command.trimTrailingWhitespace'), group: t('command.groupText'), icon: Eraser, run: () => trimTrailingWhitespace()},
+  {id: 'copyAsMarkdown', label: t('command.copyAsMarkdown'), group: t('command.groupText'), icon: Code2, run: () => copyAsMarkdown()},
   {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleZen', label: t('command.toggleZen'), icon: Minimize2, run: () => toggleZen()},
@@ -2200,18 +2245,8 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'settings', label: t('command.settings'), icon: SettingsIcon, run: () => { showSettings.value = true }}
 ])
 
-const onGlobalKeydown = (e: KeyboardEvent) => {
-  if (isOverlayOpen()) {
-    return
-  }
-  const action = matchShortcut(e)
-  if (action && shortcutDispatch[action]) {
-    // 捕获阶段拦截：阻止事件到达编辑器（避免 Cmd+Enter 等被插入换行）
-    e.preventDefault()
-    e.stopPropagation()
-    shortcutDispatch[action]()
-  }
-}
+// 全局快捷键（捕获拦截 + 派发）抽离到 useGlobalShortcuts
+useGlobalShortcuts(matchShortcut, shortcutDispatch, isOverlayOpen)
 
 const {init: initTheme, setTheme: setAppTheme} = useTheme()
 
@@ -2236,7 +2271,6 @@ onMounted(async () => {
   // 恢复上次打开的文件标签
   await restoreSession()
 
-  window.addEventListener('keydown', onGlobalKeydown, true)
   window.addEventListener('lsp:open-location', onLspOpenLocation)
   window.addEventListener('lsp:code-actions', onLspCodeActions)
 
@@ -2246,7 +2280,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   cleanupEventListeners()
-  window.removeEventListener('keydown', onGlobalKeydown, true)
   window.removeEventListener('lsp:open-location', onLspOpenLocation)
   window.removeEventListener('lsp:code-actions', onLspCodeActions)
 })

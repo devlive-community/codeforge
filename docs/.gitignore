@@ -3,6 +3,8 @@ dist
 .vite
 *.local
 
-# 根 .gitignore 忽略了所有 pnpm-lock.yaml，这里为文档站重新纳入，
-# 供 CI 的 --frozen-lockfile 与依赖缓存使用
+# 根 .gitignore 用 *.json / pnpm-lock.yaml 忽略了这些文件，
+# 这里为文档站重新纳入版本控制（构建/类型检查/依赖锁定需要）
 !pnpm-lock.yaml
+!tsconfig.json
+!package.json
