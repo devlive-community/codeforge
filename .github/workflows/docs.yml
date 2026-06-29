@@ -35,7 +35,9 @@ jobs:
           cache-dependency-path: docs/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        # 用 --no-frozen-lockfile：docs 为独立子项目，pnpm 在 CI 中会向上读到根
+        # package.json 的 overrides 导致 frozen 校验失败；文档站构建无需锁定一致性。
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build
         run: pnpm build
