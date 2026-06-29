@@ -367,6 +367,14 @@
               :file-name="currentFileName"
               @close="showDiff = false"/>
 
+    <!-- 与剪贴板比较 -->
+    <DiffView v-if="clipboardDiff"
+              :original="clipboardDiff.original"
+              :modified="code"
+              :file-name="currentFileName"
+              :title="t('diff.clipboardTitle')"
+              @close="clipboardDiff = null"/>
+
     <!-- 应用 AI 代码前的差异预览 -->
     <DiffView v-if="applyPreview"
               :original="code"
@@ -1562,6 +1570,21 @@ const openDiff = () => {
   }
   showDiff.value = true
 }
+// 与剪贴板内容比较（剪贴板为原始，当前编辑内容为修改）
+const clipboardDiff = ref<{ original: string } | null>(null)
+const compareWithClipboard = async () => {
+  try {
+    const text = await navigator.clipboard.readText()
+    if (!text) {
+      toast.info(t('app.clipboardEmpty'))
+      return
+    }
+    clipboardDiff.value = {original: text}
+  }
+  catch (error) {
+    toast.error(t('app.clipboardReadFailed') + error)
+  }
+}
 const togglePreview = () => {
   showPreview.value = !showPreview.value
 }
@@ -2116,7 +2139,7 @@ const isOverlayOpen = () =>
     || showHistory.value || showViewer.value || showRunPrompt.value
     || showQuickOpen.value || showGenerate.value || showSearch.value
     || showCommandPalette.value || showDiff.value || showGoToLine.value || showOutline.value || showSnippets.value
-    || applyPreview.value != null
+    || applyPreview.value != null || clipboardDiff.value != null
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
@@ -2191,6 +2214,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'formatWithAi', label: t('command.formatWithAi'), icon: Sparkles, run: () => formatWithAi()},
   {id: 'history', label: t('command.history'), icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
+  {id: 'compareClipboard', label: t('command.compareClipboard'), icon: GitCompare, run: () => compareWithClipboard()},
   {id: 'preview', label: t('command.preview'), icon: Eye, run: () => togglePreview()},
   {id: 'git', label: t('command.git'), icon: GitBranch, run: () => openGit()},
   {id: 'tasks', label: t('command.tasks'), icon: ListChecks, run: () => openTasks()},
