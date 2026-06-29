@@ -542,7 +542,7 @@ import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
 import {useBookmarks} from './composables/useBookmarks'
-import {foldAll, unfoldAll} from '@codemirror/language'
+import {foldAll, unfoldAll, matchBrackets} from '@codemirror/language'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
 import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
@@ -1171,6 +1171,23 @@ const convertIndentation = (toTabs: boolean) => {
   view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: out}, selection: {anchor: head}})
   view.focus()
   toast.success(t('app.indentConverted'))
+}
+
+// 转到匹配括号：取光标前后的括号，跳到其配对处
+const goToMatchingBracket = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const pos = view.state.selection.main.head
+  const m = matchBrackets(view.state, pos, -1) || matchBrackets(view.state, pos, 1)
+  if (m && m.matched && m.end) {
+    view.dispatch({selection: {anchor: m.end.from}, scrollIntoView: true})
+    view.focus()
+  }
+  else {
+    toast.info(t('app.noMatchingBracket'))
+  }
 }
 
 // AI 自然语言生成 / 选区改写
@@ -2235,6 +2252,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'indentToTabs', label: t('command.indentToTabs'), group: t('command.groupText'), icon: Eraser, run: () => convertIndentation(true)},
   {id: 'foldAll', label: t('command.foldAll'), group: t('command.groupCode'), icon: FoldVertical, run: () => { if (editorView.value) foldAll(editorView.value) }},
   {id: 'unfoldAll', label: t('command.unfoldAll'), group: t('command.groupCode'), icon: UnfoldVertical, run: () => { if (editorView.value) unfoldAll(editorView.value) }},
+  {id: 'goToMatchingBracket', label: t('command.goToMatchingBracket'), group: t('command.groupCode'), icon: Code2, run: () => goToMatchingBracket()},
   {id: 'toggleBookmark', label: t('command.toggleBookmark'), group: t('command.groupBookmark'), icon: Bookmark, hint: hintOf('toggleBookmark'), run: () => toggleBookmark()},
   {id: 'nextBookmark', label: t('command.nextBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => nextBookmark()},
   {id: 'prevBookmark', label: t('command.prevBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => prevBookmark()},
