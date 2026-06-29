@@ -540,6 +540,7 @@ import {useGitStatus} from './composables/useGitStatus'
 import {useSessionTabs} from './composables/useSessionTabs'
 import {useEditorContextMenu} from './composables/useEditorContextMenu'
 import {useRunConfig} from './composables/useRunConfig'
+import {useGlobalShortcuts} from './composables/useGlobalShortcuts'
 import EditorTabs from './components/EditorTabs.vue'
 import IndentControl from './components/IndentControl.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -2200,18 +2201,8 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'settings', label: t('command.settings'), icon: SettingsIcon, run: () => { showSettings.value = true }}
 ])
 
-const onGlobalKeydown = (e: KeyboardEvent) => {
-  if (isOverlayOpen()) {
-    return
-  }
-  const action = matchShortcut(e)
-  if (action && shortcutDispatch[action]) {
-    // 捕获阶段拦截：阻止事件到达编辑器（避免 Cmd+Enter 等被插入换行）
-    e.preventDefault()
-    e.stopPropagation()
-    shortcutDispatch[action]()
-  }
-}
+// 全局快捷键（捕获拦截 + 派发）抽离到 useGlobalShortcuts
+useGlobalShortcuts(matchShortcut, shortcutDispatch, isOverlayOpen)
 
 const {init: initTheme, setTheme: setAppTheme} = useTheme()
 
@@ -2236,7 +2227,6 @@ onMounted(async () => {
   // 恢复上次打开的文件标签
   await restoreSession()
 
-  window.addEventListener('keydown', onGlobalKeydown, true)
   window.addEventListener('lsp:open-location', onLspOpenLocation)
   window.addEventListener('lsp:code-actions', onLspCodeActions)
 
@@ -2246,7 +2236,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   cleanupEventListeners()
-  window.removeEventListener('keydown', onGlobalKeydown, true)
   window.removeEventListener('lsp:open-location', onLspOpenLocation)
   window.removeEventListener('lsp:code-actions', onLspCodeActions)
 })
