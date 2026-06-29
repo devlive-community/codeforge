@@ -510,7 +510,7 @@ import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {dapSupportsLanguage} from './debug/dapClient'
-import {ArrowDownAZ, ArrowUpAZ, Bookmark, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Minimize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
+import {ArrowDownAZ, ArrowUpAZ, Bookmark, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FoldVertical, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Minimize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, UnfoldVertical, WrapText, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -542,6 +542,7 @@ import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
 import {useBookmarks} from './composables/useBookmarks'
+import {foldAll, unfoldAll} from '@codemirror/language'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
 import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
@@ -2232,6 +2233,8 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'copyAsMarkdown', label: t('command.copyAsMarkdown'), group: t('command.groupText'), icon: Code2, run: () => copyAsMarkdown()},
   {id: 'indentToSpaces', label: t('command.indentToSpaces'), group: t('command.groupText'), icon: Eraser, run: () => convertIndentation(false)},
   {id: 'indentToTabs', label: t('command.indentToTabs'), group: t('command.groupText'), icon: Eraser, run: () => convertIndentation(true)},
+  {id: 'foldAll', label: t('command.foldAll'), group: t('command.groupCode'), icon: FoldVertical, run: () => { if (editorView.value) foldAll(editorView.value) }},
+  {id: 'unfoldAll', label: t('command.unfoldAll'), group: t('command.groupCode'), icon: UnfoldVertical, run: () => { if (editorView.value) unfoldAll(editorView.value) }},
   {id: 'toggleBookmark', label: t('command.toggleBookmark'), group: t('command.groupBookmark'), icon: Bookmark, hint: hintOf('toggleBookmark'), run: () => toggleBookmark()},
   {id: 'nextBookmark', label: t('command.nextBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => nextBookmark()},
   {id: 'prevBookmark', label: t('command.prevBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => prevBookmark()},
