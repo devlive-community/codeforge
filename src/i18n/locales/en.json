@@ -683,6 +683,7 @@
     "explainCode": "AI explain code (selection or all)",
     "generateTests": "AI generate tests (selection or all)",
     "formatWithAi": "AI format code",
+    "aiFixDiagnostics": "AI fix diagnostics",
     "history": "Run history",
     "diff": "Diff (current vs saved)",
     "preview": "Live preview (Markdown / HTML)",
@@ -694,6 +695,15 @@
     "sendToTerminal": "Send selection to terminal",
     "reopenClosed": "Reopen closed tab",
     "revealInTree": "Reveal in file tree",
+    "foldAll": "Fold all",
+    "unfoldAll": "Unfold all",
+    "goToMatchingBracket": "Go to matching bracket",
+    "groupCode": "Code",
+    "toggleBookmark": "Toggle bookmark",
+    "nextBookmark": "Next bookmark",
+    "prevBookmark": "Previous bookmark",
+    "clearBookmarks": "Clear bookmarks in file",
+    "groupBookmark": "Bookmarks",
     "copyPermalink": "Copy remote permalink (current line)",
     "openPermalink": "Open remote link in browser (current line)",
     "sortLinesAsc": "Sort lines ascending",
@@ -738,7 +748,8 @@
     "reopenClosed": "Reopen closed tab",
     "toggleSidebar": "Toggle sidebar",
     "toggleTerminal": "Toggle terminal",
-    "toggleWordWrap": "Toggle word wrap"
+    "toggleWordWrap": "Toggle word wrap",
+    "toggleBookmark": "Toggle bookmark"
   },
   "view": {
     "clear": "Clear",
@@ -1118,7 +1129,8 @@
     "title": {
       "explain": "AI: Explain code",
       "refactor": "AI: Refactor code",
-      "test": "AI: Generate tests"
+      "test": "AI: Generate tests",
+      "fix": "AI: Fix diagnostics"
     },
     "thinking": "AI is thinking…",
     "replace": "Replace selection",
@@ -1327,6 +1339,8 @@
     "pathCopied": "Path copied",
     "copiedMarkdown": "Copied as Markdown code block",
     "indentConverted": "Indentation converted",
+    "noMatchingBracket": "No matching bracket at cursor",
+    "noDiagnostics": "No diagnostics in the current file",
     "clipboardEmpty": "Clipboard is empty",
     "clipboardReadFailed": "Failed to read clipboard: ",
     "copyFailed": "Copy failed: ",

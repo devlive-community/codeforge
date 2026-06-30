@@ -399,7 +399,7 @@
     <DebugPanel/>
 
     <!-- AI 代码操作（解释/重构/生成测试） -->
-    <AiCodeAction v-if="aiCodeCtx" :language="currentLanguage" :code="aiCodeCtx.code" :action="aiCodeCtx.action"
+    <AiCodeAction v-if="aiCodeCtx" :language="currentLanguage" :code="aiCodeCtx.code" :action="aiCodeCtx.action" :diagnostics="aiCodeCtx.diagnostics"
                   @replace="onAiReplace" @insert="onAiInsert" @close="aiCodeCtx = null"/>
 
     <!-- .gitignore 模板 -->
@@ -463,6 +463,7 @@
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('explain')">{{ t('aiCode.title.explain') }}</button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('refactor')">{{ t('aiCode.title.refactor') }}</button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('test')">{{ t('aiCode.title.test') }}</button>
+        <button v-if="canBlame || editorCtx.lsp" class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiFixDiagnostics">{{ t('aiCode.title.fix') }}</button>
         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="sendToTerminal">
           {{ t('app.sendToTerminal') }}
@@ -510,7 +511,7 @@ import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {dapSupportsLanguage} from './debug/dapClient'
-import {ArrowDownAZ, ArrowUpAZ, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Minimize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, WrapText, X} from 'lucide-vue-next'
+import {ArrowDownAZ, ArrowUpAZ, Bookmark, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FoldVertical, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Minimize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, UnfoldVertical, WrapText, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -541,6 +542,9 @@ import {useFileManager} from './composables/useFileManager'
 import {useLanguageRegistry} from './composables/useLanguageRegistry'
 import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
+import {useBookmarks} from './composables/useBookmarks'
+import {foldAll, unfoldAll, matchBrackets} from '@codemirror/language'
+import {diagnostics} from './editor/lspDiagnostics'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
 import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
@@ -1117,6 +1121,9 @@ const editorView = shallowRef<any>(null)
 // ===== 文本变换命令（排序行/大小写/去重/去行尾空白）=====
 const {transformSelectionOrLine, sortLines, removeDuplicateLines, trimTrailingWhitespace} = useTextCommands(editorView)
 
+// ===== 行书签（切换/上一处/下一处/清空，按文件记忆）=====
+const {toggleBookmark, nextBookmark, prevBookmark, clearBookmarks} = useBookmarks(editorView, currentFilePath)
+
 // 复制为 Markdown 代码块（选区或全文，带语言围栏）
 const copyAsMarkdown = async () => {
   const view = editorView.value
@@ -1166,6 +1173,23 @@ const convertIndentation = (toTabs: boolean) => {
   view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: out}, selection: {anchor: head}})
   view.focus()
   toast.success(t('app.indentConverted'))
+}
+
+// 转到匹配括号：取光标前后的括号，跳到其配对处
+const goToMatchingBracket = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const pos = view.state.selection.main.head
+  const m = matchBrackets(view.state, pos, -1) || matchBrackets(view.state, pos, 1)
+  if (m && m.matched && m.end) {
+    view.dispatch({selection: {anchor: m.end.from}, scrollIntoView: true})
+    view.focus()
+  }
+  else {
+    toast.info(t('app.noMatchingBracket'))
+  }
 }
 
 // AI 自然语言生成 / 选区改写
@@ -1398,7 +1422,21 @@ const runTests = async () => {
 }
 
 // C2：对选区（无选区则整篇）执行 AI 操作：解释 / 重构 / 生成测试
-const aiCodeCtx = ref<{action: 'explain' | 'refactor' | 'test'; code: string; from: number; to: number} | null>(null)
+const aiCodeCtx = ref<{action: 'explain' | 'refactor' | 'test' | 'fix'; code: string; from: number; to: number; diagnostics?: string} | null>(null)
+// AI 修复诊断：把当前文件的 LSP 诊断交给 AI 修复整篇
+const aiFixDiagnostics = () => {
+  closeEditorCtx()
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  if (!diagnostics.value.length) {
+    toast.info(t('app.noDiagnostics'))
+    return
+  }
+  const diagText = diagnostics.value.map(d => `[${d.severity}] L${d.line}:${d.col} ${d.message}`).join('\n')
+  aiCodeCtx.value = {action: 'fix', code: view.state.doc.toString(), from: 0, to: view.state.doc.length, diagnostics: diagText}
+}
 const aiCodeAction = (action: 'explain' | 'refactor' | 'test') => {
   closeEditorCtx()
   const view = editorView.value
@@ -2154,7 +2192,8 @@ const shortcutDispatch: Record<string, () => void> = {
   reopenClosed: () => handleReopenClosed(),
   toggleSidebar: () => toggleSidebar(),
   toggleTerminal: () => toggleTerminal(),
-  toggleWordWrap: () => toggleWordWrap()
+  toggleWordWrap: () => toggleWordWrap(),
+  toggleBookmark: () => toggleBookmark()
 }
 
 // 切换自动换行（即时生效并随编辑器配置持久化）
@@ -2205,6 +2244,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'explainCode', label: t('command.explainCode'), icon: Sparkles, run: () => explainCode()},
   {id: 'generateTests', label: t('command.generateTests'), icon: Sparkles, run: () => generateTests()},
   {id: 'formatWithAi', label: t('command.formatWithAi'), icon: Sparkles, run: () => formatWithAi()},
+  {id: 'aiFixDiagnostics', label: t('command.aiFixDiagnostics'), icon: Sparkles, run: () => aiFixDiagnostics()},
   {id: 'history', label: t('command.history'), icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
   {id: 'compareClipboard', label: t('command.compareClipboard'), icon: GitCompare, run: () => compareWithClipboard()},
@@ -2227,6 +2267,13 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'copyAsMarkdown', label: t('command.copyAsMarkdown'), group: t('command.groupText'), icon: Code2, run: () => copyAsMarkdown()},
   {id: 'indentToSpaces', label: t('command.indentToSpaces'), group: t('command.groupText'), icon: Eraser, run: () => convertIndentation(false)},
   {id: 'indentToTabs', label: t('command.indentToTabs'), group: t('command.groupText'), icon: Eraser, run: () => convertIndentation(true)},
+  {id: 'foldAll', label: t('command.foldAll'), group: t('command.groupCode'), icon: FoldVertical, run: () => { if (editorView.value) foldAll(editorView.value) }},
+  {id: 'unfoldAll', label: t('command.unfoldAll'), group: t('command.groupCode'), icon: UnfoldVertical, run: () => { if (editorView.value) unfoldAll(editorView.value) }},
+  {id: 'goToMatchingBracket', label: t('command.goToMatchingBracket'), group: t('command.groupCode'), icon: Code2, run: () => goToMatchingBracket()},
+  {id: 'toggleBookmark', label: t('command.toggleBookmark'), group: t('command.groupBookmark'), icon: Bookmark, hint: hintOf('toggleBookmark'), run: () => toggleBookmark()},
+  {id: 'nextBookmark', label: t('command.nextBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => nextBookmark()},
+  {id: 'prevBookmark', label: t('command.prevBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => prevBookmark()},
+  {id: 'clearBookmarks', label: t('command.clearBookmarks'), group: t('command.groupBookmark'), icon: Bookmark, run: () => clearBookmarks()},
   {id: 'toggleAutoReveal', label: t('command.toggleAutoReveal'), icon: FolderOpen, run: () => toggleAutoReveal()},
   {id: 'toggleSidebar', label: t('command.toggleSidebar'), icon: PanelLeft, hint: hintOf('toggleSidebar'), run: () => toggleSidebar()},
   {id: 'toggleZen', label: t('command.toggleZen'), icon: Minimize2, run: () => toggleZen()},

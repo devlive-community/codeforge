@@ -22,7 +22,7 @@
       <div class="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
         <button class="text-xs px-3 py-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="emit('close')">{{ t('aiCode.close') }}</button>
         <button v-if="!loading && result" class="text-xs px-3 py-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="copy">{{ t('aiCode.copy') }}</button>
-        <button v-if="!loading && result && action === 'refactor'" class="text-xs px-3 py-1.5 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" @click="apply('replace')">{{ t('aiCode.replace') }}</button>
+        <button v-if="!loading && result && (action === 'refactor' || action === 'fix')" class="text-xs px-3 py-1.5 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" @click="apply('replace')">{{ t('aiCode.replace') }}</button>
         <button v-if="!loading && result && action === 'test'" class="text-xs px-3 py-1.5 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" @click="apply('insert')">{{ t('aiCode.insert') }}</button>
       </div>
     </div>
@@ -37,7 +37,7 @@ import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
 import {useToast} from '../plugins/toast'
 
-const props = defineProps<{ language: string; code: string; action: 'explain' | 'refactor' | 'test' }>()
+const props = defineProps<{ language: string; code: string; action: 'explain' | 'refactor' | 'test' | 'fix'; diagnostics?: string }>()
 const emit = defineEmits<{ replace: [code: string]; insert: [code: string]; close: [] }>()
 
 const toast = useToast()
@@ -62,8 +62,16 @@ const systemFor = (): string => {
       return `你是代码助手。重构给定的 ${lang} 代码以提升可读性与质量，保持行为不变。只输出重构后的完整代码，不要解释，不要使用 Markdown 代码块标记。`
     case 'test':
       return `你是测试工程师。为给定的 ${lang} 代码生成单元测试。只输出测试代码，不要解释，不要使用 Markdown 代码块标记。`
+    case 'fix':
+      return `你是代码助手。修复给定 ${lang} 代码中的错误与警告（用户消息附带诊断信息），保持其余行为不变。只输出修复后的完整代码，不要解释，不要使用 Markdown 代码块标记。`
   }
 }
+
+// 'fix' 把诊断附在用户消息里
+const userContent = (): string =>
+  props.action === 'fix' && props.diagnostics
+    ? `${props.code}\n\n--- 待修复的诊断 ---\n${props.diagnostics}`
+    : props.code
 
 const run = async () => {
   reload()
@@ -80,7 +88,7 @@ const run = async () => {
       apiKey: active.value.apiKey,
       model: active.value.model,
       system: systemFor(),
-      messages: [{role: 'user', content: props.code}]
+      messages: [{role: 'user', content: userContent()}]
     })
     result.value = props.action === 'explain' ? reply.trim() : stripFences(reply)
   }

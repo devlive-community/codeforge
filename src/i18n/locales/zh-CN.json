@@ -683,6 +683,7 @@
     "explainCode": "AI 解释代码（选中或全文）",
     "generateTests": "AI 生成测试（选中或全文）",
     "formatWithAi": "AI 格式化代码",
+    "aiFixDiagnostics": "AI 修复诊断",
     "history": "执行历史",
     "diff": "差异对比（当前 vs 已保存）",
     "preview": "实时预览（Markdown / HTML）",
@@ -694,6 +695,15 @@
     "sendToTerminal": "发送选区到终端",
     "reopenClosed": "重新打开已关闭标签",
     "revealInTree": "在文件树中定位",
+    "foldAll": "折叠全部代码",
+    "unfoldAll": "展开全部代码",
+    "goToMatchingBracket": "转到匹配括号",
+    "groupCode": "代码",
+    "toggleBookmark": "切换书签",
+    "nextBookmark": "下一处书签",
+    "prevBookmark": "上一处书签",
+    "clearBookmarks": "清空本文件书签",
+    "groupBookmark": "书签",
     "copyPermalink": "复制远程永久链接（当前行）",
     "openPermalink": "在浏览器打开远程链接（当前行）",
     "sortLinesAsc": "排序行（升序）",
@@ -738,7 +748,8 @@
     "reopenClosed": "重新打开已关闭标签",
     "toggleSidebar": "切换侧栏",
     "toggleTerminal": "切换终端",
-    "toggleWordWrap": "切换自动换行"
+    "toggleWordWrap": "切换自动换行",
+    "toggleBookmark": "切换书签"
   },
   "view": {
     "clear": "清空",
@@ -1118,7 +1129,8 @@
     "title": {
       "explain": "AI 解释代码",
       "refactor": "AI 重构代码",
-      "test": "AI 生成测试"
+      "test": "AI 生成测试",
+      "fix": "AI 修复诊断"
     },
     "thinking": "AI 思考中…",
     "replace": "替换选区",
@@ -1327,6 +1339,8 @@
     "pathCopied": "已复制路径",
     "copiedMarkdown": "已复制为 Markdown 代码块",
     "indentConverted": "已转换缩进",
+    "noMatchingBracket": "光标处没有可匹配的括号",
+    "noDiagnostics": "当前文件没有诊断问题",
     "clipboardEmpty": "剪贴板为空",
     "clipboardReadFailed": "读取剪贴板失败: ",
     "copyFailed": "复制失败: ",
