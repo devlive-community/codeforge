@@ -27,10 +27,13 @@ const modules = import.meta.glob<any>('./release/*.md', { eager: true })
 const releasesData: ReleaseMeta[] = Object.entries(modules).map(([path, module]) => {
   const version = versionFromPath(path)
   // frontmatter 字段直接在模块根级别
+  // 日期格式为 ISO 8601 字符串，提取 YYYY-MM-DD 部分
+  const date = module.date
+  const dateStr = typeof date === 'string' ? date.split('T')[0] : date
   return {
     version,
     title: `v${version}`,
-    date: module.date,
+    date: dateStr,
     description: module.description
   }
 })
