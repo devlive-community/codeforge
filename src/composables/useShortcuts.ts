@@ -29,7 +29,9 @@ const SHORTCUT_DEFS: { id: string; default: string }[] = [
     {id: 'toggleSidebar', default: 'Mod+B'},
     {id: 'toggleTerminal', default: 'Mod+`'},
     {id: 'toggleWordWrap', default: 'Alt+Z'},
-    {id: 'toggleBookmark', default: 'Mod+Alt+K'}
+    {id: 'toggleBookmark', default: 'Mod+Alt+K'},
+    {id: 'expandSelection', default: 'Alt+Shift+ArrowRight'},
+    {id: 'shrinkSelection', default: 'Alt+Shift+ArrowLeft'}
 ]
 
 const STORAGE_KEY = 'shortcuts'

@@ -701,6 +701,8 @@
     "foldAll": "折叠全部代码",
     "unfoldAll": "展开全部代码",
     "goToMatchingBracket": "转到匹配括号",
+    "expandSelection": "展开选区",
+    "shrinkSelection": "收缩选区",
     "groupCode": "代码",
     "toggleBookmark": "切换书签",
     "nextBookmark": "下一处书签",
@@ -752,7 +754,9 @@
     "toggleSidebar": "切换侧栏",
     "toggleTerminal": "切换终端",
     "toggleWordWrap": "切换自动换行",
-    "toggleBookmark": "切换书签"
+    "toggleBookmark": "切换书签",
+    "expandSelection": "展开选区",
+    "shrinkSelection": "收缩选区"
   },
   "view": {
     "clear": "清空",

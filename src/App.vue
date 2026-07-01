@@ -544,6 +544,7 @@ import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
 import {useBookmarks} from './composables/useBookmarks'
 import {foldAll, unfoldAll, matchBrackets} from '@codemirror/language'
+import {selectParentSyntax} from '@codemirror/commands'
 import {diagnostics} from './editor/lspDiagnostics'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
@@ -1173,6 +1174,41 @@ const convertIndentation = (toTabs: boolean) => {
   view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: out}, selection: {anchor: head}})
   view.focus()
   toast.success(t('app.indentConverted'))
+}
+
+// 展开/收缩选区：按语法节点逐级扩选，收缩用选区栈回退
+let expandStack: { anchor: number, head: number }[] = []
+let expandLastKey = ''
+const selKey = (view: any) => {
+  const s = view.state.selection.main
+  return s.anchor + ':' + s.head
+}
+const expandSelection = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  // 用户手动改过选区则重置栈
+  if (selKey(view) !== expandLastKey) {
+    expandStack = []
+  }
+  const s = view.state.selection.main
+  expandStack.push({anchor: s.anchor, head: s.head})
+  selectParentSyntax(view)
+  view.focus()
+  expandLastKey = selKey(view)
+}
+const shrinkSelection = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const prev = expandStack.pop()
+  if (prev) {
+    view.dispatch({selection: {anchor: prev.anchor, head: prev.head}})
+    view.focus()
+    expandLastKey = selKey(view)
+  }
 }
 
 // 转到匹配括号：取光标前后的括号，跳到其配对处
@@ -2193,7 +2229,9 @@ const shortcutDispatch: Record<string, () => void> = {
   toggleSidebar: () => toggleSidebar(),
   toggleTerminal: () => toggleTerminal(),
   toggleWordWrap: () => toggleWordWrap(),
-  toggleBookmark: () => toggleBookmark()
+  toggleBookmark: () => toggleBookmark(),
+  expandSelection: () => expandSelection(),
+  shrinkSelection: () => shrinkSelection()
 }
 
 // 切换自动换行（即时生效并随编辑器配置持久化）
@@ -2270,6 +2308,8 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'foldAll', label: t('command.foldAll'), group: t('command.groupCode'), icon: FoldVertical, run: () => { if (editorView.value) foldAll(editorView.value) }},
   {id: 'unfoldAll', label: t('command.unfoldAll'), group: t('command.groupCode'), icon: UnfoldVertical, run: () => { if (editorView.value) unfoldAll(editorView.value) }},
   {id: 'goToMatchingBracket', label: t('command.goToMatchingBracket'), group: t('command.groupCode'), icon: Code2, run: () => goToMatchingBracket()},
+  {id: 'expandSelection', label: t('command.expandSelection'), group: t('command.groupCode'), icon: Code2, hint: hintOf('expandSelection'), run: () => expandSelection()},
+  {id: 'shrinkSelection', label: t('command.shrinkSelection'), group: t('command.groupCode'), icon: Code2, hint: hintOf('shrinkSelection'), run: () => shrinkSelection()},
   {id: 'toggleBookmark', label: t('command.toggleBookmark'), group: t('command.groupBookmark'), icon: Bookmark, hint: hintOf('toggleBookmark'), run: () => toggleBookmark()},
   {id: 'nextBookmark', label: t('command.nextBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => nextBookmark()},
   {id: 'prevBookmark', label: t('command.prevBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => prevBookmark()},

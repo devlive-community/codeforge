@@ -701,6 +701,8 @@
     "foldAll": "Fold all",
     "unfoldAll": "Unfold all",
     "goToMatchingBracket": "Go to matching bracket",
+    "expandSelection": "Expand selection",
+    "shrinkSelection": "Shrink selection",
     "groupCode": "Code",
     "toggleBookmark": "Toggle bookmark",
     "nextBookmark": "Next bookmark",
@@ -752,7 +754,9 @@
     "toggleSidebar": "Toggle sidebar",
     "toggleTerminal": "Toggle terminal",
     "toggleWordWrap": "Toggle word wrap",
-    "toggleBookmark": "Toggle bookmark"
+    "toggleBookmark": "Toggle bookmark",
+    "expandSelection": "Expand selection",
+    "shrinkSelection": "Shrink selection"
   },
   "view": {
     "clear": "Clear",
