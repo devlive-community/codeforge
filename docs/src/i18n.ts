@@ -44,7 +44,14 @@ const messages = {
       open: '100%', openLabel: '开源免费'
     },
     releaseList: {title: '发布日志', intro: '每个版本的更新内容如下，点击查看详情。'},
-    footer: {download: '下载', blog: '博客', releases: '发布日志'}
+    footer: {download: '下载', blog: '博客', releases: '发布日志'},
+    notFound: {
+      title: '页面未找到',
+      description: '抱歉，您访问的页面不存在或已被移动',
+      goHome: '返回首页',
+      goBack: '返回上页',
+      quickLinks: '您可能想访问：'
+    }
   },
   en: {
     nav: {download: 'Download', blog: 'Blog', releases: 'Releases'},
@@ -86,7 +93,14 @@ const messages = {
       open: '100%', openLabel: 'Open source'
     },
     releaseList: {title: 'Releases', intro: 'Update notes for each version. Click to view details.'},
-    footer: {download: 'Download', blog: 'Blog', releases: 'Releases'}
+    footer: {download: 'Download', blog: 'Blog', releases: 'Releases'},
+    notFound: {
+      title: 'Page Not Found',
+      description: 'Sorry, the page you are looking for does not exist or has been moved',
+      goHome: 'Go Home',
+      goBack: 'Go Back',
+      quickLinks: 'You might want to visit:'
+    }
   }
 }
 
