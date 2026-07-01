@@ -78,7 +78,8 @@
   },
   "pnpm": {
     "overrides": {
-      "@codemirror/autocomplete": "6.20.3"
+      "@codemirror/autocomplete": "6.20.3",
+      "@codemirror/state": "6.7.0"
     }
   }
 }
