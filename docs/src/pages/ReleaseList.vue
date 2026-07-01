@@ -11,9 +11,15 @@
                   class="group relative flex flex-col p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-brand-400 dark:hover:border-brand-500 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-900/50 hover:shadow-xl hover:shadow-brand-500/10 dark:hover:shadow-brand-500/20 transition-all duration-300 hover:-translate-y-1">
         <!-- 版本号和箭头 -->
         <div class="flex items-center justify-between mb-4">
-          <span class="text-2xl font-bold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-            v{{ r.version }}
-          </span>
+          <div class="flex items-center gap-2">
+            <span class="text-2xl font-bold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+              v{{ r.version }}
+            </span>
+            <span v-if="r.version === latestRelease?.version" 
+                  class="px-2.5 py-0.5 rounded-full bg-brand-500 text-white text-xs font-semibold">
+              最新
+            </span>
+          </div>
           <span class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:bg-brand-500 group-hover:text-white transition-all duration-300 group-hover:translate-x-1">
             →
           </span>
@@ -41,7 +47,7 @@
 
 <script setup lang="ts">
 import {useI18n} from 'vue-i18n'
-import {releases} from '../content/releases'
+import {releases, latestRelease} from '../content/releases'
 
 const {t} = useI18n()
 </script>
