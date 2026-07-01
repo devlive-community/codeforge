@@ -9,6 +9,7 @@
       <div class="flex items-center gap-6">
         <a class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors" href="https://github.com/devlive-community/codeforge" target="_blank" rel="noopener">GitHub</a>
         <RouterLink class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors" to="/download">{{ t('footer.download') }}</RouterLink>
+        <RouterLink class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors" to="/blog">{{ t('footer.blog') }}</RouterLink>
         <RouterLink class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors" to="/release">{{ t('footer.releases') }}</RouterLink>
       </div>
     </div>

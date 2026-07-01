@@ -8,6 +8,13 @@
 
       <div class="hidden sm:flex items-center gap-1 text-[15px]">
         <RouterLink to="/download" class="px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors" active-class="!text-brand-600 dark:!text-brand-400">{{ t('nav.download') }}</RouterLink>
+        <RouterLink to="/blog" 
+                    :class="[
+                      'px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors',
+                      route.path.startsWith('/blog') && '!text-brand-600 dark:!text-brand-400'
+                    ]">
+          {{ t('nav.blog') }}
+        </RouterLink>
         <RouterLink to="/release" 
                     :class="[
                       'px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors',
