@@ -5,7 +5,7 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number]
 
 const messages = {
   zh: {
-    nav: {download: '下载', releases: '发布日志'},
+    nav: {download: '下载', blog: '博客', releases: '发布日志'},
     hero: {
       badge: 'v{version} 已发布',
       title1: '轻量级桌面',
@@ -44,10 +44,10 @@ const messages = {
       open: '100%', openLabel: '开源免费'
     },
     releaseList: {title: '发布日志', intro: '每个版本的更新内容如下，点击查看详情。'},
-    footer: {download: '下载', releases: '发布日志'}
+    footer: {download: '下载', blog: '博客', releases: '发布日志'}
   },
   en: {
-    nav: {download: 'Download', releases: 'Releases'},
+    nav: {download: 'Download', blog: 'Blog', releases: 'Releases'},
     hero: {
       badge: 'v{version} released',
       title1: 'Lightweight desktop',
@@ -86,7 +86,7 @@ const messages = {
       open: '100%', openLabel: 'Open source'
     },
     releaseList: {title: 'Releases', intro: 'Update notes for each version. Click to view details.'},
-    footer: {download: 'Download', releases: 'Releases'}
+    footer: {download: 'Download', blog: 'Blog', releases: 'Releases'}
   }
 }
 

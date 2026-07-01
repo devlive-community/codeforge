@@ -3,9 +3,12 @@
     <SiteHeader/>
     <main class="flex-1">
       <RouterView v-slot="{ Component, route }">
-        <DocLayout v-if="route.meta.doc">
+        <DocLayout v-if="route.meta.doc && route.meta.docType === 'release'">
           <component :is="Component"/>
         </DocLayout>
+        <BlogLayout v-else-if="route.meta.doc && route.meta.docType === 'blog'">
+          <component :is="Component"/>
+        </BlogLayout>
         <component :is="Component" v-else/>
       </RouterView>
     </main>
@@ -17,4 +20,5 @@
 import SiteHeader from './components/SiteHeader.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import DocLayout from './layouts/DocLayout.vue'
+import BlogLayout from './layouts/BlogLayout.vue'
 </script>
