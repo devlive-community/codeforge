@@ -7,6 +7,6 @@ import {releaseRoutes} from './content/releases'
 export const routes: RouteRecordRaw[] = [
   {path: '/', component: Home, meta: {title: 'CodeForge — 轻量级桌面代码执行器'}},
   {path: '/download', component: Download, meta: {title: '下载 CodeForge'}},
-  {path: '/release', component: ReleaseList, meta: {title: '发布日志', doc: true}},
+  {path: '/release', component: ReleaseList, meta: {title: '发布日志'}},
   ...releaseRoutes.map(r => ({...r, meta: {doc: true}}))
 ]
