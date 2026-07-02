@@ -331,6 +331,8 @@
     <!-- 文件夹内全局搜索 -->
     <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" :extra-roots="extraRoots" :scope="searchScope" @open="openSearchResult" @replaced="reloadAffectedFiles" @close="showSearch = false"/>
 
+    <WorkspaceManager v-if="showWorkspaces" :root-dir="rootDir" :extra-roots="extraRoots" @open="openWorkspace" @close="showWorkspaces = false"/>
+
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
                :root-dir="rootDir"
@@ -591,6 +593,7 @@ import {useDebug} from './composables/useDebug'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
+import WorkspaceManager from './components/WorkspaceManager.vue'
 import {useTheme, type AppTheme} from './composables/useTheme'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
@@ -754,7 +757,15 @@ const rootDir = ref<string | null>(null)
 const {copyPermalink, openPermalink, openRepoOnWeb} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
 
 // 多根工作区：额外挂载的文件夹（Git/搜索仍走主根 rootDir）
-const {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots} = useWorkspaceRoots(rootDir)
+const {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots, setExtraRoots} = useWorkspaceRoots(rootDir)
+
+// 命名工作区：保存/打开一组根
+const showWorkspaces = ref(false)
+const openWorkspace = (ws: {rootDir: string; extraRoots: string[]}) => {
+  showWorkspaces.value = false
+  openFolderPath(ws.rootDir)   // 设主根并清空额外根
+  setExtraRoots(ws.extraRoots) // 再恢复该工作区的额外根
+}
 const sidebarVisible = ref(kvGet('sidebar-visible') === 'true')
 // 专注模式：隐藏顶部工具栏/运行输入/侧栏/状态栏，沉浸编辑
 const zenMode = ref(false)
@@ -2231,7 +2242,7 @@ const isOverlayOpen = () =>
     || showHistory.value || showViewer.value || showRunPrompt.value
     || showQuickOpen.value || showGenerate.value || showSearch.value
     || showCommandPalette.value || showDiff.value || showGoToLine.value || showOutline.value || showSnippets.value
-    || applyPreview.value != null || clipboardDiff.value != null
+    || applyPreview.value != null || clipboardDiff.value != null || showWorkspaces.value
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
@@ -2291,6 +2302,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'formatOnSave', label: formatOnSave.value ? t('command.formatOnSaveOff') : t('command.formatOnSaveOn'), icon: Save, run: () => toggleFormatOnSave()},
   {id: 'open', label: t('command.open'), icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
   {id: 'openFolder', label: t('command.openFolder'), icon: FolderOpen, run: () => openFolder()},
+  {id: 'workspaces', label: t('command.workspaces'), icon: FolderOpen, run: () => { showWorkspaces.value = true }},
   {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => handleSave()},
   {id: 'saveAs', label: t('command.saveAs'), icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
   {id: 'newTab', label: t('command.newTab'), icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},

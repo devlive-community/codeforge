@@ -671,6 +671,7 @@
     "formatOnSaveOff": "关闭保存时格式化",
     "open": "打开文件",
     "openFolder": "打开文件夹",
+    "workspaces": "命名工作区",
     "save": "保存文件",
     "saveAs": "另存为",
     "newTab": "新建标签",
@@ -821,6 +822,13 @@
     "programRunning": "程序正在运行...",
     "noOutput": "没有输出",
     "noOutputHint": "可以尝试运行一些代码"
+  },
+  "workspaces": {
+    "title": "命名工作区",
+    "namePlaceholder": "为当前工作区命名…",
+    "saveCurrent": "保存当前",
+    "empty": "还没有保存的工作区",
+    "delete": "删除"
   },
   "sidebar": {
     "explorer": "资源管理器",

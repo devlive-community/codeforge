@@ -671,6 +671,7 @@
     "formatOnSaveOff": "Disable format on save",
     "open": "Open file",
     "openFolder": "Open folder",
+    "workspaces": "Named workspaces",
     "save": "Save file",
     "saveAs": "Save as",
     "newTab": "New tab",
@@ -821,6 +822,13 @@
     "programRunning": "Program is running...",
     "noOutput": "No output",
     "noOutputHint": "Try running some code"
+  },
+  "workspaces": {
+    "title": "Named workspaces",
+    "namePlaceholder": "Name this workspace…",
+    "saveCurrent": "Save current",
+    "empty": "No saved workspaces yet",
+    "delete": "Delete"
   },
   "sidebar": {
     "explorer": "Explorer",
