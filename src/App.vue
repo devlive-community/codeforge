@@ -751,7 +751,7 @@ const handleCopyRelativePath = (path: string) => {
 const rootDir = ref<string | null>(null)
 
 // 远程仓库永久链接（复制 / 在浏览器打开）
-const {copyPermalink, openPermalink} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
+const {copyPermalink, openPermalink, openRepoOnWeb} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
 
 // 多根工作区：额外挂载的文件夹（Git/搜索仍走主根 rootDir）
 const {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots} = useWorkspaceRoots(rootDir)
@@ -2321,6 +2321,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
   {id: 'copyPermalink', label: t('command.copyPermalink'), icon: GitBranch, run: () => copyPermalink()},
   {id: 'openPermalink', label: t('command.openPermalink'), icon: GitBranch, run: () => openPermalink()},
+  {id: 'openRepoOnWeb', label: t('command.openRepoOnWeb'), icon: GitBranch, run: () => openRepoOnWeb()},
   {id: 'sortLinesAsc', label: t('command.sortLinesAsc'), group: t('command.groupText'), icon: ArrowDownAZ, run: () => sortLines(false)},
   {id: 'sortLinesDesc', label: t('command.sortLinesDesc'), group: t('command.groupText'), icon: ArrowUpAZ, run: () => sortLines(true)},
   {id: 'toUpperCase', label: t('command.toUpperCase'), group: t('command.groupText'), icon: CaseUpper, run: () => transformSelectionOrLine(s => s.toUpperCase())},
