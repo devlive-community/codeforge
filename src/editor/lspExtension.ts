@@ -217,6 +217,67 @@ export const formatDocumentAsync = async (
   }
 }
 
+export interface LspSymbol {
+  name: string
+  kind: number   // LSP SymbolKind (1..26)
+  line: number   // 1-based
+  depth: number
+}
+
+// LSP SymbolKind → 大纲显示的短标签
+const SYMBOL_KIND_LABEL: Record<number, string> = {
+  2: 'mod', 3: 'ns', 4: 'pkg', 5: 'class', 6: 'method', 7: 'prop', 8: 'field',
+  9: 'ctor', 10: 'enum', 11: 'iface', 12: 'fn', 13: 'var', 14: 'const',
+  22: 'member', 23: 'struct', 24: 'event', 26: 'type'
+}
+export const lspSymbolKindLabel = (kind: number): string => SYMBOL_KIND_LABEL[kind] || 'sym'
+
+/**
+ * 请求 textDocument/documentSymbol，规范化为带层级的扁平列表。
+ * 兼容分层的 DocumentSymbol[] 与扁平的 SymbolInformation[]；不支持则返回 null。
+ */
+export const fetchDocumentSymbols = async (view: EditorView): Promise<LspSymbol[] | null> => {
+  const plugin: any = view.plugin(languageServerPlugin as any)
+  const client = plugin?.client
+  if (!client?.ready || !client.capabilities?.documentSymbolProvider) {
+    return null
+  }
+  try {
+    const res: any = await client.request(
+      'textDocument/documentSymbol',
+      {textDocument: {uri: plugin.documentUri}},
+      10000
+    )
+    if (!Array.isArray(res) || res.length === 0) {
+      return null
+    }
+    const out: LspSymbol[] = []
+    if (res[0].range !== undefined) {
+      // 分层 DocumentSymbol[]
+      const walk = (nodes: any[], depth: number) => {
+        for (const n of nodes) {
+          const startLine = (n.selectionRange?.start?.line ?? n.range.start.line) + 1
+          out.push({name: n.name, kind: n.kind, line: startLine, depth})
+          if (n.children?.length) {
+            walk(n.children, depth + 1)
+          }
+        }
+      }
+      walk(res, 0)
+    }
+    else {
+      // 扁平 SymbolInformation[]
+      for (const s of res) {
+        out.push({name: s.name, kind: s.kind, line: s.location.range.start.line + 1, depth: 0})
+      }
+    }
+    return out
+  }
+  catch {
+    return null
+  }
+}
+
 /**
  * 触发代码操作：请求后派发 lsp:code-actions（携带动作与锚点坐标）由 App 弹菜单。
  * 供 Cmd+. 键位与右键菜单共用。

@@ -356,6 +356,7 @@
              :code="code"
              :language="currentLanguage"
              :current-line="cursorInfo.line"
+             :view="editorView"
              @go="gotoLine"
              @close="showOutline = false"/>
 
