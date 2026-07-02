@@ -545,6 +545,7 @@ import {useTextCommands} from './composables/useTextCommands'
 import {useBookmarks} from './composables/useBookmarks'
 import {foldAll, unfoldAll, matchBrackets} from '@codemirror/language'
 import {selectParentSyntax} from '@codemirror/commands'
+import {format as formatSql} from 'sql-formatter'
 import {diagnostics} from './editor/lspDiagnostics'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
@@ -1208,6 +1209,30 @@ const shrinkSelection = () => {
     view.dispatch({selection: {anchor: prev.anchor, head: prev.head}})
     view.focus()
     expandLastKey = selKey(view)
+  }
+}
+
+// 格式化 SQL（选区或全文）
+const formatSqlDoc = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  if (currentLanguage.value !== 'sql') {
+    toast.info(t('app.sqlFormatOnlySql'))
+    return
+  }
+  const sel = view.state.selection.main
+  const from = sel.empty ? 0 : view.state.doc.lineAt(sel.from).from
+  const to = sel.empty ? view.state.doc.length : view.state.doc.lineAt(sel.to).to
+  try {
+    const out = formatSql(view.state.doc.sliceString(from, to), {language: 'sql', keywordCase: 'upper'})
+    view.dispatch({changes: {from, to, insert: out}, selection: {anchor: from}})
+    view.focus()
+    toast.success(t('app.sqlFormatted'))
+  }
+  catch (error) {
+    toast.error(t('app.sqlFormatFailed') + error)
   }
 }
 
@@ -2308,6 +2333,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'foldAll', label: t('command.foldAll'), group: t('command.groupCode'), icon: FoldVertical, run: () => { if (editorView.value) foldAll(editorView.value) }},
   {id: 'unfoldAll', label: t('command.unfoldAll'), group: t('command.groupCode'), icon: UnfoldVertical, run: () => { if (editorView.value) unfoldAll(editorView.value) }},
   {id: 'goToMatchingBracket', label: t('command.goToMatchingBracket'), group: t('command.groupCode'), icon: Code2, run: () => goToMatchingBracket()},
+  {id: 'formatSql', label: t('command.formatSql'), group: t('command.groupCode'), icon: Code2, run: () => formatSqlDoc()},
   {id: 'expandSelection', label: t('command.expandSelection'), group: t('command.groupCode'), icon: Code2, hint: hintOf('expandSelection'), run: () => expandSelection()},
   {id: 'shrinkSelection', label: t('command.shrinkSelection'), group: t('command.groupCode'), icon: Code2, hint: hintOf('shrinkSelection'), run: () => shrinkSelection()},
   {id: 'toggleBookmark', label: t('command.toggleBookmark'), group: t('command.groupBookmark'), icon: Bookmark, hint: hintOf('toggleBookmark'), run: () => toggleBookmark()},

@@ -54,6 +54,7 @@
     "lodash-es": "^4.17.21",
     "lucide-vue-next": "^0.539.0",
     "markdown-it": "^14.2.0",
+    "sql-formatter": "^15.8.2",
     "vscode-languageserver-protocol": "^3.18.0",
     "vue": "^3.5.13",
     "vue-codemirror": "^6.1.1",
