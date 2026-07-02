@@ -295,6 +295,17 @@
     </div>
   </Modal>
 
+  <!-- 强制删除未合并分支 -->
+  <Modal :show="!!forceDelete" :title="t('git.forceDeleteBranchTitle')" size="sm" @update:show="(v) => { if (!v) forceDelete = null }">
+    <div v-if="forceDelete" class="space-y-4">
+      <p class="text-sm text-gray-700 dark:text-gray-300">{{ t('git.forceDeleteBranchConfirm', { name: forceDelete.name }) }}</p>
+      <div class="flex justify-end gap-2">
+        <Button size="sm" type="secondary" @click="forceDelete = null">{{ t('git.cancel') }}</Button>
+        <Button size="sm" type="danger" @click="deleteBranch(forceDelete.name, true)">{{ t('git.forceDelete') }}</Button>
+      </div>
+    </div>
+  </Modal>
+
   <!-- 重命名分支 -->
   <Modal v-model:show="renameBranch.show" :title="t('git.renameBranchTitle')" size="sm">
     <div class="space-y-4">
@@ -768,13 +779,22 @@ const createBranch = async () => {
   }
 }
 
-const deleteBranch = async (name: string) => {
+// 分支未完全合并时的强制删除确认
+const forceDelete = ref<{ name: string } | null>(null)
+const deleteBranch = async (name: string, force = false) => {
   try {
-    await invoke('git_branch_delete', {root: props.rootDir, name})
+    await invoke('git_branch_delete', {root: props.rootDir, name, force})
     toast.success(t('git.branchDeleted'))
+    forceDelete.value = null
     await refresh()
   }
   catch (error) {
+    const msg = String(error)
+    // 未完全合并（git -d 拒绝）→ 弹出强制删除确认，而非直接报错
+    if (!force && (msg.includes('not fully merged') || msg.includes('没有完全合并'))) {
+      forceDelete.value = {name}
+      return
+    }
     toast.error(t('git.branchOpFailed') + ': ' + error)
   }
 }

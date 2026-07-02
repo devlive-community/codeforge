@@ -54,5 +54,38 @@ export function useGitPermalink(
     }
   }
 
-  return {copyPermalink, openPermalink}
+  // 把 git 远程地址规范化为网页地址（git@host:owner/repo(.git) 或 https://... → https://host/owner/repo）
+  const remoteToWebUrl = (raw: string): string | null => {
+    let u = raw.trim().replace(/\.git$/, '')
+    const scp = u.match(/^git@([^:]+):(.+)$/)
+    if (scp) {
+      return `https://${scp[1]}/${scp[2]}`
+    }
+    u = u.replace(/^ssh:\/\/(git@)?/, 'https://').replace(/^git:\/\//, 'https://')
+    if (u.startsWith('http://') || u.startsWith('https://')) {
+      return u.replace(/^http:\/\//, 'https://')
+    }
+    return null
+  }
+
+  const openRepoOnWeb = async () => {
+    if (!rootDir.value) {
+      return
+    }
+    try {
+      const remotes = await invoke<{ name: string, url: string }[]>('git_remotes', {root: rootDir.value})
+      const origin = remotes.find(r => r.name === 'origin') || remotes[0]
+      const web = origin && remoteToWebUrl(origin.url)
+      if (!web) {
+        toast.info(t('app.noRemoteWebUrl'))
+        return
+      }
+      await openExternalUrl(web)
+    }
+    catch (error) {
+      toast.error(t('app.permalinkFailed') + ': ' + error)
+    }
+  }
+
+  return {copyPermalink, openPermalink, openRepoOnWeb}
 }

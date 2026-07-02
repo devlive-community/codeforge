@@ -445,6 +445,9 @@
     "tracked": "Tracking branch checked out",
     "branchCreated": "Branch created and switched",
     "branchDeleted": "Branch deleted",
+    "forceDeleteBranchTitle": "Force delete branch",
+    "forceDeleteBranchConfirm": "Branch \"{name}\" is not fully merged; commits unique to it may be lost. Force delete?",
+    "forceDelete": "Force delete",
     "merged": "Merged",
     "branchOpFailed": "Branch operation failed",
     "amend": "Amend last commit",
@@ -668,6 +671,7 @@
     "formatOnSaveOff": "Disable format on save",
     "open": "Open file",
     "openFolder": "Open folder",
+    "workspaces": "Named workspaces",
     "save": "Save file",
     "saveAs": "Save as",
     "newTab": "New tab",
@@ -684,6 +688,7 @@
     "generateTests": "AI generate tests (selection or all)",
     "formatWithAi": "AI format code",
     "aiFixDiagnostics": "AI fix diagnostics",
+    "aiGenDoc": "AI generate doc comment",
     "history": "Run history",
     "diff": "Diff (current vs saved)",
     "preview": "Live preview (Markdown / HTML)",
@@ -698,6 +703,9 @@
     "foldAll": "Fold all",
     "unfoldAll": "Unfold all",
     "goToMatchingBracket": "Go to matching bracket",
+    "formatSql": "Format SQL",
+    "expandSelection": "Expand selection",
+    "shrinkSelection": "Shrink selection",
     "groupCode": "Code",
     "toggleBookmark": "Toggle bookmark",
     "nextBookmark": "Next bookmark",
@@ -706,6 +714,7 @@
     "groupBookmark": "Bookmarks",
     "copyPermalink": "Copy remote permalink (current line)",
     "openPermalink": "Open remote link in browser (current line)",
+    "openRepoOnWeb": "Open repository in browser",
     "sortLinesAsc": "Sort lines ascending",
     "sortLinesDesc": "Sort lines descending",
     "toUpperCase": "Transform to uppercase",
@@ -749,7 +758,9 @@
     "toggleSidebar": "Toggle sidebar",
     "toggleTerminal": "Toggle terminal",
     "toggleWordWrap": "Toggle word wrap",
-    "toggleBookmark": "Toggle bookmark"
+    "toggleBookmark": "Toggle bookmark",
+    "expandSelection": "Expand selection",
+    "shrinkSelection": "Shrink selection"
   },
   "view": {
     "clear": "Clear",
@@ -812,6 +823,13 @@
     "programRunning": "Program is running...",
     "noOutput": "No output",
     "noOutputHint": "Try running some code"
+  },
+  "workspaces": {
+    "title": "Named workspaces",
+    "namePlaceholder": "Name this workspace…",
+    "saveCurrent": "Save current",
+    "empty": "No saved workspaces yet",
+    "delete": "Delete"
   },
   "sidebar": {
     "explorer": "Explorer",
@@ -1130,7 +1148,8 @@
       "explain": "AI: Explain code",
       "refactor": "AI: Refactor code",
       "test": "AI: Generate tests",
-      "fix": "AI: Fix diagnostics"
+      "fix": "AI: Fix diagnostics",
+      "doc": "AI: Generate doc comment"
     },
     "thinking": "AI is thinking…",
     "replace": "Replace selection",
@@ -1341,6 +1360,9 @@
     "indentConverted": "Indentation converted",
     "noMatchingBracket": "No matching bracket at cursor",
     "noDiagnostics": "No diagnostics in the current file",
+    "sqlFormatted": "SQL formatted",
+    "sqlFormatFailed": "SQL format failed: ",
+    "sqlFormatOnlySql": "Only available when editing SQL",
     "clipboardEmpty": "Clipboard is empty",
     "clipboardReadFailed": "Failed to read clipboard: ",
     "copyFailed": "Copy failed: ",
@@ -1366,6 +1388,7 @@
     "permalinkCopied": "Remote permalink copied",
     "permalinkFailed": "Failed to build permalink",
     "permalinkOutside": "Current file is not inside the workspace repository",
+    "noRemoteWebUrl": "No remote repository URL to open",
     "aiPredictOff": "AI code prediction disabled",
     "aiPredictOnNoKey": "AI code prediction enabled, but no API Key is configured. Fill it in \"Settings → AI\"",
     "aiPredictOn": "AI code prediction enabled; pause typing to see the gray completion, press Tab to accept",

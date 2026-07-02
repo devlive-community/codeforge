@@ -445,6 +445,9 @@
     "tracked": "已检出跟踪分支",
     "branchCreated": "已创建并切换分支",
     "branchDeleted": "已删除分支",
+    "forceDeleteBranchTitle": "强制删除分支",
+    "forceDeleteBranchConfirm": "分支「{name}」尚未完全合并，删除后其独有的提交可能丢失。确定强制删除？",
+    "forceDelete": "强制删除",
     "merged": "已合并",
     "branchOpFailed": "分支操作失败",
     "amend": "修正上次提交",
@@ -668,6 +671,7 @@
     "formatOnSaveOff": "关闭保存时格式化",
     "open": "打开文件",
     "openFolder": "打开文件夹",
+    "workspaces": "命名工作区",
     "save": "保存文件",
     "saveAs": "另存为",
     "newTab": "新建标签",
@@ -684,6 +688,7 @@
     "generateTests": "AI 生成测试（选中或全文）",
     "formatWithAi": "AI 格式化代码",
     "aiFixDiagnostics": "AI 修复诊断",
+    "aiGenDoc": "AI 生成文档注释",
     "history": "执行历史",
     "diff": "差异对比（当前 vs 已保存）",
     "preview": "实时预览（Markdown / HTML）",
@@ -698,6 +703,9 @@
     "foldAll": "折叠全部代码",
     "unfoldAll": "展开全部代码",
     "goToMatchingBracket": "转到匹配括号",
+    "formatSql": "格式化 SQL",
+    "expandSelection": "展开选区",
+    "shrinkSelection": "收缩选区",
     "groupCode": "代码",
     "toggleBookmark": "切换书签",
     "nextBookmark": "下一处书签",
@@ -706,6 +714,7 @@
     "groupBookmark": "书签",
     "copyPermalink": "复制远程永久链接（当前行）",
     "openPermalink": "在浏览器打开远程链接（当前行）",
+    "openRepoOnWeb": "在浏览器打开仓库主页",
     "sortLinesAsc": "排序行（升序）",
     "sortLinesDesc": "排序行（降序）",
     "toUpperCase": "转为大写",
@@ -749,7 +758,9 @@
     "toggleSidebar": "切换侧栏",
     "toggleTerminal": "切换终端",
     "toggleWordWrap": "切换自动换行",
-    "toggleBookmark": "切换书签"
+    "toggleBookmark": "切换书签",
+    "expandSelection": "展开选区",
+    "shrinkSelection": "收缩选区"
   },
   "view": {
     "clear": "清空",
@@ -812,6 +823,13 @@
     "programRunning": "程序正在运行...",
     "noOutput": "没有输出",
     "noOutputHint": "可以尝试运行一些代码"
+  },
+  "workspaces": {
+    "title": "命名工作区",
+    "namePlaceholder": "为当前工作区命名…",
+    "saveCurrent": "保存当前",
+    "empty": "还没有保存的工作区",
+    "delete": "删除"
   },
   "sidebar": {
     "explorer": "资源管理器",
@@ -1130,7 +1148,8 @@
       "explain": "AI 解释代码",
       "refactor": "AI 重构代码",
       "test": "AI 生成测试",
-      "fix": "AI 修复诊断"
+      "fix": "AI 修复诊断",
+      "doc": "AI 生成文档注释"
     },
     "thinking": "AI 思考中…",
     "replace": "替换选区",
@@ -1341,6 +1360,9 @@
     "indentConverted": "已转换缩进",
     "noMatchingBracket": "光标处没有可匹配的括号",
     "noDiagnostics": "当前文件没有诊断问题",
+    "sqlFormatted": "SQL 已格式化",
+    "sqlFormatFailed": "SQL 格式化失败: ",
+    "sqlFormatOnlySql": "仅在 SQL 编辑时可用",
     "clipboardEmpty": "剪贴板为空",
     "clipboardReadFailed": "读取剪贴板失败: ",
     "copyFailed": "复制失败: ",
@@ -1366,6 +1388,7 @@
     "permalinkCopied": "已复制远程永久链接",
     "permalinkFailed": "生成永久链接失败",
     "permalinkOutside": "当前文件不在工作区仓库内",
+    "noRemoteWebUrl": "未找到可打开的远程仓库地址",
     "aiPredictOff": "AI 代码预测已关闭",
     "aiPredictOnNoKey": "AI 代码预测已开启，但尚未配置 API Key，请在「设置 → AI」中填写",
     "aiPredictOn": "AI 代码预测已开启，停顿打字即可看到灰色补全，Tab 接受",

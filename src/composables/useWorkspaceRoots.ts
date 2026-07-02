@@ -29,5 +29,11 @@ export function useWorkspaceRoots(rootDir: Ref<string | null>) {
     persist()
   }
 
-  return {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots}
+  // 整体设置额外根（打开命名工作区时用）
+  const setExtraRoots = (paths: string[]) => {
+    extraRoots.value = [...paths]
+    persist()
+  }
+
+  return {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots, setExtraRoots}
 }

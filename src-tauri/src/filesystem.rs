@@ -1304,10 +1304,12 @@ pub async fn git_branch_create(root: String, name: String) -> Result<String, Str
 
 /// 删除分支（安全删除，未合并会失败）。
 #[tauri::command]
-pub async fn git_branch_delete(root: String, name: String) -> Result<String, String> {
-    tokio::task::spawn_blocking(move || run_git(&root, &["branch", "-d", &name]))
-        .await
-        .map_err(|e| format!("git 任务失败: {}", e))?
+pub async fn git_branch_delete(root: String, name: String, force: bool) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        run_git(&root, &["branch", if force { "-D" } else { "-d" }, &name])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
 /// 重命名分支。

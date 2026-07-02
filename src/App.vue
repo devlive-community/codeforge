@@ -331,6 +331,8 @@
     <!-- 文件夹内全局搜索 -->
     <SearchPanel v-if="showSearch && rootDir" :root-dir="rootDir" :extra-roots="extraRoots" :scope="searchScope" @open="openSearchResult" @replaced="reloadAffectedFiles" @close="showSearch = false"/>
 
+    <WorkspaceManager v-if="showWorkspaces" :root-dir="rootDir" :extra-roots="extraRoots" @open="openWorkspace" @close="showWorkspaces = false"/>
+
     <!-- 快速打开文件 -->
     <QuickOpen v-if="showQuickOpen && rootDir"
                :root-dir="rootDir"
@@ -354,6 +356,7 @@
              :code="code"
              :language="currentLanguage"
              :current-line="cursorInfo.line"
+             :view="editorView"
              @go="gotoLine"
              @close="showOutline = false"/>
 
@@ -463,6 +466,7 @@
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('explain')">{{ t('aiCode.title.explain') }}</button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('refactor')">{{ t('aiCode.title.refactor') }}</button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('test')">{{ t('aiCode.title.test') }}</button>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('doc')">{{ t('aiCode.title.doc') }}</button>
         <button v-if="canBlame || editorCtx.lsp" class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiFixDiagnostics">{{ t('aiCode.title.fix') }}</button>
         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="sendToTerminal">
@@ -544,6 +548,8 @@ import {useWorkspace} from './composables/useWorkspace'
 import {useTextCommands} from './composables/useTextCommands'
 import {useBookmarks} from './composables/useBookmarks'
 import {foldAll, unfoldAll, matchBrackets} from '@codemirror/language'
+import {selectParentSyntax} from '@codemirror/commands'
+import {format as formatSql} from 'sql-formatter'
 import {diagnostics} from './editor/lspDiagnostics'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
@@ -589,6 +595,7 @@ import {useDebug} from './composables/useDebug'
 import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
+import WorkspaceManager from './components/WorkspaceManager.vue'
 import {useTheme, type AppTheme} from './composables/useTheme'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
@@ -749,10 +756,18 @@ const handleCopyRelativePath = (path: string) => {
 const rootDir = ref<string | null>(null)
 
 // 远程仓库永久链接（复制 / 在浏览器打开）
-const {copyPermalink, openPermalink} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
+const {copyPermalink, openPermalink, openRepoOnWeb} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
 
 // 多根工作区：额外挂载的文件夹（Git/搜索仍走主根 rootDir）
-const {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots} = useWorkspaceRoots(rootDir)
+const {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots, setExtraRoots} = useWorkspaceRoots(rootDir)
+
+// 命名工作区：保存/打开一组根
+const showWorkspaces = ref(false)
+const openWorkspace = (ws: {rootDir: string; extraRoots: string[]}) => {
+  showWorkspaces.value = false
+  openFolderPath(ws.rootDir)   // 设主根并清空额外根
+  setExtraRoots(ws.extraRoots) // 再恢复该工作区的额外根
+}
 const sidebarVisible = ref(kvGet('sidebar-visible') === 'true')
 // 专注模式：隐藏顶部工具栏/运行输入/侧栏/状态栏，沉浸编辑
 const zenMode = ref(false)
@@ -1175,6 +1190,65 @@ const convertIndentation = (toTabs: boolean) => {
   toast.success(t('app.indentConverted'))
 }
 
+// 展开/收缩选区：按语法节点逐级扩选，收缩用选区栈回退
+let expandStack: { anchor: number, head: number }[] = []
+let expandLastKey = ''
+const selKey = (view: any) => {
+  const s = view.state.selection.main
+  return s.anchor + ':' + s.head
+}
+const expandSelection = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  // 用户手动改过选区则重置栈
+  if (selKey(view) !== expandLastKey) {
+    expandStack = []
+  }
+  const s = view.state.selection.main
+  expandStack.push({anchor: s.anchor, head: s.head})
+  selectParentSyntax(view)
+  view.focus()
+  expandLastKey = selKey(view)
+}
+const shrinkSelection = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  const prev = expandStack.pop()
+  if (prev) {
+    view.dispatch({selection: {anchor: prev.anchor, head: prev.head}})
+    view.focus()
+    expandLastKey = selKey(view)
+  }
+}
+
+// 格式化 SQL（选区或全文）
+const formatSqlDoc = () => {
+  const view = editorView.value
+  if (!view) {
+    return
+  }
+  if (currentLanguage.value !== 'sql') {
+    toast.info(t('app.sqlFormatOnlySql'))
+    return
+  }
+  const sel = view.state.selection.main
+  const from = sel.empty ? 0 : view.state.doc.lineAt(sel.from).from
+  const to = sel.empty ? view.state.doc.length : view.state.doc.lineAt(sel.to).to
+  try {
+    const out = formatSql(view.state.doc.sliceString(from, to), {language: 'sql', keywordCase: 'upper'})
+    view.dispatch({changes: {from, to, insert: out}, selection: {anchor: from}})
+    view.focus()
+    toast.success(t('app.sqlFormatted'))
+  }
+  catch (error) {
+    toast.error(t('app.sqlFormatFailed') + error)
+  }
+}
+
 // 转到匹配括号：取光标前后的括号，跳到其配对处
 const goToMatchingBracket = () => {
   const view = editorView.value
@@ -1422,7 +1496,7 @@ const runTests = async () => {
 }
 
 // C2：对选区（无选区则整篇）执行 AI 操作：解释 / 重构 / 生成测试
-const aiCodeCtx = ref<{action: 'explain' | 'refactor' | 'test' | 'fix'; code: string; from: number; to: number; diagnostics?: string} | null>(null)
+const aiCodeCtx = ref<{action: 'explain' | 'refactor' | 'test' | 'fix' | 'doc'; code: string; from: number; to: number; diagnostics?: string} | null>(null)
 // AI 修复诊断：把当前文件的 LSP 诊断交给 AI 修复整篇
 const aiFixDiagnostics = () => {
   closeEditorCtx()
@@ -1437,7 +1511,7 @@ const aiFixDiagnostics = () => {
   const diagText = diagnostics.value.map(d => `[${d.severity}] L${d.line}:${d.col} ${d.message}`).join('\n')
   aiCodeCtx.value = {action: 'fix', code: view.state.doc.toString(), from: 0, to: view.state.doc.length, diagnostics: diagText}
 }
-const aiCodeAction = (action: 'explain' | 'refactor' | 'test') => {
+const aiCodeAction = (action: 'explain' | 'refactor' | 'test' | 'doc') => {
   closeEditorCtx()
   const view = editorView.value
   if (!view) {
@@ -1468,7 +1542,17 @@ const onAiReplace = (code: string) => {
 const onAiInsert = (code: string) => {
   const view = editorView.value
   const ctx = aiCodeCtx.value
-  if (view && ctx) {
+  if (!view || !ctx) {
+    return
+  }
+  if (ctx.action === 'doc') {
+    // 文档注释插入到目标代码所在行之前，缩进对齐
+    const line = view.state.doc.lineAt(ctx.from)
+    const indent = line.text.match(/^\s*/)?.[0] ?? ''
+    const commented = code.trimEnd().split('\n').map(l => indent + l).join('\n')
+    view.dispatch({changes: {from: line.from, insert: `${commented}\n`}})
+  }
+  else {
     view.dispatch({changes: {from: ctx.to, insert: `\n\n${code}\n`}})
   }
 }
@@ -2170,7 +2254,7 @@ const isOverlayOpen = () =>
     || showHistory.value || showViewer.value || showRunPrompt.value
     || showQuickOpen.value || showGenerate.value || showSearch.value
     || showCommandPalette.value || showDiff.value || showGoToLine.value || showOutline.value || showSnippets.value
-    || applyPreview.value != null || clipboardDiff.value != null
+    || applyPreview.value != null || clipboardDiff.value != null || showWorkspaces.value
 
 // 全局快捷键（绑定可在设置中自定义）
 const {matchAction: matchShortcut, reload: reloadShortcuts, getBinding, formatCombo} = useShortcuts()
@@ -2193,7 +2277,9 @@ const shortcutDispatch: Record<string, () => void> = {
   toggleSidebar: () => toggleSidebar(),
   toggleTerminal: () => toggleTerminal(),
   toggleWordWrap: () => toggleWordWrap(),
-  toggleBookmark: () => toggleBookmark()
+  toggleBookmark: () => toggleBookmark(),
+  expandSelection: () => expandSelection(),
+  shrinkSelection: () => shrinkSelection()
 }
 
 // 切换自动换行（即时生效并随编辑器配置持久化）
@@ -2228,6 +2314,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'formatOnSave', label: formatOnSave.value ? t('command.formatOnSaveOff') : t('command.formatOnSaveOn'), icon: Save, run: () => toggleFormatOnSave()},
   {id: 'open', label: t('command.open'), icon: FolderOpen, hint: hintOf('open'), run: () => handleOpenFileClick()},
   {id: 'openFolder', label: t('command.openFolder'), icon: FolderOpen, run: () => openFolder()},
+  {id: 'workspaces', label: t('command.workspaces'), icon: FolderOpen, run: () => { showWorkspaces.value = true }},
   {id: 'save', label: t('command.save'), icon: Save, hint: hintOf('save'), run: () => handleSave()},
   {id: 'saveAs', label: t('command.saveAs'), icon: Save, hint: hintOf('saveAs'), run: () => saveFileAs()},
   {id: 'newTab', label: t('command.newTab'), icon: Plus, hint: hintOf('newTab'), run: () => handleNewTab()},
@@ -2245,6 +2332,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'generateTests', label: t('command.generateTests'), icon: Sparkles, run: () => generateTests()},
   {id: 'formatWithAi', label: t('command.formatWithAi'), icon: Sparkles, run: () => formatWithAi()},
   {id: 'aiFixDiagnostics', label: t('command.aiFixDiagnostics'), icon: Sparkles, run: () => aiFixDiagnostics()},
+  {id: 'aiGenDoc', label: t('command.aiGenDoc'), icon: Sparkles, run: () => aiCodeAction('doc')},
   {id: 'history', label: t('command.history'), icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
   {id: 'compareClipboard', label: t('command.compareClipboard'), icon: GitCompare, run: () => compareWithClipboard()},
@@ -2258,6 +2346,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
   {id: 'copyPermalink', label: t('command.copyPermalink'), icon: GitBranch, run: () => copyPermalink()},
   {id: 'openPermalink', label: t('command.openPermalink'), icon: GitBranch, run: () => openPermalink()},
+  {id: 'openRepoOnWeb', label: t('command.openRepoOnWeb'), icon: GitBranch, run: () => openRepoOnWeb()},
   {id: 'sortLinesAsc', label: t('command.sortLinesAsc'), group: t('command.groupText'), icon: ArrowDownAZ, run: () => sortLines(false)},
   {id: 'sortLinesDesc', label: t('command.sortLinesDesc'), group: t('command.groupText'), icon: ArrowUpAZ, run: () => sortLines(true)},
   {id: 'toUpperCase', label: t('command.toUpperCase'), group: t('command.groupText'), icon: CaseUpper, run: () => transformSelectionOrLine(s => s.toUpperCase())},
@@ -2270,6 +2359,9 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'foldAll', label: t('command.foldAll'), group: t('command.groupCode'), icon: FoldVertical, run: () => { if (editorView.value) foldAll(editorView.value) }},
   {id: 'unfoldAll', label: t('command.unfoldAll'), group: t('command.groupCode'), icon: UnfoldVertical, run: () => { if (editorView.value) unfoldAll(editorView.value) }},
   {id: 'goToMatchingBracket', label: t('command.goToMatchingBracket'), group: t('command.groupCode'), icon: Code2, run: () => goToMatchingBracket()},
+  {id: 'formatSql', label: t('command.formatSql'), group: t('command.groupCode'), icon: Code2, run: () => formatSqlDoc()},
+  {id: 'expandSelection', label: t('command.expandSelection'), group: t('command.groupCode'), icon: Code2, hint: hintOf('expandSelection'), run: () => expandSelection()},
+  {id: 'shrinkSelection', label: t('command.shrinkSelection'), group: t('command.groupCode'), icon: Code2, hint: hintOf('shrinkSelection'), run: () => shrinkSelection()},
   {id: 'toggleBookmark', label: t('command.toggleBookmark'), group: t('command.groupBookmark'), icon: Bookmark, hint: hintOf('toggleBookmark'), run: () => toggleBookmark()},
   {id: 'nextBookmark', label: t('command.nextBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => nextBookmark()},
   {id: 'prevBookmark', label: t('command.prevBookmark'), group: t('command.groupBookmark'), icon: Bookmark, run: () => prevBookmark()},

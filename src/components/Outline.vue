@@ -39,13 +39,17 @@
 import {computed, nextTick, onMounted, ref, watch} from 'vue'
 import {useI18n} from 'vue-i18n'
 import {ListTree} from 'lucide-vue-next'
+import {fetchDocumentSymbols, lspSymbolKindLabel} from '../editor/lspExtension'
 
 const {t} = useI18n()
 
 interface Symbol { name: string; kind: string; line: number; depth: number }
 
-const props = defineProps<{ code: string; language?: string; currentLine?: number }>()
+const props = defineProps<{ code: string; language?: string; currentLine?: number; view?: any }>()
 const emit = defineEmits<{ go: [line: number]; close: [] }>()
+
+// LSP 精确符号（可用时优先于正则）
+const lspSymbols = ref<Symbol[] | null>(null)
 
 const query = ref('')
 const activeIndex = ref(0)
@@ -56,19 +60,36 @@ const setItemRef = (el: any, i: number) => {
   if (el) itemRefs[i] = el
 }
 
-onMounted(() => {
+// 预选：定位到光标所在（或其上方最近）的符号，打开即落在当前函数
+const preselectAtCursor = () => {
+  if (!props.currentLine || !symbols.value.length) {
+    return
+  }
+  let idx = -1
+  for (let i = 0; i < symbols.value.length; i++) {
+    if (symbols.value[i].line <= props.currentLine) idx = i
+    else break
+  }
+  if (idx >= 0) {
+    activeIndex.value = idx
+    nextTick(() => itemRefs[idx]?.scrollIntoView({block: 'center'}))
+  }
+}
+
+onMounted(async () => {
   inputRef.value?.focus()
-  // 预选：定位到光标所在（或其上方最近）的符号，打开即落在当前函数
-  if (props.currentLine && symbols.value.length) {
-    let idx = -1
-    for (let i = 0; i < symbols.value.length; i++) {
-      if (symbols.value[i].line <= props.currentLine) idx = i
-      else break
+  preselectAtCursor()
+  // 尝试用 LSP documentSymbol 精确符号替换正则结果
+  if (props.view) {
+    try {
+      const syms = await fetchDocumentSymbols(props.view)
+      if (syms && syms.length) {
+        lspSymbols.value = syms.map(s => ({name: s.name, kind: lspSymbolKindLabel(s.kind), line: s.line, depth: s.depth}))
+        activeIndex.value = 0
+        preselectAtCursor()
+      }
     }
-    if (idx >= 0) {
-      activeIndex.value = idx
-      nextTick(() => itemRefs[idx]?.scrollIntoView({block: 'center'}))
-    }
+    catch { /* 回退到正则 */ }
   }
 })
 
@@ -148,7 +169,10 @@ const rulesFor = (fam: string): [RegExp, string, number][] => {
   }
 }
 
-const symbols = computed<Symbol[]>(() => {
+// LSP 符号可用则优先，否则回退到正则提取
+const symbols = computed<Symbol[]>(() => lspSymbols.value ?? regexSymbols.value)
+
+const regexSymbols = computed<Symbol[]>(() => {
   const lines = (props.code || '').split('\n')
   const rules = rulesFor(family.value)
   const raw: { name: string; kind: string; line: number; indent: number }[] = []
