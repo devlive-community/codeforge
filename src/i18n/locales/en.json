@@ -688,6 +688,7 @@
     "generateTests": "AI generate tests (selection or all)",
     "formatWithAi": "AI format code",
     "aiFixDiagnostics": "AI fix diagnostics",
+    "aiGenDoc": "AI generate doc comment",
     "history": "Run history",
     "diff": "Diff (current vs saved)",
     "preview": "Live preview (Markdown / HTML)",
@@ -1147,7 +1148,8 @@
       "explain": "AI: Explain code",
       "refactor": "AI: Refactor code",
       "test": "AI: Generate tests",
-      "fix": "AI: Fix diagnostics"
+      "fix": "AI: Fix diagnostics",
+      "doc": "AI: Generate doc comment"
     },
     "thinking": "AI is thinking…",
     "replace": "Replace selection",
