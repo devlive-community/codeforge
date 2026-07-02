@@ -28,6 +28,7 @@
           <span class="text-sm text-gray-800 dark:text-gray-100 truncate">{{ cmd.label }}</span>
           <span v-if="cmd.group" class="ml-2 text-xs text-gray-400 truncate">{{ cmd.group }}</span>
           <span v-if="cmd.hint" class="ml-auto pl-3 text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 font-mono">{{ cmd.hint }}</span>
+          <Clock v-if="!query.trim() && recentSet.has(cmd.id)" class="ml-2 w-3 h-3 text-gray-300 dark:text-gray-600 flex-shrink-0" :class="{ 'ml-auto': !cmd.hint }"/>
         </button>
       </div>
     </div>
@@ -37,7 +38,8 @@
 <script setup lang="ts">
 import {computed, nextTick, onMounted, ref, watch} from 'vue'
 import {useI18n} from 'vue-i18n'
-import {ChevronRight, Command} from 'lucide-vue-next'
+import {ChevronRight, Clock, Command} from 'lucide-vue-next'
+import {kvGetJSON, kvSetJSON} from '../composables/useKvStore'
 
 const {t} = useI18n()
 
@@ -54,6 +56,10 @@ export interface PaletteCommand
 const props = defineProps<{ commands: PaletteCommand[] }>()
 const emit = defineEmits<{ close: [] }>()
 
+const RECENTS_KEY = 'command-recents'
+const recents = ref<string[]>(kvGetJSON<string[]>(RECENTS_KEY, []))
+const recentSet = computed(() => new Set(recents.value))
+
 const query = ref('')
 const activeIndex = ref(0)
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -68,7 +74,15 @@ onMounted(() => inputRef.value?.focus())
 const filtered = computed<PaletteCommand[]>(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) {
-    return props.commands
+    // 空查询：最近使用的命令置顶（按最近顺序），其余保持原序
+    if (!recents.value.length) {
+      return props.commands
+    }
+    const recentCmds = recents.value
+        .map(id => props.commands.find(c => c.id === id))
+        .filter((c): c is PaletteCommand => !!c)
+    const rest = props.commands.filter(c => !recentSet.value.has(c.id))
+    return [...recentCmds, ...rest]
   }
   return props.commands
       .map(c => {
@@ -107,6 +121,9 @@ const move = (delta: number) => {
 
 const choose = (cmd?: PaletteCommand) => {
   if (cmd) {
+    // 记录到最近使用（去重、置顶、上限 8）
+    recents.value = [cmd.id, ...recents.value.filter(id => id !== cmd.id)].slice(0, 8)
+    kvSetJSON(RECENTS_KEY, recents.value)
     emit('close')
     cmd.run()
   }
