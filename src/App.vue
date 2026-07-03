@@ -420,7 +420,8 @@
 
     <!-- LSP 问题面板 -->
     <DiagnosticsPanel v-if="showDiagnostics"
-                      @go="(line, col) => gotoLine(line, col)"
+                      :current-path="currentFilePath"
+                      @open="openDiagnostic"
                       @close="showDiagnostics = false"/>
 
     <!-- 编辑器 LSP 右键菜单 -->
@@ -551,6 +552,7 @@ import {foldAll, unfoldAll, matchBrackets} from '@codemirror/language'
 import {selectParentSyntax} from '@codemirror/commands'
 import {format as formatSql} from 'sql-formatter'
 import {diagnostics} from './editor/lspDiagnostics'
+import {initDiagnosticsAggregator} from './editor/allDiagnostics'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
 import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
@@ -1581,6 +1583,15 @@ const openSearchResult = async (path: string, line: number) => {
   gotoLine(line)
 }
 
+// 问题面板：打开诊断所在文件并定位
+const openDiagnostic = async (path: string, line: number, col: number) => {
+  if (path && path !== currentFilePath.value) {
+    await smartOpen(path)
+    await nextTick()
+  }
+  gotoLine(line, col)
+}
+
 // LSP 跨文件跳转定义：编辑器扩展派发 lsp:open-location，这里打开目标文件并定位
 const onLspOpenLocation = async (e: Event) => {
   const detail = (e as CustomEvent).detail as {path: string; line: number; character?: number}
@@ -2385,6 +2396,7 @@ useGlobalShortcuts(matchShortcut, shortcutDispatch, isOverlayOpen)
 const {init: initTheme, setTheme: setAppTheme} = useTheme()
 
 onMounted(async () => {
+  initDiagnosticsAggregator()
   await initTheme()
   await initialize()
   await buildLanguageRegistry()
