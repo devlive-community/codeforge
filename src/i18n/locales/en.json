@@ -50,6 +50,7 @@
       "showStickyScroll": "Enable sticky scroll",
       "wordWrap": "Word wrap",
       "showIndentGuides": "Show indent guides",
+      "renderWhitespace": "Render whitespace",
       "tabSize": "Indent size",
       "font": "Editor font",
       "fontSize": "Font size",

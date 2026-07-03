@@ -88,7 +88,7 @@ import {StreamLanguage} from '@codemirror/language'
 import {EditorConfig} from '../types/app.ts'
 import {useCodeMirrorFunctionHelp} from './useCodeMirrorFunctionHelp'
 import {useCodeMirrorSpaceOmission} from './useCodeMirrorSpaceOmission.ts'
-import {EditorView, keymap} from "@codemirror/view";
+import {EditorView, keymap, highlightWhitespace} from "@codemirror/view";
 import {showMinimap} from "@replit/codemirror-minimap";
 import {indentationMarkers} from "@replit/codemirror-indentation-markers";
 import {bookmarkExtension} from "../editor/bookmark";
@@ -707,6 +707,11 @@ export function useCodeMirrorEditor(props: Props)
         // 书签：行高亮，数据由 App 按当前文件 dispatch
         result.push(bookmarkExtension)
 
+        // 渲染空白字符：空格显示为 · 、制表符显示为 →，可在设置中开关
+        if (editorConfig.value?.render_whitespace) {
+            result.push(highlightWhitespace())
+        }
+
         // 断点 gutter + 调试悬停求值（仅可调试语言）
         if (dapSupportsLanguage(props.language)) {
             result.push(breakpointExtension((line) => debug.toggleBreakpoint(props.filePath ?? null, line)))
@@ -849,6 +854,10 @@ export function useCodeMirrorEditor(props: Props)
     })
 
     watch(() => editorConfig.value?.show_indent_guides, async () => {
+        await reRenderEditor()
+    })
+
+    watch(() => editorConfig.value?.render_whitespace, async () => {
         await reRenderEditor()
     })
 
