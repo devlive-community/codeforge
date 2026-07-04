@@ -825,6 +825,14 @@
     "noOutput": "没有输出",
     "noOutputHint": "可以尝试运行一些代码"
   },
+  "launch": {
+    "presets": "运行预设",
+    "namePlaceholder": "预设名称…",
+    "save": "保存",
+    "empty": "还没有运行预设",
+    "emptyInputs": "（空输入）",
+    "delete": "删除"
+  },
   "workspaces": {
     "title": "命名工作区",
     "namePlaceholder": "为当前工作区命名…",

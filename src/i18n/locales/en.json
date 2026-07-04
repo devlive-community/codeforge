@@ -825,6 +825,14 @@
     "noOutput": "No output",
     "noOutputHint": "Try running some code"
   },
+  "launch": {
+    "presets": "Run presets",
+    "namePlaceholder": "Preset name…",
+    "save": "Save",
+    "empty": "No run presets yet",
+    "emptyInputs": "(empty inputs)",
+    "delete": "Delete"
+  },
   "workspaces": {
     "title": "Named workspaces",
     "namePlaceholder": "Name this workspace…",

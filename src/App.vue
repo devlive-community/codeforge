@@ -43,10 +43,13 @@
           <label class="text-[11px] text-gray-400 mb-0.5">{{ t('app.envVars') }}</label>
           <input v-model="runEnv" class="text-xs border border-gray-300 rounded px-2 py-1 font-mono focus:outline-none focus:border-blue-400" :placeholder="t('app.envVarsPlaceholder')"/>
         </div>
-        <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
-          <input v-model="watchMode" type="checkbox" class="cursor-pointer"/>
-          {{ t('app.watchMode') }}
-        </label>
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+            <input v-model="watchMode" type="checkbox" class="cursor-pointer"/>
+            {{ t('app.watchMode') }}
+          </label>
+          <LaunchPresets :args="runArgs" :stdin="runStdin" :env="runEnv" @apply="applyLaunchPreset"/>
+        </div>
       </div>
     </div>
 
@@ -598,6 +601,7 @@ import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import WorkspaceManager from './components/WorkspaceManager.vue'
+import LaunchPresets from './components/LaunchPresets.vue'
 import {useTheme, type AppTheme} from './composables/useTheme'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
@@ -1889,6 +1893,13 @@ const showRunInput = ref(false)
 const runArgs = ref('')
 const runStdin = ref('')
 const runEnv = ref('')
+// 应用运行预设：填充参数/stdin/环境变量
+const applyLaunchPreset = (p: {args: string; stdin: string; env: string}) => {
+  runArgs.value = p.args
+  runStdin.value = p.stdin
+  runEnv.value = p.env
+  showRunInput.value = true
+}
 
 // 监听模式：保存后自动运行
 const watchMode = ref(kvGet('watch-mode') === 'true')
