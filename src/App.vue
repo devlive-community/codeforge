@@ -1403,6 +1403,23 @@ const runTask = async (command: string) => {
   terminalRef.value?.runCommand(command)
 }
 
+// B4：启动当前语言的交互式解释器(REPL)，配合「发送选区到终端」做交互开发
+const REPL_CMDS: Record<string, string> = {
+  python: 'python3', javascript: 'node', nodejs: 'node', typescript: 'node',
+  ruby: 'irb', php: 'php -a', lua: 'lua', r: 'R', scala: 'scala',
+  clojure: 'clj', groovy: 'groovy', elixir: 'iex', erlang: 'erl', perl: 'perl -de1'
+}
+const startRepl = () => {
+  const base = (currentLanguage.value || '').toLowerCase().replace(/\d+$/, '')
+  const cmd = REPL_CMDS[base]
+  if (!cmd) {
+    toast.info(t('app.replUnsupported'))
+    return
+  }
+  runTask(cmd)
+  toast.success(t('app.replStarted', {cmd}))
+}
+
 // B1-P3：开始调试当前文件（需已保存 + 语言可调试）
 const startDebug = async () => {
   const path = currentFilePath.value
@@ -2365,6 +2382,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'runTests', label: t('command.runTests'), icon: ListChecks, run: () => runTests()},
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
+  {id: 'startRepl', label: t('command.startRepl'), icon: TerminalIcon, run: () => startRepl()},
   {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
   {id: 'copyPermalink', label: t('command.copyPermalink'), icon: GitBranch, run: () => copyPermalink()},
   {id: 'openPermalink', label: t('command.openPermalink'), icon: GitBranch, run: () => openPermalink()},
