@@ -691,6 +691,7 @@
     "aiFixDiagnostics": "AI 修复诊断",
     "aiGenDoc": "AI 生成文档注释",
     "aiTranslate": "AI 翻译注释/文档",
+    "aiMultiEdit": "AI 多文件编辑",
     "history": "执行历史",
     "diff": "差异对比（当前 vs 已保存）",
     "preview": "实时预览（Markdown / HTML）",
@@ -1175,6 +1176,19 @@
     "failed": "AI 操作失败：",
     "noCode": "没有可处理的代码"
   },
+  "aiMulti": {
+    "title": "AI 多文件编辑",
+    "instructionPlaceholder": "描述要跨文件完成的修改，例如：把所有 fetch 调用改为使用统一的 request 封装",
+    "contextFiles": "参与的文件（已选 {n} 个）",
+    "cancel": "取消",
+    "generate": "生成修改",
+    "thinking": "AI 思考中…",
+    "back": "返回",
+    "apply": "应用 {n} 个文件",
+    "noChange": "AI 未提出任何修改",
+    "tooLarge": "（文件过大，已跳过差异计算）",
+    "failed": "生成失败："
+  },
   "task": {
     "title": "运行任务",
     "labelPlaceholder": "任务名",
@@ -1377,6 +1391,9 @@
     "noDiagnostics": "当前文件没有诊断问题",
     "replUnsupported": "当前语言暂无内置 REPL",
     "replStarted": "已启动 REPL：{cmd}",
+    "aiMultiNeedFiles": "请先打开需要参与编辑的文件",
+    "aiMultiApplied": "已应用 AI 修改（{n} 个文件）",
+    "aiMultiWriteFailed": "写入 {name} 失败：",
     "sqlFormatted": "SQL 已格式化",
     "sqlFormatFailed": "SQL 格式化失败: ",
     "sqlFormatOnlySql": "仅在 SQL 编辑时可用",

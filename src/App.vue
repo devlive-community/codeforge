@@ -408,6 +408,9 @@
     <AiCodeAction v-if="aiCodeCtx" :language="currentLanguage" :code="aiCodeCtx.code" :action="aiCodeCtx.action" :diagnostics="aiCodeCtx.diagnostics"
                   @replace="onAiReplace" @insert="onAiInsert" @close="aiCodeCtx = null"/>
 
+    <!-- AI 多文件编辑（跨已打开文件） -->
+    <AiMultiEdit v-if="showAiMultiEdit" :files="gatherOpenFiles()" @apply="onAiMultiApply" @close="showAiMultiEdit = false"/>
+
     <!-- .gitignore 模板 -->
     <GitIgnoreTemplates v-if="showGitignore && rootDir" :root-dir="rootDir" @close="showGitignore = false"/>
 
@@ -582,6 +585,7 @@ import GitIgnoreTemplates from './components/GitIgnoreTemplates.vue'
 import DebugToolbar from './components/DebugToolbar.vue'
 import DebugPanel from './components/DebugPanel.vue'
 import AiCodeAction from './components/AiCodeAction.vue'
+import AiMultiEdit from './components/AiMultiEdit.vue'
 import ErDiagram from './components/ErDiagram.vue'
 import TxnControl from './components/TxnControl.vue'
 import {useSqlTxn} from './composables/useSqlTxn'
@@ -1699,6 +1703,54 @@ const pickCodeAction = async (action: any) => {
   }
 }
 
+// ===== AI 多文件编辑（跨已打开文件） =====
+const showAiMultiEdit = ref(false)
+// 收集已打开、且已关联磁盘路径的文件及其当前内容（活动标签取实时内容）
+const gatherOpenFiles = () =>
+  editorTabs.value
+    .filter(tab => tab.filePath)
+    .map(tab => ({
+      path: tab.filePath as string,
+      name: (tab.filePath as string).split(/[\\/]/).pop() || (tab.filePath as string),
+      content: tab.id === activeTabId.value ? code.value : (tab.code ?? '')
+    }))
+const openAiMultiEdit = () => {
+  if (gatherOpenFiles().length === 0) {
+    toast.info(t('app.aiMultiNeedFiles'))
+    return
+  }
+  showAiMultiEdit.value = true
+}
+// 应用 AI 的多文件编辑：写回磁盘并同步内存中的标签内容
+const onAiMultiApply = async (edits: { path: string; content: string }[]) => {
+  let n = 0
+  for (const e of edits) {
+    try {
+      await invoke('write_file_text', {path: e.path, content: e.content})
+      n++
+      for (const tab of editorTabs.value) {
+        if (tab.filePath !== e.path) {
+          continue
+        }
+        if (tab.id === activeTabId.value) {
+          code.value = e.content
+          savedContent.value = e.content
+        }
+        else {
+          tab.code = e.content
+          tab.savedContent = e.content
+        }
+      }
+    }
+    catch (err) {
+      toast.error(t('app.aiMultiWriteFailed', {name: e.path.split(/[\\/]/).pop()}) + err)
+    }
+  }
+  if (n > 0) {
+    toast.success(t('app.aiMultiApplied', {n}))
+  }
+}
+
 // 全局替换后：刷新涉及到的已打开标签（保留有未保存修改的标签）
 const reloadAffectedFiles = async (paths: string[]) => {
   const set = new Set(paths)
@@ -2374,6 +2426,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'aiFixDiagnostics', label: t('command.aiFixDiagnostics'), icon: Sparkles, run: () => aiFixDiagnostics()},
   {id: 'aiGenDoc', label: t('command.aiGenDoc'), icon: Sparkles, run: () => aiCodeAction('doc')},
   {id: 'aiTranslate', label: t('command.aiTranslate'), icon: Sparkles, run: () => aiCodeAction('translate')},
+  {id: 'aiMultiEdit', label: t('command.aiMultiEdit'), icon: Sparkles, run: openAiMultiEdit},
   {id: 'history', label: t('command.history'), icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
   {id: 'compareClipboard', label: t('command.compareClipboard'), icon: GitCompare, run: () => compareWithClipboard()},

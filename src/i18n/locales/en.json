@@ -690,6 +690,8 @@
     "formatWithAi": "AI format code",
     "aiFixDiagnostics": "AI fix diagnostics",
     "aiGenDoc": "AI generate doc comment",
+    "aiTranslate": "AI translate comments/docs",
+    "aiMultiEdit": "AI multi-file edit",
     "history": "Run history",
     "diff": "Diff (current vs saved)",
     "preview": "Live preview (Markdown / HTML)",
@@ -1174,6 +1176,19 @@
     "failed": "AI action failed: ",
     "noCode": "No code to process"
   },
+  "aiMulti": {
+    "title": "AI multi-file edit",
+    "instructionPlaceholder": "Describe the change to make across files, e.g. switch all fetch calls to a shared request wrapper",
+    "contextFiles": "Files in context ({n} selected)",
+    "cancel": "Cancel",
+    "generate": "Generate edits",
+    "thinking": "AI is thinking…",
+    "back": "Back",
+    "apply": "Apply {n} file(s)",
+    "noChange": "AI proposed no changes",
+    "tooLarge": "(file too large, diff skipped)",
+    "failed": "Generation failed: "
+  },
   "task": {
     "title": "Run tasks",
     "labelPlaceholder": "Task name",
@@ -1376,6 +1391,9 @@
     "noDiagnostics": "No diagnostics in the current file",
     "replUnsupported": "No built-in REPL for the current language",
     "replStarted": "REPL started: {cmd}",
+    "aiMultiNeedFiles": "Open the files you want to edit first",
+    "aiMultiApplied": "AI edits applied ({n} file(s))",
+    "aiMultiWriteFailed": "Failed to write {name}: ",
     "sqlFormatted": "SQL formatted",
     "sqlFormatFailed": "SQL format failed: ",
     "sqlFormatOnlySql": "Only available when editing SQL",
