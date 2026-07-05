@@ -1162,7 +1162,8 @@
       "refactor": "AI: Refactor code",
       "test": "AI: Generate tests",
       "fix": "AI: Fix diagnostics",
-      "doc": "AI: Generate doc comment"
+      "doc": "AI: Generate doc comment",
+      "translate": "AI: Translate comments/docs"
     },
     "thinking": "AI is thinking…",
     "replace": "Replace selection",
