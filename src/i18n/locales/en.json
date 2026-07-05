@@ -810,6 +810,7 @@
     "items": "items",
     "keys": "keys",
     "zeroRows": "(0 rows)",
+    "editHint": "Double-click to edit cell",
     "expand": "Expand",
     "collapse": "Collapse",
     "trigger": "Trigger (on)",
@@ -1024,6 +1025,13 @@
     "total": "Total",
     "all": "All",
     "pivotHint": "Drag a field to \"Values\" to build the pivot table"
+  },
+  "sqlEdit": {
+    "confirmTitle": "Confirm write-back",
+    "confirmHint": "The following statement will update the database (the WHERE clause matches the row's original values; identical rows would all be updated):",
+    "confirmRun": "Run update",
+    "failed": "Write-back failed: ",
+    "done": "Updated"
   },
   "about": {
     "title": "About CodeForge",

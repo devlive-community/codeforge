@@ -810,6 +810,7 @@
     "items": "项",
     "keys": "键",
     "zeroRows": "（0 行）",
+    "editHint": "双击编辑单元格",
     "expand": "展开",
     "collapse": "收起",
     "trigger": "触发 (on)",
@@ -1024,6 +1025,13 @@
     "total": "合计",
     "all": "全部",
     "pivotHint": "把字段拖到「值」即可生成透视表"
+  },
+  "sqlEdit": {
+    "confirmTitle": "确认写回",
+    "confirmHint": "将执行以下语句更新数据库（WHERE 依据该行原值定位，若存在完全相同的行会一并更新）：",
+    "confirmRun": "执行更新",
+    "failed": "写回失败：",
+    "done": "已更新"
   },
   "about": {
     "title": "关于 CodeForge",

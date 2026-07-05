@@ -201,8 +201,10 @@
                             :is-running="isRunning"
                             :execution-time="lastExecutionTime"
                             :paging="sqlPaging"
+                            :editable-table="sqlEditableTable"
                             @prev="sqlPrevPage"
                             @next="sqlNextPage"
+                            @edit-cell="onSqlEditCell"
                             @clear="clearOutput"/>
 
               <!-- 数据表 / 图表（CSV / TSV） -->
@@ -324,6 +326,18 @@
           <Button type="secondary" size="sm" @click="showRunPrompt = false">{{ t('app.cancel') }}</Button>
           <Button type="info" size="sm" @click="promptRunCopy">{{ t('app.runCopy') }}</Button>
           <Button size="sm" @click="promptSaveAndRun">{{ t('app.saveAndRun') }}</Button>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- SQL 行内编辑：回写前确认生成的 UPDATE -->
+    <Modal :show="!!pendingSqlUpdate" :title="t('sqlEdit.confirmTitle')" size="md" @update:show="(v) => { if (!v) pendingSqlUpdate = null }">
+      <div v-if="pendingSqlUpdate" class="space-y-3">
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('sqlEdit.confirmHint') }}</p>
+        <pre class="text-xs font-mono bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 whitespace-pre-wrap break-all max-h-60 overflow-auto">{{ pendingSqlUpdate.sql }}</pre>
+        <div class="flex justify-end space-x-2">
+          <Button type="secondary" size="sm" @click="pendingSqlUpdate = null">{{ t('app.cancel') }}</Button>
+          <Button size="sm" @click="runPendingSqlUpdate">{{ t('sqlEdit.confirmRun') }}</Button>
         </div>
       </div>
     </Modal>
@@ -2107,6 +2121,78 @@ const loadSqlPage = async (offset: number, record: boolean) => {
 }
 const sqlPrevPage = () => sqlPage.offset > 0 && loadSqlPage(Math.max(0, sqlPage.offset - SQL_PAGE_SIZE), false)
 const sqlNextPage = () => sqlPage.hasMore && loadSqlPage(sqlPage.offset + SQL_PAGE_SIZE, false)
+
+// ===== SQL 表格行内编辑回写 =====
+// 从当前分页 SQL 解析唯一目标表（单表 SELECT 才允许编辑；含 JOIN/子查询/多表则返回 null）
+const sqlEditableTable = computed<string | null>(() => {
+  if (!sqlPage.active || !sqlPage.sql) {
+    return null
+  }
+  const s = sqlPage.sql.replace(/\s+/g, ' ').trim()
+  const m = /\bfrom\s+([`"[]?[A-Za-z_][\w.]*[`"\]]?)/i.exec(s)
+  if (!m) {
+    return null
+  }
+  if (/\bjoin\b/i.test(s) || /\bfrom\s*\(/i.test(s)) {
+    return null
+  }
+  // FROM 与后续子句之间若出现逗号则为多表，禁止编辑
+  const rest = s.slice(m.index + m[0].length).split(/\bwhere\b|\bgroup\b|\border\b|\blimit\b|\bhaving\b/i)[0]
+  if (rest.includes(',')) {
+    return null
+  }
+  return m[1].replace(/[`"[\]]/g, '')
+})
+
+// 生成 SQL 字面量（跨 SQLite/MySQL/Postgres 的基本类型）
+const sqlLiteral = (v: any): string => {
+  if (v === null || v === undefined) {
+    return 'NULL'
+  }
+  if (typeof v === 'number') {
+    return String(v)
+  }
+  if (typeof v === 'boolean') {
+    return v ? '1' : '0'
+  }
+  return `'${String(v).replace(/'/g, "''")}'`
+}
+
+const pendingSqlUpdate = ref<{ sql: string } | null>(null)
+// 单元格编辑 → 生成 UPDATE（WHERE 用该行全部原值定位）→ 确认后回写
+const onSqlEditCell = (p: { table: string; column: string; row: any[]; columns: string[]; oldValue: any; newValue: any }) => {
+  const where = p.columns
+    .map((col, i) => {
+      const val = p.row[i]
+      return val === null || val === undefined ? `${col} IS NULL` : `${col} = ${sqlLiteral(val)}`
+    })
+    .join(' AND ')
+  const sql = `UPDATE ${p.table} SET ${p.column} = ${sqlLiteral(p.newValue)} WHERE ${where}`
+  pendingSqlUpdate.value = {sql}
+}
+const runPendingSqlUpdate = async () => {
+  const pending = pendingSqlUpdate.value
+  if (!pending) {
+    return
+  }
+  pendingSqlUpdate.value = null
+  try {
+    const source = sqlPage.source ?? resolveActiveSource()
+    const res = sqlTxn.active.value
+      ? await sqlTxn.exec(pending.sql)
+      : await invoke<any>('run_sql', {sql: pending.sql, source})
+    if (res.error) {
+      toast.error(t('sqlEdit.failed') + res.error)
+      return
+    }
+    toast.success(t('sqlEdit.done'))
+    // 回写成功后刷新当前页，保证表格与数据库一致
+    await loadSqlPage(sqlPage.offset, false)
+  }
+  catch (error) {
+    toast.error(t('sqlEdit.failed') + error)
+  }
+}
 
 const runSql = async (sqlOverride?: string) => {
   const sql = sqlOverride ?? code.value
