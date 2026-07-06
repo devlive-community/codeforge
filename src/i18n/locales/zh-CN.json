@@ -1051,6 +1051,8 @@
     "whereEmpty": "拖拽列到此添加条件",
     "orderEmpty": "拖拽列到此排序",
     "groupEmpty": "拖拽列到此分组",
+    "havingEmpty": "拖拽列到此，对聚合结果过滤",
+    "addJoin": "+ 连接表…",
     "noFn": "无函数",
     "aliasPlaceholder": "别名（可选）",
     "autoGroup": "自动分组",

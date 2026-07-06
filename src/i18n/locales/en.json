@@ -1051,6 +1051,8 @@
     "whereEmpty": "Drag a column here to add a condition",
     "orderEmpty": "Drag a column here to sort",
     "groupEmpty": "Drag a column here to group",
+    "havingEmpty": "Drag a column here to filter aggregates",
+    "addJoin": "+ Join table…",
     "noFn": "No function",
     "aliasPlaceholder": "alias (optional)",
     "autoGroup": "Auto group",
