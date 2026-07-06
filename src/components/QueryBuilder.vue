@@ -17,6 +17,29 @@
               <span class="text-[11px] text-gray-400 font-normal">{{ t('qb.dragHint') }}</span>
             </div>
             <div class="flex items-center gap-2">
+              <!-- 已存查询：载入 -->
+              <select v-if="savedList.length" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 focus:outline-none cursor-pointer max-w-[160px]"
+                      :value="''" @change="loadSaved">
+                <option value="" disabled>{{ t('qb.loadSaved') }}</option>
+                <option v-for="s in savedList" :key="s.name" :value="s.name">{{ s.name }}</option>
+              </select>
+              <!-- 保存当前 -->
+              <div class="relative">
+                <button class="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showSave = !showSave">
+                  <Save class="w-3.5 h-3.5"/>{{ t('qb.save') }}
+                </button>
+                <div v-if="showSave" class="absolute right-0 mt-1 z-10 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg p-2 flex flex-col gap-1.5">
+                  <input v-model="saveName" :placeholder="t('qb.savePlaceholder')" @keydown.enter="saveQuery"
+                         class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 focus:outline-none"/>
+                  <button class="text-xs px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer disabled:opacity-40" :disabled="!saveName.trim() || !sql" @click="saveQuery">{{ t('qb.save') }}</button>
+                  <div v-if="savedList.length" class="border-t border-gray-100 dark:border-gray-700 pt-1 max-h-32 overflow-auto">
+                    <div v-for="s in savedList" :key="s.name" class="flex items-center justify-between text-xs px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                      <span class="truncate">{{ s.name }}</span>
+                      <button class="text-gray-400 hover:text-red-500 cursor-pointer" @click="deleteSaved(s.name)"><Trash2 class="w-3 h-3"/></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <button class="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="reset">
                 <RotateCcw class="w-3.5 h-3.5"/>{{ t('qb.reset') }}
               </button>
@@ -249,7 +272,7 @@
 <script setup lang="ts">
 import {computed, nextTick, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {Blocks, GripVertical, RotateCcw, Table2, Trash2, X} from 'lucide-vue-next'
+import {Blocks, GripVertical, RotateCcw, Save, Table2, Trash2, X} from 'lucide-vue-next'
 import {useI18n} from 'vue-i18n'
 import Tooltip from '../ui/Tooltip.vue'
 import {useDbConnections} from '../composables/useDbConnections'
@@ -573,14 +596,13 @@ watch([table, joins, selectItems, distinct, groupBy, wheres, havings, orders, li
 // 把任意（含旧版 {col}）引用规整为 {t,c}
 const asRef = (o: any, fallbackT: string): ColRef => ({t: o?.t ?? fallbackT, c: o?.c ?? o?.col ?? o})
 
-const restoreState = async () => {
-  const saved = kvGetJSON<QbState | null>(stateKey(), null)
-  if (!saved || !tables.value.some(tb => tb.name === saved.table)) {
+// 应用一份持久化状态（供自动恢复与载入已存查询复用）
+const applyState = async (saved: QbState) => {
+  if (!tables.value.some(tb => tb.name === saved.table)) {
     return false
   }
   restoring = true
   table.value = saved.table
-  // 仅恢复 schema 中真实存在的 join
   joins.value = (saved.joins || []).filter(j =>
     tables.value.some(tb => tb.name === j.table) && [saved.table, ...(saved.joins || []).map(x => x.table)].includes(j.leftT))
   const items = saved.selectItems ?? (saved.selectedCols || []).map((c: string) => ({t: saved.table, c, fn: '', alias: ''}))
@@ -594,6 +616,59 @@ const restoreState = async () => {
   await nextTick()
   restoring = false
   return true
+}
+const restoreState = () => {
+  const saved = kvGetJSON<QbState | null>(stateKey(), null)
+  return saved ? applyState(saved) : Promise.resolve(false)
+}
+
+// ---- 已存查询：按数据源命名存取 ----
+interface SavedQuery { name: string; state: QbState }
+const savedKey = () => `qb-saved:${activeRef.value}`
+const savedList = ref<SavedQuery[]>([])
+const saveName = ref('')
+const showSave = ref(false)
+const currentState = (): QbState => ({
+  table: table.value,
+  joins: joins.value,
+  selectItems: selectItems.value,
+  distinct: distinct.value,
+  groupBy: groupBy.value,
+  wheres: wheres.value,
+  havings: havings.value,
+  orders: orders.value,
+  limit: limit.value
+})
+const saveQuery = () => {
+  const name = saveName.value.trim()
+  if (!name) {
+    return
+  }
+  const idx = savedList.value.findIndex(s => s.name === name)
+  const entry = {name, state: currentState()}
+  if (idx >= 0) {
+    savedList.value[idx] = entry
+  }
+  else {
+    savedList.value.push(entry)
+  }
+  kvSetJSON(savedKey(), savedList.value)
+  saveName.value = ''
+  showSave.value = false
+  toast.success(t('qb.savedOk', {name}))
+}
+const loadSaved = async (e: Event) => {
+  const name = (e.target as HTMLSelectElement).value
+  ;(e.target as HTMLSelectElement).value = ''
+  const found = savedList.value.find(s => s.name === name)
+  if (found) {
+    await applyState(found.state)
+    persist()
+  }
+}
+const deleteSaved = (name: string) => {
+  savedList.value = savedList.value.filter(s => s.name !== name)
+  kvSetJSON(savedKey(), savedList.value)
 }
 
 const reset = () => {
@@ -623,6 +698,7 @@ const load = async () => {
       throw new Error(res.error)
     }
     tables.value = groupTables((res.result_sets || [])[0]?.rows || [])
+    savedList.value = kvGetJSON<SavedQuery[]>(savedKey(), [])
     const restored = await restoreState()
     if (!restored && tables.value.length && !tables.value.find(tb => tb.name === table.value)) {
       table.value = tables.value[0].name
