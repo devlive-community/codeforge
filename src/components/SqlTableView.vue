@@ -62,7 +62,8 @@
     </div>
     <!-- 表格视图 -->
     <div v-else class="flex-1 min-h-0 overflow-auto p-2">
-      <SqlResultTable :output="stable" fill-height :empty-text="t('sql.emptyResult', { label: activeLabel() })"/>
+      <SqlResultTable :output="stable" fill-height :editable="!!editableTable" :empty-text="t('sql.emptyResult', { label: activeLabel() })"
+                      @edit-cell="(p) => editableTable && emit('editCell', { table: editableTable, ...p })"/>
     </div>
   </div>
 </template>
@@ -84,8 +85,14 @@ const props = defineProps<{
   isRunning: boolean
   executionTime?: number
   paging?: { active: boolean; offset: number; pageSize: number; hasMore: boolean }
+  editableTable?: string | null
 }>()
-const emit = defineEmits<{ clear: []; prev: []; next: [] }>()
+const emit = defineEmits<{
+  clear: []
+  prev: []
+  next: []
+  editCell: [payload: { table: string; column: string; row: any[]; columns: string[]; oldValue: any; newValue: any }]
+}>()
 
 const {t} = useI18n()
 const viewMode = ref<'table' | 'chart' | 'pivot'>('table')

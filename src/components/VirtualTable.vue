@@ -16,8 +16,23 @@
         <tr v-if="topPad > 0" :style="{height: topPad + 'px'}"><td :colspan="colCount"/></tr>
         <tr v-for="(row, i) in visibleRows" :key="start + i" class="hover:bg-gray-50 dark:hover:bg-gray-800/50" :style="{height: rowHeight + 'px'}">
           <td v-if="showIndex" class="px-2 border-b border-gray-100 dark:border-gray-800 text-gray-400 whitespace-nowrap">{{ start + i + 1 }}</td>
-          <td v-for="(_c, ci) in columns" :key="ci" :style="colStyle(ci)" class="px-3 border-b border-gray-100 dark:border-gray-800 font-mono overflow-hidden whitespace-nowrap text-ellipsis"
-              :class="row[ci] === null || row[ci] === undefined ? 'text-gray-400 italic' : 'text-gray-700 dark:text-gray-300'" :title="fmt(row[ci])">{{ fmt(row[ci]) }}</td>
+          <td v-for="(_c, ci) in columns" :key="ci" :style="colStyle(ci)"
+              class="px-3 border-b border-gray-100 dark:border-gray-800 font-mono overflow-hidden whitespace-nowrap text-ellipsis"
+              :class="[
+                row[ci] === null || row[ci] === undefined ? 'text-gray-400 italic' : 'text-gray-700 dark:text-gray-300',
+                editable ? 'cursor-text' : ''
+              ]"
+              :title="editable ? t('view.editHint') : fmt(row[ci])"
+              @dblclick="editable && beginEdit(row, ci)">
+            <input v-if="editing && editing.row === row && editing.ci === ci"
+                   ref="editInput"
+                   v-model="editValue"
+                   class="w-full bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-blue-400 rounded px-1 py-0 font-mono outline-none"
+                   @keydown.enter.prevent="commitEdit"
+                   @keydown.esc.prevent="cancelEdit"
+                   @blur="commitEdit"/>
+            <template v-else>{{ fmt(row[ci]) }}</template>
+          </td>
         </tr>
         <tr v-if="bottomPad > 0" :style="{height: bottomPad + 'px'}"><td :colspan="colCount"/></tr>
         <tr v-if="rows.length === 0">
@@ -29,10 +44,49 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {useI18n} from 'vue-i18n'
 
 const {t} = useI18n()
+
+// ---- 行内编辑（editable 时双击单元格）----
+const editing = ref<{ row: any[]; ci: number } | null>(null)
+const editValue = ref('')
+const editInput = ref<HTMLInputElement[] | HTMLInputElement>()
+const beginEdit = async (row: any[], ci: number) => {
+  const v = row[ci]
+  editing.value = {row, ci}
+  editValue.value = v === null || v === undefined ? '' : String(v)
+  await nextTick()
+  const el = Array.isArray(editInput.value) ? editInput.value[0] : editInput.value
+  el?.focus()
+  el?.select()
+}
+const cancelEdit = () => { editing.value = null }
+// 依据原值类型对输入做轻量强转：原为数字且新值为数值 → 数字；原为 null 且清空 → 仍 null
+const coerce = (raw: string, old: any): any => {
+  if (raw === '' && (old === null || old === undefined)) {
+    return null
+  }
+  if (typeof old === 'number' && raw.trim() !== '' && !isNaN(Number(raw))) {
+    return Number(raw)
+  }
+  return raw
+}
+const commitEdit = () => {
+  const cur = editing.value
+  if (!cur) {
+    return
+  }
+  editing.value = null
+  const oldValue = cur.row[cur.ci]
+  const newValue = coerce(editValue.value, oldValue)
+  // 值未变化则不触发回写
+  if (newValue === oldValue) {
+    return
+  }
+  emit('editCell', {row: [...cur.row], ci: cur.ci, oldValue, newValue})
+}
 
 const props = withDefaults(defineProps<{
   columns: string[]
@@ -41,7 +95,10 @@ const props = withDefaults(defineProps<{
   showIndex?: boolean
   buffer?: number
   maxHeight?: number
-}>(), {rowHeight: 28, showIndex: true, buffer: 8})
+  editable?: boolean
+}>(), {rowHeight: 28, showIndex: true, buffer: 8, editable: false})
+
+const emit = defineEmits<{ editCell: [payload: { row: any[]; ci: number; oldValue: any; newValue: any }] }>()
 
 const scroller = ref<HTMLElement>()
 const scrollTop = ref(0)

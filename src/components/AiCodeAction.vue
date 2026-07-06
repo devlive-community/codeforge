@@ -22,7 +22,7 @@
       <div class="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
         <button class="text-xs px-3 py-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="emit('close')">{{ t('aiCode.close') }}</button>
         <button v-if="!loading && result" class="text-xs px-3 py-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="copy">{{ t('aiCode.copy') }}</button>
-        <button v-if="!loading && result && (action === 'refactor' || action === 'fix')" class="text-xs px-3 py-1.5 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" @click="apply('replace')">{{ t('aiCode.replace') }}</button>
+        <button v-if="!loading && result && (action === 'refactor' || action === 'fix' || action === 'translate')" class="text-xs px-3 py-1.5 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" @click="apply('replace')">{{ t('aiCode.replace') }}</button>
         <button v-if="!loading && result && (action === 'test' || action === 'doc')" class="text-xs px-3 py-1.5 rounded bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" @click="apply('insert')">{{ t('aiCode.insert') }}</button>
       </div>
     </div>
@@ -37,7 +37,7 @@ import {useI18n} from 'vue-i18n'
 import {useAiConfig} from '../composables/useAiConfig'
 import {useToast} from '../plugins/toast'
 
-const props = defineProps<{ language: string; code: string; action: 'explain' | 'refactor' | 'test' | 'fix' | 'doc'; diagnostics?: string }>()
+const props = defineProps<{ language: string; code: string; action: 'explain' | 'refactor' | 'test' | 'fix' | 'doc' | 'translate'; diagnostics?: string }>()
 const emit = defineEmits<{ replace: [code: string]; insert: [code: string]; close: [] }>()
 
 const toast = useToast()
@@ -66,6 +66,8 @@ const systemFor = (): string => {
       return `你是代码助手。修复给定 ${lang} 代码中的错误与警告（用户消息附带诊断信息），保持其余行为不变。只输出修复后的完整代码，不要解释，不要使用 Markdown 代码块标记。`
     case 'doc':
       return `你是代码助手。为给定的 ${lang} 代码生成规范的文档注释（如 JSDoc/docstring/rustdoc 等，与语言习惯一致）。只输出注释块本身，不要重复原代码，不要解释，不要使用 Markdown 代码块标记。`
+    case 'translate':
+      return `你是翻译助手。把给定内容里的自然语言（注释、文档、字符串描述）在中文与英文之间互译：中文译为英文，英文译为中文。严格保留代码结构、标识符、符号与缩进不变，只翻译其中的自然语言部分。只输出翻译后的完整内容，不要解释，不要使用 Markdown 代码块标记。`
   }
 }
 

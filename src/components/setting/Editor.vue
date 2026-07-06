@@ -32,6 +32,10 @@
       <Switch v-model="editorConfig.show_indent_guides"/>
     </Label>
 
+    <Label :label="t('settings.editor.renderWhitespace')">
+      <Switch v-model="editorConfig.render_whitespace"/>
+    </Label>
+
     <Label :label="t('settings.editor.tabSize')">
       <Number v-model="editorConfig.tab_size" :min="1" :max="8" :placeholder="t('settings.editor.tabSize')"/>
     </Label>

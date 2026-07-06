@@ -41,6 +41,9 @@ pub struct DbConnection {
     pub ssh_password: Option<String>,
     #[serde(default)]
     pub ssh_key_file: Option<String>,
+    // 分组（用于在列表里归类；数据库列名为 grp，避开 SQL 关键字）
+    #[serde(default)]
+    pub group: Option<String>,
 }
 
 pub struct DbConnStore {
@@ -72,6 +75,7 @@ impl DbConnStore {
                 ssh_user TEXT,
                 ssh_password TEXT,
                 ssh_key_file TEXT,
+                grp TEXT,
                 sort_order INTEGER NOT NULL DEFAULT 0
             )",
             [],
@@ -87,6 +91,7 @@ impl DbConnStore {
             "ssh_user TEXT",
             "ssh_password TEXT",
             "ssh_key_file TEXT",
+            "grp TEXT",
         ] {
             let _ = conn.execute(
                 &format!("ALTER TABLE db_connections ADD COLUMN {}", col),
@@ -101,7 +106,7 @@ impl DbConnStore {
 }
 
 const COLUMNS: &str = "id, name, kind, file, host, port, user, password, database, \
-     ssl, ssh_enabled, ssh_host, ssh_port, ssh_user, ssh_password, ssh_key_file";
+     ssl, ssh_enabled, ssh_host, ssh_port, ssh_user, ssh_password, ssh_key_file, grp";
 
 fn row_to_conn(row: &rusqlite::Row) -> rusqlite::Result<DbConnection> {
     Ok(DbConnection {
@@ -121,6 +126,7 @@ fn row_to_conn(row: &rusqlite::Row) -> rusqlite::Result<DbConnection> {
         ssh_user: row.get(13)?,
         ssh_password: row.get(14)?,
         ssh_key_file: row.get(15)?,
+        group: row.get(16)?,
     })
 }
 
@@ -166,40 +172,7 @@ pub async fn db_connection_save(
         conn.execute(
             "UPDATE db_connections SET name=?2, kind=?3, file=?4, host=?5, port=?6, user=?7, \
              password=?8, database=?9, ssl=?10, ssh_enabled=?11, ssh_host=?12, ssh_port=?13, \
-             ssh_user=?14, ssh_password=?15, ssh_key_file=?16 WHERE id=?1",
-            params![
-                c.id,
-                c.name,
-                c.kind,
-                c.file,
-                c.host,
-                c.port,
-                c.user,
-                c.password,
-                c.database,
-                c.ssl,
-                c.ssh_enabled,
-                c.ssh_host,
-                c.ssh_port,
-                c.ssh_user,
-                c.ssh_password,
-                c.ssh_key_file
-            ],
-        )
-        .map_err(|e| format!("更新连接失败: {}", e))?;
-    } else {
-        let next: i64 = conn
-            .query_row(
-                "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM db_connections",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap_or(1);
-        conn.execute(
-            "INSERT INTO db_connections (id, name, kind, file, host, port, user, password, \
-             database, ssl, ssh_enabled, ssh_host, ssh_port, ssh_user, ssh_password, \
-             ssh_key_file, sort_order)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+             ssh_user=?14, ssh_password=?15, ssh_key_file=?16, grp=?17 WHERE id=?1",
             params![
                 c.id,
                 c.name,
@@ -217,6 +190,41 @@ pub async fn db_connection_save(
                 c.ssh_user,
                 c.ssh_password,
                 c.ssh_key_file,
+                c.group
+            ],
+        )
+        .map_err(|e| format!("更新连接失败: {}", e))?;
+    } else {
+        let next: i64 = conn
+            .query_row(
+                "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM db_connections",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap_or(1);
+        conn.execute(
+            "INSERT INTO db_connections (id, name, kind, file, host, port, user, password, \
+             database, ssl, ssh_enabled, ssh_host, ssh_port, ssh_user, ssh_password, \
+             ssh_key_file, grp, sort_order)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+            params![
+                c.id,
+                c.name,
+                c.kind,
+                c.file,
+                c.host,
+                c.port,
+                c.user,
+                c.password,
+                c.database,
+                c.ssl,
+                c.ssh_enabled,
+                c.ssh_host,
+                c.ssh_port,
+                c.ssh_user,
+                c.ssh_password,
+                c.ssh_key_file,
+                c.group,
                 next
             ],
         )

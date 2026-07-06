@@ -61,6 +61,7 @@ export interface EditorConfig
     show_sticky_scroll?: boolean
     word_wrap?: boolean
     show_indent_guides?: boolean
+    render_whitespace?: boolean
     layout?: LayoutMode
     last_direction?: SplitDirection
     max_open_file_size?: number

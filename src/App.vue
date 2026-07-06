@@ -43,10 +43,13 @@
           <label class="text-[11px] text-gray-400 mb-0.5">{{ t('app.envVars') }}</label>
           <input v-model="runEnv" class="text-xs border border-gray-300 rounded px-2 py-1 font-mono focus:outline-none focus:border-blue-400" :placeholder="t('app.envVarsPlaceholder')"/>
         </div>
-        <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
-          <input v-model="watchMode" type="checkbox" class="cursor-pointer"/>
-          {{ t('app.watchMode') }}
-        </label>
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+            <input v-model="watchMode" type="checkbox" class="cursor-pointer"/>
+            {{ t('app.watchMode') }}
+          </label>
+          <LaunchPresets :args="runArgs" :stdin="runStdin" :env="runEnv" @apply="applyLaunchPreset"/>
+        </div>
       </div>
     </div>
 
@@ -101,6 +104,7 @@
                   </span>
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
+                  <QueryBuilder v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
                   <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0" @notice="onTxnNotice"/>
@@ -198,8 +202,10 @@
                             :is-running="isRunning"
                             :execution-time="lastExecutionTime"
                             :paging="sqlPaging"
+                            :editable-table="sqlEditableTable"
                             @prev="sqlPrevPage"
                             @next="sqlNextPage"
+                            @edit-cell="onSqlEditCell"
                             @clear="clearOutput"/>
 
               <!-- 数据表 / 图表（CSV / TSV） -->
@@ -243,6 +249,7 @@
             </span>
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
             <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
+                  <QueryBuilder v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
                   <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0" @notice="onTxnNotice"/>
@@ -321,6 +328,18 @@
           <Button type="secondary" size="sm" @click="showRunPrompt = false">{{ t('app.cancel') }}</Button>
           <Button type="info" size="sm" @click="promptRunCopy">{{ t('app.runCopy') }}</Button>
           <Button size="sm" @click="promptSaveAndRun">{{ t('app.saveAndRun') }}</Button>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- SQL 行内编辑：回写前确认生成的 UPDATE -->
+    <Modal :show="!!pendingSqlUpdate" :title="t('sqlEdit.confirmTitle')" size="md" @update:show="(v) => { if (!v) pendingSqlUpdate = null }">
+      <div v-if="pendingSqlUpdate" class="space-y-3">
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('sqlEdit.confirmHint') }}</p>
+        <pre class="text-xs font-mono bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 whitespace-pre-wrap break-all max-h-60 overflow-auto">{{ pendingSqlUpdate.sql }}</pre>
+        <div class="flex justify-end space-x-2">
+          <Button type="secondary" size="sm" @click="pendingSqlUpdate = null">{{ t('app.cancel') }}</Button>
+          <Button size="sm" @click="runPendingSqlUpdate">{{ t('sqlEdit.confirmRun') }}</Button>
         </div>
       </div>
     </Modal>
@@ -405,6 +424,9 @@
     <AiCodeAction v-if="aiCodeCtx" :language="currentLanguage" :code="aiCodeCtx.code" :action="aiCodeCtx.action" :diagnostics="aiCodeCtx.diagnostics"
                   @replace="onAiReplace" @insert="onAiInsert" @close="aiCodeCtx = null"/>
 
+    <!-- AI 多文件编辑（跨已打开文件） -->
+    <AiMultiEdit v-if="showAiMultiEdit" :files="gatherOpenFiles()" @apply="onAiMultiApply" @close="showAiMultiEdit = false"/>
+
     <!-- .gitignore 模板 -->
     <GitIgnoreTemplates v-if="showGitignore && rootDir" :root-dir="rootDir" @close="showGitignore = false"/>
 
@@ -420,7 +442,8 @@
 
     <!-- LSP 问题面板 -->
     <DiagnosticsPanel v-if="showDiagnostics"
-                      @go="(line, col) => gotoLine(line, col)"
+                      :current-path="currentFilePath"
+                      @open="openDiagnostic"
                       @close="showDiagnostics = false"/>
 
     <!-- 编辑器 LSP 右键菜单 -->
@@ -467,6 +490,7 @@
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('refactor')">{{ t('aiCode.title.refactor') }}</button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('test')">{{ t('aiCode.title.test') }}</button>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('doc')">{{ t('aiCode.title.doc') }}</button>
+        <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiCodeAction('translate')">{{ t('aiCode.title.translate') }}</button>
         <button v-if="canBlame || editorCtx.lsp" class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="aiFixDiagnostics">{{ t('aiCode.title.fix') }}</button>
         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
         <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" @click="sendToTerminal">
@@ -531,6 +555,7 @@ import DataTableView from "./components/DataTableView.vue";
 import XlsxView from "./components/XlsxView.vue";
 import SqlSourceSelect from "./components/SqlSourceSelect.vue";
 import SchemaBrowser from "./components/SchemaBrowser.vue";
+import QueryBuilder from "./components/QueryBuilder.vue";
 import AiSql from "./components/AiSql.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'
@@ -551,6 +576,7 @@ import {foldAll, unfoldAll, matchBrackets} from '@codemirror/language'
 import {selectParentSyntax} from '@codemirror/commands'
 import {format as formatSql} from 'sql-formatter'
 import {diagnostics} from './editor/lspDiagnostics'
+import {initDiagnosticsAggregator} from './editor/allDiagnostics'
 import {useGitPermalink} from './composables/useGitPermalink'
 import {useRevealInTree} from './composables/useRevealInTree'
 import {useWorkspaceRoots} from './composables/useWorkspaceRoots'
@@ -576,6 +602,7 @@ import GitIgnoreTemplates from './components/GitIgnoreTemplates.vue'
 import DebugToolbar from './components/DebugToolbar.vue'
 import DebugPanel from './components/DebugPanel.vue'
 import AiCodeAction from './components/AiCodeAction.vue'
+import AiMultiEdit from './components/AiMultiEdit.vue'
 import ErDiagram from './components/ErDiagram.vue'
 import TxnControl from './components/TxnControl.vue'
 import {useSqlTxn} from './composables/useSqlTxn'
@@ -596,6 +623,7 @@ import AiAssistant from './components/AiAssistant.vue'
 import InlineGenerate from './components/InlineGenerate.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import WorkspaceManager from './components/WorkspaceManager.vue'
+import LaunchPresets from './components/LaunchPresets.vue'
 import {useTheme, type AppTheme} from './composables/useTheme'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
@@ -1397,6 +1425,23 @@ const runTask = async (command: string) => {
   terminalRef.value?.runCommand(command)
 }
 
+// B4：启动当前语言的交互式解释器(REPL)，配合「发送选区到终端」做交互开发
+const REPL_CMDS: Record<string, string> = {
+  python: 'python3', javascript: 'node', nodejs: 'node', typescript: 'node',
+  ruby: 'irb', php: 'php -a', lua: 'lua', r: 'R', scala: 'scala',
+  clojure: 'clj', groovy: 'groovy', elixir: 'iex', erlang: 'erl', perl: 'perl -de1'
+}
+const startRepl = () => {
+  const base = (currentLanguage.value || '').toLowerCase().replace(/\d+$/, '')
+  const cmd = REPL_CMDS[base]
+  if (!cmd) {
+    toast.info(t('app.replUnsupported'))
+    return
+  }
+  runTask(cmd)
+  toast.success(t('app.replStarted', {cmd}))
+}
+
 // B1-P3：开始调试当前文件（需已保存 + 语言可调试）
 const startDebug = async () => {
   const path = currentFilePath.value
@@ -1496,7 +1541,7 @@ const runTests = async () => {
 }
 
 // C2：对选区（无选区则整篇）执行 AI 操作：解释 / 重构 / 生成测试
-const aiCodeCtx = ref<{action: 'explain' | 'refactor' | 'test' | 'fix' | 'doc'; code: string; from: number; to: number; diagnostics?: string} | null>(null)
+const aiCodeCtx = ref<{action: 'explain' | 'refactor' | 'test' | 'fix' | 'doc' | 'translate'; code: string; from: number; to: number; diagnostics?: string} | null>(null)
 // AI 修复诊断：把当前文件的 LSP 诊断交给 AI 修复整篇
 const aiFixDiagnostics = () => {
   closeEditorCtx()
@@ -1511,7 +1556,7 @@ const aiFixDiagnostics = () => {
   const diagText = diagnostics.value.map(d => `[${d.severity}] L${d.line}:${d.col} ${d.message}`).join('\n')
   aiCodeCtx.value = {action: 'fix', code: view.state.doc.toString(), from: 0, to: view.state.doc.length, diagnostics: diagText}
 }
-const aiCodeAction = (action: 'explain' | 'refactor' | 'test' | 'doc') => {
+const aiCodeAction = (action: 'explain' | 'refactor' | 'test' | 'doc' | 'translate') => {
   closeEditorCtx()
   const view = editorView.value
   if (!view) {
@@ -1579,6 +1624,15 @@ const openSearchResult = async (path: string, line: number) => {
   await smartOpen(path)
   await nextTick()
   gotoLine(line)
+}
+
+// 问题面板：打开诊断所在文件并定位
+const openDiagnostic = async (path: string, line: number, col: number) => {
+  if (path && path !== currentFilePath.value) {
+    await smartOpen(path)
+    await nextTick()
+  }
+  gotoLine(line, col)
 }
 
 // LSP 跨文件跳转定义：编辑器扩展派发 lsp:open-location，这里打开目标文件并定位
@@ -1663,6 +1717,54 @@ const pickCodeAction = async (action: any) => {
   }
   catch (err) {
     toast.error(t('app.applyActionFailed') + err)
+  }
+}
+
+// ===== AI 多文件编辑（跨已打开文件） =====
+const showAiMultiEdit = ref(false)
+// 收集已打开、且已关联磁盘路径的文件及其当前内容（活动标签取实时内容）
+const gatherOpenFiles = () =>
+  editorTabs.value
+    .filter(tab => tab.filePath)
+    .map(tab => ({
+      path: tab.filePath as string,
+      name: (tab.filePath as string).split(/[\\/]/).pop() || (tab.filePath as string),
+      content: tab.id === activeTabId.value ? code.value : (tab.code ?? '')
+    }))
+const openAiMultiEdit = () => {
+  if (gatherOpenFiles().length === 0) {
+    toast.info(t('app.aiMultiNeedFiles'))
+    return
+  }
+  showAiMultiEdit.value = true
+}
+// 应用 AI 的多文件编辑：写回磁盘并同步内存中的标签内容
+const onAiMultiApply = async (edits: { path: string; content: string }[]) => {
+  let n = 0
+  for (const e of edits) {
+    try {
+      await invoke('write_file_text', {path: e.path, content: e.content})
+      n++
+      for (const tab of editorTabs.value) {
+        if (tab.filePath !== e.path) {
+          continue
+        }
+        if (tab.id === activeTabId.value) {
+          code.value = e.content
+          savedContent.value = e.content
+        }
+        else {
+          tab.code = e.content
+          tab.savedContent = e.content
+        }
+      }
+    }
+    catch (err) {
+      toast.error(t('app.aiMultiWriteFailed', {name: e.path.split(/[\\/]/).pop()}) + err)
+    }
+  }
+  if (n > 0) {
+    toast.success(t('app.aiMultiApplied', {n}))
   }
 }
 
@@ -1878,6 +1980,13 @@ const showRunInput = ref(false)
 const runArgs = ref('')
 const runStdin = ref('')
 const runEnv = ref('')
+// 应用运行预设：填充参数/stdin/环境变量
+const applyLaunchPreset = (p: {args: string; stdin: string; env: string}) => {
+  runArgs.value = p.args
+  runStdin.value = p.stdin
+  runEnv.value = p.env
+  showRunInput.value = true
+}
 
 // 监听模式：保存后自动运行
 const watchMode = ref(kvGet('watch-mode') === 'true')
@@ -2016,6 +2125,89 @@ const loadSqlPage = async (offset: number, record: boolean) => {
 const sqlPrevPage = () => sqlPage.offset > 0 && loadSqlPage(Math.max(0, sqlPage.offset - SQL_PAGE_SIZE), false)
 const sqlNextPage = () => sqlPage.hasMore && loadSqlPage(sqlPage.offset + SQL_PAGE_SIZE, false)
 
+// ===== SQL 表格行内编辑回写 =====
+// 记录「当前结果集」对应的 SQL 与数据源（分页/非分页/事务都会写入），供编辑回写与刷新使用
+const resultSql = ref('')
+const resultSource = ref<any>(null)
+// 从当前结果 SQL 解析唯一目标表（单表 SELECT 才允许编辑；含 JOIN/子查询/多表则返回 null）
+const sqlEditableTable = computed<string | null>(() => {
+  if (!resultSql.value) {
+    return null
+  }
+  const s = resultSql.value.replace(/\s+/g, ' ').trim()
+  if (!/^(select|with)\b/i.test(s)) {
+    return null
+  }
+  const m = /\bfrom\s+([`"[]?[A-Za-z_][\w.]*[`"\]]?)/i.exec(s)
+  if (!m) {
+    return null
+  }
+  if (/\bjoin\b/i.test(s) || /\bfrom\s*\(/i.test(s)) {
+    return null
+  }
+  // FROM 与后续子句之间若出现逗号则为多表，禁止编辑
+  const rest = s.slice(m.index + m[0].length).split(/\bwhere\b|\bgroup\b|\border\b|\blimit\b|\bhaving\b/i)[0]
+  if (rest.includes(',')) {
+    return null
+  }
+  return m[1].replace(/[`"[\]]/g, '')
+})
+
+// 生成 SQL 字面量（跨 SQLite/MySQL/Postgres 的基本类型）
+const sqlLiteral = (v: any): string => {
+  if (v === null || v === undefined) {
+    return 'NULL'
+  }
+  if (typeof v === 'number') {
+    return String(v)
+  }
+  if (typeof v === 'boolean') {
+    return v ? '1' : '0'
+  }
+  return `'${String(v).replace(/'/g, "''")}'`
+}
+
+const pendingSqlUpdate = ref<{ sql: string } | null>(null)
+// 单元格编辑 → 生成 UPDATE（WHERE 用该行全部原值定位）→ 确认后回写
+const onSqlEditCell = (p: { table: string; column: string; row: any[]; columns: string[]; oldValue: any; newValue: any }) => {
+  const where = p.columns
+    .map((col, i) => {
+      const val = p.row[i]
+      return val === null || val === undefined ? `${col} IS NULL` : `${col} = ${sqlLiteral(val)}`
+    })
+    .join(' AND ')
+  const sql = `UPDATE ${p.table} SET ${p.column} = ${sqlLiteral(p.newValue)} WHERE ${where}`
+  pendingSqlUpdate.value = {sql}
+}
+const runPendingSqlUpdate = async () => {
+  const pending = pendingSqlUpdate.value
+  if (!pending) {
+    return
+  }
+  pendingSqlUpdate.value = null
+  try {
+    const source = resultSource.value ?? sqlPage.source ?? resolveActiveSource()
+    const res = sqlTxn.active.value
+      ? await sqlTxn.exec(pending.sql)
+      : await invoke<any>('run_sql', {sql: pending.sql, source})
+    if (res.error) {
+      toast.error(t('sqlEdit.failed') + res.error)
+      return
+    }
+    toast.success(t('sqlEdit.done'))
+    // 回写成功后刷新结果：分页则重拉当前页，否则按原 SQL 重跑，保证与数据库一致
+    if (sqlPage.active) {
+      await loadSqlPage(sqlPage.offset, false)
+    }
+    else if (resultSql.value) {
+      await runSql(resultSql.value)
+    }
+  }
+  catch (error) {
+    toast.error(t('sqlEdit.failed') + error)
+  }
+}
+
 const runSql = async (sqlOverride?: string) => {
   const sql = sqlOverride ?? code.value
   if (!sql.trim()) {
@@ -2026,6 +2218,8 @@ const runSql = async (sqlOverride?: string) => {
   if (sqlTxn.active.value) {
     output.value = ''
     isSuccess.value = false
+    resultSql.value = sql
+    resultSource.value = null
     if (layoutMode.value === 'editor') {
       showConsole.value = true
     }
@@ -2051,6 +2245,8 @@ const runSql = async (sqlOverride?: string) => {
   const source = resolveActiveSource()
   output.value = ''
   isSuccess.value = false
+  resultSql.value = sql
+  resultSource.value = source
   // 可分页查询：走分页拉取（首页记入历史）
   if (isPageableSql(sql)) {
     sqlPage.active = true
@@ -2333,6 +2529,8 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'formatWithAi', label: t('command.formatWithAi'), icon: Sparkles, run: () => formatWithAi()},
   {id: 'aiFixDiagnostics', label: t('command.aiFixDiagnostics'), icon: Sparkles, run: () => aiFixDiagnostics()},
   {id: 'aiGenDoc', label: t('command.aiGenDoc'), icon: Sparkles, run: () => aiCodeAction('doc')},
+  {id: 'aiTranslate', label: t('command.aiTranslate'), icon: Sparkles, run: () => aiCodeAction('translate')},
+  {id: 'aiMultiEdit', label: t('command.aiMultiEdit'), icon: Sparkles, run: openAiMultiEdit},
   {id: 'history', label: t('command.history'), icon: History, run: () => { showHistory.value = true }},
   {id: 'diff', label: t('command.diff'), icon: GitCompare, run: () => openDiff()},
   {id: 'compareClipboard', label: t('command.compareClipboard'), icon: GitCompare, run: () => compareWithClipboard()},
@@ -2343,6 +2541,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'runTests', label: t('command.runTests'), icon: ListChecks, run: () => runTests()},
   {id: 'startDebug', label: t('command.startDebug'), icon: Play, run: () => startDebug()},
   {id: 'sendToTerminal', label: t('command.sendToTerminal'), icon: TerminalIcon, run: () => sendToTerminal()},
+  {id: 'startRepl', label: t('command.startRepl'), icon: TerminalIcon, run: () => startRepl()},
   {id: 'revealInTree', label: t('command.revealInTree'), icon: FolderOpen, run: () => revealInTree()},
   {id: 'copyPermalink', label: t('command.copyPermalink'), icon: GitBranch, run: () => copyPermalink()},
   {id: 'openPermalink', label: t('command.openPermalink'), icon: GitBranch, run: () => openPermalink()},
@@ -2385,6 +2584,7 @@ useGlobalShortcuts(matchShortcut, shortcutDispatch, isOverlayOpen)
 const {init: initTheme, setTheme: setAppTheme} = useTheme()
 
 onMounted(async () => {
+  initDiagnosticsAggregator()
   await initTheme()
   await initialize()
   await buildLanguageRegistry()

@@ -27,6 +27,8 @@ export interface DbConnection extends DataSource
 {
     id: string
     name: string
+    // 分组名（用于列表归类；空表示未分组）
+    group?: string
 }
 
 const LEGACY_CONN_KEY = 'sql-connections' // 旧版：连接存于 KV 的一个 JSON 数组（已迁移到独立表）

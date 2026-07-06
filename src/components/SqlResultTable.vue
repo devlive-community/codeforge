@@ -15,7 +15,9 @@
       <div v-for="(rs, ri) in result.result_sets" :key="ri" :class="fill ? 'flex-1 min-h-0 flex flex-col' : 'mb-4'">
         <div v-if="result.result_sets.length > 1" class="text-[11px] text-gray-400 mb-1 flex-shrink-0">{{ t('sql.resultSet', { n: ri + 1, rows: rs.rows.length }) }}</div>
         <div class="border border-gray-200 dark:border-gray-700 rounded overflow-hidden" :class="fill ? 'flex-1 min-h-0' : ''">
-          <VirtualTable :columns="rs.columns" :rows="rs.rows" :show-index="false" :max-height="fill ? undefined : 420"/>
+          <VirtualTable :columns="rs.columns" :rows="rs.rows" :show-index="false" :max-height="fill ? undefined : 420"
+                        :editable="editable && fill"
+                        @edit-cell="(p) => emit('editCell', { column: rs.columns[p.ci], row: p.row, columns: rs.columns, oldValue: p.oldValue, newValue: p.newValue })"/>
         </div>
       </div>
 
@@ -37,7 +39,8 @@ const {t} = useI18n()
 interface ResultSet { columns: string[]; rows: any[][] }
 interface SqlResult { result_sets: ResultSet[]; messages: string[]; error: string | null; elapsed_ms: number }
 
-const props = defineProps<{ output: string; emptyText?: string; fillHeight?: boolean }>()
+const props = defineProps<{ output: string; emptyText?: string; fillHeight?: boolean; editable?: boolean }>()
+const emit = defineEmits<{ editCell: [payload: { column: string; row: any[]; columns: string[]; oldValue: any; newValue: any }] }>()
 
 const result = computed<SqlResult | null>(() => {
   if (!props.output.trim()) {

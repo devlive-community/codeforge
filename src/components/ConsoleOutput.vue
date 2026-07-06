@@ -12,6 +12,15 @@
       <div class="flex items-center space-x-3">
         <span v-if="isCopied" class="text-xs text-gray-400">{{ t('console.copied') }}</span>
 
+        <!-- 过滤按钮 -->
+        <button v-if="output"
+                @click="showFilter = !showFilter"
+                class="text-gray-400 hover:text-white transition-colors duration-200 p-1 rounded hover:bg-gray-700 cursor-pointer"
+                :class="{ 'text-white bg-gray-700': showFilter }"
+                :title="t('console.filterTitle')">
+          <Search class="w-3 h-3"/>
+        </button>
+
         <!-- 复制按钮 -->
         <button v-if="output && !isRunning"
                 @click="copyOutput"
@@ -33,6 +42,15 @@
           <span>{{ t('console.ms', { n: executionTime }) }}</span>
         </div>
       </div>
+    </div>
+
+    <!-- 过滤栏：仅显示包含关键字的行 -->
+    <div v-if="showFilter && output" class="px-2 py-1 border-b border-gray-700 flex items-center gap-2">
+      <Search class="w-3 h-3 text-gray-500 flex-shrink-0"/>
+      <input v-model="filterQuery"
+             class="flex-1 bg-transparent text-xs text-gray-200 placeholder-gray-600 focus:outline-none"
+             :placeholder="t('console.filterPlaceholder')"/>
+      <span v-if="filterQuery.trim()" class="text-[10px] text-gray-500 flex-shrink-0">{{ t('console.filterCount', { n: matchCount }) }}</span>
     </div>
 
     <div class="flex-1 overflow-auto" ref="outputContainer">
@@ -63,7 +81,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Clock, Copy, Loader, Terminal, Trash2 } from 'lucide-vue-next'
+import { Check, Clock, Copy, Loader, Search, Terminal, Trash2 } from 'lucide-vue-next'
 import { ansiToHtml } from '../utils/ansi'
 
 const props = defineProps<{
@@ -81,12 +99,31 @@ const {t} = useI18n()
 const isCopied = ref(false)
 const outputContainer = ref<HTMLElement>()
 
+// 输出过滤：仅显示包含关键字的行
+const showFilter = ref(false)
+const filterQuery = ref('')
+const filteredText = computed(() => {
+  const q = filterQuery.value.trim().toLowerCase()
+  const text = props.output || ''
+  if (!showFilter.value || !q) {
+    return text
+  }
+  return text.split('\n').filter(l => l.toLowerCase().includes(q)).join('\n')
+})
+const matchCount = computed(() => {
+  const q = filterQuery.value.trim()
+  if (!q) {
+    return 0
+  }
+  return filteredText.value ? filteredText.value.split('\n').length : 0
+})
+
 // 动态切换图标
 const copyIcon = computed(() => isCopied.value ? Check : Copy)
 
 // 根据执行状态和成功状态确定输出样式
-// 渲染 ANSI 颜色（自带 HTML 转义）
-const renderedOutput = computed(() => ansiToHtml(props.output || ''))
+// 渲染 ANSI 颜色（自带 HTML 转义）；过滤开启时仅渲染匹配行
+const renderedOutput = computed(() => ansiToHtml(filteredText.value))
 
 const getOutputClass = () => {
   if (props.isRunning) {
