@@ -1036,6 +1036,8 @@
   "qb": {
     "title": "查询构建器",
     "dragHint": "从左侧把列拖到下方落区",
+    "dropHere": "松开以添加 {col}",
+    "reset": "清空",
     "loading": "加载表结构中…",
     "noTables": "当前数据源没有可用的表（MySQL 请先选择数据库）",
     "tables": "表",

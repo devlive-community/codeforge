@@ -16,9 +16,14 @@
               <span>{{ t('qb.title') }} · {{ activeLabel() }}</span>
               <span class="text-[11px] text-gray-400 font-normal">{{ t('qb.dragHint') }}</span>
             </div>
-            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="visible = false">
-              <X class="w-4 h-4"/>
-            </button>
+            <div class="flex items-center gap-2">
+              <button class="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="reset">
+                <RotateCcw class="w-3.5 h-3.5"/>{{ t('qb.reset') }}
+              </button>
+              <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="visible = false">
+                <X class="w-4 h-4"/>
+              </button>
+            </div>
           </div>
 
           <div v-if="loading" class="flex-1 flex items-center justify-center text-sm text-gray-400">{{ t('qb.loading') }}</div>
@@ -44,7 +49,7 @@
                 <div v-for="c in currentCols" :key="c.name"
                      draggable="true"
                      class="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs cursor-grab active:cursor-grabbing hover:border-blue-400"
-                     @dragstart="draggedCol = c.name">
+                     @dragstart="onDragStart(c.name)" @dragend="onDragEnd">
                   <GripVertical class="w-3 h-3 text-gray-300 flex-shrink-0"/>
                   <span class="truncate">{{ c.name }}</span>
                   <span class="ml-auto text-[10px] text-gray-400 flex-shrink-0">{{ c.type }}</span>
@@ -58,11 +63,15 @@
               <div class="rounded border transition-colors" :class="zoneClass('select')"
                    @dragover.prevent="dropHover = 'select'" @dragleave="dropHover = ''" @drop="onDropSelect">
                 <div class="px-2.5 py-1 text-[11px] font-medium text-gray-500 flex items-center gap-1">SELECT</div>
-                <div class="px-2.5 pb-2 flex flex-wrap gap-1.5 min-h-[28px]">
-                  <span v-if="selectedCols.length === 0" class="text-xs text-gray-400 italic">{{ t('qb.selectEmpty') }}</span>
+                <div class="px-2.5 pb-2 flex flex-wrap gap-1.5 min-h-[28px] items-center">
+                  <span v-if="selectedCols.length === 0 && !isDragging" class="text-xs text-gray-400 italic">{{ t('qb.selectEmpty') }}</span>
                   <span v-for="(col, i) in selectedCols" :key="col" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs">
                     {{ col }}
                     <button class="hover:text-red-500 cursor-pointer" @click="selectedCols.splice(i, 1)"><X class="w-3 h-3"/></button>
+                  </span>
+                  <span v-if="isDragging" class="border-2 border-dashed rounded px-2 py-0.5 text-xs pointer-events-none transition-colors"
+                        :class="dropHover === 'select' ? 'border-blue-400 text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 text-gray-400'">
+                    {{ t('qb.dropHere', { col: draggedCol }) }}
                   </span>
                 </div>
               </div>
@@ -72,7 +81,11 @@
                    @dragover.prevent="dropHover = 'where'" @dragleave="dropHover = ''" @drop="onDropWhere">
                 <div class="px-2.5 py-1 text-[11px] font-medium text-gray-500">WHERE</div>
                 <div class="px-2.5 pb-2 flex flex-col gap-1.5 min-h-[28px]">
-                  <span v-if="wheres.length === 0" class="text-xs text-gray-400 italic">{{ t('qb.whereEmpty') }}</span>
+                  <span v-if="wheres.length === 0 && !isDragging" class="text-xs text-gray-400 italic">{{ t('qb.whereEmpty') }}</span>
+                  <div v-if="isDragging" class="border-2 border-dashed rounded px-2 py-1 text-xs text-center pointer-events-none transition-colors"
+                       :class="dropHover === 'where' ? 'border-blue-400 text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 text-gray-400'">
+                    {{ t('qb.dropHere', { col: draggedCol }) }}
+                  </div>
                   <div v-for="(w, i) in wheres" :key="i" class="flex items-center gap-1.5">
                     <span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs font-mono">{{ w.col }}</span>
                     <select v-model="w.op" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1.5 py-1 focus:outline-none">
@@ -91,7 +104,11 @@
                    @dragover.prevent="dropHover = 'order'" @dragleave="dropHover = ''" @drop="onDropOrder">
                 <div class="px-2.5 py-1 text-[11px] font-medium text-gray-500">ORDER BY</div>
                 <div class="px-2.5 pb-2 flex flex-wrap gap-1.5 min-h-[28px] items-center">
-                  <span v-if="orders.length === 0" class="text-xs text-gray-400 italic">{{ t('qb.orderEmpty') }}</span>
+                  <span v-if="orders.length === 0 && !isDragging" class="text-xs text-gray-400 italic">{{ t('qb.orderEmpty') }}</span>
+                  <span v-if="isDragging" class="border-2 border-dashed rounded px-2 py-0.5 text-xs pointer-events-none transition-colors"
+                        :class="dropHover === 'order' ? 'border-blue-400 text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 text-gray-400'">
+                    {{ t('qb.dropHere', { col: draggedCol }) }}
+                  </span>
                   <span v-for="(o, i) in orders" :key="o.col" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs">
                     {{ o.col }}
                     <button class="text-blue-500 hover:underline cursor-pointer font-mono" @click="o.dir = o.dir === 'ASC' ? 'DESC' : 'ASC'">{{ o.dir }}</button>
@@ -126,19 +143,20 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue'
+import {computed, nextTick, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {Blocks, GripVertical, Table2, Trash2, X} from 'lucide-vue-next'
+import {Blocks, GripVertical, RotateCcw, Table2, Trash2, X} from 'lucide-vue-next'
 import {useI18n} from 'vue-i18n'
 import Tooltip from '../ui/Tooltip.vue'
 import {useDbConnections} from '../composables/useDbConnections'
+import {kvGetJSON, kvSetJSON} from '../composables/useKvStore'
 import {useToast} from '../plugins/toast'
 import {columnsSql, groupTables, quoteIdent, type Tbl} from '../utils/dbSchema'
 
 const emit = defineEmits<{ preview: [sql: string]; insert: [sql: string] }>()
 const {t} = useI18n()
 const toast = useToast()
-const {resolveActiveSource, activeLabel} = useDbConnections()
+const {resolveActiveSource, activeLabel, activeRef} = useDbConnections()
 
 const OPS = ['=', '!=', '>', '>=', '<', '<=', 'LIKE', 'IS NULL', 'IS NOT NULL']
 
@@ -153,46 +171,111 @@ const wheres = ref<{ col: string; op: string; value: string }[]>([])
 const orders = ref<{ col: string; dir: 'ASC' | 'DESC' }[]>([])
 const limit = ref(100)
 
-// 当前被拖拽的列名 + 悬停中的落区（用于高亮）
+// 当前被拖拽的列名 + 悬停中的落区（用于高亮）+ 是否拖拽中（显示放置提示块）
 const draggedCol = ref('')
 const dropHover = ref('')
+const isDragging = ref(false)
 
 const currentCols = computed(() => tables.value.find(tb => tb.name === table.value)?.columns ?? [])
 
-// 切表时清空所有落区，避免残留其它表的字段
+// 切表时清空所有落区，避免残留其它表的字段（恢复状态期间不触发）
+let restoring = false
 watch(table, () => {
+  if (restoring) {
+    return
+  }
   selectedCols.value = []
   wheres.value = []
   orders.value = []
 })
+
+// ---- 状态记忆：按数据源分别持久化，重开时恢复 ----
+interface QbState {
+  table: string
+  selectedCols: string[]
+  wheres: { col: string; op: string; value: string }[]
+  orders: { col: string; dir: 'ASC' | 'DESC' }[]
+  limit: number
+}
+const stateKey = () => `qb-state:${activeRef.value}`
+const persist = () => {
+  if (restoring || !visible.value || !table.value) {
+    return
+  }
+  kvSetJSON(stateKey(), {
+    table: table.value,
+    selectedCols: selectedCols.value,
+    wheres: wheres.value,
+    orders: orders.value,
+    limit: limit.value
+  })
+}
+watch([table, selectedCols, wheres, orders, limit], persist, {deep: true})
+
+// 从持久化状态恢复（仅保留当前 schema 中仍存在的表/列）
+const restoreState = async () => {
+  const saved = kvGetJSON<QbState | null>(stateKey(), null)
+  if (!saved || !tables.value.some(tb => tb.name === saved.table)) {
+    return false
+  }
+  const cols = new Set((tables.value.find(tb => tb.name === saved.table)?.columns ?? []).map(c => c.name))
+  restoring = true
+  table.value = saved.table
+  selectedCols.value = (saved.selectedCols || []).filter(c => cols.has(c))
+  wheres.value = (saved.wheres || []).filter(w => cols.has(w.col))
+  orders.value = (saved.orders || []).filter(o => cols.has(o.col))
+  limit.value = saved.limit ?? 100
+  await nextTick()
+  restoring = false
+  return true
+}
+
+const reset = () => {
+  restoring = true
+  selectedCols.value = []
+  wheres.value = []
+  orders.value = []
+  limit.value = 100
+  nextTick(() => {
+    restoring = false
+    persist()
+  })
+}
 
 const zoneClass = (zone: string) =>
   dropHover.value === zone
     ? 'border-blue-400 bg-blue-50/50 dark:bg-blue-900/10'
     : 'border-gray-200 dark:border-gray-700'
 
-const onDropSelect = () => {
+const onDragStart = (col: string) => {
+  draggedCol.value = col
+  isDragging.value = true
   dropHover.value = ''
+}
+const onDragEnd = () => {
+  isDragging.value = false
+  dropHover.value = ''
+  draggedCol.value = ''
+}
+const onDropSelect = () => {
   const c = draggedCol.value
   if (c && !selectedCols.value.includes(c)) {
     selectedCols.value.push(c)
   }
-  draggedCol.value = ''
+  onDragEnd()
 }
 const onDropWhere = () => {
-  dropHover.value = ''
   if (draggedCol.value) {
     wheres.value.push({col: draggedCol.value, op: '=', value: ''})
   }
-  draggedCol.value = ''
+  onDragEnd()
 }
 const onDropOrder = () => {
-  dropHover.value = ''
   const c = draggedCol.value
   if (c && !orders.value.some(o => o.col === c)) {
     orders.value.push({col: c, dir: 'ASC'})
   }
-  draggedCol.value = ''
+  onDragEnd()
 }
 
 const kind = () => resolveActiveSource().kind
@@ -241,7 +324,9 @@ const load = async () => {
       throw new Error(res.error)
     }
     tables.value = groupTables((res.result_sets || [])[0]?.rows || [])
-    if (tables.value.length && !tables.value.find(tb => tb.name === table.value)) {
+    // 优先恢复上次内容；无可恢复且当前表无效时回退到第一张表
+    const restored = await restoreState()
+    if (!restored && tables.value.length && !tables.value.find(tb => tb.name === table.value)) {
       table.value = tables.value[0].name
     }
   }

@@ -1036,6 +1036,8 @@
   "qb": {
     "title": "Query builder",
     "dragHint": "Drag columns from the left into the zones below",
+    "dropHere": "Release to add {col}",
+    "reset": "Reset",
     "loading": "Loading schema…",
     "noTables": "No tables in the current source (pick a database first for MySQL)",
     "tables": "Tables",
