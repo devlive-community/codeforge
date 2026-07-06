@@ -2126,12 +2126,18 @@ const sqlPrevPage = () => sqlPage.offset > 0 && loadSqlPage(Math.max(0, sqlPage.
 const sqlNextPage = () => sqlPage.hasMore && loadSqlPage(sqlPage.offset + SQL_PAGE_SIZE, false)
 
 // ===== SQL 表格行内编辑回写 =====
-// 从当前分页 SQL 解析唯一目标表（单表 SELECT 才允许编辑；含 JOIN/子查询/多表则返回 null）
+// 记录「当前结果集」对应的 SQL 与数据源（分页/非分页/事务都会写入），供编辑回写与刷新使用
+const resultSql = ref('')
+const resultSource = ref<any>(null)
+// 从当前结果 SQL 解析唯一目标表（单表 SELECT 才允许编辑；含 JOIN/子查询/多表则返回 null）
 const sqlEditableTable = computed<string | null>(() => {
-  if (!sqlPage.active || !sqlPage.sql) {
+  if (!resultSql.value) {
     return null
   }
-  const s = sqlPage.sql.replace(/\s+/g, ' ').trim()
+  const s = resultSql.value.replace(/\s+/g, ' ').trim()
+  if (!/^(select|with)\b/i.test(s)) {
+    return null
+  }
   const m = /\bfrom\s+([`"[]?[A-Za-z_][\w.]*[`"\]]?)/i.exec(s)
   if (!m) {
     return null
@@ -2180,7 +2186,7 @@ const runPendingSqlUpdate = async () => {
   }
   pendingSqlUpdate.value = null
   try {
-    const source = sqlPage.source ?? resolveActiveSource()
+    const source = resultSource.value ?? sqlPage.source ?? resolveActiveSource()
     const res = sqlTxn.active.value
       ? await sqlTxn.exec(pending.sql)
       : await invoke<any>('run_sql', {sql: pending.sql, source})
@@ -2189,8 +2195,13 @@ const runPendingSqlUpdate = async () => {
       return
     }
     toast.success(t('sqlEdit.done'))
-    // 回写成功后刷新当前页，保证表格与数据库一致
-    await loadSqlPage(sqlPage.offset, false)
+    // 回写成功后刷新结果：分页则重拉当前页，否则按原 SQL 重跑，保证与数据库一致
+    if (sqlPage.active) {
+      await loadSqlPage(sqlPage.offset, false)
+    }
+    else if (resultSql.value) {
+      await runSql(resultSql.value)
+    }
   }
   catch (error) {
     toast.error(t('sqlEdit.failed') + error)
@@ -2207,6 +2218,8 @@ const runSql = async (sqlOverride?: string) => {
   if (sqlTxn.active.value) {
     output.value = ''
     isSuccess.value = false
+    resultSql.value = sql
+    resultSource.value = null
     if (layoutMode.value === 'editor') {
       showConsole.value = true
     }
@@ -2232,6 +2245,8 @@ const runSql = async (sqlOverride?: string) => {
   const source = resolveActiveSource()
   output.value = ''
   isSuccess.value = false
+  resultSql.value = sql
+  resultSource.value = source
   // 可分页查询：走分页拉取（首页记入历史）
   if (isPageableSql(sql)) {
     sqlPage.active = true
