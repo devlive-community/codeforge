@@ -59,20 +59,31 @@
 
             <!-- 右：落区 + SQL 预览 -->
             <div class="flex-1 min-w-0 overflow-auto p-3 flex flex-col gap-3">
-              <!-- SELECT 列 -->
+              <!-- SELECT 列（可套函数 + 别名 + DISTINCT） -->
               <div class="rounded border transition-colors" :class="zoneClass('select')"
                    @dragover.prevent="dropHover = 'select'" @dragleave="dropHover = ''" @drop="onDropSelect">
-                <div class="px-2.5 py-1 text-[11px] font-medium text-gray-500 flex items-center gap-1">SELECT</div>
-                <div class="px-2.5 pb-2 flex flex-wrap gap-1.5 min-h-[28px] items-center">
-                  <span v-if="selectedCols.length === 0 && !isDragging" class="text-xs text-gray-400 italic">{{ t('qb.selectEmpty') }}</span>
-                  <span v-for="(col, i) in selectedCols" :key="col" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs">
-                    {{ col }}
-                    <button class="hover:text-red-500 cursor-pointer" @click="selectedCols.splice(i, 1)"><X class="w-3 h-3"/></button>
-                  </span>
-                  <span v-if="isDragging" class="border-2 border-dashed rounded px-2 py-0.5 text-xs pointer-events-none transition-colors"
-                        :class="dropHover === 'select' ? 'border-blue-400 text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 text-gray-400'">
+                <div class="px-2.5 py-1 text-[11px] font-medium text-gray-500 flex items-center gap-2">
+                  <span>SELECT</span>
+                  <label class="inline-flex items-center gap-1 font-normal cursor-pointer">
+                    <input type="checkbox" v-model="distinct" class="cursor-pointer"/> DISTINCT
+                  </label>
+                </div>
+                <div class="px-2.5 pb-2 flex flex-col gap-1.5 min-h-[28px]">
+                  <span v-if="selectItems.length === 0 && !isDragging" class="text-xs text-gray-400 italic">{{ t('qb.selectEmpty') }}</span>
+                  <div v-if="isDragging" class="border-2 border-dashed rounded px-2 py-1 text-xs text-center pointer-events-none transition-colors"
+                       :class="dropHover === 'select' ? 'border-blue-400 text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 text-gray-400'">
                     {{ t('qb.dropHere', { col: draggedCol }) }}
-                  </span>
+                  </div>
+                  <div v-for="(it, i) in selectItems" :key="i" class="flex items-center gap-1.5">
+                    <select v-model="it.fn" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1.5 py-1 focus:outline-none flex-shrink-0">
+                      <option v-for="fn in FUNCS" :key="fn" :value="fn">{{ fn || t('qb.noFn') }}</option>
+                    </select>
+                    <span class="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs font-mono flex-shrink-0">{{ it.col }}</span>
+                    <span class="text-[11px] text-gray-400 flex-shrink-0">AS</span>
+                    <input v-model="it.alias" :placeholder="t('qb.aliasPlaceholder')"
+                           class="flex-1 min-w-0 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 focus:outline-none"/>
+                    <button class="text-gray-400 hover:text-red-500 cursor-pointer p-1 flex-shrink-0" @click="selectItems.splice(i, 1)"><Trash2 class="w-3.5 h-3.5"/></button>
+                  </div>
                 </div>
               </div>
 
@@ -111,6 +122,26 @@
                     </template>
                     <button class="text-gray-400 hover:text-red-500 cursor-pointer p-1 ml-auto flex-shrink-0" @click="wheres.splice(i, 1)"><Trash2 class="w-3.5 h-3.5"/></button>
                   </div>
+                </div>
+              </div>
+
+              <!-- GROUP BY -->
+              <div class="rounded border transition-colors" :class="zoneClass('group')"
+                   @dragover.prevent="dropHover = 'group'" @dragleave="dropHover = ''" @drop="onDropGroup">
+                <div class="px-2.5 py-1 text-[11px] font-medium text-gray-500 flex items-center gap-2">
+                  <span>GROUP BY</span>
+                  <button v-if="hasAggregate" class="font-normal text-blue-500 hover:underline cursor-pointer" @click="autoGroupBy">{{ t('qb.autoGroup') }}</button>
+                </div>
+                <div class="px-2.5 pb-2 flex flex-wrap gap-1.5 min-h-[28px] items-center">
+                  <span v-if="groupBy.length === 0 && !isDragging" class="text-xs text-gray-400 italic">{{ t('qb.groupEmpty') }}</span>
+                  <span v-if="isDragging" class="border-2 border-dashed rounded px-2 py-0.5 text-xs pointer-events-none transition-colors"
+                        :class="dropHover === 'group' ? 'border-blue-400 text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 text-gray-400'">
+                    {{ t('qb.dropHere', { col: draggedCol }) }}
+                  </span>
+                  <span v-for="(g, i) in groupBy" :key="g" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs font-mono">
+                    {{ g }}
+                    <button class="hover:text-red-500 cursor-pointer" @click="groupBy.splice(i, 1)"><X class="w-3 h-3"/></button>
+                  </span>
                 </div>
               </div>
 
@@ -207,11 +238,18 @@ const loading = ref(false)
 const error = ref('')
 const tables = ref<Tbl[]>([])
 
+// 可用的聚合/函数（'' 表示不套函数）
+const FUNCS = ['', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'COUNT DISTINCT']
+
 const table = ref('')
-const selectedCols = ref<string[]>([])
+const selectItems = ref<{ col: string; fn: string; alias: string }[]>([])
+const distinct = ref(false)
+const groupBy = ref<string[]>([])
 const wheres = ref<{ col: string; op: string; value: string; value2?: string }[]>([])
 const orders = ref<{ col: string; dir: 'ASC' | 'DESC' }[]>([])
 const limit = ref(100)
+
+const hasAggregate = computed(() => selectItems.value.some(it => it.fn))
 
 // 按列名取类型分类 / 该列可用运算符 / 输入框类型
 const colType = (col: string): TypeCat => typeCategory(currentCols.value.find(c => c.name === col)?.type ?? '')
@@ -234,7 +272,9 @@ watch(table, () => {
   if (restoring) {
     return
   }
-  selectedCols.value = []
+  selectItems.value = []
+  distinct.value = false
+  groupBy.value = []
   wheres.value = []
   orders.value = []
 })
@@ -242,10 +282,13 @@ watch(table, () => {
 // ---- 状态记忆：按数据源分别持久化，重开时恢复 ----
 interface QbState {
   table: string
-  selectedCols: string[]
+  selectItems?: { col: string; fn: string; alias: string }[]
+  distinct?: boolean
+  groupBy?: string[]
   wheres: { col: string; op: string; value: string; value2?: string }[]
   orders: { col: string; dir: 'ASC' | 'DESC' }[]
   limit: number
+  selectedCols?: string[] // 旧版本字段，兼容迁移
 }
 const stateKey = () => `qb-state:${activeRef.value}`
 const persist = () => {
@@ -254,13 +297,15 @@ const persist = () => {
   }
   kvSetJSON(stateKey(), {
     table: table.value,
-    selectedCols: selectedCols.value,
+    selectItems: selectItems.value,
+    distinct: distinct.value,
+    groupBy: groupBy.value,
     wheres: wheres.value,
     orders: orders.value,
     limit: limit.value
   })
 }
-watch([table, selectedCols, wheres, orders, limit], persist, {deep: true})
+watch([table, selectItems, distinct, groupBy, wheres, orders, limit], persist, {deep: true})
 
 // 从持久化状态恢复（仅保留当前 schema 中仍存在的表/列）
 const restoreState = async () => {
@@ -269,9 +314,13 @@ const restoreState = async () => {
     return false
   }
   const cols = new Set((tables.value.find(tb => tb.name === saved.table)?.columns ?? []).map(c => c.name))
+  // 优先用新字段；否则从旧版 selectedCols 迁移
+  const items = saved.selectItems ?? (saved.selectedCols || []).map(c => ({col: c, fn: '', alias: ''}))
   restoring = true
   table.value = saved.table
-  selectedCols.value = (saved.selectedCols || []).filter(c => cols.has(c))
+  selectItems.value = items.filter(it => cols.has(it.col))
+  distinct.value = !!saved.distinct
+  groupBy.value = (saved.groupBy || []).filter(c => cols.has(c))
   wheres.value = (saved.wheres || []).filter(w => cols.has(w.col))
   orders.value = (saved.orders || []).filter(o => cols.has(o.col))
   limit.value = saved.limit ?? 100
@@ -282,7 +331,9 @@ const restoreState = async () => {
 
 const reset = () => {
   restoring = true
-  selectedCols.value = []
+  selectItems.value = []
+  distinct.value = false
+  groupBy.value = []
   wheres.value = []
   orders.value = []
   limit.value = 100
@@ -290,6 +341,10 @@ const reset = () => {
     restoring = false
     persist()
   })
+}
+// 自动分组：把 SELECT 中未套聚合函数的列填入 GROUP BY
+const autoGroupBy = () => {
+  groupBy.value = selectItems.value.filter(it => !it.fn).map(it => it.col)
 }
 
 const zoneClass = (zone: string) =>
@@ -309,8 +364,9 @@ const onDragEnd = () => {
 }
 const onDropSelect = () => {
   const c = draggedCol.value
-  if (c && !selectedCols.value.includes(c)) {
-    selectedCols.value.push(c)
+  if (c) {
+    // 允许同列多次加入（可套不同聚合函数）
+    selectItems.value.push({col: c, fn: '', alias: ''})
   }
   onDragEnd()
 }
@@ -328,9 +384,26 @@ const onDropOrder = () => {
   }
   onDragEnd()
 }
+const onDropGroup = () => {
+  const c = draggedCol.value
+  if (c && !groupBy.value.includes(c)) {
+    groupBy.value.push(c)
+  }
+  onDragEnd()
+}
 
 const kind = () => resolveActiveSource().kind
 const q = (name: string) => quoteIdent(kind(), name)
+
+// SELECT 项 → SQL 片段：套函数 + 可选别名
+const itemSql = (it: { col: string; fn: string; alias: string }): string => {
+  const base = it.fn === 'COUNT DISTINCT'
+    ? `COUNT(DISTINCT ${q(it.col)})`
+    : it.fn
+      ? `${it.fn}(${q(it.col)})`
+      : q(it.col)
+  return it.alias.trim() ? `${base} AS ${q(it.alias.trim())}` : base
+}
 
 const strLit = (s: string) => `'${String(s ?? '').replace(/'/g, "''")}'`
 // 按类型生成字面量：布尔→1/0，数字→原样，日期/字符串→带引号转义
@@ -379,11 +452,14 @@ const sql = computed(() => {
   if (!table.value) {
     return ''
   }
-  const cols = selectedCols.value.length === 0 ? '*' : selectedCols.value.map(q).join(', ')
-  let out = `SELECT ${cols} FROM ${q(table.value)}`
+  const cols = selectItems.value.length === 0 ? '*' : selectItems.value.map(itemSql).join(', ')
+  let out = `SELECT ${distinct.value ? 'DISTINCT ' : ''}${cols} FROM ${q(table.value)}`
   const conds = wheres.value.filter(w => w.col).map(condSql).filter(Boolean)
   if (conds.length) {
     out += ' WHERE ' + conds.join(' AND ')
+  }
+  if (groupBy.value.length) {
+    out += ' GROUP BY ' + groupBy.value.map(q).join(', ')
   }
   if (orders.value.length) {
     out += ' ORDER BY ' + orders.value.map(o => `${q(o.col)} ${o.dir}`).join(', ')
