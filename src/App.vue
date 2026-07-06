@@ -434,9 +434,11 @@
     <TaskRunner v-if="showTasks && rootDir" :root-dir="rootDir" @run="runTask" @close="showTasks = false"/>
 
     <!-- Git 源代码管理 -->
-    <GitPanel v-if="showGit && rootDir"
-              :root-dir="rootDir"
+    <GitPanel v-if="showGit && gitRoot"
+              :root-dir="gitRoot"
+              :roots="allRoots"
               @open="smartOpen"
+              @switch-root="activeGitRoot = $event"
               @refresh="refreshGitStatus"
               @close="showGit = false"/>
 
@@ -786,8 +788,16 @@ const rootDir = ref<string | null>(null)
 // 远程仓库永久链接（复制 / 在浏览器打开）
 const {copyPermalink, openPermalink, openRepoOnWeb} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
 
-// 多根工作区：额外挂载的文件夹（Git/搜索仍走主根 rootDir）
+// 多根工作区：额外挂载的文件夹
 const {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots, setExtraRoots} = useWorkspaceRoots(rootDir)
+
+// 活动根：Git 面板针对哪个根（各根独立 Git）；无效时回退主根
+const activeGitRoot = ref<string | null>(null)
+const allRoots = computed(() => [rootDir.value, ...extraRoots.value].filter((r): r is string => !!r))
+const gitRoot = computed(() => {
+  const a = activeGitRoot.value
+  return a && allRoots.value.includes(a) ? a : rootDir.value
+})
 
 // 命名工作区：保存/打开一组根
 const showWorkspaces = ref(false)

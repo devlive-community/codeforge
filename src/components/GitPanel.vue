@@ -7,6 +7,14 @@
     <!-- 头部：分支 + 操作 -->
     <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 min-w-0">
+        <!-- 多根工作区：活动根切换（各根独立 Git） -->
+        <select v-if="roots && roots.length > 1"
+                :value="rootDir"
+                class="bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300 rounded px-1.5 py-0.5 focus:outline-none cursor-pointer max-w-[130px] truncate flex-shrink-0"
+                :title="t('git.switchRoot')"
+                @change="emit('switchRoot', ($event.target as HTMLSelectElement).value)">
+          <option v-for="r in roots" :key="r" :value="r" class="dark:bg-gray-800">{{ baseName(r) }}</option>
+        </select>
         <GitBranch class="w-4 h-4 text-gray-400 flex-shrink-0"/>
         <select v-if="status.is_repo"
                 :value="status.branch"
@@ -372,7 +380,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, h, onBeforeUnmount, onMounted, ref} from 'vue'
+import {computed, h, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {kvGet, kvSet} from '../composables/useKvStore'
 import {invoke} from '@tauri-apps/api/core'
 import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, Webhook, X} from 'lucide-vue-next'
@@ -401,8 +409,10 @@ import {useAiConfig} from '../composables/useAiConfig'
 interface GitFile { path: string; index: string; worktree: string }
 interface GitStatusData { is_repo: boolean; branch: string; ahead: number; behind: number; files: GitFile[] }
 
-const props = defineProps<{ rootDir: string }>()
-const emit = defineEmits<{ close: []; refresh: []; open: [path: string] }>()
+const props = defineProps<{ rootDir: string; roots?: string[] }>()
+const emit = defineEmits<{ close: []; refresh: []; open: [path: string]; switchRoot: [root: string] }>()
+
+const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
 
 // 面板宽度（可拖拽左缘改宽，持久化到 KV）
 const clampWidth = (w: number) => Math.max(360, Math.min(w, Math.max(360, window.innerWidth - 200)))
@@ -929,6 +939,11 @@ const genMessage = async () => {
 }
 
 onMounted(refresh)
+// 活动根切换时重新载入该根的 Git 状态
+watch(() => props.rootDir, () => {
+  branchMenu.value = false
+  refresh()
+})
 
 // 行内小组件：文件名 + 状态字母 + 暂存/取消按钮
 const FileRow = (rowProps: { file: GitFile; staged?: boolean }, {emit: rowEmit }: any) => {

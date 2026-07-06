@@ -352,6 +352,7 @@
   },
   "git": {
     "notRepo": "Not a Git repository",
+    "switchRoot": "Switch workspace root (per-root Git)",
     "opInProgress": "{op} in progress (resolve conflicts then continue, or abort)",
     "opContinue": "Continue",
     "opAbort": "Abort",

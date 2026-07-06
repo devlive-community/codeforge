@@ -352,6 +352,7 @@
   },
   "git": {
     "notRepo": "非 Git 仓库",
+    "switchRoot": "切换工作区根（各根独立 Git）",
     "opInProgress": "{op} 进行中（解决冲突后继续，或中止）",
     "opContinue": "继续",
     "opAbort": "中止",
