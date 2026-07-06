@@ -1054,6 +1054,14 @@
     "havingEmpty": "Drag a column here to filter aggregates",
     "addJoin": "+ Join table…",
     "noFn": "No function",
+    "searchFn": "Search functions…",
+    "noFnMatch": "No matching function",
+    "cat": {
+      "agg": "Aggregate",
+      "string": "String",
+      "date": "Date/Time",
+      "math": "Math"
+    },
     "aliasPlaceholder": "alias (optional)",
     "autoGroup": "Auto group",
     "save": "Save",

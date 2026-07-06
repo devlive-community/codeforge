@@ -1054,6 +1054,14 @@
     "havingEmpty": "拖拽列到此，对聚合结果过滤",
     "addJoin": "+ 连接表…",
     "noFn": "无函数",
+    "searchFn": "搜索函数…",
+    "noFnMatch": "无匹配函数",
+    "cat": {
+      "agg": "聚合",
+      "string": "字符串",
+      "date": "日期时间",
+      "math": "数学"
+    },
     "aliasPlaceholder": "别名（可选）",
     "autoGroup": "自动分组",
     "save": "保存",

@@ -132,9 +132,30 @@
                     {{ t('qb.dropHere', { col: draggedRef?.c }) }}
                   </div>
                   <div v-for="(it, i) in selectItems" :key="i" class="flex items-center gap-1.5">
-                    <select v-model="it.fn" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1.5 py-1 focus:outline-none flex-shrink-0">
-                      <option v-for="fn in FUNCS" :key="fn" :value="fn">{{ fn || t('qb.noFn') }}</option>
-                    </select>
+                    <!-- 函数选择器：可搜索、分类 -->
+                    <div class="relative flex-shrink-0">
+                      <button class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 min-w-[92px] cursor-pointer flex items-center gap-1 hover:border-blue-400" @click="openFnPicker(i)">
+                        <span :class="it.fn ? 'font-mono' : 'text-gray-400'" class="truncate">{{ it.fn || t('qb.noFn') }}</span>
+                        <ChevronDown class="w-3 h-3 ml-auto text-gray-400 flex-shrink-0"/>
+                      </button>
+                      <template v-if="fnPickerIdx === i">
+                        <div class="fixed inset-0 z-10" @click="closeFnPicker"></div>
+                        <div class="absolute left-0 mt-1 z-20 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg p-2">
+                          <input v-model="fnSearch" :placeholder="t('qb.searchFn')" autofocus
+                                 class="w-full text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 mb-1 focus:outline-none"/>
+                          <div class="max-h-56 overflow-auto">
+                            <button class="w-full text-left text-xs px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-500" @click="setFn(i, '')">{{ t('qb.noFn') }}</button>
+                            <template v-for="cat in FUNC_CATS" :key="cat">
+                              <div v-if="funcsInCat(cat).length" class="text-[10px] uppercase tracking-wide text-gray-400 px-1 pt-1.5">{{ catLabel(cat) }}</div>
+                              <button v-for="f in funcsInCat(cat)" :key="f.name"
+                                      class="w-full text-left text-xs px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-mono"
+                                      @click="setFn(i, f.name)">{{ f.name }}</button>
+                            </template>
+                            <div v-if="filteredFuncs.length === 0" class="text-xs text-gray-400 px-2 py-1">{{ t('qb.noFnMatch') }}</div>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
                     <span class="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs font-mono flex-shrink-0">{{ refLabel(it) }}</span>
                     <span class="text-[11px] text-gray-400 flex-shrink-0">AS</span>
                     <input v-model="it.alias" :placeholder="t('qb.aliasPlaceholder')"
@@ -272,7 +293,7 @@
 <script setup lang="ts">
 import {computed, nextTick, ref, watch} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {Blocks, GripVertical, RotateCcw, Save, Table2, Trash2, X} from 'lucide-vue-next'
+import {Blocks, ChevronDown, GripVertical, RotateCcw, Save, Table2, Trash2, X} from 'lucide-vue-next'
 import {useI18n} from 'vue-i18n'
 import Tooltip from '../ui/Tooltip.vue'
 import {useDbConnections} from '../composables/useDbConnections'
@@ -294,9 +315,22 @@ interface Ord extends ColRef { dir: 'ASC' | 'DESC' }
 interface Having extends ColRef { fn: string; op: string; value: string }
 
 const JOIN_TYPES = ['INNER', 'LEFT', 'RIGHT', 'FULL']
-const FUNCS = ['', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'COUNT DISTINCT']
 const AGG_FUNCS = ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX']
 const NUM_OPS = ['=', '!=', '>', '>=', '<', '<=']
+
+// 可用函数（按分类分组，跨方言常见集合）
+interface FuncDef { name: string; cat: string }
+const FUNC_CATS = ['agg', 'string', 'date', 'math']
+const FUNC_DEFS: FuncDef[] = [
+  {name: 'COUNT', cat: 'agg'}, {name: 'COUNT DISTINCT', cat: 'agg'}, {name: 'SUM', cat: 'agg'},
+  {name: 'AVG', cat: 'agg'}, {name: 'MIN', cat: 'agg'}, {name: 'MAX', cat: 'agg'},
+  {name: 'UPPER', cat: 'string'}, {name: 'LOWER', cat: 'string'}, {name: 'LENGTH', cat: 'string'},
+  {name: 'TRIM', cat: 'string'}, {name: 'LTRIM', cat: 'string'}, {name: 'RTRIM', cat: 'string'}, {name: 'REVERSE', cat: 'string'},
+  {name: 'DATE', cat: 'date'}, {name: 'YEAR', cat: 'date'}, {name: 'MONTH', cat: 'date'}, {name: 'DAY', cat: 'date'},
+  {name: 'HOUR', cat: 'date'}, {name: 'MINUTE', cat: 'date'}, {name: 'SECOND', cat: 'date'},
+  {name: 'ABS', cat: 'math'}, {name: 'ROUND', cat: 'math'}, {name: 'CEIL', cat: 'math'},
+  {name: 'FLOOR', cat: 'math'}, {name: 'SQRT', cat: 'math'}, {name: 'SIGN', cat: 'math'}
+]
 
 const OPS_BY_CAT: Record<TypeCat, string[]> = {
   number: ['=', '!=', '>', '>=', '<', '<=', 'BETWEEN', 'IN', 'IS NULL', 'IS NOT NULL'],
@@ -339,6 +373,27 @@ const orders = ref<Ord[]>([])
 const limit = ref(100)
 
 const hasAggregate = computed(() => selectItems.value.some(it => it.fn))
+
+// ---- 函数选择器（可搜索、按分类分组） ----
+const fnPickerIdx = ref<number | null>(null)
+const fnSearch = ref('')
+const openFnPicker = (i: number) => {
+  fnPickerIdx.value = i
+  fnSearch.value = ''
+}
+const closeFnPicker = () => {
+  fnPickerIdx.value = null
+}
+const setFn = (i: number, name: string) => {
+  selectItems.value[i].fn = name
+  closeFnPicker()
+}
+const filteredFuncs = computed(() => {
+  const kw = fnSearch.value.trim().toLowerCase()
+  return kw ? FUNC_DEFS.filter(f => f.name.toLowerCase().includes(kw)) : FUNC_DEFS
+})
+const funcsInCat = (cat: string) => filteredFuncs.value.filter(f => f.cat === cat)
+const catLabel = (cat: string) => t('qb.cat.' + cat)
 
 // ---- 表 / 列 基础 ----
 const colsOf = (tableName: string): Col[] => tables.value.find(tb => tb.name === tableName)?.columns ?? []
