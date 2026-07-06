@@ -1,8 +1,17 @@
 <template>
   <div class="-mt-1">
-    <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
-      {{ t('settings.database.desc') }}
-    </p>
+    <div class="flex items-center justify-between mb-3 gap-3">
+      <p class="text-sm text-gray-600 dark:text-gray-300">
+        {{ t('settings.database.desc') }}
+      </p>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <label class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none" :title="t('settings.database.includePasswordsHint')">
+          <input type="checkbox" v-model="includePasswords" class="cursor-pointer"/>{{ t('settings.database.includePasswords') }}
+        </label>
+        <Button size="sm" type="secondary" :icon="Download" @click="exportConnections">{{ t('settings.database.export') }}</Button>
+        <Button size="sm" type="secondary" :icon="Upload" @click="importConnections">{{ t('settings.database.import') }}</Button>
+      </div>
+    </div>
 
     <!-- 主从布局：左侧连接列表 + 右侧表单 -->
     <div class="flex gap-4 items-start">
@@ -121,8 +130,8 @@
 <script setup lang="ts">
 import {computed, reactive, ref} from 'vue'
 import {invoke} from '@tauri-apps/api/core'
-import {open} from '@tauri-apps/plugin-dialog'
-import {Plus, Trash2} from 'lucide-vue-next'
+import {open, save} from '@tauri-apps/plugin-dialog'
+import {Download, Plus, Trash2, Upload} from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
 import Select from '../../ui/Select.vue'
 import Input from '../../ui/Input.vue'
@@ -268,6 +277,57 @@ const pickKeyFile = async () => {
   const selected = await open({multiple: false})
   if (typeof selected === 'string') {
     form.sshKeyFile = selected
+  }
+}
+
+// ---- 导入 / 导出 ----
+const includePasswords = ref(false)
+const exportConnections = async () => {
+  if (!connections.value.length) {
+    toast.info(t('settings.database.noConnections'))
+    return
+  }
+  // 去掉 id（导入时重新生成）；默认不含密码，避免明文外泄
+  const data = connections.value.map((c) => {
+    const {id: _id, password, sshPassword, ...rest} = c
+    return includePasswords.value ? {...rest, password, sshPassword} : rest
+  })
+  try {
+    const path = await save({defaultPath: 'codeforge-connections.json', filters: [{name: 'JSON', extensions: ['json']}]})
+    if (!path) {
+      return
+    }
+    await invoke('write_file_text', {path, content: JSON.stringify(data, null, 2)})
+    toast.success(t('settings.database.exported', {n: data.length}))
+  }
+  catch (e: any) {
+    toast.error(t('settings.database.exportFailed') + String(e?.message || e))
+  }
+}
+const importConnections = async () => {
+  const selected = await open({multiple: false, filters: [{name: 'JSON', extensions: ['json']}]})
+  if (typeof selected !== 'string') {
+    return
+  }
+  try {
+    const text = await invoke<string>('read_file_text', {path: selected, maxSizeMb: 10})
+    const arr = JSON.parse(text)
+    if (!Array.isArray(arr)) {
+      throw new Error(t('settings.database.importBadFormat'))
+    }
+    let n = 0
+    for (const c of arr) {
+      if (!c || !c.kind || !c.name) {
+        continue
+      }
+      const {id: _id, ...rest} = c
+      add(rest)
+      n++
+    }
+    toast.success(t('settings.database.imported', {n}))
+  }
+  catch (e: any) {
+    toast.error(t('settings.database.importFailed') + String(e?.message || e))
   }
 }
 
