@@ -1048,6 +1048,26 @@
     "all": "All",
     "pivotHint": "Drag a field to \"Values\" to build the pivot table"
   },
+  "gh": {
+    "prs": "Pull Requests",
+    "issues": "Issues",
+    "refresh": "Refresh",
+    "needToken": "Configure a token first in Settings → General → GitHub",
+    "newPr": "New Pull Request",
+    "newIssue": "New Issue",
+    "titlePlaceholder": "Title",
+    "bodyPlaceholder": "Description (optional, Markdown supported)",
+    "from": "from",
+    "draft": "Draft",
+    "createPr": "Create PR",
+    "createIssue": "Create Issue",
+    "submitting": "Submitting…",
+    "loading": "Loading…",
+    "noPrs": "No open pull requests",
+    "noIssues": "No open issues",
+    "prCreated": "Created PR #{n}",
+    "issueCreated": "Created Issue #{n}"
+  },
   "conflict": {
     "title": "Resolve conflicts",
     "remaining": "{n} unresolved",

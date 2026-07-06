@@ -1048,6 +1048,26 @@
     "all": "全部",
     "pivotHint": "把字段拖到「值」即可生成透视表"
   },
+  "gh": {
+    "prs": "Pull Requests",
+    "issues": "Issues",
+    "refresh": "刷新",
+    "needToken": "请先在「设置 → 通用 → GitHub」配置 Token",
+    "newPr": "新建 Pull Request",
+    "newIssue": "新建 Issue",
+    "titlePlaceholder": "标题",
+    "bodyPlaceholder": "描述（可选，支持 Markdown）",
+    "from": "从",
+    "draft": "草稿",
+    "createPr": "创建 PR",
+    "createIssue": "创建 Issue",
+    "submitting": "提交中…",
+    "loading": "加载中…",
+    "noPrs": "没有开放的 Pull Request",
+    "noIssues": "没有开放的 Issue",
+    "prCreated": "已创建 PR #{n}",
+    "issueCreated": "已创建 Issue #{n}"
+  },
   "conflict": {
     "title": "解决冲突",
     "remaining": "剩余 {n} 处未解决",

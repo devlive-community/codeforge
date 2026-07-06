@@ -76,25 +76,12 @@
         </div>
       </template>
       <div class="flex items-center gap-2 flex-shrink-0">
-        <!-- GitHub Pull Request -->
-        <div v-if="status.is_repo && githubBase" class="relative">
-          <Tooltip :text="t('git.pr.title')">
-            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click.stop="prMenu = !prMenu">
-              <GitPullRequest class="w-4 h-4"/>
-            </button>
-          </Tooltip>
-          <template v-if="prMenu">
-            <div class="fixed inset-0 z-40" @click="prMenu = false"/>
-            <div class="absolute right-0 top-7 z-50 w-52 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 text-sm">
-              <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2" @click="createPr">
-                <GitPullRequest class="w-3.5 h-3.5 text-gray-400"/>{{ t('git.pr.create') }}
-              </button>
-              <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2" @click="viewPrs">
-                <Cloud class="w-3.5 h-3.5 text-gray-400"/>{{ t('git.pr.list') }}
-              </button>
-            </div>
-          </template>
-        </div>
+        <!-- GitHub PR / Issue（应用内管理） -->
+        <Tooltip v-if="status.is_repo && ghRepo" :text="t('git.pr.title')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showGithub = true">
+            <GitPullRequest class="w-4 h-4"/>
+          </button>
+        </Tooltip>
         <Tooltip v-if="status.is_repo" :text="t('git.remoteTitle')">
           <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showRemotes = true">
             <Cloud class="w-4 h-4"/>
@@ -395,6 +382,9 @@
   <ConflictResolver v-if="conflictFile" :root-dir="rootDir" :rel-path="conflictFile"
                     @open="p => { openFile(p); conflictFile = null }" @resolved="refresh" @close="conflictFile = null"/>
 
+  <!-- GitHub PR / Issue -->
+  <GitHubPanel v-if="showGithub && ghRepo" :owner="ghRepo.owner" :repo="ghRepo.repo" :branch="status.branch" @close="showGithub = false"/>
+
   <!-- 单文件改动对比：HEAD vs 工作区 -->
   <DiffView v-if="diffFile"
             :original="diffFile.original"
@@ -409,7 +399,6 @@
 import {computed, h, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {kvGet, kvSet} from '../composables/useKvStore'
 import {invoke} from '@tauri-apps/api/core'
-import {open as openExternalUrl} from '@tauri-apps/plugin-shell'
 import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, GitPullRequest, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, Webhook, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
@@ -419,6 +408,7 @@ import GitLog from './GitLog.vue'
 import GitReflog from './GitReflog.vue'
 import GitCompare from './GitCompare.vue'
 import ConflictResolver from './ConflictResolver.vue'
+import GitHubPanel from './GitHubPanel.vue'
 import GitStash from './GitStash.vue'
 import GitTags from './GitTags.vue'
 import GitRemotes from './GitRemotes.vue'
@@ -442,9 +432,9 @@ const emit = defineEmits<{ close: []; refresh: []; open: [path: string]; switchR
 
 const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
 
-// ===== GitHub PR 集成（浏览器打开创建/查看 PR，无需鉴权）=====
-const githubBase = ref<string | null>(null)
-const prMenu = ref(false)
+// ===== GitHub PR / Issue 集成（用配置的 token 在应用内管理）=====
+const showGithub = ref(false)
+const ghRepo = ref<{ owner: string; repo: string } | null>(null)
 const remoteToWebUrl = (raw: string): string | null => {
   let u = raw.trim().replace(/\.git$/, '')
   const scp = u.match(/^git@([^:]+):(.+)$/)
@@ -459,22 +449,11 @@ const detectGithub = async () => {
     const remotes = await invoke<{ name: string; url: string }[]>('git_remotes', {root: props.rootDir})
     const origin = remotes.find(r => r.name === 'origin') || remotes[0]
     const web = origin && remoteToWebUrl(origin.url)
-    githubBase.value = web && /(^|\/\/)github\.com\//.test(web) ? web : null
+    const m = web && web.match(/github\.com\/([^/]+)\/([^/]+)/)
+    ghRepo.value = m ? {owner: m[1], repo: m[2]} : null
   }
   catch {
-    githubBase.value = null
-  }
-}
-const createPr = () => {
-  prMenu.value = false
-  if (githubBase.value && status.value.branch) {
-    openExternalUrl(`${githubBase.value}/compare/${encodeURIComponent(status.value.branch)}?expand=1`)
-  }
-}
-const viewPrs = () => {
-  prMenu.value = false
-  if (githubBase.value) {
-    openExternalUrl(`${githubBase.value}/pulls`)
+    ghRepo.value = null
   }
 }
 
@@ -590,7 +569,7 @@ const refresh = async () => {
     }
     else {
       opState.value = 'none'
-      githubBase.value = null
+      ghRepo.value = null
     }
     emit('refresh')
   }

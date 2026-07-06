@@ -16,6 +16,7 @@ mod env_manager;
 mod env_providers;
 mod example;
 mod execution;
+mod github;
 mod filesystem;
 mod font;
 mod geo;
@@ -257,6 +258,10 @@ fn main() {
             git_checkout_track,
             git_merge,
             git_resolve_side,
+            github::github_list_prs,
+            github::github_create_pr,
+            github::github_list_issues,
+            github::github_create_issue,
             git_blame,
             git_file_head,
             git_log,
