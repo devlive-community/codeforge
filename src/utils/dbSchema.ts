@@ -1,5 +1,25 @@
-// 按数据库类型构造「列」与「外键」查询。用于 schema 浏览 / ER 图。
+// 按数据库类型构造「列」与「外键」查询。用于 schema 浏览 / ER 图 / 查询构建器。
 const esc = (s: string) => s.replace(/'/g, "''")
+
+export interface Col { name: string; type: string }
+export interface Tbl { name: string; columns: Col[] }
+
+// 标识符引用（MySQL/ClickHouse 用反引号，其余用双引号）
+export const quoteIdent = (kind: string, name: string) =>
+  kind === 'mysql' || kind === 'clickhouse' ? `\`${name}\`` : `"${name}"`
+
+// 把 columnsSql 返回的 (tbl, col, typ) 行分组为按表聚合的结构
+export const groupTables = (rows: any[][]): Tbl[] => {
+  const map = new Map<string, Tbl>()
+  for (const row of rows) {
+    const tbl = String(row[0])
+    if (!map.has(tbl)) {
+      map.set(tbl, {name: tbl, columns: []})
+    }
+    map.get(tbl)!.columns.push({name: String(row[1]), type: String(row[2] ?? '')})
+  }
+  return [...map.values()]
+}
 
 // 返回 (tbl, col, typ) 行
 export function columnsSql(kind: string, db?: string): string {

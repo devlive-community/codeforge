@@ -1033,6 +1033,26 @@
     "failed": "Write-back failed: ",
     "done": "Updated"
   },
+  "qb": {
+    "title": "Query builder",
+    "loading": "Loading schema…",
+    "noTables": "No tables in the current source (pick a database first for MySQL)",
+    "table": "Table",
+    "columns": "Columns",
+    "allColumns": "All columns (*)",
+    "where": "Where",
+    "pickColumn": "Pick column",
+    "value": "Value",
+    "addCondition": "Add condition",
+    "orderBy": "Order by",
+    "noOrder": "No order",
+    "limit": "Limit",
+    "preview": "SQL preview",
+    "copy": "Copy",
+    "copied": "SQL copied",
+    "insert": "Insert to editor",
+    "run": "Run"
+  },
   "about": {
     "title": "About CodeForge",
     "tagline": "CodeForge is a lightweight, high-performance desktop code runner designed for developers, students and coding enthusiasts.",

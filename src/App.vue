@@ -104,6 +104,7 @@
                   </span>
                   <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
+                  <QueryBuilder v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
                   <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0" @notice="onTxnNotice"/>
@@ -248,6 +249,7 @@
             </span>
             <SqlSourceSelect v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
             <SchemaBrowser v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
+                  <QueryBuilder v-if="currentLanguage === 'sql'" class="flex-shrink-0" @preview="previewTable" @insert="insertAtCursor"/>
                   <AiSql v-if="currentLanguage === 'sql'" class="flex-shrink-0" @generated="insertAtCursor"/>
                   <ErDiagram v-if="currentLanguage === 'sql'" class="flex-shrink-0"/>
                   <TxnControl v-if="currentLanguage === 'sql'" class="flex-shrink-0" @notice="onTxnNotice"/>
@@ -553,6 +555,7 @@ import DataTableView from "./components/DataTableView.vue";
 import XlsxView from "./components/XlsxView.vue";
 import SqlSourceSelect from "./components/SqlSourceSelect.vue";
 import SchemaBrowser from "./components/SchemaBrowser.vue";
+import QueryBuilder from "./components/QueryBuilder.vue";
 import AiSql from "./components/AiSql.vue";
 import StatusBar from './components/StatusBar.vue'
 import About from './components/About.vue'

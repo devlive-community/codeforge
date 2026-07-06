@@ -1033,6 +1033,26 @@
     "failed": "写回失败：",
     "done": "已更新"
   },
+  "qb": {
+    "title": "查询构建器",
+    "loading": "加载表结构中…",
+    "noTables": "当前数据源没有可用的表（MySQL 请先选择数据库）",
+    "table": "表",
+    "columns": "列",
+    "allColumns": "全部列 (*)",
+    "where": "条件",
+    "pickColumn": "选择列",
+    "value": "值",
+    "addCondition": "添加条件",
+    "orderBy": "排序",
+    "noOrder": "不排序",
+    "limit": "限制",
+    "preview": "SQL 预览",
+    "copy": "复制",
+    "copied": "已复制 SQL",
+    "insert": "插入编辑器",
+    "run": "运行"
+  },
   "about": {
     "title": "关于 CodeForge",
     "tagline": "CodeForge 是一款轻量级、高性能的桌面代码执行器，专为开发者、学生和编程爱好者设计。",
