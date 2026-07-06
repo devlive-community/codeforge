@@ -1066,13 +1066,17 @@
     "havingEmpty": "拖拽列到此，对聚合结果过滤",
     "addJoin": "+ 连接表…",
     "noFn": "无函数",
-    "searchFn": "搜索函数…",
-    "noFnMatch": "无匹配函数",
+    "searchFn": "搜索或输入函数名…",
+    "noFnMatch": "无匹配函数（可直接输入使用）",
+    "useCustom": "使用 “{name}”",
+    "argsPlaceholder": "参数",
+    "argsHint": "额外参数，原样拼到列后面，如 1, 3 或 ',', 1",
     "cat": {
       "agg": "聚合",
       "string": "字符串",
       "date": "日期时间",
-      "math": "数学"
+      "math": "数学",
+      "convert": "转换/空值"
     },
     "aliasPlaceholder": "别名（可选）",
     "autoGroup": "自动分组",
