@@ -51,6 +51,15 @@
 
           <div v-if="loading" class="flex-1 flex items-center justify-center text-sm text-gray-400">{{ t('qb.loading') }}</div>
           <div v-else-if="error" class="flex-1 flex items-center justify-center text-sm text-red-500 px-6 text-center">{{ error }}</div>
+          <!-- MySQL 连接未指定库：先选库 -->
+          <div v-else-if="srcNoDb && !pickedDb" class="flex-1 flex flex-col items-center justify-center gap-3 text-sm text-gray-400 px-6 text-center">
+            <span>{{ t('qb.pickDbFirst') }}</span>
+            <select class="text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 focus:outline-none cursor-pointer min-w-[200px]"
+                    :value="''" @change="onPickDb($event)">
+              <option value="" disabled>{{ t('qb.selectDb') }}</option>
+              <option v-for="d in databases" :key="d" :value="d">{{ d }}</option>
+            </select>
+          </div>
           <div v-else-if="tables.length === 0" class="flex-1 flex items-center justify-center text-sm text-gray-400 px-6 text-center">{{ t('qb.noTables') }}</div>
 
           <div v-else class="flex-1 flex min-h-0">
@@ -82,6 +91,12 @@
               <div class="rounded border border-gray-200 dark:border-gray-700">
                 <div class="px-2.5 py-1 text-[11px] font-medium text-gray-500">FROM / JOIN</div>
                 <div class="px-2.5 pb-2 flex flex-col gap-1.5">
+                  <div v-if="srcNoDb" class="flex items-center gap-1.5">
+                    <span class="text-[11px] text-gray-400 w-10 flex-shrink-0">{{ t('qb.db') }}</span>
+                    <select :value="pickedDb" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 focus:outline-none min-w-[160px]" @change="onPickDb($event)">
+                      <option v-for="d in databases" :key="d" :value="d">{{ d }}</option>
+                    </select>
+                  </div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-[11px] text-gray-400 w-10 flex-shrink-0">FROM</span>
                     <select v-model="table" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 focus:outline-none min-w-[160px]">
@@ -332,6 +347,11 @@ const loading = ref(false)
 const error = ref('')
 const tables = ref<Tbl[]>([])
 
+// MySQL 连接未指定库时：需先在构建器内选库
+const srcNoDb = ref(false)
+const databases = ref<string[]>([])
+const pickedDb = ref('')
+
 const table = ref('')
 const joins = ref<Join[]>([])
 const selectItems = ref<SelItem[]>([])
@@ -475,6 +495,8 @@ watch(table, () => {
 const kind = () => resolveActiveSource().kind
 const q = (name: string) => quoteIdent(kind(), name)
 const qRef = (r: ColRef) => (multiTable.value ? `${q(r.t)}.${q(r.c)}` : q(r.c))
+// FROM/JOIN 表名：连接未指定库时用 库.表 限定
+const qTable = (name: string) => (srcNoDb.value && pickedDb.value ? `${q(pickedDb.value)}.${q(name)}` : q(name))
 
 // 列引用 + 可选函数与额外参数：fn(col, args)
 const exprSql = (r: ColRef & { fn?: string; args?: string }) => wrapFunc(qRef(r), r.fn, r.args)
@@ -540,9 +562,9 @@ const sql = computed(() => {
     return ''
   }
   const cols = selectItems.value.length === 0 ? '*' : selectItems.value.map(itemSql).join(', ')
-  let out = `SELECT ${distinct.value ? 'DISTINCT ' : ''}${cols} FROM ${q(table.value)}`
+  let out = `SELECT ${distinct.value ? 'DISTINCT ' : ''}${cols} FROM ${qTable(table.value)}`
   for (const j of joins.value) {
-    out += ` ${j.type} JOIN ${q(j.table)} ON ${qRef({t: j.leftT, c: j.leftC})} = ${q(j.table)}.${q(j.rightC)}`
+    out += ` ${j.type} JOIN ${qTable(j.table)} ON ${qRef({t: j.leftT, c: j.leftC})} = ${q(j.table)}.${q(j.rightC)}`
   }
   const conds = wheres.value.map(condSql).filter(Boolean)
   if (conds.length) {
@@ -567,6 +589,7 @@ const sql = computed(() => {
 // ---- 状态记忆：按数据源持久化 ----
 interface QbState {
   table: string
+  pickedDb?: string
   joins?: Join[]
   selectItems?: any[]
   distinct?: boolean
@@ -584,6 +607,7 @@ const persist = () => {
   }
   kvSetJSON(stateKey(), {
     table: table.value,
+    pickedDb: pickedDb.value,
     joins: joins.value,
     selectItems: selectItems.value,
     distinct: distinct.value,
@@ -633,6 +657,7 @@ const saveName = ref('')
 const showSave = ref(false)
 const currentState = (): QbState => ({
   table: table.value,
+  pickedDb: pickedDb.value,
   joins: joins.value,
   selectItems: selectItems.value,
   distinct: distinct.value,
@@ -690,19 +715,37 @@ const reset = () => {
   })
 }
 
+const runRows = async (source: any, sqlStr: string): Promise<any[][]> => {
+  const res = await invoke<any>('run_sql', {sql: sqlStr, source})
+  if (res.error) {
+    throw new Error(res.error)
+  }
+  return (res.result_sets || [])[0]?.rows || []
+}
+const fetchTables = async (source: any, db?: string) => groupTables(await runRows(source, columnsSql(source.kind, db)))
+
 const load = async () => {
   loading.value = true
   error.value = ''
   try {
     const source = resolveActiveSource()
-    const db = source.kind === 'mysql' ? source.database || undefined : undefined
-    const res = await invoke<any>('run_sql', {sql: columnsSql(source.kind, db), source})
-    if (res.error) {
-      throw new Error(res.error)
-    }
-    tables.value = groupTables((res.result_sets || [])[0]?.rows || [])
     savedList.value = kvGetJSON<SavedQuery[]>(savedKey(), [])
-    const restored = await restoreState()
+    srcNoDb.value = source.kind === 'mysql' && !source.database
+    if (srcNoDb.value) {
+      // 连接未指定库：先列出可选库，并尝试恢复上次所选库
+      databases.value = (await runRows(source,
+        'SELECT schema_name FROM information_schema.schemata '
+        + "WHERE schema_name NOT IN ('information_schema','mysql','performance_schema','sys') "
+        + 'ORDER BY schema_name')).map(r => String(r[0]))
+      const savedDb = kvGetJSON<QbState | null>(stateKey(), null)?.pickedDb
+      pickedDb.value = savedDb && databases.value.includes(savedDb) ? savedDb : ''
+      tables.value = pickedDb.value ? await fetchTables(source, pickedDb.value) : []
+    }
+    else {
+      pickedDb.value = ''
+      tables.value = await fetchTables(source, undefined)
+    }
+    const restored = tables.value.length ? await restoreState() : false
     if (!restored && tables.value.length && !tables.value.find(tb => tb.name === table.value)) {
       table.value = tables.value[0].name
     }
@@ -710,6 +753,39 @@ const load = async () => {
   catch (e: any) {
     error.value = e?.message || String(e)
     tables.value = []
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+// 选择/切换数据库：加载该库表并重置构建器
+const onPickDb = async (e: Event) => {
+  const db = (e.target as HTMLSelectElement).value
+  if (!db || db === pickedDb.value) {
+    return
+  }
+  loading.value = true
+  try {
+    const source = resolveActiveSource()
+    const list = await fetchTables(source, db)
+    restoring = true
+    pickedDb.value = db
+    tables.value = list
+    joins.value = []
+    selectItems.value = []
+    distinct.value = false
+    groupBy.value = []
+    wheres.value = []
+    havings.value = []
+    orders.value = []
+    table.value = list[0]?.name || ''
+    await nextTick()
+    restoring = false
+    persist()
+  }
+  catch (e: any) {
+    error.value = e?.message || String(e)
   }
   finally {
     loading.value = false
