@@ -9,21 +9,24 @@
       <!-- 左：连接列表 -->
       <div class="w-64 flex-shrink-0 space-y-2">
         <Button size="sm" :icon="Plus" class="w-full" :type="editingId ? 'secondary' : 'primary'" @click="resetForm">{{ t('settings.database.newConnection') }}</Button>
-        <div class="space-y-1 max-h-[55vh] overflow-y-auto pr-0.5">
-          <button v-for="c in connections" :key="c.id"
-                  class="group w-full text-left rounded-lg border px-2.5 py-2 transition-colors cursor-pointer"
-                  :class="editingId === c.id ? 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'"
-                  @click="startEdit(c)">
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] px-1.5 py-0.5 rounded uppercase font-semibold flex-shrink-0"
-                    :class="c.kind === 'mysql' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300' : c.kind === 'postgres' ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300' : c.kind === 'clickhouse' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' : c.kind === 'duckdb' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'">{{ c.kind }}</span>
-              <span class="flex-1 truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ c.name }}</span>
-              <Trash2 class="w-3.5 h-3.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 flex-shrink-0" :title="t('settings.database.delete')" @click.stop="remove(c.id)"/>
-            </div>
-            <div class="text-xs text-gray-400 truncate mt-0.5">
-              {{ isFileKind(c.kind) ? (c.file || t('settings.database.memoryDb')) : `${c.user || ''}@${c.host || ''}:${c.port || defaultPortOf(c.kind)}/${c.database || ''}` }}
-            </div>
-          </button>
+        <div class="space-y-2 max-h-[55vh] overflow-y-auto pr-0.5">
+          <div v-for="[grp, conns] in groupedConnections" :key="grp || '__ungrouped'" class="space-y-1">
+            <div class="text-[10px] uppercase tracking-wide text-gray-400 px-0.5 pt-1 font-semibold">{{ grp || t('settings.database.ungrouped') }}</div>
+            <button v-for="c in conns" :key="c.id"
+                    class="group w-full text-left rounded-lg border px-2.5 py-2 transition-colors cursor-pointer"
+                    :class="editingId === c.id ? 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'"
+                    @click="startEdit(c)">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] px-1.5 py-0.5 rounded uppercase font-semibold flex-shrink-0"
+                      :class="c.kind === 'mysql' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300' : c.kind === 'postgres' ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300' : c.kind === 'clickhouse' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' : c.kind === 'duckdb' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300'">{{ c.kind }}</span>
+                <span class="flex-1 truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ c.name }}</span>
+                <Trash2 class="w-3.5 h-3.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 flex-shrink-0" :title="t('settings.database.delete')" @click.stop="remove(c.id)"/>
+              </div>
+              <div class="text-xs text-gray-400 truncate mt-0.5">
+                {{ isFileKind(c.kind) ? (c.file || t('settings.database.memoryDb')) : `${c.user || ''}@${c.host || ''}:${c.port || defaultPortOf(c.kind)}/${c.database || ''}` }}
+              </div>
+            </button>
+          </div>
           <div v-if="!connections.length" class="text-xs text-gray-400 text-center py-6">{{ t('settings.database.noConnections') }}</div>
         </div>
       </div>
@@ -38,6 +41,13 @@
           </Label>
           <Label :label="t('settings.database.name')">
             <Input v-model="form.name" :placeholder="t('settings.database.namePlaceholder')"/>
+          </Label>
+          <Label :label="t('settings.database.group')" custom-class="col-span-2">
+            <input v-model="form.group" list="qb-conn-groups" :placeholder="t('settings.database.groupPlaceholder')"
+                   class="w-full text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"/>
+            <datalist id="qb-conn-groups">
+              <option v-for="g in groups" :key="g" :value="g"/>
+            </datalist>
           </Label>
         </div>
 
@@ -145,13 +155,30 @@ const isFileKind = (kind: string) => kind === 'sqlite' || kind === 'duckdb'
 const editingId = ref<string | null>(null)
 const form = reactive<{
   kind: 'mysql' | 'postgres' | 'clickhouse' | 'sqlite' | 'duckdb'
-  name: string; host: string; port: number | null; user: string; password: string; database: string; file: string
+  name: string; group: string; host: string; port: number | null; user: string; password: string; database: string; file: string
   ssl: boolean
   sshEnabled: boolean; sshHost: string; sshPort: number | null; sshUser: string; sshPassword: string; sshKeyFile: string
 }>({
-  kind: 'mysql', name: '', host: '', port: null, user: '', password: '', database: '', file: '',
+  kind: 'mysql', name: '', group: '', host: '', port: null, user: '', password: '', database: '', file: '',
   ssl: false,
   sshEnabled: false, sshHost: '', sshPort: null, sshUser: '', sshPassword: '', sshKeyFile: ''
+})
+
+// 已有分组（用于输入建议）
+const groups = computed(() => [...new Set(connections.value.map(c => c.group).filter((g): g is string => !!g))].sort())
+// 连接按分组归类；未分组置于末尾
+const groupedConnections = computed(() => {
+  const map = new Map<string, DbConnection[]>()
+  for (const c of connections.value) {
+    const g = c.group || ''
+    if (!map.has(g)) {
+      map.set(g, [])
+    }
+    map.get(g)!.push(c)
+  }
+  const named = [...map.entries()].filter(([g]) => g).sort(([a], [b]) => a.localeCompare(b))
+  const ungrouped = map.get('') ? [['', map.get('')!] as [string, DbConnection[]]] : []
+  return [...named, ...ungrouped]
 })
 
 // 网络型数据源的加密/隧道字段（文件型不含）
@@ -210,7 +237,7 @@ const testConnection = async () => {
 const resetForm = () => {
   editingId.value = null
   Object.assign(form, {
-    kind: 'mysql', name: '', host: '', port: null, user: '', password: '', database: '', file: '',
+    kind: 'mysql', name: '', group: '', host: '', port: null, user: '', password: '', database: '', file: '',
     ssl: false, sshEnabled: false, sshHost: '', sshPort: null, sshUser: '', sshPassword: '', sshKeyFile: ''
   })
 }
@@ -220,6 +247,7 @@ const startEdit = (c: DbConnection) => {
   Object.assign(form, {
     kind: c.kind === 'sqlite' || c.kind === 'duckdb' || c.kind === 'postgres' || c.kind === 'clickhouse' ? c.kind : 'mysql',
     name: c.name,
+    group: c.group || '',
     host: c.host || '', port: c.port ?? null, user: c.user || '', password: c.password || '',
     database: c.database || '', file: c.file || '',
     ssl: !!c.ssl,
@@ -245,9 +273,10 @@ const pickKeyFile = async () => {
 
 const submit = () => {
   if (!canSave.value) return
+  const grp = form.group.trim() || undefined
   const payload = isFileKind(form.kind)
-      ? {kind: form.kind, name: form.name.trim(), file: form.file.trim()}
-      : {kind: form.kind, name: form.name.trim(), host: form.host.trim() || '127.0.0.1', port: form.port || defaultPortOf(form.kind), user: form.user.trim(), password: form.password, database: form.database.trim(), ...netExtras()}
+      ? {kind: form.kind, name: form.name.trim(), group: grp, file: form.file.trim()}
+      : {kind: form.kind, name: form.name.trim(), group: grp, host: form.host.trim() || '127.0.0.1', port: form.port || defaultPortOf(form.kind), user: form.user.trim(), password: form.password, database: form.database.trim(), ...netExtras()}
   if (editingId.value) {
     update(editingId.value, payload)
   }
