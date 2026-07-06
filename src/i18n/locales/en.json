@@ -353,6 +353,11 @@
   "git": {
     "notRepo": "Not a Git repository",
     "switchRoot": "Switch workspace root (per-root Git)",
+    "pr": {
+      "title": "GitHub Pull Request",
+      "create": "New PR for current branch",
+      "list": "View all PRs"
+    },
     "useOurs": "Take our version for the whole file",
     "useTheirs": "Take their version for the whole file",
     "resolveAssist": "Resolve…",

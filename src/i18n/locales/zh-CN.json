@@ -353,6 +353,11 @@
   "git": {
     "notRepo": "非 Git 仓库",
     "switchRoot": "切换工作区根（各根独立 Git）",
+    "pr": {
+      "title": "GitHub Pull Request",
+      "create": "为当前分支新建 PR",
+      "list": "查看所有 PR"
+    },
     "useOurs": "整文件采用我方版本",
     "useTheirs": "整文件采用他方版本",
     "resolveAssist": "解决…",

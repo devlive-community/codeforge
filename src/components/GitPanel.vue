@@ -76,6 +76,25 @@
         </div>
       </template>
       <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- GitHub Pull Request -->
+        <div v-if="status.is_repo && githubBase" class="relative">
+          <Tooltip :text="t('git.pr.title')">
+            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click.stop="prMenu = !prMenu">
+              <GitPullRequest class="w-4 h-4"/>
+            </button>
+          </Tooltip>
+          <template v-if="prMenu">
+            <div class="fixed inset-0 z-40" @click="prMenu = false"/>
+            <div class="absolute right-0 top-7 z-50 w-52 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 text-sm">
+              <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2" @click="createPr">
+                <GitPullRequest class="w-3.5 h-3.5 text-gray-400"/>{{ t('git.pr.create') }}
+              </button>
+              <button class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2" @click="viewPrs">
+                <Cloud class="w-3.5 h-3.5 text-gray-400"/>{{ t('git.pr.list') }}
+              </button>
+            </div>
+          </template>
+        </div>
         <Tooltip v-if="status.is_repo" :text="t('git.remoteTitle')">
           <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showRemotes = true">
             <Cloud class="w-4 h-4"/>
@@ -390,7 +409,8 @@
 import {computed, h, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {kvGet, kvSet} from '../composables/useKvStore'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, Webhook, X} from 'lucide-vue-next'
+import {open as openExternalUrl} from '@tauri-apps/plugin-shell'
+import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, GitPullRequest, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, Webhook, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import Tooltip from '../ui/Tooltip.vue'
@@ -421,6 +441,42 @@ const props = defineProps<{ rootDir: string; roots?: string[] }>()
 const emit = defineEmits<{ close: []; refresh: []; open: [path: string]; switchRoot: [root: string] }>()
 
 const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
+
+// ===== GitHub PR 集成（浏览器打开创建/查看 PR，无需鉴权）=====
+const githubBase = ref<string | null>(null)
+const prMenu = ref(false)
+const remoteToWebUrl = (raw: string): string | null => {
+  let u = raw.trim().replace(/\.git$/, '')
+  const scp = u.match(/^git@([^:]+):(.+)$/)
+  if (scp) {
+    return `https://${scp[1]}/${scp[2]}`
+  }
+  u = u.replace(/^ssh:\/\/(git@)?/, 'https://').replace(/^git:\/\//, 'https://')
+  return u.startsWith('http://') || u.startsWith('https://') ? u.replace(/^http:\/\//, 'https://') : null
+}
+const detectGithub = async () => {
+  try {
+    const remotes = await invoke<{ name: string; url: string }[]>('git_remotes', {root: props.rootDir})
+    const origin = remotes.find(r => r.name === 'origin') || remotes[0]
+    const web = origin && remoteToWebUrl(origin.url)
+    githubBase.value = web && /(^|\/\/)github\.com\//.test(web) ? web : null
+  }
+  catch {
+    githubBase.value = null
+  }
+}
+const createPr = () => {
+  prMenu.value = false
+  if (githubBase.value && status.value.branch) {
+    openExternalUrl(`${githubBase.value}/compare/${encodeURIComponent(status.value.branch)}?expand=1`)
+  }
+}
+const viewPrs = () => {
+  prMenu.value = false
+  if (githubBase.value) {
+    openExternalUrl(`${githubBase.value}/pulls`)
+  }
+}
 
 // 面板宽度（可拖拽左缘改宽，持久化到 KV）
 const clampWidth = (w: number) => Math.max(360, Math.min(w, Math.max(360, window.innerWidth - 200)))
@@ -530,9 +586,11 @@ const refresh = async () => {
       remoteBranches.value = await invoke<string[]>('git_remote_branches', {root: props.rootDir})
       opState.value = await invoke<string>('git_op_state', {root: props.rootDir})
       submoduleCount.value = (await invoke<unknown[]>('git_submodules', {root: props.rootDir})).length
+      detectGithub()
     }
     else {
       opState.value = 'none'
+      githubBase.value = null
     }
     emit('refresh')
   }
