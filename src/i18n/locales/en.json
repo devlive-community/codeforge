@@ -353,6 +353,10 @@
   "git": {
     "notRepo": "Not a Git repository",
     "switchRoot": "Switch workspace root (per-root Git)",
+    "useOurs": "Take our version for the whole file",
+    "useTheirs": "Take their version for the whole file",
+    "resolveAssist": "Resolve…",
+    "markResolvedHint": "Already fixed manually? Mark as resolved (stage)",
     "opInProgress": "{op} in progress (resolve conflicts then continue, or abort)",
     "opContinue": "Continue",
     "opAbort": "Abort",
@@ -1038,6 +1042,26 @@
     "total": "Total",
     "all": "All",
     "pivotHint": "Drag a field to \"Values\" to build the pivot table"
+  },
+  "conflict": {
+    "title": "Resolve conflicts",
+    "remaining": "{n} unresolved",
+    "allBlocks": "All blocks",
+    "ours": "Ours",
+    "theirs": "Theirs",
+    "both": "Both",
+    "loading": "Loading…",
+    "noConflict": "No conflict markers in this file",
+    "resolvedBlock": "Picked: {pick}",
+    "pickSide": "Choose which side to keep",
+    "ourSide": "Ours (current branch)",
+    "theirSide": "Theirs (incoming branch)",
+    "openInEditor": "Edit manually in editor",
+    "cancel": "Cancel",
+    "saveResolved": "Save & mark resolved",
+    "done": "Conflict resolved",
+    "saveFailed": "Save failed",
+    "loadFailed": "Load failed"
   },
   "sqlEdit": {
     "confirmTitle": "Confirm write-back",

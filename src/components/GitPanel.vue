@@ -180,9 +180,12 @@
           <div class="px-4 py-1 text-xs font-semibold text-red-500 flex items-center gap-1">
             <AlertTriangle class="w-3.5 h-3.5"/>{{ t('git.conflicts') }} ({{ conflicts.length }})
           </div>
-          <div v-for="f in conflicts" :key="'c' + f.path" class="group flex items-center px-4 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
+          <div v-for="f in conflicts" :key="'c' + f.path" class="group flex items-center gap-2 px-4 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
             <span class="flex-1 min-w-0 text-sm text-gray-800 dark:text-gray-200 truncate cursor-pointer" @click="openFile(f.path)">{{ f.path }}</span>
-            <button class="text-xs text-blue-500 hover:underline cursor-pointer flex-shrink-0" @click="resolve(f.path)">{{ t('git.resolve') }}</button>
+            <button class="text-xs text-blue-500 hover:underline cursor-pointer flex-shrink-0" :title="t('git.useOurs')" @click="resolveSide(f.path, 'ours')">{{ t('conflict.ours') }}</button>
+            <button class="text-xs text-blue-500 hover:underline cursor-pointer flex-shrink-0" :title="t('git.useTheirs')" @click="resolveSide(f.path, 'theirs')">{{ t('conflict.theirs') }}</button>
+            <button class="text-xs text-amber-600 dark:text-amber-400 hover:underline cursor-pointer flex-shrink-0 font-medium" @click="conflictFile = f.path">{{ t('git.resolveAssist') }}</button>
+            <button class="text-xs text-gray-400 hover:underline cursor-pointer flex-shrink-0" :title="t('git.markResolvedHint')" @click="resolve(f.path)">{{ t('git.resolve') }}</button>
           </div>
         </div>
 
@@ -369,6 +372,10 @@
   <!-- 分支对比 -->
   <GitCompare v-if="showCompare" :root-dir="rootDir" :branch="status.branch" @close="showCompare = false"/>
 
+  <!-- 冲突解决辅助 -->
+  <ConflictResolver v-if="conflictFile" :root-dir="rootDir" :rel-path="conflictFile"
+                    @open="p => { openFile(p); conflictFile = null }" @resolved="refresh" @close="conflictFile = null"/>
+
   <!-- 单文件改动对比：HEAD vs 工作区 -->
   <DiffView v-if="diffFile"
             :original="diffFile.original"
@@ -391,6 +398,7 @@ import DiffView from './DiffView.vue'
 import GitLog from './GitLog.vue'
 import GitReflog from './GitReflog.vue'
 import GitCompare from './GitCompare.vue'
+import ConflictResolver from './ConflictResolver.vue'
 import GitStash from './GitStash.vue'
 import GitTags from './GitTags.vue'
 import GitRemotes from './GitRemotes.vue'
@@ -567,6 +575,21 @@ const resolve = async (path: string) => {
     toast.error(t('git.stageFailed') + ': ' + error)
   }
 }
+
+// 冲突文件整文件取一侧（ours/theirs）并标记已解决
+const resolveSide = async (path: string, side: 'ours' | 'theirs') => {
+  try {
+    await invoke('git_resolve_side', {root: props.rootDir, path, side})
+    toast.success(t('git.resolved'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.stageFailed') + ': ' + error)
+  }
+}
+
+// 冲突解决辅助界面的目标文件（相对路径）
+const conflictFile = ref<string | null>(null)
 const stageAll = () => stage(unstaged.value.map(f => f.path))
 const unstageAll = () => unstage(staged.value.map(f => f.path))
 

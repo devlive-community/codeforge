@@ -353,6 +353,10 @@
   "git": {
     "notRepo": "非 Git 仓库",
     "switchRoot": "切换工作区根（各根独立 Git）",
+    "useOurs": "整文件采用我方版本",
+    "useTheirs": "整文件采用他方版本",
+    "resolveAssist": "解决…",
+    "markResolvedHint": "已手动改好则直接标记为已解决（暂存）",
     "opInProgress": "{op} 进行中（解决冲突后继续，或中止）",
     "opContinue": "继续",
     "opAbort": "中止",
@@ -1038,6 +1042,26 @@
     "total": "合计",
     "all": "全部",
     "pivotHint": "把字段拖到「值」即可生成透视表"
+  },
+  "conflict": {
+    "title": "解决冲突",
+    "remaining": "剩余 {n} 处未解决",
+    "allBlocks": "全部冲突",
+    "ours": "我方",
+    "theirs": "他方",
+    "both": "两者",
+    "loading": "读取中…",
+    "noConflict": "该文件没有冲突标记",
+    "resolvedBlock": "已选：{pick}",
+    "pickSide": "请选择保留哪一侧",
+    "ourSide": "我方（当前分支）",
+    "theirSide": "他方（合入分支）",
+    "openInEditor": "在编辑器中手动编辑",
+    "cancel": "取消",
+    "saveResolved": "保存并标记已解决",
+    "done": "冲突已解决",
+    "saveFailed": "保存失败",
+    "loadFailed": "读取失败"
   },
   "sqlEdit": {
     "confirmTitle": "确认写回",
