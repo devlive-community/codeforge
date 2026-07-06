@@ -14,7 +14,9 @@
             <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
               <Blocks class="w-4 h-4 text-gray-400"/>
               <span>{{ t('qb.title') }} · {{ activeLabel() }}</span>
-              <span class="text-[11px] text-gray-400 font-normal">{{ t('qb.dragHint') }}</span>
+              <span v-if="srcNoDb && pickedDb" class="text-[11px] text-gray-400 font-normal">/ {{ pickedDb }}</span>
+              <button v-if="srcNoDb && pickedDb && !picking" class="text-[11px] text-blue-500 hover:underline cursor-pointer font-normal" @click="picking = true">{{ t('qb.switchDb') }}</button>
+              <span v-else class="text-[11px] text-gray-400 font-normal">{{ t('qb.dragHint') }}</span>
             </div>
             <div class="flex items-center gap-2">
               <!-- 已存查询：载入 -->
@@ -51,14 +53,16 @@
 
           <div v-if="loading" class="flex-1 flex items-center justify-center text-sm text-gray-400">{{ t('qb.loading') }}</div>
           <div v-else-if="error" class="flex-1 flex items-center justify-center text-sm text-red-500 px-6 text-center">{{ error }}</div>
-          <!-- MySQL 连接未指定库：先选库 -->
-          <div v-else-if="srcNoDb && !pickedDb" class="flex-1 flex flex-col items-center justify-center gap-3 text-sm text-gray-400 px-6 text-center">
-            <span>{{ t('qb.pickDbFirst') }}</span>
-            <select class="text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 focus:outline-none cursor-pointer min-w-[200px]"
-                    :value="''" @change="onPickDb($event)">
-              <option value="" disabled>{{ t('qb.selectDb') }}</option>
-              <option v-for="d in databases" :key="d" :value="d">{{ d }}</option>
-            </select>
+          <!-- MySQL 连接未指定库：选库页（首次或点“切换库”后） -->
+          <div v-else-if="srcNoDb && (picking || !pickedDb)" class="flex-1 overflow-auto p-4">
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ t('qb.pickDbFirst') }}</div>
+            <div v-if="databases.length" class="flex flex-wrap gap-2">
+              <button v-for="d in databases" :key="d"
+                      class="px-3 py-1.5 text-xs rounded border cursor-pointer transition-colors"
+                      :class="d === pickedDb ? 'border-blue-400 text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:text-blue-500'"
+                      @click="selectDb(d)">{{ d }}</button>
+            </div>
+            <div v-else class="text-xs text-gray-400">{{ t('qb.noTables') }}</div>
           </div>
           <div v-else-if="tables.length === 0" class="flex-1 flex items-center justify-center text-sm text-gray-400 px-6 text-center">{{ t('qb.noTables') }}</div>
 
@@ -91,12 +95,6 @@
               <div class="rounded border border-gray-200 dark:border-gray-700">
                 <div class="px-2.5 py-1 text-[11px] font-medium text-gray-500">FROM / JOIN</div>
                 <div class="px-2.5 pb-2 flex flex-col gap-1.5">
-                  <div v-if="srcNoDb" class="flex items-center gap-1.5">
-                    <span class="text-[11px] text-gray-400 w-10 flex-shrink-0">{{ t('qb.db') }}</span>
-                    <select :value="pickedDb" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 focus:outline-none min-w-[160px]" @change="onPickDb($event)">
-                      <option v-for="d in databases" :key="d" :value="d">{{ d }}</option>
-                    </select>
-                  </div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-[11px] text-gray-400 w-10 flex-shrink-0">FROM</span>
                     <select v-model="table" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 focus:outline-none min-w-[160px]">
@@ -351,6 +349,7 @@ const tables = ref<Tbl[]>([])
 const srcNoDb = ref(false)
 const databases = ref<string[]>([])
 const pickedDb = ref('')
+const picking = ref(false)
 
 const table = ref('')
 const joins = ref<Join[]>([])
@@ -760,11 +759,11 @@ const load = async () => {
 }
 
 // 选择/切换数据库：加载该库表并重置构建器
-const onPickDb = async (e: Event) => {
-  const db = (e.target as HTMLSelectElement).value
-  if (!db || db === pickedDb.value) {
+const selectDb = async (db: string) => {
+  if (!db) {
     return
   }
+  const switching = db !== pickedDb.value
   loading.value = true
   try {
     const source = resolveActiveSource()
@@ -772,14 +771,18 @@ const onPickDb = async (e: Event) => {
     restoring = true
     pickedDb.value = db
     tables.value = list
-    joins.value = []
-    selectItems.value = []
-    distinct.value = false
-    groupBy.value = []
-    wheres.value = []
-    havings.value = []
-    orders.value = []
-    table.value = list[0]?.name || ''
+    picking.value = false
+    // 切到不同库才重置查询；重选同库则保持
+    if (switching) {
+      joins.value = []
+      selectItems.value = []
+      distinct.value = false
+      groupBy.value = []
+      wheres.value = []
+      havings.value = []
+      orders.value = []
+      table.value = list[0]?.name || ''
+    }
     await nextTick()
     restoring = false
     persist()
@@ -794,6 +797,7 @@ const onPickDb = async (e: Event) => {
 
 const openBuilder = () => {
   visible.value = true
+  picking.value = false
   load()
 }
 
