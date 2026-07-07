@@ -187,6 +187,44 @@ pub async fn github_list_issues(
         .unwrap_or_default())
 }
 
+#[derive(Serialize)]
+pub struct RepoBranches {
+    default_branch: String,
+    branches: Vec<String>,
+}
+
+/// 取仓库的默认分支与全部分支（供新建 PR 选择 base）。
+#[tauri::command]
+pub async fn github_repo_branches(
+    token: String,
+    owner: String,
+    repo: String,
+) -> Result<RepoBranches, String> {
+    require_token(&token)?;
+    let info = api_get(&token, &format!("/repos/{}/{}", owner, repo)).await?;
+    let default_branch = info["default_branch"]
+        .as_str()
+        .unwrap_or("main")
+        .to_string();
+    let brs = api_get(
+        &token,
+        &format!("/repos/{}/{}/branches?per_page=100", owner, repo),
+    )
+    .await?;
+    let branches = brs
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|b| b["name"].as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(RepoBranches {
+        default_branch,
+        branches,
+    })
+}
+
 /// 创建 Issue。
 #[tauri::command]
 pub async fn github_create_issue(

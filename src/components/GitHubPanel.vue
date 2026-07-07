@@ -40,7 +40,11 @@
               <span class="text-gray-400">{{ t('gh.from') }}</span>
               <span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 font-mono">{{ branch }}</span>
               <span class="text-gray-400">→</span>
-              <input v-model="form.base" placeholder="main"
+              <select v-if="branches.length" v-model="form.base"
+                      class="w-40 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 font-mono focus:outline-none cursor-pointer">
+                <option v-for="b in branches" :key="b" :value="b">{{ b }}</option>
+              </select>
+              <input v-else v-model="form.base" placeholder="main"
                      class="w-32 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 font-mono focus:outline-none"/>
               <label class="flex items-center gap-1 cursor-pointer ml-2"><input type="checkbox" v-model="form.draft" class="cursor-pointer"/>{{ t('gh.draft') }}</label>
             </div>
@@ -99,9 +103,27 @@ const token = ref('')
 const loading = ref(false)
 const error = ref('')
 const items = ref<any[]>([])
+const branches = ref<string[]>([])
 const showForm = ref(false)
 const submitting = ref(false)
 const form = reactive({title: '', base: 'main', body: '', draft: false})
+
+// 拉取仓库分支与默认分支，供新建 PR 的 base 下拉使用
+const loadBranches = async () => {
+  if (!token.value) {
+    return
+  }
+  try {
+    const res = await invoke<{ default_branch: string; branches: string[] }>('github_repo_branches', {
+      token: token.value, owner: props.owner, repo: props.repo
+    })
+    branches.value = res.branches
+    if (res.default_branch) {
+      form.base = res.default_branch
+    }
+  }
+  catch { /* 拉取失败则退回文本输入 */ }
+}
 
 const openUrl = (url: string) => url && openExternalUrl(url)
 
@@ -175,6 +197,7 @@ onMounted(async () => {
     token.value = config?.github?.token || ''
   }
   catch { /* 忽略 */ }
+  loadBranches()
   reload()
 })
 </script>

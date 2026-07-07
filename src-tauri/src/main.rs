@@ -260,6 +260,7 @@ fn main() {
             git_resolve_side,
             github::github_list_prs,
             github::github_create_pr,
+            github::github_repo_branches,
             github::github_list_issues,
             github::github_create_issue,
             git_blame,
