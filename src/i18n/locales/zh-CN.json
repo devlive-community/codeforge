@@ -714,6 +714,7 @@
     "aiGenDoc": "AI 生成文档注释",
     "aiTranslate": "AI 翻译注释/文档",
     "aiMultiEdit": "AI 多文件编辑",
+    "exportCodeImage": "导出代码为图片",
     "history": "执行历史",
     "diff": "差异对比（当前 vs 已保存）",
     "preview": "实时预览（Markdown / HTML）",
@@ -1047,6 +1048,20 @@
     "total": "合计",
     "all": "全部",
     "pivotHint": "把字段拖到「值」即可生成透视表"
+  },
+  "codeImage": {
+    "title": "导出代码为图片",
+    "theme": "主题",
+    "padding": "内边距",
+    "windowChrome": "窗口装饰",
+    "lineNumbers": "行号",
+    "copy": "复制到剪贴板",
+    "download": "下载 PNG",
+    "rendering": "渲染中…",
+    "saved": "图片已保存",
+    "copied": "图片已复制",
+    "failed": "生成失败",
+    "copyFailed": "复制失败"
   },
   "gh": {
     "prs": "Pull Requests",
@@ -1511,6 +1526,7 @@
     "noDiagnostics": "当前文件没有诊断问题",
     "replUnsupported": "当前语言暂无内置 REPL",
     "replStarted": "已启动 REPL：{cmd}",
+    "noCodeToImage": "没有可导出的代码",
     "aiMultiNeedFiles": "请先打开需要参与编辑的文件",
     "aiMultiApplied": "已应用 AI 修改（{n} 个文件）",
     "aiMultiWriteFailed": "写入 {name} 失败：",

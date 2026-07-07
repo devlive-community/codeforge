@@ -714,6 +714,7 @@
     "aiGenDoc": "AI generate doc comment",
     "aiTranslate": "AI translate comments/docs",
     "aiMultiEdit": "AI multi-file edit",
+    "exportCodeImage": "Export code as image",
     "history": "Run history",
     "diff": "Diff (current vs saved)",
     "preview": "Live preview (Markdown / HTML)",
@@ -1047,6 +1048,20 @@
     "total": "Total",
     "all": "All",
     "pivotHint": "Drag a field to \"Values\" to build the pivot table"
+  },
+  "codeImage": {
+    "title": "Export code as image",
+    "theme": "Theme",
+    "padding": "Padding",
+    "windowChrome": "Window chrome",
+    "lineNumbers": "Line numbers",
+    "copy": "Copy to clipboard",
+    "download": "Download PNG",
+    "rendering": "Rendering…",
+    "saved": "Image saved",
+    "copied": "Image copied",
+    "failed": "Render failed",
+    "copyFailed": "Copy failed"
   },
   "gh": {
     "prs": "Pull Requests",
@@ -1511,6 +1526,7 @@
     "noDiagnostics": "No diagnostics in the current file",
     "replUnsupported": "No built-in REPL for the current language",
     "replStarted": "REPL started: {cmd}",
+    "noCodeToImage": "No code to export",
     "aiMultiNeedFiles": "Open the files you want to edit first",
     "aiMultiApplied": "AI edits applied ({n} file(s))",
     "aiMultiWriteFailed": "Failed to write {name}: ",
