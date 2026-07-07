@@ -97,6 +97,12 @@
       "cancel": "Cancel",
       "edit": "Edit",
       "reset": "Reset",
+      "presets": "Presets",
+      "applyPreset": "Apply preset…",
+      "savePreset": "Save as preset",
+      "presetNamePlaceholder": "Preset name",
+      "presetSaved": "Saved preset \"{name}\"",
+      "presetApplied": "Applied preset \"{name}\"",
       "hint": "Tip: changes take effect after closing Settings."
     },
     "cache": {

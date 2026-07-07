@@ -97,6 +97,12 @@
       "cancel": "取消",
       "edit": "修改",
       "reset": "重置",
+      "presets": "预设",
+      "applyPreset": "套用预设…",
+      "savePreset": "保存为预设",
+      "presetNamePlaceholder": "预设名称",
+      "presetSaved": "已保存预设「{name}」",
+      "presetApplied": "已套用预设「{name}」",
       "hint": "提示：修改后关闭设置即生效。"
     },
     "cache": {
