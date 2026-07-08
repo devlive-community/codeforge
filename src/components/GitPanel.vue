@@ -7,6 +7,14 @@
     <!-- 头部：分支 + 操作 -->
     <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
       <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 min-w-0">
+        <!-- 多根工作区：活动根切换（各根独立 Git） -->
+        <select v-if="roots && roots.length > 1"
+                :value="rootDir"
+                class="bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300 rounded px-1.5 py-0.5 focus:outline-none cursor-pointer max-w-[130px] truncate flex-shrink-0"
+                :title="t('git.switchRoot')"
+                @change="emit('switchRoot', ($event.target as HTMLSelectElement).value)">
+          <option v-for="r in roots" :key="r" :value="r" class="dark:bg-gray-800">{{ baseName(r) }}</option>
+        </select>
         <GitBranch class="w-4 h-4 text-gray-400 flex-shrink-0"/>
         <select v-if="status.is_repo"
                 :value="status.branch"
@@ -68,6 +76,12 @@
         </div>
       </template>
       <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- GitHub PR / Issue（应用内管理） -->
+        <Tooltip v-if="status.is_repo && ghRepo" :text="t('git.pr.title')">
+          <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showGithub = true">
+            <GitPullRequest class="w-4 h-4"/>
+          </button>
+        </Tooltip>
         <Tooltip v-if="status.is_repo" :text="t('git.remoteTitle')">
           <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer" @click="showRemotes = true">
             <Cloud class="w-4 h-4"/>
@@ -172,9 +186,12 @@
           <div class="px-4 py-1 text-xs font-semibold text-red-500 flex items-center gap-1">
             <AlertTriangle class="w-3.5 h-3.5"/>{{ t('git.conflicts') }} ({{ conflicts.length }})
           </div>
-          <div v-for="f in conflicts" :key="'c' + f.path" class="group flex items-center px-4 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
+          <div v-for="f in conflicts" :key="'c' + f.path" class="group flex items-center gap-2 px-4 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
             <span class="flex-1 min-w-0 text-sm text-gray-800 dark:text-gray-200 truncate cursor-pointer" @click="openFile(f.path)">{{ f.path }}</span>
-            <button class="text-xs text-blue-500 hover:underline cursor-pointer flex-shrink-0" @click="resolve(f.path)">{{ t('git.resolve') }}</button>
+            <button class="text-xs text-blue-500 hover:underline cursor-pointer flex-shrink-0" :title="t('git.useOurs')" @click="resolveSide(f.path, 'ours')">{{ t('conflict.ours') }}</button>
+            <button class="text-xs text-blue-500 hover:underline cursor-pointer flex-shrink-0" :title="t('git.useTheirs')" @click="resolveSide(f.path, 'theirs')">{{ t('conflict.theirs') }}</button>
+            <button class="text-xs text-amber-600 dark:text-amber-400 hover:underline cursor-pointer flex-shrink-0 font-medium" @click="conflictFile = f.path">{{ t('git.resolveAssist') }}</button>
+            <button class="text-xs text-gray-400 hover:underline cursor-pointer flex-shrink-0" :title="t('git.markResolvedHint')" @click="resolve(f.path)">{{ t('git.resolve') }}</button>
           </div>
         </div>
 
@@ -361,6 +378,13 @@
   <!-- 分支对比 -->
   <GitCompare v-if="showCompare" :root-dir="rootDir" :branch="status.branch" @close="showCompare = false"/>
 
+  <!-- 冲突解决辅助 -->
+  <ConflictResolver v-if="conflictFile" :root-dir="rootDir" :rel-path="conflictFile"
+                    @open="p => { openFile(p); conflictFile = null }" @resolved="refresh" @close="conflictFile = null"/>
+
+  <!-- GitHub PR / Issue -->
+  <GitHubPanel v-if="showGithub && ghRepo" :owner="ghRepo.owner" :repo="ghRepo.repo" :branch="status.branch" @close="showGithub = false"/>
+
   <!-- 单文件改动对比：HEAD vs 工作区 -->
   <DiffView v-if="diffFile"
             :original="diffFile.original"
@@ -372,10 +396,10 @@
 </template>
 
 <script setup lang="ts">
-import {computed, h, onBeforeUnmount, onMounted, ref} from 'vue'
+import {computed, h, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {kvGet, kvSet} from '../composables/useKvStore'
 import {invoke} from '@tauri-apps/api/core'
-import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, Webhook, X} from 'lucide-vue-next'
+import {AlertTriangle, Archive, Boxes, Cloud, Crosshair, DownloadCloud, Eraser, GitBranch, GitBranchPlus, GitCompare as GitCompareIcon, GitCompareArrows, GitMerge, GitPullRequest, History, ListOrdered, MoreHorizontal, Network, Pencil, RefreshCw, RotateCcw, Rows3, Sparkles, Tag, Trash2, TreeDeciduous, Undo2, UserCog, Webhook, X} from 'lucide-vue-next'
 import Button from '../ui/Button.vue'
 import Modal from '../ui/Modal.vue'
 import Tooltip from '../ui/Tooltip.vue'
@@ -383,6 +407,8 @@ import DiffView from './DiffView.vue'
 import GitLog from './GitLog.vue'
 import GitReflog from './GitReflog.vue'
 import GitCompare from './GitCompare.vue'
+import ConflictResolver from './ConflictResolver.vue'
+import GitHubPanel from './GitHubPanel.vue'
 import GitStash from './GitStash.vue'
 import GitTags from './GitTags.vue'
 import GitRemotes from './GitRemotes.vue'
@@ -401,8 +427,35 @@ import {useAiConfig} from '../composables/useAiConfig'
 interface GitFile { path: string; index: string; worktree: string }
 interface GitStatusData { is_repo: boolean; branch: string; ahead: number; behind: number; files: GitFile[] }
 
-const props = defineProps<{ rootDir: string }>()
-const emit = defineEmits<{ close: []; refresh: []; open: [path: string] }>()
+const props = defineProps<{ rootDir: string; roots?: string[] }>()
+const emit = defineEmits<{ close: []; refresh: []; open: [path: string]; switchRoot: [root: string] }>()
+
+const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
+
+// ===== GitHub PR / Issue 集成（用配置的 token 在应用内管理）=====
+const showGithub = ref(false)
+const ghRepo = ref<{ owner: string; repo: string } | null>(null)
+const remoteToWebUrl = (raw: string): string | null => {
+  let u = raw.trim().replace(/\.git$/, '')
+  const scp = u.match(/^git@([^:]+):(.+)$/)
+  if (scp) {
+    return `https://${scp[1]}/${scp[2]}`
+  }
+  u = u.replace(/^ssh:\/\/(git@)?/, 'https://').replace(/^git:\/\//, 'https://')
+  return u.startsWith('http://') || u.startsWith('https://') ? u.replace(/^http:\/\//, 'https://') : null
+}
+const detectGithub = async () => {
+  try {
+    const remotes = await invoke<{ name: string; url: string }[]>('git_remotes', {root: props.rootDir})
+    const origin = remotes.find(r => r.name === 'origin') || remotes[0]
+    const web = origin && remoteToWebUrl(origin.url)
+    const m = web && web.match(/github\.com\/([^/]+)\/([^/]+)/)
+    ghRepo.value = m ? {owner: m[1], repo: m[2]} : null
+  }
+  catch {
+    ghRepo.value = null
+  }
+}
 
 // 面板宽度（可拖拽左缘改宽，持久化到 KV）
 const clampWidth = (w: number) => Math.max(360, Math.min(w, Math.max(360, window.innerWidth - 200)))
@@ -512,9 +565,11 @@ const refresh = async () => {
       remoteBranches.value = await invoke<string[]>('git_remote_branches', {root: props.rootDir})
       opState.value = await invoke<string>('git_op_state', {root: props.rootDir})
       submoduleCount.value = (await invoke<unknown[]>('git_submodules', {root: props.rootDir})).length
+      detectGithub()
     }
     else {
       opState.value = 'none'
+      ghRepo.value = null
     }
     emit('refresh')
   }
@@ -557,6 +612,21 @@ const resolve = async (path: string) => {
     toast.error(t('git.stageFailed') + ': ' + error)
   }
 }
+
+// 冲突文件整文件取一侧（ours/theirs）并标记已解决
+const resolveSide = async (path: string, side: 'ours' | 'theirs') => {
+  try {
+    await invoke('git_resolve_side', {root: props.rootDir, path, side})
+    toast.success(t('git.resolved'))
+    await refresh()
+  }
+  catch (error) {
+    toast.error(t('git.stageFailed') + ': ' + error)
+  }
+}
+
+// 冲突解决辅助界面的目标文件（相对路径）
+const conflictFile = ref<string | null>(null)
 const stageAll = () => stage(unstaged.value.map(f => f.path))
 const unstageAll = () => unstage(staged.value.map(f => f.path))
 
@@ -929,6 +999,11 @@ const genMessage = async () => {
 }
 
 onMounted(refresh)
+// 活动根切换时重新载入该根的 Git 状态
+watch(() => props.rootDir, () => {
+  branchMenu.value = false
+  refresh()
+})
 
 // 行内小组件：文件名 + 状态字母 + 暂存/取消按钮
 const FileRow = (rowProps: { file: GitFile; staged?: boolean }, {emit: rowEmit }: any) => {

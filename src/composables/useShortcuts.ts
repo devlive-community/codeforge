@@ -9,6 +9,13 @@ export interface ShortcutAction
     default: string
 }
 
+// 命名快捷键预设：一整套绑定，可保存/套用/切换
+export interface ShortcutPreset
+{
+    name: string
+    bindings: Record<string, string>
+}
+
 // 可自定义的快捷键动作及默认绑定（Mod = mac 上 ⌘，其他平台 Ctrl）。
 // 动作名（label）由 i18n 提供（shortcutAction.<id>），随界面语言切换。
 const SHORTCUT_DEFS: { id: string; default: string }[] = [
@@ -35,6 +42,7 @@ const SHORTCUT_DEFS: { id: string; default: string }[] = [
 ]
 
 const STORAGE_KEY = 'shortcuts'
+const PRESET_KEY = 'shortcut-presets'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
 
@@ -129,6 +137,41 @@ export function useShortcuts()
         SHORTCUT_DEFS.map(a => ({id: a.id, label: i18n.global.t(`shortcutAction.${a.id}`), default: a.default}))
     )
 
+    // ===== 命名预设：保存当前整套绑定，随时套用/切换 =====
+    const presets = ref<ShortcutPreset[]>(kvGetJSON<ShortcutPreset[]>(PRESET_KEY, []))
+    const reloadPresets = () => {
+        presets.value = kvGetJSON<ShortcutPreset[]>(PRESET_KEY, [])
+    }
+    const persistPresets = () => kvSetJSON(PRESET_KEY, presets.value)
+
+    // 把当前生效的整套绑定存为预设（同名覆盖）
+    const savePreset = (name: string) => {
+        const entry: ShortcutPreset = {name, bindings: {...bindings.value}}
+        const i = presets.value.findIndex(p => p.name === name)
+        if (i >= 0) {
+            presets.value[i] = entry
+        }
+        else {
+            presets.value = [...presets.value, entry]
+        }
+        persistPresets()
+    }
+
+    // 套用预设：把预设的绑定作为覆盖生效
+    const applyPreset = (name: string) => {
+        const p = presets.value.find(pr => pr.name === name)
+        if (!p) {
+            return
+        }
+        overrides.value = {...p.bindings}
+        persist()
+    }
+
+    const deletePreset = (name: string) => {
+        presets.value = presets.value.filter(p => p.name !== name)
+        persistPresets()
+    }
+
     return {
         actions,
         bindings,
@@ -138,6 +181,11 @@ export function useShortcuts()
         resetAll,
         matchAction,
         formatCombo,
-        reload: load
+        reload: load,
+        presets,
+        savePreset,
+        applyPreset,
+        deletePreset,
+        reloadPresets
     }
 }

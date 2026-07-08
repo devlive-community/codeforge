@@ -427,6 +427,9 @@
     <!-- AI 多文件编辑（跨已打开文件） -->
     <AiMultiEdit v-if="showAiMultiEdit" :files="gatherOpenFiles()" @apply="onAiMultiApply" @close="showAiMultiEdit = false"/>
 
+    <!-- 导出代码为图片 -->
+    <CodeImageExport v-if="codeImageCtx" :code="codeImageCtx.code" :language="currentLanguage" :file-name="currentFileName" @close="codeImageCtx = null"/>
+
     <!-- .gitignore 模板 -->
     <GitIgnoreTemplates v-if="showGitignore && rootDir" :root-dir="rootDir" @close="showGitignore = false"/>
 
@@ -434,9 +437,11 @@
     <TaskRunner v-if="showTasks && rootDir" :root-dir="rootDir" @run="runTask" @close="showTasks = false"/>
 
     <!-- Git 源代码管理 -->
-    <GitPanel v-if="showGit && rootDir"
-              :root-dir="rootDir"
+    <GitPanel v-if="showGit && gitRoot"
+              :root-dir="gitRoot"
+              :roots="allRoots"
               @open="smartOpen"
+              @switch-root="activeGitRoot = $event"
               @refresh="refreshGitStatus"
               @close="showGit = false"/>
 
@@ -539,7 +544,7 @@ import {debounce} from 'lodash-es'
 import {formatDocument, formatSelection, renameSymbol} from 'codemirror-languageserver'
 import {runGotoDefinition, lspSupportsLanguage, triggerCodeActions, applyCodeAction, formatDocumentAsync} from './editor/lspExtension'
 import {dapSupportsLanguage} from './debug/dapClient'
-import {ArrowDownAZ, ArrowUpAZ, Bookmark, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FoldVertical, FolderOpen, GitBranch, GitCompare, History, ListChecks, ListTree, Maximize2, Minimize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, UnfoldVertical, WrapText, X} from 'lucide-vue-next'
+import {ArrowDownAZ, ArrowUpAZ, Bookmark, CaseLower, CaseUpper, ChevronRight, Code2, CornerDownRight, Eraser, Eye, FoldVertical, FolderOpen, GitBranch, GitCompare, History, Image as ImageIcon, ListChecks, ListTree, Maximize2, Minimize2, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Play, Plus, Save, Search, Settings as SettingsIcon, Sparkles, Sun, Terminal as TerminalIcon, UnfoldVertical, WrapText, X} from 'lucide-vue-next'
 import {ExecutionResult, LayoutMode, SplitDirection} from './types/app.ts'
 import AppHeader from './components/AppHeader.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -603,6 +608,7 @@ import DebugToolbar from './components/DebugToolbar.vue'
 import DebugPanel from './components/DebugPanel.vue'
 import AiCodeAction from './components/AiCodeAction.vue'
 import AiMultiEdit from './components/AiMultiEdit.vue'
+import CodeImageExport from './components/CodeImageExport.vue'
 import ErDiagram from './components/ErDiagram.vue'
 import TxnControl from './components/TxnControl.vue'
 import {useSqlTxn} from './composables/useSqlTxn'
@@ -786,8 +792,16 @@ const rootDir = ref<string | null>(null)
 // 远程仓库永久链接（复制 / 在浏览器打开）
 const {copyPermalink, openPermalink, openRepoOnWeb} = useGitPermalink(rootDir, currentFilePath, cursorInfo)
 
-// 多根工作区：额外挂载的文件夹（Git/搜索仍走主根 rootDir）
+// 多根工作区：额外挂载的文件夹
 const {extraRoots, addWorkspaceFolder, removeWorkspaceFolder, resetExtraRoots, setExtraRoots} = useWorkspaceRoots(rootDir)
+
+// 活动根：Git 面板针对哪个根（各根独立 Git）；无效时回退主根
+const activeGitRoot = ref<string | null>(null)
+const allRoots = computed(() => [rootDir.value, ...extraRoots.value].filter((r): r is string => !!r))
+const gitRoot = computed(() => {
+  const a = activeGitRoot.value
+  return a && allRoots.value.includes(a) ? a : rootDir.value
+})
 
 // 命名工作区：保存/打开一组根
 const showWorkspaces = ref(false)
@@ -964,6 +978,17 @@ const selectedOrAll = (): string => {
     }
   }
   return code.value
+}
+
+// 导出代码为图片（选中片段或整篇）
+const codeImageCtx = ref<{ code: string } | null>(null)
+const openCodeImage = () => {
+  const src = selectedOrAll()
+  if (!src.trim()) {
+    toast.info(t('app.noCodeToImage'))
+    return
+  }
+  codeImageCtx.value = {code: src}
 }
 
 // 以一次性提示打开 AI（临时会话，不关联执行）
@@ -2553,6 +2578,7 @@ const paletteCommands = computed<PaletteCommand[]>(() => [
   {id: 'removeDuplicateLines', label: t('command.removeDuplicateLines'), group: t('command.groupText'), icon: ListChecks, run: () => removeDuplicateLines()},
   {id: 'trimTrailingWhitespace', label: t('command.trimTrailingWhitespace'), group: t('command.groupText'), icon: Eraser, run: () => trimTrailingWhitespace()},
   {id: 'copyAsMarkdown', label: t('command.copyAsMarkdown'), group: t('command.groupText'), icon: Code2, run: () => copyAsMarkdown()},
+  {id: 'exportCodeImage', label: t('command.exportCodeImage'), group: t('command.groupText'), icon: ImageIcon, run: openCodeImage},
   {id: 'indentToSpaces', label: t('command.indentToSpaces'), group: t('command.groupText'), icon: Eraser, run: () => convertIndentation(false)},
   {id: 'indentToTabs', label: t('command.indentToTabs'), group: t('command.groupText'), icon: Eraser, run: () => convertIndentation(true)},
   {id: 'foldAll', label: t('command.foldAll'), group: t('command.groupCode'), icon: FoldVertical, run: () => { if (editorView.value) foldAll(editorView.value) }},

@@ -1328,6 +1328,18 @@ pub async fn git_merge(root: String, branch: String) -> Result<String, String> {
         .map_err(|e| format!("git 任务失败: {}", e))?
 }
 
+/// 冲突文件整文件取一侧：side = "ours" | "theirs"，取该侧内容并暂存（标记已解决）。
+#[tauri::command]
+pub async fn git_resolve_side(root: String, path: String, side: String) -> Result<String, String> {
+    let flag = if side == "theirs" { "--theirs" } else { "--ours" };
+    tokio::task::spawn_blocking(move || {
+        run_git(&root, &["checkout", flag, "--", &path])?;
+        run_git(&root, &["add", "--", &path])
+    })
+    .await
+    .map_err(|e| format!("git 任务失败: {}", e))?
+}
+
 #[derive(Serialize)]
 pub struct GitCommit {
     hash: String,

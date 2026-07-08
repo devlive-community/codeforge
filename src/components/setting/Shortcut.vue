@@ -8,6 +8,25 @@
       <Button type="secondary" size="sm" @click="resetAll">{{ t('settings.shortcut.resetAll') }}</Button>
     </div>
 
+    <!-- 快捷键预设：套用 / 保存当前 / 删除 -->
+    <div class="flex items-center flex-wrap gap-2 mb-4 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('settings.shortcut.presets') }}</span>
+      <select v-if="presets.length" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 focus:outline-none cursor-pointer max-w-[160px]"
+              :value="''" @change="onApplyPreset">
+        <option value="" disabled>{{ t('settings.shortcut.applyPreset') }}</option>
+        <option v-for="p in presets" :key="p.name" :value="p.name">{{ p.name }}</option>
+      </select>
+      <div v-for="p in presets" :key="'chip' + p.name" class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+        <span class="truncate max-w-[100px]">{{ p.name }}</span>
+        <button class="text-gray-400 hover:text-red-500 cursor-pointer" @click="deletePreset(p.name)"><X class="w-3 h-3"/></button>
+      </div>
+      <div class="flex items-center gap-1 ml-auto">
+        <input v-model="newPresetName" :placeholder="t('settings.shortcut.presetNamePlaceholder')" @keydown.enter="doSavePreset"
+               class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 focus:outline-none w-32"/>
+        <Button size="sm" :disabled="!newPresetName.trim()" @click="doSavePreset">{{ t('settings.shortcut.savePreset') }}</Button>
+      </div>
+    </div>
+
     <div class="space-y-1">
       <div v-for="action in actions"
            :key="action.id"
@@ -43,14 +62,36 @@
 <script setup lang="ts">
 import {onMounted, onUnmounted, ref} from 'vue'
 import {useI18n} from 'vue-i18n'
-import {Keyboard} from 'lucide-vue-next'
+import {Keyboard, X} from 'lucide-vue-next'
 import Button from '../../ui/Button.vue'
+import {useToast} from '../../plugins/toast'
 import {comboFromEvent, formatCombo, useShortcuts} from '../../composables/useShortcuts'
 
 const {t} = useI18n()
-const {actions, getBinding, setBinding, resetBinding, resetAll} = useShortcuts()
+const toast = useToast()
+const {actions, getBinding, setBinding, resetBinding, resetAll, presets, savePreset, applyPreset, deletePreset} = useShortcuts()
 
 const recordingId = ref<string | null>(null)
+
+// 快捷键预设
+const newPresetName = ref('')
+const doSavePreset = () => {
+  const name = newPresetName.value.trim()
+  if (!name) {
+    return
+  }
+  savePreset(name)
+  newPresetName.value = ''
+  toast.success(t('settings.shortcut.presetSaved', {name}))
+}
+const onApplyPreset = (e: Event) => {
+  const name = (e.target as HTMLSelectElement).value
+  ;(e.target as HTMLSelectElement).value = ''
+  if (name) {
+    applyPreset(name)
+    toast.success(t('settings.shortcut.presetApplied', {name}))
+  }
+}
 
 const onRecordKeydown = (e: KeyboardEvent) => {
   if (!recordingId.value) {
